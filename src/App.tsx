@@ -126,6 +126,13 @@ function App() {
             <BarChart3 className="w-8 h-8 text-blue-600" />
             Dashboard Financeiro
           </h1>
+          <button
+            onClick={() => alert("Ferramenta em construção")}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-white font-semibold rounded-xl hover:from-blue-500 hover:to-indigo-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Nova Transação
+          </button>
         </div>
 
         {/* Seção Mês Atual */}
@@ -136,49 +143,47 @@ function App() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-6 rounded-2xl border border-emerald-200 shadow-lg">
-              <div className="flex items-center justify-between">
+            <div className="bg-green-500 p-6 rounded-2xl shadow-lg">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold text-emerald-600 uppercase tracking-wide">Total Receitas</p>
-                  <p className="text-2xl font-bold text-emerald-900 mt-1">
+                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
+                  <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <DollarSign className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200 shadow-lg">
-              <div className="flex items-center justify-between">
+            <div className="bg-red-500 p-6 rounded-2xl shadow-lg">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <TrendingDown className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Total Despesas</p>
-                  <p className="text-2xl font-bold text-orange-900 mt-1">
+                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
+                  <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <TrendingDown className="h-8 w-8 text-orange-600" />
               </div>
             </div>
 
-            <div className={`bg-gradient-to-r p-6 rounded-2xl border shadow-lg ${
-              lucroLiquido >= 0 
-                ? 'from-emerald-50 to-green-50 border-emerald-200' 
-                : 'from-red-50 to-pink-50 border-red-200'
+            <div className={`p-6 rounded-2xl shadow-lg ${
+              lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-red-500'
             }`}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <p className={`text-sm font-semibold uppercase tracking-wide ${
-                    lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'
-                  }`}>
-                    Lucro Líquido
-                  </p>
-                  <p className={`text-2xl font-bold mt-1 ${
-                    lucroLiquido >= 0 ? 'text-emerald-900' : 'text-red-900'
-                  }`}>
+                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
+                  <p className="text-2xl font-bold text-white mt-1">
                     R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <BarChart3 className={`h-8 w-8 ${lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
               </div>
             </div>
           </div>
@@ -192,49 +197,47 @@ function App() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-r from-emerald-100 to-green-100 p-6 rounded-2xl border-2 border-emerald-300 shadow-xl">
-              <div className="flex items-center justify-between">
+            <div className="bg-green-600 p-6 rounded-2xl shadow-lg">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Total Receitas Anual</p>
-                  <p className="text-2xl font-bold text-emerald-900 mt-1">
+                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Receitas Anuais</p>
+                  <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <DollarSign className="h-8 w-8 text-emerald-700" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-orange-100 to-red-100 p-6 rounded-2xl border-2 border-orange-300 shadow-xl">
-              <div className="flex items-center justify-between">
+            <div className="bg-red-600 p-6 rounded-2xl shadow-lg">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <TrendingDown className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Total Despesas Anual</p>
-                  <p className="text-2xl font-bold text-orange-900 mt-1">
+                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Despesas Anuais</p>
+                  <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <TrendingDown className="h-8 w-8 text-orange-700" />
               </div>
             </div>
 
-            <div className={`bg-gradient-to-r p-6 rounded-2xl border-2 shadow-xl ${
-              lucroLiquidoAno >= 0 
-                ? 'from-emerald-100 to-green-100 border-emerald-300' 
-                : 'from-red-100 to-pink-100 border-red-300'
+            <div className={`p-6 rounded-2xl shadow-lg ${
+              lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-red-600'
             }`}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <p className={`text-sm font-semibold uppercase tracking-wide ${
-                    lucroLiquidoAno >= 0 ? 'text-emerald-700' : 'text-red-700'
-                  }`}>
-                    Lucro Líquido Anual
-                  </p>
-                  <p className={`text-2xl font-bold mt-1 ${
-                    lucroLiquidoAno >= 0 ? 'text-emerald-900' : 'text-red-900'
-                  }`}>
+                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
+                  <p className="text-2xl font-bold text-white mt-1">
                     R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <BarChart3 className={`h-8 w-8 ${lucroLiquidoAno >= 0 ? 'text-emerald-700' : 'text-red-700'}`} />
               </div>
             </div>
           </div>
