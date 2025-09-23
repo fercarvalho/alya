@@ -1599,33 +1599,35 @@ function App() {
       {/* Navigation */}
       <nav className="fixed top-[60px] left-0 right-0 z-40 bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-2">
-            {[
-              { id: 'dashboard', name: 'Dashboard', icon: Home },
-              { id: 'metas', name: 'Metas', icon: TrendingUp },
-              { id: 'reports', name: 'Relatórios', icon: BarChart3 },
-              { id: 'transactions', name: 'Transações', icon: DollarSign },
-              { id: 'products', name: 'Produtos', icon: Package }
-            ].map(tab => {
-              const Icon = tab.icon
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id as TabType)
-                    setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
-                  }}
-                  className={`flex items-center px-6 pt-5 pb-3 text-sm font-medium rounded-t-xl transition-all duration-300 ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
-                      : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
-                  }`}
-                >
-                  <Icon className="h-5 w-5 mr-2" />
-                  {tab.name}
-                </button>
-              )
-            })}
+          <div className="flex items-center overflow-x-auto scrollbar-hide">
+            <div className="flex items-center space-x-2 min-w-max">
+              {[
+                { id: 'dashboard', name: 'Dashboard', icon: Home },
+                { id: 'metas', name: 'Metas', icon: TrendingUp },
+                { id: 'reports', name: 'Relatórios', icon: BarChart3 },
+                { id: 'transactions', name: 'Transações', icon: DollarSign },
+                { id: 'products', name: 'Produtos', icon: Package }
+              ].map(tab => {
+                const Icon = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as TabType)
+                      setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
+                    }}
+                    className={`flex items-center px-6 pt-5 pb-3 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
+                        : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 mr-2" />
+                    {tab.name}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </nav>
