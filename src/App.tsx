@@ -296,64 +296,98 @@ function App() {
           </h2>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Painel de Fluxo de Caixa */}
+            {/* Quadrante Financeiro */}
             <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
-              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                <DollarSign className="h-6 w-6 mr-2 text-gray-600" />
-                Fluxo de Caixa
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-2">
-                  <span className="font-medium text-emerald-700">RECEITA</span>
+              <div className="space-y-3">
+                {/* REFORÇO DE CAIXA */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-gray-700">REFORÇO DE CAIXA</span>
+                  <span className="font-bold text-gray-800">R$ 0,00</span>
+                </div>
+                
+                {/* SAÍDA DE CAIXA */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-gray-700">SAÍDA DE CAIXA</span>
+                  <span className="font-bold text-gray-800">R$ 0,00</span>
+                </div>
+                
+                {/* RECEITA */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-emerald-700">RECEITA</span>
                   <span className="font-bold text-emerald-800">
                     R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 
-                <div className="flex justify-between items-center py-2">
-                  <span className="font-medium text-red-700">DESPESA</span>
+                {/* DESPESA */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-red-700">DESPESA</span>
                   <span className="font-bold text-red-800">
                     -R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 
-                <div className="flex justify-between items-center py-3 bg-gray-50 px-4 rounded-lg border-t border-gray-200">
-                  <span className="font-bold text-gray-800 text-lg">SALDO</span>
-                  <span className={`font-bold text-lg ${
-                    (totalReceitas - totalDespesas) >= 0 ? 'text-emerald-800' : 'text-red-800'
+                {/* SALDO INICIAL */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-blue-700">SALDO INICIAL</span>
+                  <span className="font-bold text-blue-800">R$ 31.970,50</span>
+                </div>
+                
+                {/* TOTAL GERAL */}
+                <div className="flex justify-between items-center py-4 bg-gray-50 px-4 rounded-lg border-2 border-gray-300 mt-4">
+                  <span className="font-bold text-gray-900 text-lg">Total geral</span>
+                  <span className={`font-bold text-xl ${
+                    (31970.50 + totalReceitas - totalDespesas) >= 0 ? 'text-emerald-800' : 'text-red-800'
                   }`}>
-                    R$ {(totalReceitas - totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(31970.50 + totalReceitas - totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Painel de Metas vs Realizado */}
+            {/* Quadrante META DO MÊS */}
             <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
-              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                <TrendingUp className="h-6 w-6 mr-2 text-gray-600" />
-                Metas vs Realizado
-              </h3>
-              
               <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 bg-gray-50 px-4 rounded-lg">
-                  <span className="font-medium text-gray-700">META RECEITA</span>
-                  <span className="font-bold text-gray-800">R$ 21.889,17</span>
+                {/* Cabeçalho com colunas R$ e % */}
+                <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-gray-300">
+                  <div className="text-center">
+                    <span className="font-bold text-gray-600 text-lg"></span>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-bold text-gray-800 text-xl">R$</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-bold text-gray-800 text-xl">%</span>
+                  </div>
                 </div>
                 
-                <div className="flex justify-between items-center py-2">
-                  <span className="font-medium text-emerald-700">ALCANÇADO</span>
-                  <span className="font-bold text-emerald-800">
-                    R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({((totalReceitas / 21889.17) * 100).toFixed(0)}%)
-                  </span>
+                {/* META */}
+                <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
+                  <div className="font-bold text-gray-800 italic">META</div>
+                  <div className="text-center font-bold text-gray-800">R$ 21.889,17</div>
+                  <div className="text-center font-bold text-gray-800">100%</div>
                 </div>
                 
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div 
-                    className="h-4 rounded-full transition-all duration-700 bg-amber-500"
-                    style={{ width: `${Math.min((totalReceitas / 21889.17) * 100, 100)}%` }}
-                  />
+                {/* ALCANÇADO */}
+                <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
+                  <div className="font-bold text-emerald-700 italic">ALCANÇADO</div>
+                  <div className="text-center font-bold text-emerald-800">
+                    R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-center font-bold text-emerald-800">
+                    {((totalReceitas / 21889.17) * 100).toFixed(0)}%
+                  </div>
+                </div>
+                
+                {/* RESTANTE */}
+                <div className="grid grid-cols-3 gap-4 py-3">
+                  <div className="font-bold text-red-700 italic">RESTANTE</div>
+                  <div className="text-center font-bold text-red-800">
+                    -R$ {Math.max(0, 21889.17 - totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-center font-bold text-red-800">
+                    {Math.max(0, 100 - ((totalReceitas / 21889.17) * 100)).toFixed(0)}%
+                  </div>
                 </div>
               </div>
             </div>
@@ -367,7 +401,7 @@ function App() {
             Faturamento
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200 shadow-lg">
               <h3 className="text-lg font-bold text-emerald-800 mb-4">Faturamento TOTAL</h3>
               <div className="text-2xl font-bold text-emerald-900">
@@ -388,13 +422,6 @@ function App() {
                 R$ {(totalReceitas * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200 shadow-lg">
-              <h3 className="text-lg font-bold text-purple-800 mb-4">Investimentos em MKT</h3>
-              <div className="text-2xl font-bold text-purple-900">
-                R$ {(totalReceitas * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -405,7 +432,7 @@ function App() {
             Despesas
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
               <h3 className="text-lg font-bold text-red-800 mb-4">Despesas Totais</h3>
               <div className="text-2xl font-bold text-red-900">
@@ -426,11 +453,28 @@ function App() {
                 R$ {(totalDespesas * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
+          </div>
+        </div>
 
+        {/* 4. INVESTIMENTOS */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-indigo-800 flex items-center gap-3">
+            <img src="/alya-logo.png" alt="Alya" className="w-6 h-6" />
+            Investimentos
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-lg">
-              <h3 className="text-lg font-bold text-blue-800 mb-4">Investimentos</h3>
+              <h3 className="text-lg font-bold text-blue-800 mb-4">Investimentos Gerais</h3>
               <div className="text-2xl font-bold text-blue-900">
                 R$ {(totalDespesas * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200 shadow-lg">
+              <h3 className="text-lg font-bold text-purple-800 mb-4">Investimentos em MKT</h3>
+              <div className="text-2xl font-bold text-purple-900">
+                R$ {(totalReceitas * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
