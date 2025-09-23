@@ -102,65 +102,202 @@ function App() {
   const lucroLiquido = totalReceitas - totalDespesas
 
   // Render Dashboard
-  const renderDashboard = () => (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <BarChart3 className="w-8 h-8 text-blue-600" />
-          Dashboard Financeiro
-        </h1>
+  const renderDashboard = () => {
+    // Dados anuais
+    const totalReceitasAno = transactions
+      .filter(t => t.type === 'receita')
+      .reduce((sum, t) => sum + t.amount, 0)
+    
+    const totalDespesasAno = transactions
+      .filter(t => t.type === 'despesa')
+      .reduce((sum, t) => sum + t.amount, 0)
+    
+    const lucroLiquidoAno = totalReceitasAno - totalDespesasAno
+
+    // Transações recentes (últimas 5)
+    const transacoesRecentes = transactions
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5)
+
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <BarChart3 className="w-8 h-8 text-blue-600" />
+            Dashboard Financeiro
+          </h1>
+        </div>
+
+        {/* Seção Mês Atual */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <PieChart className="w-6 h-6 text-gray-600" />
+            Mês Atual
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-6 rounded-2xl border border-emerald-200 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-emerald-600 uppercase tracking-wide">Total Receitas</p>
+                  <p className="text-2xl font-bold text-emerald-900 mt-1">
+                    R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-emerald-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Total Despesas</p>
+                  <p className="text-2xl font-bold text-orange-900 mt-1">
+                    R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-orange-600" />
+              </div>
+            </div>
+
+            <div className={`bg-gradient-to-r p-6 rounded-2xl border shadow-lg ${
+              lucroLiquido >= 0 
+                ? 'from-emerald-50 to-green-50 border-emerald-200' 
+                : 'from-red-50 to-pink-50 border-red-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-semibold uppercase tracking-wide ${
+                    lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'
+                  }`}>
+                    Lucro Líquido
+                  </p>
+                  <p className={`text-2xl font-bold mt-1 ${
+                    lucroLiquido >= 0 ? 'text-emerald-900' : 'text-red-900'
+                  }`}>
+                    R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <BarChart3 className={`h-8 w-8 ${lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Seção Ano */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-3">
+            <PieChart className="w-6 h-6 text-purple-600" />
+            Ano
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-r from-emerald-100 to-green-100 p-6 rounded-2xl border-2 border-emerald-300 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Total Receitas Anual</p>
+                  <p className="text-2xl font-bold text-emerald-900 mt-1">
+                    R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-emerald-700" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-orange-100 to-red-100 p-6 rounded-2xl border-2 border-orange-300 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Total Despesas Anual</p>
+                  <p className="text-2xl font-bold text-orange-900 mt-1">
+                    R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-orange-700" />
+              </div>
+            </div>
+
+            <div className={`bg-gradient-to-r p-6 rounded-2xl border-2 shadow-xl ${
+              lucroLiquidoAno >= 0 
+                ? 'from-emerald-100 to-green-100 border-emerald-300' 
+                : 'from-red-100 to-pink-100 border-red-300'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-semibold uppercase tracking-wide ${
+                    lucroLiquidoAno >= 0 ? 'text-emerald-700' : 'text-red-700'
+                  }`}>
+                    Lucro Líquido Anual
+                  </p>
+                  <p className={`text-2xl font-bold mt-1 ${
+                    lucroLiquidoAno >= 0 ? 'text-emerald-900' : 'text-red-900'
+                  }`}>
+                    R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <BarChart3 className={`h-8 w-8 ${lucroLiquidoAno >= 0 ? 'text-emerald-700' : 'text-red-700'}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Lista de Transações Recentes */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <DollarSign className="w-6 h-6 text-gray-600" />
+            Transações Recentes
+          </h2>
+          
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            {transacoesRecentes.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-gray-500">Nenhuma transação encontrada.</p>
+                <p className="text-sm text-gray-400 mt-1">Adicione suas primeiras transações para vê-las aqui.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {transacoesRecentes.map((transacao, index) => (
+                  <div key={index} className="p-4 hover:bg-gray-50 transition-colors duration-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          transacao.type === 'receita' ? 'bg-emerald-500' : 'bg-red-500'
+                        }`}></div>
+                        <div>
+                          <p className="font-medium text-gray-900">{transacao.description}</p>
+                          <p className="text-sm text-gray-500">{transacao.category}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-bold ${
+                          transacao.type === 'receita' ? 'text-emerald-600' : 'text-red-600'
+                        }`}>
+                          {transacao.type === 'receita' ? '+' : '-'}R$ {transacao.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(transacao.date).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-100">
+              <button 
+                onClick={() => setActiveTab('transactions')}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 group"
+              >
+                <DollarSign className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                Ver todas as transações
+                <ArrowUpCircle className="h-5 w-5 rotate-90 group-hover:translate-x-1 transition-all duration-300" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-6 rounded-2xl border border-emerald-200 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-emerald-600 uppercase tracking-wide">Total Receitas</p>
-              <p className="text-2xl font-bold text-emerald-900 mt-1">
-                R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <DollarSign className="h-8 w-8 text-emerald-600" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Total Despesas</p>
-              <p className="text-2xl font-bold text-orange-900 mt-1">
-                R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-orange-600" />
-          </div>
-        </div>
-
-        <div className={`bg-gradient-to-r p-6 rounded-2xl border shadow-lg ${
-          lucroLiquido >= 0 
-            ? 'from-emerald-50 to-green-50 border-emerald-200' 
-            : 'from-red-50 to-pink-50 border-red-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className={`text-sm font-semibold uppercase tracking-wide ${
-                lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'
-              }`}>
-                Lucro Líquido
-              </p>
-              <p className={`text-2xl font-bold mt-1 ${
-                lucroLiquido >= 0 ? 'text-emerald-900' : 'text-red-900'
-              }`}>
-                R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <BarChart3 className={`h-8 w-8 ${lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+    )
+  }
 
   // Função para renderizar apenas o conteúdo do mês (sem título)
   const renderMonthContent = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
@@ -1199,21 +1336,21 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md shadow-lg border-b border-amber-200">
+      {/* Header Fixo */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex justify-between items-center py-3">
             <div className="flex items-center">
               <img 
                 src="/alya-logo.png" 
                 alt="Alya Velas Logo" 
-                className="w-12 h-12 mr-4 rounded-xl shadow-lg object-contain"
+                className="w-8 h-8 mr-3 rounded-lg shadow-sm object-contain"
               />
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   Alya Velas
                 </h1>
-                <p className="text-sm text-amber-600/70 font-medium">Sistema de Gestão Financeira</p>
+                <p className="text-xs text-amber-600/70 font-medium">Sistema de Gestão Financeira</p>
               </div>
             </div>
           </div>
@@ -1221,7 +1358,7 @@ function App() {
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-sm shadow-md border-b border-amber-100">
+      <nav className="fixed top-[60px] left-0 right-0 z-40 bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-2">
             {[
@@ -1238,7 +1375,7 @@ function App() {
                   onClick={() => setActiveTab(tab.id as TabType)}
                   className={`flex items-center px-6 py-4 text-sm font-medium rounded-t-xl transition-all duration-300 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg transform -translate-y-1'
+                      ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
                       : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
                   }`}
                 >
@@ -1252,7 +1389,7 @@ function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[120px]">
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'metas' && renderMetas()}
         {activeTab === 'transactions' && renderTransactions()}
