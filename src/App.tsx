@@ -9,6 +9,7 @@ import {
   Edit, 
   Trash2,
   Download,
+  Upload,
   Target,
   PieChart,
   TrendingDown,
@@ -96,6 +97,12 @@ function App() {
   // Estados do formulário de transação
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<NewTransaction | null>(null)
+  
+  // Estados do modal de importar/exportar
+  const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false)
+  const [importExportType, setImportExportType] = useState<'transactions' | 'products'>('transactions')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [transactionForm, setTransactionForm] = useState({
     date: new Date().toISOString().split('T')[0], // Data atual por padrão
     description: '',
@@ -1696,8 +1703,8 @@ function App() {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              // TODO: Implementar função de importar/exportar
-              console.log('Importar/Exportar transações')
+              setImportExportType('transactions')
+              setIsImportExportModalOpen(true)
             }}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
@@ -1844,8 +1851,8 @@ function App() {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              // TODO: Implementar função de importar/exportar
-              console.log('Importar/Exportar produtos')
+              setImportExportType('products')
+              setIsImportExportModalOpen(true)
             }}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
@@ -2991,6 +2998,189 @@ function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Importar/Exportar */}
+      {isImportExportModalOpen && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsImportExportModalOpen(false)
+              setSelectedFile(null)
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Download className="w-6 h-6 text-amber-700" />
+                  Importar/Exportar {importExportType === 'transactions' ? 'Transações' : 'Produtos'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setIsImportExportModalOpen(false)
+                    setSelectedFile(null)
+                  }}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="space-y-6">
+              <p className="text-gray-600 text-center">
+                Escolha uma das opções abaixo para gerenciar seus dados:
+              </p>
+
+              {/* Botão Selecionar Arquivo ou Arquivo Selecionado */}
+              {!selectedFile ? (
+                <button
+                  onClick={() => {
+                    // Criar input de arquivo dinamicamente
+                    const fileInput = document.createElement('input')
+                    fileInput.type = 'file'
+                    fileInput.accept = '.xlsx'
+                    fileInput.style.display = 'none'
+                    
+                    fileInput.onchange = (event) => {
+                      const file = (event.target as HTMLInputElement).files?.[0]
+                      if (file) {
+                        // Verificar se é arquivo xlsx
+                        if (file.name.toLowerCase().endsWith('.xlsx')) {
+                          setSelectedFile(file)
+                        } else {
+                          alert('Por favor, selecione apenas arquivos no formato .xlsx')
+                        }
+                      }
+                      document.body.removeChild(fileInput)
+                    }
+                    
+                    document.body.appendChild(fileInput)
+                    fileInput.click()
+                  }}
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+                >
+                  <Upload className="h-6 w-6" />
+                  <div className="text-left">
+                    <div className="font-bold">Selecionar Arquivo</div>
+                    <div className="text-sm opacity-90">Carregar arquivo .xlsx</div>
+                  </div>
+                </button>
+              ) : (
+                <div className="w-full p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <Upload className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-green-800">Arquivo selecionado:</div>
+                      <div className="text-sm text-green-600 truncate">{selectedFile.name}</div>
+                      <div className="text-xs text-green-500">
+                        Tamanho: {(selectedFile.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedFile(null)}
+                      className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full transition-all"
+                      title="Remover arquivo"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Botão Exportar */}
+              <button
+                onClick={() => {
+                  // TODO: Implementar função de exportar
+                  console.log(`Exportar ${importExportType}`)
+                  alert(`Funcionalidade de exportar ${importExportType === 'transactions' ? 'transações' : 'produtos'} será implementada em breve!`)
+                }}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+              >
+                <Download className="h-6 w-6" />
+                <div className="text-left">
+                  <div className="font-bold">Exportar</div>
+                  <div className="text-sm opacity-90">Salvar dados em arquivo</div>
+                </div>
+              </button>
+
+              {/* Botão Importar (quando arquivo selecionado) */}
+              {selectedFile && (
+                <button
+                  onClick={async () => {
+                    setIsUploading(true)
+                    try {
+                      // Criar FormData para enviar o arquivo
+                      const formData = new FormData()
+                      formData.append('file', selectedFile)
+                      formData.append('type', importExportType) // 'transactions' ou 'products'
+                      
+                      console.log(`Enviando arquivo: ${selectedFile.name} (${importExportType})`)
+                      
+                      // Fazer requisição para o servidor
+                      const response = await fetch('/api/import', {
+                        method: 'POST',
+                        body: formData
+                      })
+                      
+                      if (response.ok) {
+                        const result = await response.json()
+                        console.log('Resposta do servidor:', result)
+                        alert(`Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || 'Dados processados com sucesso.'}`)
+                        
+                        // TODO: Atualizar os dados no frontend baseado na resposta
+                        // if (importExportType === 'transactions') {
+                        //   setTransactions(result.data)
+                        // } else {
+                        //   setProducts(result.data)
+                        // }
+                      } else {
+                        const error = await response.text()
+                        console.error('Erro do servidor:', error)
+                        alert(`Erro ao importar arquivo: ${error}`)
+                      }
+                    } catch (error) {
+                      console.error('Erro na requisição:', error)
+                      alert(`Erro ao enviar arquivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+                    } finally {
+                      setIsUploading(false)
+                    }
+                    
+                    // Fechar modal e limpar arquivo após tentativa
+                    setSelectedFile(null)
+                    setIsImportExportModalOpen(false)
+                  }}
+                  disabled={isUploading}
+                  className={`w-full px-6 py-3 font-semibold rounded-lg shadow-lg transition-all duration-200 ${
+                    isUploading 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-xl transform hover:-translate-y-0.5'
+                  }`}
+                >
+                  {isUploading ? 'Enviando arquivo...' : 'Importar Arquivo'}
+                </button>
+              )}
+
+              {/* Botão Cancelar */}
+              <button
+                onClick={() => {
+                  setIsImportExportModalOpen(false)
+                  setSelectedFile(null)
+                }}
+                className="w-full px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
