@@ -1360,7 +1360,7 @@ function App() {
       {/* Navigation */}
       <nav className="fixed top-[60px] left-0 right-0 z-40 bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
             {[
               { id: 'dashboard', name: 'Dashboard', icon: Home },
               { id: 'metas', name: 'Metas', icon: TrendingUp },
@@ -1373,7 +1373,7 @@ function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`flex items-center px-6 py-4 text-sm font-medium rounded-t-xl transition-all duration-300 ${
+                  className={`flex items-center px-6 pt-5 pb-3 text-sm font-medium rounded-t-xl transition-all duration-300 ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
                       : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
