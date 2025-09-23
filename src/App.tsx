@@ -8,6 +8,7 @@ import {
   Plus, 
   Edit, 
   Trash2,
+  Download,
   Target,
   PieChart,
   TrendingDown,
@@ -1692,13 +1693,25 @@ function App() {
           <DollarSign className="w-8 h-8 text-green-600" />
           Transações
         </h1>
-        <button
-          onClick={() => setIsTransactionModalOpen(true)}
-          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-        >
-          <Plus className="h-5 w-5" />
-          Nova Transação
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              // TODO: Implementar função de importar/exportar
+              console.log('Importar/Exportar transações')
+            }}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Download className="h-5 w-5" />
+            Importar/Exportar
+          </button>
+          <button
+            onClick={() => setIsTransactionModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Nova Transação
+          </button>
+        </div>
       </div>
       
       {/* Lista de Transações */}
@@ -1828,13 +1841,25 @@ function App() {
           <Package className="w-8 h-8 text-purple-600" />
           Produtos
         </h1>
-        <button
-          onClick={() => setIsProductModalOpen(true)}
-          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-        >
-          <Plus className="h-5 w-5" />
-          Novo Produto
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              // TODO: Implementar função de importar/exportar
+              console.log('Importar/Exportar produtos')
+            }}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Download className="h-5 w-5" />
+            Importar/Exportar
+          </button>
+          <button
+            onClick={() => setIsProductModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Novo Produto
+          </button>
+        </div>
       </div>
       
       {/* Lista de Produtos */}
@@ -2805,6 +2830,21 @@ function App() {
             {/* Formulário */}
             <form onSubmit={(e) => {
               e.preventDefault()
+              
+              // Validar categoria obrigatória
+              if (!transactionForm.category || transactionForm.category.trim() === '') {
+                const tipoTransacao = transactionForm.type.toLowerCase()
+                alert(`Por favor, selecione uma categoria para a ${tipoTransacao} antes de salvar a transação.`)
+                return
+              }
+              
+              // Validar se a categoria é válida para o tipo selecionado
+              const categoriasValidas = getCategoriesByType(transactionForm.type)
+              if (!categoriasValidas.includes(transactionForm.category)) {
+                const tipoTransacao = transactionForm.type.toLowerCase()
+                alert(`A categoria selecionada não é válida para o tipo ${tipoTransacao}. Por favor, selecione uma categoria apropriada.`)
+                return
+              }
               
               if (editingTransaction) {
                 // Editar transação existente
