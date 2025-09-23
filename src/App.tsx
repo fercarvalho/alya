@@ -58,6 +58,9 @@ function App() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>()
   const [editingProduct, setEditingProduct] = useState<Product | undefined>()
   const [editingMeta, setEditingMeta] = useState<Meta | undefined>()
+  
+  // Estado para o mês selecionado (padrão é o mês atual)
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
 
   // Carregar dados do localStorage
   useEffect(() => {
@@ -614,9 +617,8 @@ function App() {
     const currentDate = new Date()
     const currentMonthIndex = currentDate.getMonth()
     
-    // Encontrar o mês atual na lista
-    const mesAtual = meses.find(mes => mes.indice === currentMonthIndex)
-    const outrosMeses = meses.filter(mes => mes.indice !== currentMonthIndex)
+    // Encontrar o mês selecionado na lista
+    const mesSelecionado = meses.find(mes => mes.indice === selectedMonth)
 
     return (
       <div className="space-y-6">
@@ -625,23 +627,39 @@ function App() {
             <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
             Metas
           </h1>
-          <button
-            onClick={() => setIsMetaModalOpen(true)}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <Plus className="h-5 w-5" />
-            Nova Meta
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Destacar mês:</label>
+              <select 
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {meses.map((mes) => (
+                  <option key={mes.indice} value={mes.indice}>
+                    {mes.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => setIsMetaModalOpen(true)}
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            >
+              <Plus className="h-5 w-5" />
+              Nova Meta
+            </button>
+          </div>
         </div>
 
-        {/* Renderizar Mês Atual (se existir) */}
-        {mesAtual && renderMonth(mesAtual.nome, mesAtual.indice, mesAtual.meta, 31970.50)}
+        {/* Renderizar Mês Selecionado (se existir) */}
+        {mesSelecionado && renderMonth(mesSelecionado.nome, mesSelecionado.indice, mesSelecionado.meta, 31970.50)}
 
         {/* Renderizar Total do Ano */}
         {renderTotalAno()}
 
-        {/* Renderizar outros meses (exceto o atual) */}
-        {outrosMeses.map((mes) => 
+        {/* Renderizar todos os 12 meses em ordem normal */}
+        {meses.map((mes) => 
           renderMonth(mes.nome, mes.indice, mes.meta, 31970.50)
         )}
       </div>
