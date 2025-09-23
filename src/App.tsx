@@ -8,7 +8,6 @@ import {
   Plus, 
   Edit, 
   Trash2,
-  ShoppingCart,
   Target,
   PieChart,
   TrendingDown,
@@ -74,17 +73,11 @@ type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas'
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('metas')
-  const [oldTransactions, setOldTransactions] = useState<OldTransaction[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
 
   // Estados dos modais
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
-  const [isMetaModalOpen, setIsMetaModalOpen] = useState(false)
-  const [editingTransaction, setEditingTransaction] = useState<OldTransaction | undefined>()
-  const [editingProduct, setEditingProduct] = useState<Product | undefined>()
-  const [editingMeta, setEditingMeta] = useState<Meta | undefined>()
 
   // Estados do formulário de produto
   const [productForm, setProductForm] = useState({
@@ -101,6 +94,7 @@ function App() {
 
   // Estados do formulário de transação
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<NewTransaction | null>(null)
   const [transactionForm, setTransactionForm] = useState({
     date: new Date().toISOString().split('T')[0], // Data atual por padrão
     description: '',
@@ -128,6 +122,19 @@ function App() {
       return ['Fixo', 'Variável', 'Atacado', 'Varejo', 'Investimento', 'Mkt']
     }
     return []
+  }
+
+  // Função para abrir modal de edição
+  const handleEditTransaction = (transaction: NewTransaction) => {
+    setEditingTransaction(transaction)
+    setTransactionForm({
+      date: transaction.date,
+      description: transaction.description,
+      value: transaction.value.toString(),
+      type: transaction.type,
+      category: transaction.category
+    })
+    setIsTransactionModalOpen(true)
   }
 
   // Funções para calcular totais das transações
@@ -1669,54 +1676,118 @@ function App() {
       </div>
       
       {/* Lista de Transações */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="space-y-4">
         {transactions.length === 0 ? (
-          <div className="p-8 text-center">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
             <p className="text-gray-600">Nenhuma transação encontrada.</p>
             <p className="text-gray-500 text-sm mt-2">Adicione sua primeira transação clicando no botão "Nova Transação".</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            {/* Cabeçalho das Colunas */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
+              <div className="grid grid-cols-7 gap-4 items-center text-center">
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Indicador</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Data</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Descrição</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Categoria</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
+                </div>
+              </div>
+            </div>
+            
+            {transactions.map((transaction, index) => (
+              <div key={transaction.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
+                index === transactions.length - 1 ? 'border-b-0' : ''
+              }`}>
+                <div className="grid grid-cols-7 gap-4 items-center text-center">
+                  {/* Indicador Visual */}
+                  <div className="flex justify-center">
+                    <div className={`w-3 h-3 rounded-full ${
+                      transaction.type === 'Receita' ? 'bg-green-500' : 'bg-red-500'
+                    }`}></div>
+                  </div>
+                  
+                  {/* Data */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
                       {new Date(transaction.date).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </p>
+                  </div>
+                  
+                  {/* Descrição */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 truncate">
                       {transaction.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </h3>
+                  </div>
+                  
+                  {/* Tipo */}
+                  <div className="flex justify-center">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      transaction.type === 'Receita' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {transaction.type}
+                    </span>
+                  </div>
+                  
+                  {/* Categoria */}
+                  <div className="flex justify-center">
+                    <span className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded-md">
                       {transaction.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        transaction.type === 'Receita' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {transaction.type}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                    </span>
+                  </div>
+                  
+                  {/* Valor */}
+                  <div>
+                    <p className={`text-lg font-bold ${
                       transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {transaction.type === 'Receita' ? '+' : '-'}R$ {transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </p>
+                  </div>
+                  
+                  {/* Ações */}
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={() => handleEditTransaction(transaction)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
+                      title="Editar transação"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Tem certeza que deseja excluir esta transação?')) {
+                          setTransactions(prev => prev.filter(t => t.id !== transaction.id))
+                        }
+                      }}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
+                      title="Excluir transação"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -2546,11 +2617,12 @@ function App() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <DollarSign className="w-6 h-6 text-amber-700" />
-                  Nova Transação
+                  {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
                 </h2>
                 <button
                   onClick={() => {
                     setIsTransactionModalOpen(false)
+                    setEditingTransaction(null)
                     setTransactionForm({ 
                       date: new Date().toISOString().split('T')[0], 
                       description: '', 
@@ -2569,21 +2641,40 @@ function App() {
             {/* Formulário */}
             <form onSubmit={(e) => {
               e.preventDefault()
-              // Criar nova transação
-              const newTransaction = {
-                id: Date.now().toString(),
-                date: transactionForm.date,
-                description: transactionForm.description,
-                value: parseFloat(transactionForm.value) || 0,
-                type: transactionForm.type as 'Receita' | 'Despesa',
-                category: transactionForm.category,
-                createdAt: new Date()
+              
+              if (editingTransaction) {
+                // Editar transação existente
+                const updatedTransaction = {
+                  ...editingTransaction,
+                  date: transactionForm.date,
+                  description: transactionForm.description,
+                  value: parseFloat(transactionForm.value) || 0,
+                  type: transactionForm.type as 'Receita' | 'Despesa',
+                  category: transactionForm.category
+                }
+                
+                // Atualizar na lista de transações
+                setTransactions(prev => prev.map(t => 
+                  t.id === editingTransaction.id ? updatedTransaction : t
+                ))
+              } else {
+                // Criar nova transação
+                const newTransaction = {
+                  id: Date.now().toString(),
+                  date: transactionForm.date,
+                  description: transactionForm.description,
+                  value: parseFloat(transactionForm.value) || 0,
+                  type: transactionForm.type as 'Receita' | 'Despesa',
+                  category: transactionForm.category,
+                  createdAt: new Date()
+                }
+                
+                // Adicionar à lista de transações
+                setTransactions(prev => [newTransaction, ...prev])
               }
               
-              // Adicionar à lista de transações
-              setTransactions(prev => [newTransaction, ...prev])
-              
               // Limpar formulário e fechar modal
+              setEditingTransaction(null)
               setTransactionForm({ 
                 date: new Date().toISOString().split('T')[0], 
                 description: '', 
@@ -2675,6 +2766,7 @@ function App() {
                   type="button"
                   onClick={() => {
                     setIsTransactionModalOpen(false)
+                    setEditingTransaction(null)
                     setTransactionForm({ 
                       date: new Date().toISOString().split('T')[0], 
                       description: '', 
@@ -2691,7 +2783,7 @@ function App() {
                   type="submit"
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
                 >
-                  Salvar
+                  {editingTransaction ? 'Atualizar' : 'Salvar'}
                 </button>
               </div>
             </form>
