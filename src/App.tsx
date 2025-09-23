@@ -1622,29 +1622,230 @@ function App() {
   )
 
   // Render Reports
-  const renderReports = () => (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <BarChart3 className="w-8 h-8 text-blue-600" />
-          Relatórios
-        </h1>
-        <button
-          onClick={() => alert("Ferramenta em construção")}
-          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-white font-semibold rounded-xl hover:from-blue-500 hover:to-indigo-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-        >
-          <Plus className="h-5 w-5" />
-          Novo Relatório
-        </button>
+  const renderReports = () => {
+    // Dados simulados - futuramente virão das transações
+    const dadosSimulados = {
+      semana: {
+        vendasPorCategoria: [
+          { nome: 'Velas Aromáticas', valor: 2500, cor: '#22c55e' },
+          { nome: 'Velas Decorativas', valor: 1800, cor: '#3b82f6' },
+          { nome: 'Kits Presente', valor: 1200, cor: '#f59e0b' }
+        ],
+        vendasPorProduto: [
+          { nome: 'Vela Lavanda', valor: 800, cor: '#8b5cf6' },
+          { nome: 'Vela Vanilla', valor: 650, cor: '#ec4899' },
+          { nome: 'Kit Romance', valor: 500, cor: '#06b6d4' }
+        ],
+        despesasPorCategoria: [
+          { nome: 'Matéria Prima', valor: 1500, cor: '#ef4444' },
+          { nome: 'Embalagens', valor: 800, cor: '#f97316' },
+          { nome: 'Marketing', valor: 400, cor: '#84cc16' }
+        ]
+      },
+      mes: {
+        vendasPorCategoria: [
+          { nome: 'Velas Aromáticas', valor: 12000, cor: '#22c55e' },
+          { nome: 'Velas Decorativas', valor: 8500, cor: '#3b82f6' },
+          { nome: 'Kits Presente', valor: 5200, cor: '#f59e0b' }
+        ],
+        vendasPorProduto: [
+          { nome: 'Vela Lavanda', valor: 4200, cor: '#8b5cf6' },
+          { nome: 'Vela Vanilla', valor: 3800, cor: '#ec4899' },
+          { nome: 'Kit Romance', valor: 2500, cor: '#06b6d4' }
+        ],
+        despesasPorCategoria: [
+          { nome: 'Matéria Prima', valor: 7500, cor: '#ef4444' },
+          { nome: 'Embalagens', valor: 3200, cor: '#f97316' },
+          { nome: 'Marketing', valor: 1800, cor: '#84cc16' }
+        ]
+      },
+      trimestre: {
+        vendasPorCategoria: [
+          { nome: 'Velas Aromáticas', valor: 35000, cor: '#22c55e' },
+          { nome: 'Velas Decorativas', valor: 28500, cor: '#3b82f6' },
+          { nome: 'Kits Presente', valor: 18200, cor: '#f59e0b' }
+        ],
+        vendasPorProduto: [
+          { nome: 'Vela Lavanda', valor: 15200, cor: '#8b5cf6' },
+          { nome: 'Vela Vanilla', valor: 12800, cor: '#ec4899' },
+          { nome: 'Kit Romance', valor: 8500, cor: '#06b6d4' }
+        ],
+        despesasPorCategoria: [
+          { nome: 'Matéria Prima', valor: 22500, cor: '#ef4444' },
+          { nome: 'Embalagens', valor: 12200, cor: '#f97316' },
+          { nome: 'Marketing', valor: 6800, cor: '#84cc16' }
+        ]
+      },
+      ano: {
+        vendasPorCategoria: [
+          { nome: 'Velas Aromáticas', valor: 145000, cor: '#22c55e' },
+          { nome: 'Velas Decorativas', valor: 118500, cor: '#3b82f6' },
+          { nome: 'Kits Presente', valor: 78200, cor: '#f59e0b' }
+        ],
+        vendasPorProduto: [
+          { nome: 'Vela Lavanda', valor: 65200, cor: '#8b5cf6' },
+          { nome: 'Vela Vanilla', valor: 58800, cor: '#ec4899' },
+          { nome: 'Kit Romance', valor: 38500, cor: '#06b6d4' }
+        ],
+        despesasPorCategoria: [
+          { nome: 'Matéria Prima', valor: 92500, cor: '#ef4444' },
+          { nome: 'Embalagens', valor: 52200, cor: '#f97316' },
+          { nome: 'Marketing', valor: 28800, cor: '#84cc16' }
+        ]
+      }
+    }
+
+    const renderSecaoRelatorio = (titulo: string, dados: any, periodo: string) => {
+      const totalVendasCategoria = dados.vendasPorCategoria.reduce((sum: number, item: any) => sum + item.valor, 0)
+      const totalVendasProduto = dados.vendasPorProduto.reduce((sum: number, item: any) => sum + item.valor, 0)
+      const totalDespesas = dados.despesasPorCategoria.reduce((sum: number, item: any) => sum + item.valor, 0)
+      const lucroLiquido = totalVendasCategoria - totalDespesas
+
+      return (
+        <div className="space-y-6 mb-12">
+          <h2 className="text-2xl font-bold text-gray-800">{titulo}</h2>
+          
+          {/* Cards principais lado a lado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Card Vendas por Categoria */}
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Vendas por Categoria</h3>
+              <div className="space-y-3">
+                {dados.vendasPorCategoria.map((item: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600">{item.nome}</span>
+                    <span className="font-bold" style={{ color: item.cor }}>
+                      R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+                <div className="border-t pt-3 mt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-base font-bold text-gray-800">Total</span>
+                    <span className="text-base font-bold text-green-600">
+                      R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Seção Vendas por Produto (metade inferior) */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="text-md font-bold text-gray-700 mb-3">Vendas por Produto</h4>
+                <div className="space-y-3">
+                  {dados.vendasPorProduto.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">{item.nome}</span>
+                      <span className="font-bold" style={{ color: item.cor }}>
+                        R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-3 mt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-gray-700">Subtotal</span>
+                      <span className="text-sm font-bold text-blue-600">
+                        R$ {totalVendasProduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card Despesas por Categoria */}
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Despesas por Categoria</h3>
+              <div className="space-y-3">
+                {dados.despesasPorCategoria.map((item: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600">{item.nome}</span>
+                    <span className="font-bold" style={{ color: item.cor }}>
+                      R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+                <div className="border-t pt-3 mt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-base font-bold text-gray-800">Total</span>
+                    <span className="text-base font-bold text-red-600">
+                      R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card Resumo da Seção - Abaixo dos outros dois */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Resumo do {periodo}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-600">Total de Vendas</span>
+                  <span className="font-bold text-green-600">
+                    R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-600">Total de Despesas</span>
+                  <span className="font-bold text-red-600">
+                    R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-base font-bold text-gray-800">Lucro Líquido</span>
+                  <span className={`text-base font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 text-center">
+                    Margem de Lucro: {((lucroLiquido / totalVendasCategoria) * 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-center">
+                <div className={`text-center p-4 rounded-lg ${lucroLiquido >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <p className="text-xs text-gray-600 mb-1">Status</p>
+                  <p className={`text-lg font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {lucroLiquido >= 0 ? '📈 Positivo' : '📉 Negativo'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <BarChart3 className="w-8 h-8 text-blue-600" />
+            Relatórios
+          </h1>
+        </div>
+
+        {/* Seção Semana */}
+        {renderSecaoRelatorio('Relatório Semanal', dadosSimulados.semana, 'Semana')}
+        
+        {/* Seção Mês */}
+        {renderSecaoRelatorio('Relatório Mensal', dadosSimulados.mes, 'Mês')}
+        
+        {/* Seção Trimestre */}
+        {renderSecaoRelatorio('Relatório Trimestral', dadosSimulados.trimestre, 'Trimestre')}
+        
+        {/* Seção Ano */}
+        {renderSecaoRelatorio('Relatório Anual', dadosSimulados.ano, 'Ano')}
       </div>
-      
-      <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
-        <p className="text-gray-600 text-center">
-          Funcionalidade em desenvolvimento. Em breve você terá acesso a relatórios detalhados e análises financeiras.
-        </p>
-      </div>
-    </div>
-  )
+    )
+  }
 
   // Render Metas
   const renderMetas = () => {
