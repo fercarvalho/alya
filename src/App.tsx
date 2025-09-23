@@ -1717,7 +1717,7 @@ function App() {
                   <h3 className="text-lg font-bold text-gray-800">Vendas por Categoria</h3>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {dados.vendasPorCategoria.map((item: any, index: number) => {
                     // Cores baseadas na imagem - tons de verde claro para categorias vazias
                     const backgroundColors = ['bg-green-100', 'bg-green-100', 'bg-green-100'];
@@ -1725,15 +1725,13 @@ function App() {
                     const textColors = ['text-green-800', 'text-green-800', 'text-green-800'];
                     
                     return (
-                      <div key={index} className={`${backgroundColors[index]} p-4 rounded-xl`}>
-                        <div className="flex justify-between items-center">
-                          <span className={`${labelBgColors[index]} ${textColors[index]} font-medium px-3 py-2 rounded-lg`}>
-                            {item.nome}
-                          </span>
-                          <span className="font-bold text-gray-500">
-                            R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
+                      <div key={index} className={`${backgroundColors[index]} p-4 rounded-xl flex justify-between items-center`}>
+                        <span className={`${labelBgColors[index]} ${textColors[index]} font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0`}>
+                          {item.nome}
+                        </span>
+                        <span className="font-bold text-gray-500 ml-4 text-right">
+                          R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
                     );
                   })}
@@ -1741,15 +1739,13 @@ function App() {
                 
                 {/* Total Vendas por Categoria */}
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="bg-green-200 p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <span className="bg-green-300 text-green-800 font-bold px-3 py-2 rounded-lg">
-                        Total Vendas por Categoria
-                      </span>
-                      <span className="font-bold text-green-800 text-lg">
-                        R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
+                  <div className="bg-green-200 p-4 rounded-xl flex justify-between items-center">
+                    <span className="bg-green-300 text-green-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
+                      Total Vendas por Categoria
+                    </span>
+                    <span className="font-bold text-green-800 text-lg ml-4 text-right">
+                      R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1768,15 +1764,13 @@ function App() {
                     const textColors = ['text-blue-800', 'text-blue-800', 'text-blue-800'];
                     
                     return (
-                      <div key={index} className={`${backgroundColors[index]} p-3 rounded-lg`}>
-                        <div className="flex justify-between items-center">
-                          <span className={`${labelBgColors[index]} ${textColors[index]} font-medium text-sm px-2 py-1 rounded`}>
-                            {item.nome}
-                          </span>
-                          <span className="font-bold text-blue-900 text-sm">
-                            R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
+                      <div key={index} className={`${backgroundColors[index]} p-3 rounded-lg flex justify-between items-center`}>
+                        <span className={`${labelBgColors[index]} ${textColors[index]} font-medium text-sm px-3 py-2 rounded min-w-0 flex-shrink-0`}>
+                          {item.nome}
+                        </span>
+                        <span className="font-bold text-blue-900 text-sm ml-3 text-right">
+                          R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
                     );
                   })}
@@ -1784,15 +1778,13 @@ function App() {
                 
                 {/* Total Vendas por Produto */}
                 <div className="mt-4 pt-3 border-t border-gray-200">
-                  <div className="bg-blue-200 p-3 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="bg-blue-300 text-blue-800 font-bold text-sm px-2 py-1 rounded">
-                        Total por Produto
-                      </span>
-                      <span className="font-bold text-blue-800 text-sm">
-                        R$ {totalVendasProduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
+                  <div className="bg-blue-200 p-3 rounded-lg flex justify-between items-center">
+                    <span className="bg-blue-300 text-blue-800 font-bold text-sm px-3 py-2 rounded min-w-0 flex-shrink-0">
+                      Total por Produto
+                    </span>
+                    <span className="font-bold text-blue-800 text-sm ml-3 text-right">
+                      R$ {totalVendasProduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1809,15 +1801,13 @@ function App() {
                 {dados.despesasPorCategoria.map((item: any, index: number) => {
                   // Todos os itens com a mesma cor (como Materia Prima na imagem)
                   return (
-                    <div key={index} className="bg-orange-50 p-4 rounded-xl">
-                      <div className="flex justify-between items-center">
-                        <span className="bg-orange-100 text-orange-700 font-medium px-3 py-2 rounded-lg">
-                          {item.nome}
-                        </span>
-                        <span className="font-bold text-gray-500">
-                          R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
+                    <div key={index} className="bg-orange-50 p-4 rounded-xl flex justify-between items-center">
+                      <span className="bg-orange-100 text-orange-700 font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
+                        {item.nome}
+                      </span>
+                      <span className="font-bold text-gray-500 ml-4 text-right">
+                        R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
                     </div>
                   );
                 })}
@@ -1825,57 +1815,59 @@ function App() {
               
               {/* Total de Despesas - Mais escuro */}
               <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="bg-orange-200 p-4 rounded-xl">
-                  <div className="flex justify-between items-center">
-                    <span className="bg-orange-300 text-orange-800 font-bold px-3 py-2 rounded-lg">
-                      Total de Despesas
-                    </span>
-                    <span className="font-bold text-orange-800 text-lg">
-                      R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
+                <div className="bg-orange-200 p-4 rounded-xl flex justify-between items-center">
+                  <span className="bg-orange-300 text-orange-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
+                    Total de Despesas
+                  </span>
+                  <span className="font-bold text-orange-800 text-lg ml-4 text-right">
+                    R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Card Resumo da Seção - Abaixo dos outros dois */}
+          {/* Card Resumo da Seção - Layout único com 4 colunas */}
           <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Resumo do {periodo}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">Total de Vendas</span>
-                  <span className="font-bold text-green-600">
-                    R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">Total de Despesas</span>
-                  <span className="font-bold text-red-600">
-                    R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-6">Resumo do {periodo}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              
+              {/* Total Vendas */}
+              <div className="text-center p-4 bg-green-50 rounded-xl">
+                <p className="text-sm font-bold text-green-600 mb-2">Total Vendas</p>
+                <p className="text-xl font-bold text-green-600">
+                  R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-base font-bold text-gray-800">Lucro Líquido</span>
-                  <span className={`text-base font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-600 text-center">
-                    Margem de Lucro: {((lucroLiquido / totalVendasCategoria) * 100).toFixed(1)}%
+
+              {/* Total Despesas */}
+              <div className="text-center p-4 bg-red-50 rounded-xl">
+                <p className="text-sm font-bold text-red-600 mb-2">Total Despesas</p>
+                <p className="text-xl font-bold text-red-600">
+                  R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              {/* Lucro Líquido */}
+              <div className={`text-center p-4 rounded-xl ${lucroLiquido >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                <p className={`text-sm font-bold mb-2 ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>Lucro Líquido</p>
+                <p className={`text-xl font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <div className={`mt-2 p-2 rounded-lg ${lucroLiquido >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <p className={`text-xs font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    Margem: {((lucroLiquido / totalVendasCategoria) * 100).toFixed(1)}%
                   </p>
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                <div className={`text-center p-4 rounded-lg ${lucroLiquido >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                  <p className="text-xs text-gray-600 mb-1">Status</p>
-                  <p className={`text-lg font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+
+              {/* Status */}
+              <div className={`text-center p-4 rounded-xl ${lucroLiquido >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                <p className={`text-sm font-bold mb-2 ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>Status</p>
+                <div className={`inline-flex items-center px-3 py-2 rounded-lg ${lucroLiquido >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <span className={`text-sm font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {lucroLiquido >= 0 ? '📈 Positivo' : '📉 Negativo'}
-                  </p>
+                  </span>
                 </div>
               </div>
             </div>
