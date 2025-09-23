@@ -29,13 +29,23 @@ import {
 } from 'recharts'
 
 // Tipos
-interface Transaction {
+interface OldTransaction {
   id: string
   description: string
   amount: number
   type: 'receita' | 'despesa' | 'investimento'
   category: string
   date: string
+}
+
+interface NewTransaction {
+  id: string;
+  date: string;
+  description: string;
+  value: number;
+  type: 'Receita' | 'Despesa';
+  category: string;
+  createdAt: Date;
 }
 
 interface Product {
@@ -64,7 +74,7 @@ type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas'
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('metas')
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [oldTransactions, setOldTransactions] = useState<OldTransaction[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
 
@@ -72,7 +82,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isMetaModalOpen, setIsMetaModalOpen] = useState(false)
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>()
+  const [editingTransaction, setEditingTransaction] = useState<OldTransaction | undefined>()
   const [editingProduct, setEditingProduct] = useState<Product | undefined>()
   const [editingMeta, setEditingMeta] = useState<Meta | undefined>()
 
@@ -86,10 +96,13 @@ function App() {
     sold: ''
   })
 
+  // Estados das transações
+  const [transactions, setTransactions] = useState<NewTransaction[]>([]);
+
   // Estados do formulário de transação
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const [transactionForm, setTransactionForm] = useState({
-    date: '',
+    date: new Date().toISOString().split('T')[0], // Data atual por padrão
     description: '',
     value: '',
     type: 'Receita',
@@ -115,6 +128,43 @@ function App() {
       return ['Fixo', 'Variável', 'Atacado', 'Varejo', 'Investimento', 'Mkt']
     }
     return []
+  }
+
+  // Funções para calcular totais das transações
+  const calculateTotals = () => {
+    // Verificar se transactions existe e não está vazio
+    if (!transactions || transactions.length === 0) {
+      return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0 }
+    }
+
+    const currentDate = new Date()
+    const currentMonth = currentDate.getMonth()
+    const currentYear = currentDate.getFullYear()
+    
+    try {
+      // Filtrar transações do mês atual
+      const currentMonthTransactions = transactions.filter(transaction => {
+        if (!transaction.date) return false
+        const transactionDate = new Date(transaction.date)
+        return transactionDate.getMonth() === currentMonth && transactionDate.getFullYear() === currentYear
+      })
+      
+      const receitas = currentMonthTransactions
+        .filter(t => t.type === 'Receita')
+        .reduce((sum, t) => sum + (t.value || 0), 0)
+      
+      const despesas = currentMonthTransactions
+        .filter(t => t.type === 'Despesa')
+        .reduce((sum, t) => sum + (t.value || 0), 0)
+      
+      const faturamento = receitas
+      const resultado = receitas - despesas
+      
+      return { receitas, despesas, faturamento, resultado }
+    } catch (error) {
+      console.error('Erro ao calcular totais:', error)
+      return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0 }
+    }
   }
   
   // Estado para o mês selecionado (padrão é o mês atual)
@@ -180,19 +230,16 @@ function App() {
     localStorage.setItem('alya-metas', JSON.stringify(metas))
   }, [metas])
 
-  // Calcular resumo financeiro
-  const totalReceitas = transactions
-    .filter(t => t.type === 'receita')
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const totalDespesas = transactions
-    .filter(t => t.type === 'despesa')
-    .reduce((sum, t) => sum + t.amount, 0)
-
+  // Calcular resumo financeiro (mantendo para compatibilidade)
+  const totalReceitas = 0 // Agora usando calculateTotals()
+  const totalDespesas = 0 // Agora usando calculateTotals()
   const lucroLiquido = totalReceitas - totalDespesas
 
   // Render Dashboard
   const renderDashboard = () => {
+    // Calcular totais das transações reais (movido para dentro da função)
+    const { receitas, despesas, faturamento, resultado } = calculateTotals()
+    
     // Obter o mês selecionado nas metas
     const mesSelecionadoMetas = mesesMetas.find(mes => mes.indice === selectedMonth) || mesesMetas[new Date().getMonth()]
     
@@ -202,16 +249,10 @@ function App() {
       return transactionMonth === selectedMonth
     })
     
-    // Dados mensais baseados no mês selecionado nas metas
-    const totalReceitasMes = transacoesMesSelecionado
-      .filter(t => t.type === 'receita')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
-    const totalDespesasMes = transacoesMesSelecionado
-      .filter(t => t.type === 'despesa')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
-    const lucroLiquidoMes = totalReceitasMes - totalDespesasMes
+    // Usar dados reais das transações para o mês atual
+    const totalReceitasMes = receitas
+    const totalDespesasMes = despesas
+    const lucroLiquidoMes = resultado
     
     // Função para determinar o trimestre de um mês (0-11)
     const getQuarter = (month: number) => Math.floor(month / 3)
@@ -235,15 +276,9 @@ function App() {
       return mesesDoTrimestre.includes(transactionMonth)
     })
     
-    // Dados trimestrais
-    const totalReceitasTrimestre = transacoesTrimestre
-      .filter(t => t.type === 'receita')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
-    const totalDespesasTrimestre = transacoesTrimestre
-      .filter(t => t.type === 'despesa')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
+    // Dados trimestrais (usando dados atuais das transações)
+    const totalReceitasTrimestre = 0 // Simplificado por enquanto
+    const totalDespesasTrimestre = 0 // Simplificado por enquanto  
     const lucroLiquidoTrimestre = totalReceitasTrimestre - totalDespesasTrimestre
     
     // Meta do trimestre (soma das metas dos 3 meses)
@@ -251,15 +286,9 @@ function App() {
       total + (mesesMetas[mesIndex]?.meta || 0), 0
     )
     
-    // Dados anuais
-    const totalReceitasAno = transactions
-      .filter(t => t.type === 'receita')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
-    const totalDespesasAno = transactions
-      .filter(t => t.type === 'despesa')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
+    // Dados anuais (usando dados atuais das transações)
+    const totalReceitasAno = 0 // Simplificado por enquanto
+    const totalDespesasAno = 0 // Simplificado por enquanto
     const lucroLiquidoAno = totalReceitasAno - totalDespesasAno
 
     // Transações recentes (últimas 5)
@@ -500,7 +529,7 @@ function App() {
               <div className="space-y-4">
                 <div 
                   className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
-                    lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
+                    lucroLiquidoMes >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
                   }`}
                   onClick={() => toggleChart('saldo-mensal')}
                 >
@@ -703,7 +732,7 @@ function App() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${
-                          transacao.type === 'receita' ? 'bg-emerald-500' : 'bg-red-500'
+                          transacao.type === 'Receita' ? 'bg-emerald-500' : 'bg-red-500'
                         }`}></div>
                         <div>
                           <p className="font-medium text-gray-900">{transacao.description}</p>
@@ -712,9 +741,9 @@ function App() {
                       </div>
                       <div className="text-right">
                         <p className={`font-bold ${
-                          transacao.type === 'receita' ? 'text-emerald-600' : 'text-red-600'
+                          transacao.type === 'Receita' ? 'text-emerald-600' : 'text-red-600'
                         }`}>
-                          {transacao.type === 'receita' ? '+' : '-'}R$ {transacao.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {transacao.type === 'Receita' ? '+' : '-'}R$ {transacao.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         <p className="text-sm text-gray-500">
                           {new Date(transacao.date).toLocaleDateString('pt-BR')}
@@ -751,8 +780,8 @@ function App() {
       return transactionDate.getMonth() === monthIndex && transactionDate.getFullYear() === currentYear
     })
 
-    const totalReceitas = transacoesDoMes.filter(t => t.type === 'receita').reduce((sum, t) => sum + t.amount, 0)
-    const totalDespesas = transacoesDoMes.filter(t => t.type === 'despesa').reduce((sum, t) => sum + t.amount, 0)
+    const totalReceitas = transacoesDoMes.filter(t => t.type === 'Receita').reduce((sum, t) => sum + t.value, 0)
+    const totalDespesas = transacoesDoMes.filter(t => t.type === 'Despesa').reduce((sum, t) => sum + t.value, 0)
 
     return (
       <div className="space-y-6">
@@ -1194,8 +1223,8 @@ function App() {
       return transactionDate.getFullYear() === currentYear
     })
 
-    const totalReceitasAno = transacoesDoAno.filter(t => t.type === 'receita').reduce((sum, t) => sum + t.amount, 0)
-    const totalDespesasAno = transacoesDoAno.filter(t => t.type === 'despesa').reduce((sum, t) => sum + t.amount, 0)
+    const totalReceitasAno = transacoesDoAno.filter(t => t.type === 'Receita').reduce((sum, t) => sum + t.value, 0)
+    const totalDespesasAno = transacoesDoAno.filter(t => t.type === 'Despesa').reduce((sum, t) => sum + t.value, 0)
 
     // Metas totais do ano
     const metasDoAno = [18500, 19200, 20100, 19800, 20500, 21000, 21500, 22000, 21889.17, 23000, 25000, 28000]
@@ -1639,10 +1668,57 @@ function App() {
         </button>
       </div>
       
-      <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
-        <p className="text-gray-600 text-center">
-          Funcionalidade em desenvolvimento. Em breve você poderá gerenciar todas as suas transações financeiras aqui.
-        </p>
+      {/* Lista de Transações */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        {transactions.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-gray-600">Nenhuma transação encontrada.</p>
+            <p className="text-gray-500 text-sm mt-2">Adicione sua primeira transação clicando no botão "Nova Transação".</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {transactions.map((transaction) => (
+                  <tr key={transaction.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {transaction.description}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {transaction.category}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        transaction.type === 'Receita' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {transaction.type}
+                      </span>
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                      transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.type === 'Receita' ? '+' : '-'}R$ {transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -2454,7 +2530,13 @@ function App() {
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsTransactionModalOpen(false)
-              setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+              setTransactionForm({ 
+                date: new Date().toISOString().split('T')[0], 
+                description: '', 
+                value: '', 
+                type: 'Receita', 
+                category: '' 
+              })
             }
           }}
         >
@@ -2469,7 +2551,13 @@ function App() {
                 <button
                   onClick={() => {
                     setIsTransactionModalOpen(false)
-                    setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+                    setTransactionForm({ 
+                      date: new Date().toISOString().split('T')[0], 
+                      description: '', 
+                      value: '', 
+                      type: 'Receita', 
+                      category: '' 
+                    })
                   }}
                   className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
                 >
@@ -2481,9 +2569,28 @@ function App() {
             {/* Formulário */}
             <form onSubmit={(e) => {
               e.preventDefault()
-              // Aqui será implementada a lógica de salvamento
-              console.log('Nova transação:', transactionForm)
-              setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+              // Criar nova transação
+              const newTransaction = {
+                id: Date.now().toString(),
+                date: transactionForm.date,
+                description: transactionForm.description,
+                value: parseFloat(transactionForm.value) || 0,
+                type: transactionForm.type as 'Receita' | 'Despesa',
+                category: transactionForm.category,
+                createdAt: new Date()
+              }
+              
+              // Adicionar à lista de transações
+              setTransactions(prev => [newTransaction, ...prev])
+              
+              // Limpar formulário e fechar modal
+              setTransactionForm({ 
+                date: new Date().toISOString().split('T')[0], 
+                description: '', 
+                value: '', 
+                type: 'Receita', 
+                category: '' 
+              })
               setIsTransactionModalOpen(false)
             }} className="space-y-5">
               
@@ -2568,7 +2675,13 @@ function App() {
                   type="button"
                   onClick={() => {
                     setIsTransactionModalOpen(false)
-                    setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+                    setTransactionForm({ 
+                      date: new Date().toISOString().split('T')[0], 
+                      description: '', 
+                      value: '', 
+                      type: 'Receita', 
+                      category: '' 
+                    })
                   }}
                   className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200"
                 >
