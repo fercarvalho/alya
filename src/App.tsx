@@ -80,6 +80,22 @@ function App() {
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
   const [expandedCharts, setExpandedCharts] = useState<string[]>([])
 
+  // Definição das metas mensais (centralizada)
+  const mesesMetas = [
+    { nome: 'JANEIRO', indice: 0, meta: 18500.00 },
+    { nome: 'FEVEREIRO', indice: 1, meta: 19200.00 },
+    { nome: 'MARÇO', indice: 2, meta: 20100.00 },
+    { nome: 'ABRIL', indice: 3, meta: 19800.00 },
+    { nome: 'MAIO', indice: 4, meta: 20500.00 },
+    { nome: 'JUNHO', indice: 5, meta: 21000.00 },
+    { nome: 'JULHO', indice: 6, meta: 21500.00 },
+    { nome: 'AGOSTO', indice: 7, meta: 22000.00 },
+    { nome: 'SETEMBRO', indice: 8, meta: 21889.17 },
+    { nome: 'OUTUBRO', indice: 9, meta: 23000.00 },
+    { nome: 'NOVEMBRO', indice: 10, meta: 25000.00 },
+    { nome: 'DEZEMBRO', indice: 11, meta: 28000.00 }
+  ]
+
   // Função para alternar gráficos
   const toggleChart = (chartId: string) => {
     setExpandedCharts(prev => 
@@ -126,6 +142,64 @@ function App() {
 
   // Render Dashboard
   const renderDashboard = () => {
+    // Obter o mês selecionado nas metas
+    const mesSelecionadoMetas = mesesMetas.find(mes => mes.indice === selectedMonth) || mesesMetas[new Date().getMonth()]
+    
+    // Filtrar transações do mês selecionado
+    const transacoesMesSelecionado = transactions.filter(t => {
+      const transactionMonth = new Date(t.date).getMonth()
+      return transactionMonth === selectedMonth
+    })
+    
+    // Dados mensais baseados no mês selecionado nas metas
+    const totalReceitasMes = transacoesMesSelecionado
+      .filter(t => t.type === 'receita')
+      .reduce((sum, t) => sum + t.amount, 0)
+    
+    const totalDespesasMes = transacoesMesSelecionado
+      .filter(t => t.type === 'despesa')
+      .reduce((sum, t) => sum + t.amount, 0)
+    
+    const lucroLiquidoMes = totalReceitasMes - totalDespesasMes
+    
+    // Função para determinar o trimestre de um mês (0-11)
+    const getQuarter = (month: number) => Math.floor(month / 3)
+    
+    // Determinar trimestre atual baseado no mês selecionado
+    const trimestreAtual = getQuarter(selectedMonth)
+    const mesesDoTrimestre = [
+      trimestreAtual * 3,     // Primeiro mês do trimestre
+      trimestreAtual * 3 + 1, // Segundo mês do trimestre
+      trimestreAtual * 3 + 2  // Terceiro mês do trimestre
+    ]
+    
+    // Nomes dos trimestres
+    const nomesTrimestres = [
+      'Q1 (Jan-Mar)', 'Q2 (Abr-Jun)', 'Q3 (Jul-Set)', 'Q4 (Out-Dez)'
+    ]
+    
+    // Filtrar transações do trimestre atual
+    const transacoesTrimestre = transactions.filter(t => {
+      const transactionMonth = new Date(t.date).getMonth()
+      return mesesDoTrimestre.includes(transactionMonth)
+    })
+    
+    // Dados trimestrais
+    const totalReceitasTrimestre = transacoesTrimestre
+      .filter(t => t.type === 'receita')
+      .reduce((sum, t) => sum + t.amount, 0)
+    
+    const totalDespesasTrimestre = transacoesTrimestre
+      .filter(t => t.type === 'despesa')
+      .reduce((sum, t) => sum + t.amount, 0)
+    
+    const lucroLiquidoTrimestre = totalReceitasTrimestre - totalDespesasTrimestre
+    
+    // Meta do trimestre (soma das metas dos 3 meses)
+    const metaTrimestre = mesesDoTrimestre.reduce((total, mesIndex) => 
+      total + (mesesMetas[mesIndex]?.meta || 0), 0
+    )
+    
     // Dados anuais
     const totalReceitasAno = transactions
       .filter(t => t.type === 'receita')
@@ -142,10 +216,16 @@ function App() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5)
 
-    // Dados para gráficos
+    // Dados para gráficos mensais (baseados no mês selecionado nas metas)
     const pieChartData = [
-      { name: 'Receitas', value: totalReceitas, color: '#22c55e' },
-      { name: 'Despesas', value: totalDespesas, color: '#ef4444' }
+      { name: 'Receitas', value: totalReceitasMes, color: '#22c55e' },
+      { name: 'Despesas', value: totalDespesasMes, color: '#ef4444' }
+    ]
+
+    // Dados para gráficos trimestrais
+    const pieChartDataTrimestre = [
+      { name: 'Receitas', value: totalReceitasTrimestre, color: '#06b6d4' },
+      { name: 'Despesas', value: totalDespesasTrimestre, color: '#f97316' }
     ]
 
     const pieChartDataAnual = [
@@ -153,30 +233,20 @@ function App() {
       { name: 'Despesas Anuais', value: totalDespesasAno, color: '#dc2626' }
     ]
 
-    // Dados para comparação com metas (mes atual vs meta)
-    const meses = [
-      { nome: 'JANEIRO', indice: 0, meta: 18500.00 },
-      { nome: 'FEVEREIRO', indice: 1, meta: 19200.00 },
-      { nome: 'MARÇO', indice: 2, meta: 20100.00 },
-      { nome: 'ABRIL', indice: 3, meta: 19800.00 },
-      { nome: 'MAIO', indice: 4, meta: 20500.00 },
-      { nome: 'JUNHO', indice: 5, meta: 21000.00 },
-      { nome: 'JULHO', indice: 6, meta: 21500.00 },
-      { nome: 'AGOSTO', indice: 7, meta: 22000.00 },
-      { nome: 'SETEMBRO', indice: 8, meta: 21889.17 },
-      { nome: 'OUTUBRO', indice: 9, meta: 23000.00 },
-      { nome: 'NOVEMBRO', indice: 10, meta: 25000.00 },
-      { nome: 'DEZEMBRO', indice: 11, meta: 28000.00 }
-    ]
-    
-    const mesAtual = meses[new Date().getMonth()]
+    // Dados para comparação com metas (mês selecionado vs meta)
     const barChartData = [
-      { name: 'Meta', value: mesAtual.meta, color: '#f59e0b' },
-      { name: 'Real', value: lucroLiquido, color: lucroLiquido >= mesAtual.meta ? '#22c55e' : '#ef4444' }
+      { name: 'Meta', value: mesSelecionadoMetas.meta, color: '#f59e0b' },
+      { name: 'Real', value: lucroLiquidoMes, color: lucroLiquidoMes >= mesSelecionadoMetas.meta ? '#22c55e' : '#ef4444' }
+    ]
+
+    // Dados para comparação trimestral
+    const barChartDataTrimestre = [
+      { name: 'Meta', value: metaTrimestre, color: '#f59e0b' },
+      { name: 'Real', value: lucroLiquidoTrimestre, color: lucroLiquidoTrimestre >= metaTrimestre ? '#22c55e' : '#ef4444' }
     ]
 
     // Meta anual (soma de todas as metas mensais)
-    const metaAnual = meses.reduce((total, mes) => total + mes.meta, 0)
+    const metaAnual = mesesMetas.reduce((total, mes) => total + mes.meta, 0)
     const barChartDataAnual = [
       { name: 'Meta Anual', value: metaAnual, color: '#f59e0b' },
       { name: 'Real Anual', value: lucroLiquidoAno, color: lucroLiquidoAno >= metaAnual ? '#22c55e' : '#ef4444' }
@@ -326,6 +396,9 @@ function App() {
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
             <PieChart className="w-6 h-6 text-gray-600" />
             Mês Atual
+            <span className="text-lg font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+              {mesSelecionadoMetas.nome}
+            </span>
           </h2>
           
           <div className="space-y-4">
@@ -343,7 +416,7 @@ function App() {
                     <div>
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
                       <p className="text-2xl font-bold text-white mt-1">
-                        R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {totalReceitasMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
@@ -364,7 +437,7 @@ function App() {
                     <div>
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
                       <p className="text-2xl font-bold text-white mt-1">
-                        R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {totalDespesasMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
@@ -387,14 +460,94 @@ function App() {
                     <div>
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
                       <p className={`text-2xl font-bold mt-1 ${
-                        lucroLiquido >= 0 ? 'text-green-900' : 'text-red-900'
+                        lucroLiquidoMes >= 0 ? 'text-green-900' : 'text-red-900'
                       }`}>
-                        R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {lucroLiquidoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('saldo-mensal') && renderBarChart(barChartData, `Comparação: Meta vs Real (${mesAtual.nome})`)}
+                {expandedCharts.includes('saldo-mensal') && renderBarChart(barChartData, `Comparação: Meta vs Real (${mesSelecionadoMetas.nome})`)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Seção Trimestre */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-cyan-800 flex items-center gap-3">
+            <PieChart className="w-6 h-6 text-cyan-600" />
+            Trimestre Atual
+            <span className="text-lg font-medium text-cyan-600 bg-cyan-50 px-3 py-1 rounded-lg border border-cyan-200">
+              {nomesTrimestres[trimestreAtual]}
+            </span>
+          </h2>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Card Receitas Trimestrais */}
+              <div className="space-y-4">
+                <div 
+                  className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  onClick={() => toggleChart('receitas-trimestre')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
+                      <p className="text-2xl font-bold text-white mt-1">
+                        R$ {totalReceitasTrimestre.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {expandedCharts.includes('receitas-trimestre') && renderPieChart(pieChartDataTrimestre, 'Distribuição Trimestral: Receitas vs Despesas')}
+              </div>
+
+              {/* Card Despesas Trimestrais */}
+              <div className="space-y-4">
+                <div 
+                  className="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  onClick={() => toggleChart('despesas-trimestre')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <TrendingDown className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
+                      <p className="text-2xl font-bold text-white mt-1">
+                        R$ {totalDespesasTrimestre.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {expandedCharts.includes('despesas-trimestre') && renderPieChart(pieChartDataTrimestre, 'Distribuição Trimestral: Receitas vs Despesas')}
+              </div>
+
+              {/* Card Saldo Trimestral */}
+              <div className="space-y-4">
+                <div 
+                  className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  onClick={() => toggleChart('saldo-trimestre')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <BarChart3 className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
+                      <p className={`text-2xl font-bold mt-1 ${
+                        lucroLiquidoTrimestre >= 0 ? 'text-green-900' : 'text-red-900'
+                      }`}>
+                        R$ {lucroLiquidoTrimestre.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {expandedCharts.includes('saldo-trimestre') && renderBarChart(barChartDataTrimestre, `Comparação Trimestral: Meta vs Real (${nomesTrimestres[trimestreAtual]})`)}
               </div>
             </div>
           </div>
@@ -779,7 +932,7 @@ function App() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
-              <h3 className="text-lg font-bold text-red-800 mb-4">Despesas Totais</h3>
+              <h3 className="text-lg font-bold text-red-800 mb-4">Despesas TOTAL</h3>
               <div className="text-2xl font-bold text-red-900 mb-4">
                 R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -1234,7 +1387,7 @@ function App() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-red-100 to-red-200 p-8 rounded-2xl border-2 border-red-300 shadow-xl">
-              <h3 className="text-xl font-bold text-red-900 mb-6">Despesas Totais Anuais</h3>
+              <h3 className="text-xl font-bold text-red-900 mb-6">Despesas TOTAL Anuais</h3>
               <div className="text-3xl font-bold text-red-900 mb-4">
                 R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -1495,23 +1648,8 @@ function App() {
 
   // Render Metas
   const renderMetas = () => {
-    const meses = [
-      { nome: 'JANEIRO', indice: 0, meta: 18500.00 },
-      { nome: 'FEVEREIRO', indice: 1, meta: 19200.00 },
-      { nome: 'MARÇO', indice: 2, meta: 20100.00 },
-      { nome: 'ABRIL', indice: 3, meta: 19800.00 },
-      { nome: 'MAIO', indice: 4, meta: 20500.00 },
-      { nome: 'JUNHO', indice: 5, meta: 21000.00 },
-      { nome: 'JULHO', indice: 6, meta: 21500.00 },
-      { nome: 'AGOSTO', indice: 7, meta: 22000.00 },
-      { nome: 'SETEMBRO', indice: 8, meta: 21889.17 },
-      { nome: 'OUTUBRO', indice: 9, meta: 23000.00 },
-      { nome: 'NOVEMBRO', indice: 10, meta: 25000.00 },
-      { nome: 'DEZEMBRO', indice: 11, meta: 28000.00 }
-    ]
-
     // Encontrar o mês selecionado na lista
-    const mesSelecionado = meses.find(mes => mes.indice === selectedMonth)
+    const mesSelecionado = mesesMetas.find(mes => mes.indice === selectedMonth)
 
     return (
       <div className="space-y-6">
@@ -1549,7 +1687,7 @@ function App() {
                   paddingRight: '3rem'
                 }}
               >
-                {meses.map((mes) => (
+                {mesesMetas.map((mes) => (
                   <option key={mes.indice} value={mes.indice} className="text-gray-800 bg-white normal-case text-lg font-normal">
                     {mes.nome} - 2025
                   </option>
@@ -1566,7 +1704,7 @@ function App() {
         {renderTotalAno()}
 
         {/* Renderizar todos os 12 meses em ordem normal */}
-        {meses.map((mes) => 
+        {mesesMetas.map((mes) => 
           renderMonth(mes.nome, mes.indice, mes.meta, 31970.50)
         )}
       </div>
