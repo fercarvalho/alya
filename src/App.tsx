@@ -14,6 +14,19 @@ import {
   TrendingDown,
   ArrowUpCircle
 } from 'lucide-react'
+import { 
+  PieChart as RechartsPieChart, 
+  Pie,
+  Cell, 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend 
+} from 'recharts'
 
 // Tipos
 interface Transaction {
@@ -65,6 +78,7 @@ function App() {
   
   // Estado para o mês selecionado (padrão é o mês atual)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
+  const [expandedChart, setExpandedChart] = useState<string | null>(null)
 
   // Carregar dados do localStorage
   useEffect(() => {
@@ -119,6 +133,85 @@ function App() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5)
 
+    // Dados para gráficos
+    const pieChartData = [
+      { name: 'Receitas', value: totalReceitas, color: '#22c55e' },
+      { name: 'Despesas', value: totalDespesas, color: '#ef4444' }
+    ]
+
+    const pieChartDataAnual = [
+      { name: 'Receitas Anuais', value: totalReceitasAno, color: '#16a34a' },
+      { name: 'Despesas Anuais', value: totalDespesasAno, color: '#dc2626' }
+    ]
+
+    // Dados para comparação com metas (mes atual vs meta)
+    const meses = [
+      { nome: 'JANEIRO', indice: 0, meta: 18500.00 },
+      { nome: 'FEVEREIRO', indice: 1, meta: 19200.00 },
+      { nome: 'MARÇO', indice: 2, meta: 20100.00 },
+      { nome: 'ABRIL', indice: 3, meta: 19800.00 },
+      { nome: 'MAIO', indice: 4, meta: 20500.00 },
+      { nome: 'JUNHO', indice: 5, meta: 21000.00 },
+      { nome: 'JULHO', indice: 6, meta: 21500.00 },
+      { nome: 'AGOSTO', indice: 7, meta: 22000.00 },
+      { nome: 'SETEMBRO', indice: 8, meta: 21889.17 },
+      { nome: 'OUTUBRO', indice: 9, meta: 23000.00 },
+      { nome: 'NOVEMBRO', indice: 10, meta: 25000.00 },
+      { nome: 'DEZEMBRO', indice: 11, meta: 28000.00 }
+    ]
+    
+    const mesAtual = meses[new Date().getMonth()]
+    const barChartData = [
+      { name: 'Meta', value: mesAtual.meta, color: '#f59e0b' },
+      { name: 'Real', value: lucroLiquido, color: lucroLiquido >= mesAtual.meta ? '#22c55e' : '#ef4444' }
+    ]
+
+    // Componente de gráfico de pizza
+    const renderPieChart = (data: any[], title: string) => (
+      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <RechartsPieChart>
+            <Pie
+              data={data} 
+              cx="50%" 
+              cy="50%" 
+              innerRadius={60} 
+              outerRadius={120} 
+              paddingAngle={5} 
+              dataKey="value"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+            <Legend />
+          </RechartsPieChart>
+        </ResponsiveContainer>
+      </div>
+    )
+
+    // Componente de gráfico de barras para comparação com metas
+    const renderBarChart = (data: any[], title: string) => (
+      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis tickFormatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`} />
+            <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+            <Bar dataKey="value" fill="#8884d8">
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )
+
     return (
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -142,52 +235,68 @@ function App() {
             Mês Atual
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-green-500 p-6 rounded-2xl shadow-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div 
+                className="bg-green-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                onClick={() => setExpandedChart(expandedChart === 'receitas-mensal' ? null : 'receitas-mensal')}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
-                  <p className="text-2xl font-bold text-white mt-1">
-                    R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
+              </div>
+
+              <div 
+                className="bg-red-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                onClick={() => setExpandedChart(expandedChart === 'despesas-mensal' ? null : 'despesas-mensal')}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <TrendingDown className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
+                  lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
+                }`}
+                onClick={() => setExpandedChart(expandedChart === 'saldo-mensal' ? null : 'saldo-mensal')}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
+                    <p className={`text-2xl font-bold mt-1 ${
+                      lucroLiquido >= 0 ? 'text-green-900' : 'text-red-900'
+                    }`}>
+                      R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-red-500 p-6 rounded-2xl shadow-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <TrendingDown className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
-                  <p className="text-2xl font-bold text-white mt-1">
-                    R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`p-6 rounded-2xl shadow-lg ${
-              lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
-            }`}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
-                  <p className={`text-2xl font-bold mt-1 ${
-                    lucroLiquido >= 0 ? 'text-green-900' : 'text-red-900'
-                  }`}>
-                    R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Gráficos condicionais para o mês atual */}
+            {expandedChart === 'receitas-mensal' && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
+            {expandedChart === 'despesas-mensal' && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
+            {expandedChart === 'saldo-mensal' && renderBarChart(barChartData, `Comparação: Meta vs Real (${mesAtual.nome})`)}
           </div>
         </div>
 
@@ -198,52 +307,68 @@ function App() {
             Ano
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-green-600 p-6 rounded-2xl shadow-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div 
+                className="bg-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                onClick={() => setExpandedChart(expandedChart === 'receitas-anual' ? null : 'receitas-anual')}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas Anuais</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas Anuais</p>
-                  <p className="text-2xl font-bold text-white mt-1">
-                    R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
+              </div>
+
+              <div 
+                className="bg-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                onClick={() => setExpandedChart(expandedChart === 'despesas-anual' ? null : 'despesas-anual')}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <TrendingDown className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas Anuais</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
+                  lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-yellow-600'
+                }`}
+                onClick={() => setExpandedChart(expandedChart === 'saldo-anual' ? null : 'saldo-anual')}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
+                    <p className={`text-2xl font-bold mt-1 ${
+                      lucroLiquidoAno >= 0 ? 'text-green-900' : 'text-red-900'
+                    }`}>
+                      R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-red-600 p-6 rounded-2xl shadow-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <TrendingDown className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas Anuais</p>
-                  <p className="text-2xl font-bold text-white mt-1">
-                    R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`p-6 rounded-2xl shadow-lg ${
-              lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-yellow-600'
-            }`}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
-                  <p className={`text-2xl font-bold mt-1 ${
-                    lucroLiquidoAno >= 0 ? 'text-green-900' : 'text-red-900'
-                  }`}>
-                    R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Gráficos condicionais para dados anuais */}
+            {expandedChart === 'receitas-anual' && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
+            {expandedChart === 'despesas-anual' && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
+            {expandedChart === 'saldo-anual' && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
           </div>
         </div>
 
