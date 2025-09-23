@@ -1710,42 +1710,86 @@ function App() {
             
             {/* Card Vendas por Categoria */}
             <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Vendas por Categoria</h3>
-              <div className="space-y-3">
-                {dados.vendasPorCategoria.map((item: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">{item.nome}</span>
-                    <span className="font-bold" style={{ color: item.cor }}>
-                      R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                ))}
-                <div className="border-t pt-3 mt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-base font-bold text-gray-800">Total</span>
-                    <span className="text-base font-bold text-green-600">
-                      R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
+              {/* Seção Vendas por Categoria */}
+              <div className="mb-8">
+                <div className="flex items-center mb-6">
+                  <span className="text-gray-400 text-lg mr-3">📈</span>
+                  <h3 className="text-lg font-bold text-gray-800">Vendas por Categoria</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  {dados.vendasPorCategoria.map((item: any, index: number) => {
+                    // Cores baseadas na imagem - tons de verde claro para categorias vazias
+                    const backgroundColors = ['bg-green-100', 'bg-green-100', 'bg-green-100'];
+                    const labelBgColors = ['bg-green-200', 'bg-green-200', 'bg-green-200'];
+                    const textColors = ['text-green-800', 'text-green-800', 'text-green-800'];
+                    
+                    return (
+                      <div key={index} className={`${backgroundColors[index]} p-4 rounded-xl`}>
+                        <div className="flex justify-between items-center">
+                          <span className={`${labelBgColors[index]} ${textColors[index]} font-medium px-3 py-2 rounded-lg`}>
+                            {item.nome}
+                          </span>
+                          <span className="font-bold text-gray-500">
+                            R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Total Vendas por Categoria */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="bg-green-200 p-4 rounded-xl">
+                    <div className="flex justify-between items-center">
+                      <span className="bg-green-300 text-green-800 font-bold px-3 py-2 rounded-lg">
+                        Total Vendas por Categoria
+                      </span>
+                      <span className="font-bold text-green-800 text-lg">
+                        R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
               
-              {/* Seção Vendas por Produto (metade inferior) */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-md font-bold text-gray-700 mb-3">Vendas por Produto</h4>
+              {/* Seção Vendas por Tipo de Produto */}
+              <div>
+                <div className="mb-4">
+                  <h4 className="text-md font-bold text-gray-700">Vendas por Tipo de Produto</h4>
+                </div>
+                
                 <div className="space-y-3">
-                  {dados.vendasPorProduto.map((item: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600">{item.nome}</span>
-                      <span className="font-bold" style={{ color: item.cor }}>
-                        R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="border-t pt-3 mt-4">
+                  {dados.vendasPorProduto.map((item: any, index: number) => {
+                    // Cores baseadas na imagem - tons de azul para produtos
+                    const backgroundColors = ['bg-blue-100', 'bg-blue-100', 'bg-blue-100'];
+                    const labelBgColors = ['bg-blue-200', 'bg-blue-200', 'bg-blue-200'];
+                    const textColors = ['text-blue-800', 'text-blue-800', 'text-blue-800'];
+                    
+                    return (
+                      <div key={index} className={`${backgroundColors[index]} p-3 rounded-lg`}>
+                        <div className="flex justify-between items-center">
+                          <span className={`${labelBgColors[index]} ${textColors[index]} font-medium text-sm px-2 py-1 rounded`}>
+                            {item.nome}
+                          </span>
+                          <span className="font-bold text-blue-900 text-sm">
+                            R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Total Vendas por Produto */}
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <div className="bg-blue-200 p-3 rounded-lg">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-gray-700">Subtotal</span>
-                      <span className="text-sm font-bold text-blue-600">
+                      <span className="bg-blue-300 text-blue-800 font-bold text-sm px-2 py-1 rounded">
+                        Total por Produto
+                      </span>
+                      <span className="font-bold text-blue-800 text-sm">
                         R$ {totalVendasProduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -1756,20 +1800,37 @@ function App() {
 
             {/* Card Despesas por Categoria */}
             <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Despesas por Categoria</h3>
+              <div className="flex items-center mb-6">
+                <span className="text-gray-400 text-lg mr-3">💸</span>
+                <h3 className="text-lg font-bold text-gray-800">Despesas por Categoria</h3>
+              </div>
+              
               <div className="space-y-3">
-                {dados.despesasPorCategoria.map((item: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">{item.nome}</span>
-                    <span className="font-bold" style={{ color: item.cor }}>
-                      R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                ))}
-                <div className="border-t pt-3 mt-4">
+                {dados.despesasPorCategoria.map((item: any, index: number) => {
+                  // Todos os itens com a mesma cor (como Materia Prima na imagem)
+                  return (
+                    <div key={index} className="bg-orange-50 p-4 rounded-xl">
+                      <div className="flex justify-between items-center">
+                        <span className="bg-orange-100 text-orange-700 font-medium px-3 py-2 rounded-lg">
+                          {item.nome}
+                        </span>
+                        <span className="font-bold text-gray-500">
+                          R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Total de Despesas - Mais escuro */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="bg-orange-200 p-4 rounded-xl">
                   <div className="flex justify-between items-center">
-                    <span className="text-base font-bold text-gray-800">Total</span>
-                    <span className="text-base font-bold text-red-600">
+                    <span className="bg-orange-300 text-orange-800 font-bold px-3 py-2 rounded-lg">
+                      Total de Despesas
+                    </span>
+                    <span className="font-bold text-orange-800 text-lg">
                       R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
