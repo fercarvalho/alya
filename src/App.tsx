@@ -647,29 +647,27 @@ function App() {
           <div className="space-y-6 mb-12">
             {/* Dropdown do Mês Selecionado */}
             <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
-              <div className="flex justify-center">
-                <select 
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="px-4 py-2 border border-white/30 rounded-lg bg-white/20 backdrop-blur-sm text-white font-semibold text-lg focus:outline-none focus:ring-2 focus:ring-white/50 hover:bg-white/30 transition-all duration-300"
-                  style={{ 
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
-                    backgroundPosition: 'right 0.5rem center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: '1.5em 1.5em',
-                    paddingRight: '2.5rem'
-                  }}
-                >
-                  {meses.map((mes) => (
-                    <option key={mes.indice} value={mes.indice} className="text-gray-800 bg-white">
-                      {mes.nome} - 2025
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select 
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="w-full text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
+                style={{ 
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
+                  backgroundPosition: 'right 1rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1.2em 1.2em',
+                  paddingRight: '3rem'
+                }}
+              >
+                {meses.map((mes) => (
+                  <option key={mes.indice} value={mes.indice} className="text-gray-800 bg-white normal-case text-lg font-normal">
+                    {mes.nome} - 2025
+                  </option>
+                ))}
+              </select>
             </div>
             
             {/* Conteúdo do Mês */}
