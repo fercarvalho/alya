@@ -175,43 +175,127 @@ function App() {
       { name: 'Real', value: lucroLiquido, color: lucroLiquido >= mesAtual.meta ? '#22c55e' : '#ef4444' }
     ]
 
-    // Componente de gráfico de pizza
-    const renderPieChart = (data: any[], title: string) => (
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <RechartsPieChart>
-            <Pie
-              data={data} 
-              cx="50%" 
-              cy="50%" 
-              innerRadius={60} 
-              outerRadius={120} 
-              paddingAngle={5} 
-              dataKey="value"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
-            <Legend />
-          </RechartsPieChart>
-        </ResponsiveContainer>
-      </div>
-    )
+    // Meta anual (soma de todas as metas mensais)
+    const metaAnual = meses.reduce((total, mes) => total + mes.meta, 0)
+    const barChartDataAnual = [
+      { name: 'Meta Anual', value: metaAnual, color: '#f59e0b' },
+      { name: 'Real Anual', value: lucroLiquidoAno, color: lucroLiquidoAno >= metaAnual ? '#22c55e' : '#ef4444' }
+    ]
+
+    // Componente de gráfico de rosca (donut chart)
+    const renderPieChart = (data: any[], title: string) => {
+      // Se não houver dados ou todos os valores forem 0, exibir rosca cinza
+      const hasData = data.length > 0 && data.some(item => item.value > 0);
+      const displayData = hasData ? data : [{ name: 'Sem dados', value: 100, color: '#e5e7eb' }];
+      
+      return (
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <RechartsPieChart>
+              <Pie
+                data={displayData} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={80} 
+                outerRadius={140} 
+                paddingAngle={hasData ? 8 : 0} 
+                dataKey="value"
+                cornerRadius={hasData ? 10 : 0}
+                stroke="none"
+              >
+                {displayData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              {hasData && (
+                <Tooltip 
+                  formatter={(value: number) => [
+                    `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                    ''
+                  ]}
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+              )}
+              {hasData && (
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  iconType="circle"
+                  wrapperStyle={{
+                    paddingTop: '20px',
+                    fontSize: '14px',
+                    fontWeight: 600
+                  }}
+                />
+              )}
+              {!hasData && (
+                <text 
+                  x="50%" 
+                  y="50%" 
+                  textAnchor="middle" 
+                  dominantBaseline="middle" 
+                  className="fill-gray-400 text-sm font-medium"
+                >
+                  Sem dados disponíveis
+                </text>
+              )}
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
 
     // Componente de gráfico de barras para comparação com metas
     const renderBarChart = (data: any[], title: string) => (
       <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
         <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis tickFormatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`} />
-            <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
-            <Bar dataKey="value" fill="#8884d8">
+        <ResponsiveContainer width="100%" height={350}>
+          <BarChart 
+            data={data}
+            margin={{
+              top: 20,
+              right: 30,
+              left: 20,
+              bottom: 20,
+            }}
+          >
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              stroke="#f0f0f0"
+              vertical={false}
+            />
+            <XAxis 
+              dataKey="name" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#666' }}
+            />
+            <YAxis 
+              tickFormatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#666' }}
+            />
+            <Tooltip 
+              formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e0e0e0',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+              }}
+            />
+            <Bar 
+              dataKey="value" 
+              fill="#8884d8"
+              radius={[8, 8, 0, 0]}
+            >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
@@ -389,7 +473,7 @@ function App() {
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('saldo-anual') && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
+                {expandedCharts.includes('saldo-anual') && renderBarChart(barChartDataAnual, 'Comparação Anual: Meta vs Real')}
               </div>
             </div>
           </div>
