@@ -14,7 +14,10 @@ import {
   PieChart,
   TrendingDown,
   ArrowUpCircle,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { 
   PieChart as RechartsPieChart, 
@@ -78,6 +81,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabType>('metas')
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
+  const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set())
 
   // Estados dos modais
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
@@ -90,6 +95,14 @@ function App() {
     cost: '',
     stock: '',
     sold: ''
+  })
+  const [productFormErrors, setProductFormErrors] = useState({
+    name: false,
+    category: false,
+    price: false,
+    cost: false,
+    stock: false,
+    sold: false
   })
 
   // Estados das transações
@@ -111,6 +124,135 @@ function App() {
     type: 'Receita',
     category: ''
   })
+  const [transactionFormErrors, setTransactionFormErrors] = useState({
+    date: false,
+    description: false,
+    value: false,
+    type: false,
+    category: false
+  })
+  
+  // Estados do calendário personalizado
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const [calendarDate, setCalendarDate] = useState(new Date())
+
+  // Função para fechar modais com ESC
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        // Fechar calendário se estiver aberto
+        if (isCalendarOpen) {
+          setIsCalendarOpen(false)
+          return
+        }
+        
+        // Fechar modal de produto se estiver aberto
+        if (isProductModalOpen) {
+          setIsProductModalOpen(false)
+          setEditingProduct(null)
+          setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+          setProductFormErrors({
+            name: false,
+            category: false,
+            price: false,
+            cost: false,
+            stock: false,
+            sold: false
+          })
+          return
+        }
+        
+        // Fechar modal de transação se estiver aberto
+        if (isTransactionModalOpen) {
+          setIsTransactionModalOpen(false)
+          setEditingTransaction(null)
+          setTransactionForm({ 
+            date: new Date().toISOString().split('T')[0], 
+            description: '', 
+            value: '', 
+            type: 'Receita', 
+            category: '' 
+          })
+          setTransactionFormErrors({
+            date: false,
+            description: false,
+            value: false,
+            type: false,
+            category: false
+          })
+          setIsCalendarOpen(false)
+          return
+        }
+        
+        // Fechar modal de importar/exportar se estiver aberto
+        if (isImportExportModalOpen) {
+          setIsImportExportModalOpen(false)
+          setSelectedFile(null)
+          return
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isCalendarOpen, isProductModalOpen, isTransactionModalOpen, isImportExportModalOpen])
+
+  // Funções para gerenciar o calendário personalizado
+  const formatDateToInput = (date: Date) => {
+    return date.toISOString().split('T')[0]
+  }
+
+  const formatDateToDisplay = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('pt-BR')
+  }
+
+  const handleDateSelect = (date: Date) => {
+    setTransactionForm(prev => ({
+      ...prev,
+      date: formatDateToInput(date)
+    }))
+    setCalendarDate(date)
+    setIsCalendarOpen(false)
+    
+    // Limpar erro do campo quando uma data for selecionada
+    setTransactionFormErrors(prev => ({
+      ...prev,
+      date: false
+    }))
+  }
+
+  const handleCalendarToggle = () => {
+    setIsCalendarOpen(!isCalendarOpen)
+  }
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCalendarDate(prev => {
+      const newDate = new Date(prev)
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1)
+      } else {
+        newDate.setMonth(prev.getMonth() + 1)
+      }
+      return newDate
+    })
+  }
+
+  const goToToday = () => {
+    const today = new Date()
+    setCalendarDate(today)
+    handleDateSelect(today)
+  }
+
+  const clearDate = () => {
+    setTransactionForm(prev => ({
+      ...prev,
+      date: ''
+    }))
+    setIsCalendarOpen(false)
+  }
 
   // Função para gerenciar mudanças no formulário de transação
   const handleTransactionInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -121,6 +263,206 @@ function App() {
       // Reset category when type changes
       ...(name === 'type' ? { category: '' } : {})
     }))
+    
+    // Limpar erro do campo quando o usuário digitar
+    setTransactionFormErrors(prev => ({
+      ...prev,
+      [name]: false
+    }))
+  }
+
+  // Funções para gerenciar seleção de produtos
+  const handleSelectProduct = (productId: string) => {
+    setSelectedProducts(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(productId)) {
+        newSet.delete(productId)
+      } else {
+        newSet.add(productId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAllProducts = () => {
+    if (selectedProducts.size === products.length) {
+      setSelectedProducts(new Set())
+    } else {
+      setSelectedProducts(new Set(products.map(p => p.id)))
+    }
+  }
+
+  const handleDeleteSelectedProducts = () => {
+    if (selectedProducts.size === 0) return
+    
+    const confirmMessage = selectedProducts.size === 1 
+      ? 'Tem certeza que deseja deletar este produto?' 
+      : `Tem certeza que deseja deletar ${selectedProducts.size} produtos?`
+    
+    if (confirm(confirmMessage)) {
+      setProducts(prev => prev.filter(product => !selectedProducts.has(product.id)))
+      setSelectedProducts(new Set())
+    }
+  }
+
+  // Funções para gerenciar seleção de transações
+  const handleSelectTransaction = (transactionId: string) => {
+    setSelectedTransactions(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(transactionId)) {
+        newSet.delete(transactionId)
+      } else {
+        newSet.add(transactionId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAllTransactions = () => {
+    if (selectedTransactions.size === transactions.length) {
+      setSelectedTransactions(new Set())
+    } else {
+      setSelectedTransactions(new Set(transactions.map(t => t.id)))
+    }
+  }
+
+  const handleDeleteSelectedTransactions = () => {
+    if (selectedTransactions.size === 0) return
+    
+    const confirmMessage = selectedTransactions.size === 1 
+      ? 'Tem certeza que deseja deletar esta transação?' 
+      : `Tem certeza que deseja deletar ${selectedTransactions.size} transações?`
+    
+    if (confirm(confirmMessage)) {
+      setTransactions(prev => prev.filter(transaction => !selectedTransactions.has(transaction.id)))
+      setSelectedTransactions(new Set())
+    }
+  }
+
+  // Função para validar formulário de transação
+  const validateTransactionForm = () => {
+    const errors = {
+      date: !transactionForm.date || transactionForm.date.trim() === '',
+      description: !transactionForm.description || transactionForm.description.trim() === '',
+      value: !transactionForm.value || transactionForm.value.trim() === '' || parseFloat(transactionForm.value) <= 0,
+      type: !transactionForm.type || transactionForm.type.trim() === '',
+      category: !transactionForm.category || transactionForm.category.trim() === ''
+    }
+    
+    setTransactionFormErrors(errors)
+    
+    // Verificar se há erros
+    const hasErrors = Object.values(errors).some(error => error)
+    
+    if (hasErrors) {
+      // Não mostrar notificação, apenas marcar os campos com erro visual
+      return false
+    }
+    
+    return true
+  }
+
+  // Função para renderizar o calendário personalizado
+  const renderCustomCalendar = () => {
+    const today = new Date()
+    const currentMonth = calendarDate.getMonth()
+    const currentYear = calendarDate.getFullYear()
+    
+    // Primeiro dia do mês
+    const firstDay = new Date(currentYear, currentMonth, 1)
+    const lastDay = new Date(currentYear, currentMonth + 1, 0)
+    const startDate = new Date(firstDay)
+    startDate.setDate(startDate.getDate() - firstDay.getDay())
+    
+    const days = []
+    const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+    
+    // Gerar dias do calendário
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + i)
+      days.push(date)
+    }
+    
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ]
+    
+    return (
+      <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
+        {/* Header do calendário */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-amber-600" />
+          </button>
+          
+          <h3 className="text-lg font-semibold text-amber-800">
+            {monthNames[currentMonth]} {currentYear}
+          </h3>
+          
+          <button
+            onClick={() => navigateMonth('next')}
+            className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-amber-600" />
+          </button>
+        </div>
+        
+        {/* Dias da semana */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {weekDays.map((day, index) => (
+            <div key={index} className="text-center text-sm font-semibold text-gray-600 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        {/* Dias do calendário */}
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((date, index) => {
+            const isCurrentMonth = date.getMonth() === currentMonth
+            const isToday = date.toDateString() === today.toDateString()
+            const isSelected = transactionForm.date === formatDateToInput(date)
+            
+            return (
+              <button
+                key={index}
+                onClick={() => handleDateSelect(date)}
+                className={`
+                  w-10 h-10 text-sm rounded-lg transition-all duration-200
+                  ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
+                  ${isToday ? 'bg-amber-100 text-amber-800 font-semibold' : ''}
+                  ${isSelected ? 'bg-amber-500 text-white font-semibold' : ''}
+                  ${!isSelected && !isToday ? 'hover:bg-amber-50' : ''}
+                `}
+              >
+                {date.getDate()}
+              </button>
+            )
+          })}
+        </div>
+        
+        {/* Botões de ação */}
+        <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={clearDate}
+            className="flex-1 px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Limpar
+          </button>
+          <button
+            onClick={goToToday}
+            className="flex-1 px-3 py-2 text-sm text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors"
+          >
+            Hoje
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // Função para obter as categorias baseadas no tipo
@@ -156,6 +498,36 @@ function App() {
       ...prev,
       [name]: value
     }))
+    
+    // Limpar erro do campo quando o usuário digitar
+    setProductFormErrors(prev => ({
+      ...prev,
+      [name]: false
+    }))
+  }
+
+  // Função para validar formulário de produto
+  const validateProductForm = () => {
+    const errors = {
+      name: !productForm.name || productForm.name.trim() === '',
+      category: !productForm.category || productForm.category.trim() === '',
+      price: !productForm.price || productForm.price.trim() === '' || parseFloat(productForm.price) <= 0,
+      cost: false, // Não obrigatório
+      stock: false, // Não obrigatório
+      sold: false  // Não obrigatório
+    }
+    
+    setProductFormErrors(errors)
+    
+    // Verificar se há erros apenas nos campos obrigatórios
+    const hasErrors = errors.name || errors.category || errors.price
+    
+    if (hasErrors) {
+      // Não mostrar notificação, apenas marcar os campos com erro visual
+      return false
+    }
+    
+    return true
   }
 
   // Função para abrir modal de edição de produto
@@ -1734,8 +2106,13 @@ function App() {
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
               <div className="grid grid-cols-7 gap-4 items-center text-center">
-                <div>
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Indicador</p>
+                <div className="flex justify-center">
+                  <input
+                    type="checkbox"
+                    checked={transactions.length > 0 && selectedTransactions.size === transactions.length}
+                    onChange={handleSelectAllTransactions}
+                    className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                  />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Data</p>
@@ -1763,11 +2140,14 @@ function App() {
                 index === transactions.length - 1 ? 'border-b-0' : ''
               }`}>
                 <div className="grid grid-cols-7 gap-4 items-center text-center">
-                  {/* Indicador Visual */}
+                  {/* Checkbox */}
                   <div className="flex justify-center">
-                    <div className={`w-3 h-3 rounded-full ${
-                      transaction.type === 'Receita' ? 'bg-green-500' : 'bg-red-500'
-                    }`}></div>
+                    <input
+                      type="checkbox"
+                      checked={selectedTransactions.has(transaction.id)}
+                      onChange={() => handleSelectTransaction(transaction.id)}
+                      className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                    />
                   </div>
                   
                   {/* Data */}
@@ -1835,6 +2215,19 @@ function App() {
                 </div>
               </div>
             ))}
+            
+            {/* Botão de Deletar Selecionados */}
+            {selectedTransactions.size > 0 && (
+              <div className="flex justify-end p-4 bg-red-50 border-t border-red-200">
+                <button
+                  onClick={handleDeleteSelectedTransactions}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Deletar Selecionada{selectedTransactions.size > 1 ? 's' : ''} ({selectedTransactions.size})
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1881,7 +2274,15 @@ function App() {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
-              <div className="grid grid-cols-7 gap-4 items-center text-center">
+              <div className="grid grid-cols-8 gap-4 items-center text-center">
+                <div className="flex justify-center">
+                  <input
+                    type="checkbox"
+                    checked={products.length > 0 && selectedProducts.size === products.length}
+                    onChange={handleSelectAllProducts}
+                    className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                  />
+                </div>
                 <div>
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
                 </div>
@@ -1910,7 +2311,16 @@ function App() {
               <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === products.length - 1 ? 'border-b-0' : ''
               }`}>
-                <div className="grid grid-cols-7 gap-4 items-center text-center">
+                <div className="grid grid-cols-8 gap-4 items-center text-center">
+                  {/* Checkbox */}
+                  <div className="flex justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.has(product.id)}
+                      onChange={() => handleSelectProduct(product.id)}
+                      className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                    />
+                  </div>
                   {/* Nome */}
                   <div>
                     <h3 className="font-semibold text-gray-900 truncate">
@@ -1977,6 +2387,19 @@ function App() {
                 </div>
               </div>
             ))}
+            
+            {/* Botão de Deletar Selecionados */}
+            {selectedProducts.size > 0 && (
+              <div className="flex justify-end p-4 bg-red-50 border-t border-red-200">
+                <button
+                  onClick={handleDeleteSelectedProducts}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Deletar Selecionado{selectedProducts.size > 1 ? 's' : ''} ({selectedProducts.size})
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2598,6 +3021,14 @@ function App() {
               setIsProductModalOpen(false)
               setEditingProduct(null)
               setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+              setProductFormErrors({
+                name: false,
+                category: false,
+                price: false,
+                cost: false,
+                stock: false,
+                sold: false
+              })
             }
           }}
         >
@@ -2614,6 +3045,14 @@ function App() {
                     setIsProductModalOpen(false)
                     setEditingProduct(null)
                     setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+                    setProductFormErrors({
+                      name: false,
+                      category: false,
+                      price: false,
+                      cost: false,
+                      stock: false,
+                      sold: false
+                    })
                   }}
                   className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
                 >
@@ -2625,6 +3064,11 @@ function App() {
             {/* Formulário */}
             <form onSubmit={(e) => {
               e.preventDefault()
+              
+              // Validar formulário antes de prosseguir
+              if (!validateProductForm()) {
+                return
+              }
               
               if (editingProduct) {
                 // Editar produto existente
@@ -2667,7 +3111,7 @@ function App() {
               {/* Nome do Produto */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nome do Produto
+                  Nome do Produto <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -2675,7 +3119,11 @@ function App() {
                   required
                   value={productForm.name}
                   onChange={handleProductInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
+                    productFormErrors.name 
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
                   placeholder="Ex: Vela Aromática Lavanda"
                 />
               </div>
@@ -2683,7 +3131,7 @@ function App() {
               {/* Categoria */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Categoria
+                  Categoria <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -2691,7 +3139,11 @@ function App() {
                   required
                   value={productForm.category}
                   onChange={handleProductInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
+                    productFormErrors.category 
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
                   placeholder="Ex: Velas Aromáticas"
                 />
               </div>
@@ -2699,7 +3151,7 @@ function App() {
               {/* Preço de Venda */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Preço de Venda (R$)
+                  Preço de Venda (R$) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -2709,7 +3161,11 @@ function App() {
                   required
                   value={productForm.price}
                   onChange={handleProductInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
+                    productFormErrors.price 
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
                   placeholder="0,00"
                 />
               </div>
@@ -2724,7 +3180,6 @@ function App() {
                   name="cost"
                   step="0.01"
                   min="0"
-                  required
                   value={productForm.cost}
                   onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
@@ -2741,7 +3196,6 @@ function App() {
                   type="number"
                   name="stock"
                   min="0"
-                  required
                   value={productForm.stock}
                   onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
@@ -2758,7 +3212,6 @@ function App() {
                   type="number"
                   name="sold"
                   min="0"
-                  required
                   value={productForm.sold}
                   onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
@@ -2774,6 +3227,14 @@ function App() {
                     setIsProductModalOpen(false)
                     setEditingProduct(null)
                     setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+                    setProductFormErrors({
+                      name: false,
+                      category: false,
+                      price: false,
+                      cost: false,
+                      stock: false,
+                      sold: false
+                    })
                   }}
                   className="flex-1 px-6 py-3 text-gray-700 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 font-semibold shadow-sm"
                 >
@@ -2805,6 +3266,13 @@ function App() {
                 type: 'Receita', 
                 category: '' 
               })
+              setTransactionFormErrors({
+                date: false,
+                description: false,
+                value: false,
+                type: false,
+                category: false
+              })
             }
           }}
         >
@@ -2827,6 +3295,14 @@ function App() {
                       type: 'Receita', 
                       category: '' 
                     })
+                    setTransactionFormErrors({
+                      date: false,
+                      description: false,
+                      value: false,
+                      type: false,
+                      category: false
+                    })
+                    setIsCalendarOpen(false)
                   }}
                   className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
                 >
@@ -2839,18 +3315,8 @@ function App() {
             <form onSubmit={(e) => {
               e.preventDefault()
               
-              // Validar categoria obrigatória
-              if (!transactionForm.category || transactionForm.category.trim() === '') {
-                const tipoTransacao = transactionForm.type.toLowerCase()
-                alert(`Por favor, selecione uma categoria para a ${tipoTransacao} antes de salvar a transação.`)
-                return
-              }
-              
-              // Validar se a categoria é válida para o tipo selecionado
-              const categoriasValidas = getCategoriesByType(transactionForm.type)
-              if (!categoriasValidas.includes(transactionForm.category)) {
-                const tipoTransacao = transactionForm.type.toLowerCase()
-                alert(`A categoria selecionada não é válida para o tipo ${tipoTransacao}. Por favor, selecione uma categoria apropriada.`)
+              // Validar formulário antes de prosseguir
+              if (!validateTransactionForm()) {
                 return
               }
               
@@ -2898,78 +3364,206 @@ function App() {
             }} className="space-y-5">
               
               {/* Data */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Data</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={transactionForm.date}
-                  onChange={handleTransactionInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
-                  required
-                />
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="date"
+                    value={transactionForm.date ? formatDateToDisplay(transactionForm.date) : ''}
+                    readOnly
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white cursor-pointer ${
+                      transactionFormErrors.date 
+                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                        : 'bg-gray-100 border-gray-300'
+                    }`}
+                    placeholder="Selecione uma data"
+                    onClick={handleCalendarToggle}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCalendarToggle}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-600 hover:text-amber-800 transition-colors"
+                  >
+                    <Calendar className="w-5 h-5" />
+                  </button>
+                  
+                  {/* Ícone de erro e tooltip */}
+                  {transactionFormErrors.date && (
+                    <div className="absolute -bottom-8 left-0 z-50">
+                      <div className="relative">
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center gap-2">
+                          <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">!</span>
+                          </div>
+                          <span className="text-gray-700 text-sm">Preencha este campo.</span>
+                        </div>
+                        <div className="absolute -top-1 left-4 w-0 h-0 border-l-2 border-r-2 border-b-2 border-transparent border-b-gray-50"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Calendário personalizado */}
+                {isCalendarOpen && renderCustomCalendar()}
               </div>
 
               {/* Descrição */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                <input
-                  type="text"
-                  name="description"
-                  value={transactionForm.description}
-                  onChange={handleTransactionInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
-                  placeholder="Digite a descrição da transação..."
-                  required
-                />
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descrição <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="description"
+                    value={transactionForm.description}
+                    onChange={handleTransactionInputChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
+                      transactionFormErrors.description 
+                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                        : 'bg-gray-100 border-gray-300'
+                    }`}
+                    placeholder="Digite a descrição da transação..."
+                    required
+                  />
+                  
+                  {/* Ícone de erro e tooltip */}
+                  {transactionFormErrors.description && (
+                    <div className="absolute -bottom-8 left-0 z-50">
+                      <div className="relative">
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center gap-2">
+                          <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">!</span>
+                          </div>
+                          <span className="text-gray-700 text-sm">Preencha este campo.</span>
+                        </div>
+                        <div className="absolute -top-1 left-4 w-0 h-0 border-l-2 border-r-2 border-b-2 border-transparent border-b-gray-50"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Valor */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$)</label>
-                <input
-                  type="number"
-                  name="value"
-                  value={transactionForm.value}
-                  onChange={handleTransactionInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
-                  placeholder="0,00"
-                  step="0.01"
-                  min="0"
-                  required
-                />
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor (R$) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    name="value"
+                    value={transactionForm.value}
+                    onChange={handleTransactionInputChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
+                      transactionFormErrors.value 
+                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                        : 'bg-gray-100 border-gray-300'
+                    }`}
+                    placeholder="0,00"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                  
+                  {/* Ícone de erro e tooltip */}
+                  {transactionFormErrors.value && (
+                    <div className="absolute -bottom-8 left-0 z-50">
+                      <div className="relative">
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center gap-2">
+                          <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">!</span>
+                          </div>
+                          <span className="text-gray-700 text-sm">Preencha este campo.</span>
+                        </div>
+                        <div className="absolute -top-1 left-4 w-0 h-0 border-l-2 border-r-2 border-b-2 border-transparent border-b-gray-50"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Tipo */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-                <select
-                  name="type"
-                  value={transactionForm.type}
-                  onChange={handleTransactionInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
-                  required
-                >
-                  <option value="Receita">Receita</option>
-                  <option value="Despesa">Despesa</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    name="type"
+                    value={transactionForm.type}
+                    onChange={handleTransactionInputChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
+                      transactionFormErrors.type 
+                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                        : 'bg-gray-100 border-gray-300'
+                    }`}
+                    required
+                  >
+                    <option value="">Selecione o tipo</option>
+                    <option value="Receita">Receita</option>
+                    <option value="Despesa">Despesa</option>
+                  </select>
+                  
+                  {/* Ícone de erro e tooltip */}
+                  {transactionFormErrors.type && (
+                    <div className="absolute -bottom-8 left-0 z-50">
+                      <div className="relative">
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center gap-2">
+                          <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">!</span>
+                          </div>
+                          <span className="text-gray-700 text-sm">Preencha este campo.</span>
+                        </div>
+                        <div className="absolute -top-1 left-4 w-0 h-0 border-l-2 border-r-2 border-b-2 border-transparent border-b-gray-50"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Categoria */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
-                <select
-                  name="category"
-                  value={transactionForm.category}
-                  onChange={handleTransactionInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
-                  required
-                >
-                  <option value="" disabled>Selecione uma categoria</option>
-                  {getCategoriesByType(transactionForm.type).map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Categoria <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    name="category"
+                    value={transactionForm.category}
+                    onChange={handleTransactionInputChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
+                      transactionFormErrors.category 
+                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
+                        : 'bg-gray-100 border-gray-300'
+                    }`}
+                    required
+                  >
+                    <option value="" disabled>Selecione uma categoria</option>
+                    {getCategoriesByType(transactionForm.type).map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                  
+                  {/* Ícone de erro e tooltip */}
+                  {transactionFormErrors.category && (
+                    <div className="absolute -bottom-8 left-0 z-50">
+                      <div className="relative">
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center gap-2">
+                          <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">!</span>
+                          </div>
+                          <span className="text-gray-700 text-sm">Preencha este campo.</span>
+                        </div>
+                        <div className="absolute -top-1 left-4 w-0 h-0 border-l-2 border-r-2 border-b-2 border-transparent border-b-gray-50"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Botões */}
@@ -2986,6 +3580,14 @@ function App() {
                       type: 'Receita', 
                       category: '' 
                     })
+                    setTransactionFormErrors({
+                      date: false,
+                      description: false,
+                      value: false,
+                      type: false,
+                      category: false
+                    })
+                    setIsCalendarOpen(false)
                   }}
                   className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200"
                 >
