@@ -137,6 +137,32 @@ function App() {
     setIsTransactionModalOpen(true)
   }
 
+  // Estados e funções para produtos
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+
+  // Função para gerenciar mudanças no formulário de produto
+  const handleProductInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setProductForm(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  // Função para abrir modal de edição de produto
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product)
+    setProductForm({
+      name: product.name,
+      price: product.price.toString(),
+      cost: product.cost.toString(),
+      stock: product.stock.toString(),
+      sold: product.sold.toString(),
+      category: product.category
+    })
+    setIsProductModalOpen(true)
+  }
+
   // Funções para calcular totais das transações
   const calculateTotals = () => {
     // Verificar se transactions existe e não está vazio
@@ -1811,10 +1837,115 @@ function App() {
         </button>
       </div>
       
-      <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
-        <p className="text-gray-600 text-center">
-          Funcionalidade em desenvolvimento. Em breve você poderá gerenciar seu catálogo de produtos aqui.
-        </p>
+      {/* Lista de Produtos */}
+      <div className="space-y-4">
+        {products.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
+            <p className="text-gray-600">Nenhum produto encontrado.</p>
+            <p className="text-gray-500 text-sm mt-2">Adicione seu primeiro produto clicando no botão "Novo Produto".</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            {/* Cabeçalho das Colunas */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
+              <div className="grid grid-cols-7 gap-4 items-center text-center">
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Categoria</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Custo</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Vendidos</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
+                </div>
+              </div>
+            </div>
+            
+            {products.map((product, index) => (
+              <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
+                index === products.length - 1 ? 'border-b-0' : ''
+              }`}>
+                <div className="grid grid-cols-7 gap-4 items-center text-center">
+                  {/* Nome */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 truncate">
+                      {product.name}
+                    </h3>
+                  </div>
+                  
+                  {/* Categoria */}
+                  <div className="flex justify-center">
+                    <span className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded-md">
+                      {product.category}
+                    </span>
+                  </div>
+                  
+                  {/* Preço */}
+                  <div>
+                    <p className="text-lg font-bold text-green-600">
+                      R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  
+                  {/* Custo */}
+                  <div>
+                    <p className="text-lg font-bold text-orange-600">
+                      R$ {product.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  
+                  {/* Estoque */}
+                  <div>
+                    <p className={`text-lg font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {product.stock}
+                    </p>
+                  </div>
+                  
+                  {/* Vendidos */}
+                  <div>
+                    <p className="text-lg font-bold text-blue-600">
+                      {product.sold}
+                    </p>
+                  </div>
+                  
+                  {/* Ações */}
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={() => handleEditProduct(product)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
+                      title="Editar produto"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Tem certeza que deseja excluir este produto?')) {
+                          setProducts(prev => prev.filter(p => p.id !== product.id))
+                        }
+                      }}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
+                      title="Excluir produto"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -2432,6 +2563,7 @@ function App() {
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsProductModalOpen(false)
+              setEditingProduct(null)
               setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
             }
           }}
@@ -2442,11 +2574,12 @@ function App() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Package className="w-6 h-6 text-amber-700" />
-                  Novo Produto
+                  {editingProduct ? 'Editar Produto' : 'Novo Produto'}
                 </h2>
                 <button
                   onClick={() => {
                     setIsProductModalOpen(false)
+                    setEditingProduct(null)
                     setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
                   }}
                   className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
@@ -2459,17 +2592,41 @@ function App() {
             {/* Formulário */}
             <form onSubmit={(e) => {
               e.preventDefault()
-              // Aqui será implementada a lógica de salvamento
-              const newProduct: Product = {
-                id: Date.now().toString(),
-                name: productForm.name,
-                category: productForm.category,
-                price: parseFloat(productForm.price) || 0,
-                cost: parseFloat(productForm.cost) || 0,
-                stock: parseInt(productForm.stock) || 0,
-                sold: parseInt(productForm.sold) || 0
+              
+              if (editingProduct) {
+                // Editar produto existente
+                const updatedProduct = {
+                  ...editingProduct,
+                  name: productForm.name,
+                  category: productForm.category,
+                  price: parseFloat(productForm.price) || 0,
+                  cost: parseFloat(productForm.cost) || 0,
+                  stock: parseInt(productForm.stock) || 0,
+                  sold: parseInt(productForm.sold) || 0
+                }
+                
+                // Atualizar na lista de produtos
+                setProducts(prev => prev.map(p => 
+                  p.id === editingProduct.id ? updatedProduct : p
+                ))
+              } else {
+                // Criar novo produto
+                const newProduct: Product = {
+                  id: Date.now().toString(),
+                  name: productForm.name,
+                  category: productForm.category,
+                  price: parseFloat(productForm.price) || 0,
+                  cost: parseFloat(productForm.cost) || 0,
+                  stock: parseInt(productForm.stock) || 0,
+                  sold: parseInt(productForm.sold) || 0
+                }
+                
+                // Adicionar à lista de produtos
+                setProducts(prev => [newProduct, ...prev])
               }
-              setProducts(prev => [...prev, newProduct])
+              
+              // Limpar formulário e fechar modal
+              setEditingProduct(null)
               setIsProductModalOpen(false)
               setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
             }} className="space-y-4">
@@ -2481,9 +2638,10 @@ function App() {
                 </label>
                 <input
                   type="text"
+                  name="name"
                   required
                   value={productForm.name}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
                   placeholder="Ex: Vela Aromática Lavanda"
                 />
@@ -2496,11 +2654,12 @@ function App() {
                 </label>
                 <input
                   type="text"
+                  name="category"
                   required
                   value={productForm.category}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
+                  onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
-                  placeholder="Selecione uma categoria"
+                  placeholder="Ex: Velas Aromáticas"
                 />
               </div>
 
@@ -2511,11 +2670,12 @@ function App() {
                 </label>
                 <input
                   type="number"
+                  name="price"
                   step="0.01"
                   min="0"
                   required
                   value={productForm.price}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                  onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
                   placeholder="0,00"
                 />
@@ -2528,11 +2688,12 @@ function App() {
                 </label>
                 <input
                   type="number"
+                  name="cost"
                   step="0.01"
                   min="0"
                   required
                   value={productForm.cost}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, cost: e.target.value }))}
+                  onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
                   placeholder="0,00"
                 />
@@ -2545,10 +2706,11 @@ function App() {
                 </label>
                 <input
                   type="number"
+                  name="stock"
                   min="0"
                   required
                   value={productForm.stock}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, stock: e.target.value }))}
+                  onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
                   placeholder="0"
                 />
@@ -2561,10 +2723,11 @@ function App() {
                 </label>
                 <input
                   type="number"
+                  name="sold"
                   min="0"
                   required
                   value={productForm.sold}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, sold: e.target.value }))}
+                  onChange={handleProductInputChange}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
                   placeholder="0"
                 />
@@ -2576,6 +2739,7 @@ function App() {
                   type="button"
                   onClick={() => {
                     setIsProductModalOpen(false)
+                    setEditingProduct(null)
                     setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
                   }}
                   className="flex-1 px-6 py-3 text-gray-700 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 font-semibold shadow-sm"
@@ -2584,9 +2748,9 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
                 >
-                  Salvar
+                  {editingProduct ? 'Atualizar' : 'Salvar'}
                 </button>
               </div>
             </form>
