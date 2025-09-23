@@ -46,7 +46,7 @@ interface Meta {
 type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard')
+  const [activeTab, setActiveTab] = useState<TabType>('metas')
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
@@ -82,78 +82,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem('alya-metas', JSON.stringify(metas))
   }, [metas])
-
-  // Funções para transações
-  const handleSaveTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    if (editingTransaction) {
-      setTransactions(prev => prev.map(t => 
-        t.id === editingTransaction.id ? { ...transaction, id: editingTransaction.id } : t
-      ))
-    } else {
-      setTransactions(prev => [...prev, { ...transaction, id: Date.now().toString() }])
-    }
-    setIsModalOpen(false)
-    setEditingTransaction(undefined)
-  }
-
-  const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction)
-    setIsModalOpen(true)
-  }
-
-  const handleDeleteTransaction = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta transação?')) {
-      setTransactions(prev => prev.filter(t => t.id !== id))
-    }
-  }
-
-  // Funções para produtos
-  const handleSaveProduct = (product: Omit<Product, 'id'>) => {
-    if (editingProduct) {
-      setProducts(prev => prev.map(p => 
-        p.id === editingProduct.id ? { ...product, id: editingProduct.id } : p
-      ))
-    } else {
-      setProducts(prev => [...prev, { ...product, id: Date.now().toString() }])
-    }
-    setIsProductModalOpen(false)
-    setEditingProduct(undefined)
-  }
-
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product)
-    setIsProductModalOpen(true)
-  }
-
-  const handleDeleteProduct = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este produto?')) {
-      setProducts(prev => prev.filter(p => p.id !== id))
-    }
-  }
-
-  // Funções para metas
-  const handleSaveMeta = (meta: Omit<Meta, 'id'>) => {
-    if (editingMeta) {
-      setMetas(prev => prev.map(m => 
-        m.id === editingMeta.id ? { ...meta, id: editingMeta.id } : m
-      ))
-    } else {
-      setMetas(prev => [...prev, { ...meta, id: Date.now().toString() }])
-    }
-    setIsMetaModalOpen(false)
-    setEditingMeta(undefined)
-  }
-
-  const handleEditMeta = (meta: Meta) => {
-    setEditingMeta(meta)
-    setIsMetaModalOpen(true)
-  }
-
-  const handleDeleteMeta = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta meta?')) {
-      setMetas(prev => prev.filter(m => m.id !== id))
-    }
-  }
 
   // Calcular resumo financeiro
   const totalReceitas = transactions
@@ -224,67 +152,27 @@ function App() {
           </div>
         </div>
       </div>
-
-      {/* Transações Recentes */}
-      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-amber-100">
-        <h3 className="text-xl font-bold text-amber-900 mb-4">Transações Recentes</h3>
-        <div className="space-y-3">
-          {transactions.slice(-5).reverse().map(transaction => (
-            <div key={transaction.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-              <div>
-                <p className="font-medium text-amber-900">{transaction.description}</p>
-                <p className="text-sm text-amber-600">{new Date(transaction.date).toLocaleDateString('pt-BR')}</p>
-              </div>
-              <span className={`font-bold ${
-                transaction.type === 'receita' ? 'text-emerald-600' : 'text-orange-600'
-              }`}>
-                {transaction.type === 'receita' ? '+' : '-'}R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          ))}
-          {transactions.length === 0 && (
-            <p className="text-amber-600 text-center py-8">Nenhuma transação registrada ainda.</p>
-          )}
-        </div>
-      </div>
     </div>
   )
 
-  // Render Metas
-  const renderMetas = () => {
-    // Cálculos para o mês atual
-    const currentDate = new Date()
-    const currentMonth = currentDate.getMonth()
-    const currentYear = currentDate.getFullYear()
-
+  // Função para renderizar um mês específico
+  const renderMonth = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
+    // Cálculos para o mês específico
+    const currentYear = 2025
     const transacoesDoMes = transactions.filter(t => {
       const transactionDate = new Date(t.date)
-      return transactionDate.getMonth() === currentMonth && transactionDate.getFullYear() === currentYear
+      return transactionDate.getMonth() === monthIndex && transactionDate.getFullYear() === currentYear
     })
 
     const totalReceitas = transacoesDoMes.filter(t => t.type === 'receita').reduce((sum, t) => sum + t.amount, 0)
     const totalDespesas = transacoesDoMes.filter(t => t.type === 'despesa').reduce((sum, t) => sum + t.amount, 0)
 
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
-            Metas
-          </h1>
-          <button
-            onClick={() => setIsMetaModalOpen(true)}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <Plus className="h-5 w-5" />
-            Nova Meta
-          </button>
-        </div>
-
+      <div key={monthName} className="space-y-6 mb-12">
         {/* Título Principal do Mês */}
         <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
           <h2 className="text-3xl font-bold text-white text-center uppercase tracking-wider">
-            SETEMBRO - 2025
+            {monthName} - 2025
           </h2>
         </div>
 
@@ -330,16 +218,16 @@ function App() {
                 {/* SALDO INICIAL */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="font-semibold text-blue-700">SALDO INICIAL</span>
-                  <span className="font-bold text-blue-800">R$ 31.970,50</span>
+                  <span className="font-bold text-blue-800">R$ {saldoInicial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 
                 {/* TOTAL GERAL */}
                 <div className="flex justify-between items-center py-4 bg-gray-50 px-4 rounded-lg border-2 border-gray-300 mt-4">
                   <span className="font-bold text-gray-900 text-lg">Total geral</span>
                   <span className={`font-bold text-xl ${
-                    (31970.50 + totalReceitas - totalDespesas) >= 0 ? 'text-emerald-800' : 'text-red-800'
+                    (saldoInicial + totalReceitas - totalDespesas) >= 0 ? 'text-emerald-800' : 'text-red-800'
                   }`}>
-                    R$ {(31970.50 + totalReceitas - totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(saldoInicial + totalReceitas - totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -364,7 +252,7 @@ function App() {
                 {/* META */}
                 <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
                   <div className="font-bold text-gray-800 italic">META</div>
-                  <div className="text-center font-bold text-gray-800">R$ 21.889,17</div>
+                  <div className="text-center font-bold text-gray-800">R$ {metaValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                   <div className="text-center font-bold text-gray-800">100%</div>
                 </div>
                 
@@ -375,7 +263,7 @@ function App() {
                     R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-center font-bold text-emerald-800">
-                    {((totalReceitas / 21889.17) * 100).toFixed(0)}%
+                    {metaValue > 0 ? ((totalReceitas / metaValue) * 100).toFixed(0) : 0}%
                   </div>
                 </div>
                 
@@ -383,10 +271,10 @@ function App() {
                 <div className="grid grid-cols-3 gap-4 py-3">
                   <div className="font-bold text-red-700 italic">RESTANTE</div>
                   <div className="text-center font-bold text-red-800">
-                    -R$ {Math.max(0, 21889.17 - totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    -R$ {Math.max(0, metaValue - totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-center font-bold text-red-800">
-                    {Math.max(0, 100 - ((totalReceitas / 21889.17) * 100)).toFixed(0)}%
+                    {metaValue > 0 ? Math.max(0, 100 - ((totalReceitas / metaValue) * 100)).toFixed(0) : 100}%
                   </div>
                 </div>
               </div>
@@ -479,6 +367,283 @@ function App() {
             </div>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  // Função para renderizar o total do ano
+  const renderTotalAno = () => {
+    const currentYear = 2025
+    
+    // Cálculos totais do ano
+    const transacoesDoAno = transactions.filter(t => {
+      const transactionDate = new Date(t.date)
+      return transactionDate.getFullYear() === currentYear
+    })
+
+    const totalReceitasAno = transacoesDoAno.filter(t => t.type === 'receita').reduce((sum, t) => sum + t.amount, 0)
+    const totalDespesasAno = transacoesDoAno.filter(t => t.type === 'despesa').reduce((sum, t) => sum + t.amount, 0)
+
+    // Metas totais do ano
+    const metasDoAno = [18500, 19200, 20100, 19800, 20500, 21000, 21500, 22000, 21889.17, 23000, 25000, 28000]
+    const metaTotalAno = metasDoAno.reduce((sum, meta) => sum + meta, 0)
+    const saldoInicialAno = 31970.50
+
+    return (
+      <div className="space-y-6 mb-12">
+        {/* Título Principal do Ano */}
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-8 rounded-2xl shadow-xl">
+          <h2 className="text-4xl font-bold text-white text-center uppercase tracking-wider">
+            TOTAL DO ANO - 2025
+          </h2>
+        </div>
+
+        {/* 1. RESULTADO ANUAL */}
+        <div className="space-y-4">
+          <h2 className="text-3xl font-bold text-purple-800 flex items-center gap-3">
+            <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
+            Resultado Anual
+          </h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Quadrante Financeiro Anual */}
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl shadow-lg border-2 border-purple-200">
+              <div className="space-y-4">
+                {/* REFORÇO DE CAIXA */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                  <span className="font-bold text-purple-800 text-lg">REFORÇO DE CAIXA</span>
+                  <span className="font-bold text-purple-900 text-lg">R$ 0,00</span>
+                </div>
+                
+                {/* SAÍDA DE CAIXA */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                  <span className="font-bold text-purple-800 text-lg">SAÍDA DE CAIXA</span>
+                  <span className="font-bold text-purple-900 text-lg">R$ 0,00</span>
+                </div>
+                
+                {/* RECEITA ANUAL */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                  <span className="font-bold text-emerald-700 text-lg">RECEITA ANUAL</span>
+                  <span className="font-bold text-emerald-800 text-lg">
+                    R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                
+                {/* DESPESA ANUAL */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                  <span className="font-bold text-red-700 text-lg">DESPESA ANUAL</span>
+                  <span className="font-bold text-red-800 text-lg">
+                    -R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                
+                {/* SALDO INICIAL */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                  <span className="font-bold text-blue-700 text-lg">SALDO INICIAL</span>
+                  <span className="font-bold text-blue-800 text-lg">R$ {saldoInicialAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                
+                {/* TOTAL GERAL ANUAL */}
+                <div className="flex justify-between items-center py-6 bg-gradient-to-r from-purple-100 to-indigo-100 px-6 rounded-xl border-3 border-purple-400 mt-6">
+                  <span className="font-bold text-purple-900 text-2xl">Total Geral Anual</span>
+                  <span className={`font-bold text-2xl ${
+                    (saldoInicialAno + totalReceitasAno - totalDespesasAno) >= 0 ? 'text-emerald-800' : 'text-red-800'
+                  }`}>
+                    R$ {(saldoInicialAno + totalReceitasAno - totalDespesasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quadrante META ANUAL */}
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl shadow-lg border-2 border-purple-200">
+              <div className="space-y-6">
+                {/* Cabeçalho com colunas R$ e % */}
+                <div className="grid grid-cols-3 gap-4 pb-3 border-b-3 border-purple-400">
+                  <div className="text-center">
+                    <span className="font-bold text-purple-700 text-xl"></span>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-bold text-purple-900 text-2xl">R$</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-bold text-purple-900 text-2xl">%</span>
+                  </div>
+                </div>
+                
+                {/* META ANUAL */}
+                <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200">
+                  <div className="font-bold text-purple-800 italic text-lg">META ANUAL</div>
+                  <div className="text-center font-bold text-purple-900 text-lg">R$ {metaTotalAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                  <div className="text-center font-bold text-purple-900 text-lg">100%</div>
+                </div>
+                
+                {/* ALCANÇADO ANUAL */}
+                <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200">
+                  <div className="font-bold text-emerald-700 italic text-lg">ALCANÇADO</div>
+                  <div className="text-center font-bold text-emerald-800 text-lg">
+                    R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-center font-bold text-emerald-800 text-lg">
+                    {metaTotalAno > 0 ? ((totalReceitasAno / metaTotalAno) * 100).toFixed(0) : 0}%
+                  </div>
+                </div>
+                
+                {/* RESTANTE ANUAL */}
+                <div className="grid grid-cols-3 gap-4 py-4">
+                  <div className="font-bold text-red-700 italic text-lg">RESTANTE</div>
+                  <div className="text-center font-bold text-red-800 text-lg">
+                    -R$ {Math.max(0, metaTotalAno - totalReceitasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-center font-bold text-red-800 text-lg">
+                    {metaTotalAno > 0 ? Math.max(0, 100 - ((totalReceitasAno / metaTotalAno) * 100)).toFixed(0) : 100}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. FATURAMENTO ANUAL */}
+        <div className="space-y-4">
+          <h2 className="text-3xl font-bold text-emerald-800 flex items-center gap-3">
+            <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
+            Faturamento Anual
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 p-8 rounded-2xl border-2 border-emerald-300 shadow-xl">
+              <h3 className="text-xl font-bold text-emerald-900 mb-6">Faturamento TOTAL ANUAL</h3>
+              <div className="text-3xl font-bold text-emerald-900">
+                R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-100 to-green-200 p-8 rounded-2xl border-2 border-green-300 shadow-xl">
+              <h3 className="text-xl font-bold text-green-900 mb-6">Faturamento Varejo Anual</h3>
+              <div className="text-3xl font-bold text-green-900">
+                R$ {(totalReceitasAno * 0.6).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-teal-100 to-teal-200 p-8 rounded-2xl border-2 border-teal-300 shadow-xl">
+              <h3 className="text-xl font-bold text-teal-900 mb-6">Faturamento Atacado Anual</h3>
+              <div className="text-3xl font-bold text-teal-900">
+                R$ {(totalReceitasAno * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. DESPESAS ANUAIS */}
+        <div className="space-y-4">
+          <h2 className="text-3xl font-bold text-red-800 flex items-center gap-3">
+            <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
+            Despesas Anuais
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-red-100 to-red-200 p-8 rounded-2xl border-2 border-red-300 shadow-xl">
+              <h3 className="text-xl font-bold text-red-900 mb-6">Despesas Totais Anuais</h3>
+              <div className="text-3xl font-bold text-red-900">
+                R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-100 to-orange-200 p-8 rounded-2xl border-2 border-orange-300 shadow-xl">
+              <h3 className="text-xl font-bold text-orange-900 mb-6">Despesas Variáveis Anuais</h3>
+              <div className="text-3xl font-bold text-orange-900">
+                R$ {(totalDespesasAno * 0.7).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-100 to-amber-200 p-8 rounded-2xl border-2 border-amber-300 shadow-xl">
+              <h3 className="text-xl font-bold text-amber-900 mb-6">Despesas Fixas Anuais</h3>
+              <div className="text-3xl font-bold text-amber-900">
+                R$ {(totalDespesasAno * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. INVESTIMENTOS ANUAIS */}
+        <div className="space-y-4">
+          <h2 className="text-3xl font-bold text-indigo-800 flex items-center gap-3">
+            <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
+            Investimentos Anuais
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-8 rounded-2xl border-2 border-blue-300 shadow-xl">
+              <h3 className="text-xl font-bold text-blue-900 mb-6">Investimentos Gerais Anuais</h3>
+              <div className="text-3xl font-bold text-blue-900">
+                R$ {(totalDespesasAno * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-8 rounded-2xl border-2 border-purple-300 shadow-xl">
+              <h3 className="text-xl font-bold text-purple-900 mb-6">Investimentos MKT Anuais</h3>
+              <div className="text-3xl font-bold text-purple-900">
+                R$ {(totalReceitasAno * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Render Metas
+  const renderMetas = () => {
+    const meses = [
+      { nome: 'JANEIRO', indice: 0, meta: 18500.00 },
+      { nome: 'FEVEREIRO', indice: 1, meta: 19200.00 },
+      { nome: 'MARÇO', indice: 2, meta: 20100.00 },
+      { nome: 'ABRIL', indice: 3, meta: 19800.00 },
+      { nome: 'MAIO', indice: 4, meta: 20500.00 },
+      { nome: 'JUNHO', indice: 5, meta: 21000.00 },
+      { nome: 'JULHO', indice: 6, meta: 21500.00 },
+      { nome: 'AGOSTO', indice: 7, meta: 22000.00 },
+      { nome: 'SETEMBRO', indice: 8, meta: 21889.17 },
+      { nome: 'OUTUBRO', indice: 9, meta: 23000.00 },
+      { nome: 'NOVEMBRO', indice: 10, meta: 25000.00 },
+      { nome: 'DEZEMBRO', indice: 11, meta: 28000.00 }
+    ]
+
+    // Identificar mês atual
+    const currentDate = new Date()
+    const currentMonthIndex = currentDate.getMonth()
+    
+    // Encontrar o mês atual na lista
+    const mesAtual = meses.find(mes => mes.indice === currentMonthIndex)
+    const outrosMeses = meses.filter(mes => mes.indice !== currentMonthIndex)
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
+            Metas
+          </h1>
+          <button
+            onClick={() => setIsMetaModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Nova Meta
+          </button>
+        </div>
+
+        {/* Renderizar Mês Atual (se existir) */}
+        {mesAtual && renderMonth(mesAtual.nome, mesAtual.indice, mesAtual.meta, 31970.50)}
+
+        {/* Renderizar Total do Ano */}
+        {renderTotalAno()}
+
+        {/* Renderizar outros meses (exceto o atual) */}
+        {outrosMeses.map((mes) => 
+          renderMonth(mes.nome, mes.indice, mes.meta, 31970.50)
+        )}
       </div>
     )
   }
