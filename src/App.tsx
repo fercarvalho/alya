@@ -78,7 +78,16 @@ function App() {
   
   // Estado para o mês selecionado (padrão é o mês atual)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
-  const [expandedChart, setExpandedChart] = useState<string | null>(null)
+  const [expandedCharts, setExpandedCharts] = useState<string[]>([])
+
+  // Função para alternar gráficos
+  const toggleChart = (chartId: string) => {
+    setExpandedCharts(prev => 
+      prev.includes(chartId) 
+        ? prev.filter(id => id !== chartId)  // Remove se já existe
+        : [...prev, chartId]                 // Adiciona se não existe
+    )
+  }
 
   // Carregar dados do localStorage
   useEffect(() => {
@@ -237,66 +246,73 @@ function App() {
           
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div 
-                className="bg-green-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
-                onClick={() => setExpandedChart(expandedChart === 'receitas-mensal' ? null : 'receitas-mensal')}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
+              {/* Card Receitas */}
+              <div className="space-y-4">
+                <div 
+                  className="bg-green-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  onClick={() => toggleChart('receitas-mensal')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
+                      <p className="text-2xl font-bold text-white mt-1">
+                        R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {expandedCharts.includes('receitas-mensal') && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
               </div>
 
-              <div 
-                className="bg-red-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
-                onClick={() => setExpandedChart(expandedChart === 'despesas-mensal' ? null : 'despesas-mensal')}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <TrendingDown className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
+              {/* Card Despesas */}
+              <div className="space-y-4">
+                <div 
+                  className="bg-red-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  onClick={() => toggleChart('despesas-mensal')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <TrendingDown className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
+                      <p className="text-2xl font-bold text-white mt-1">
+                        R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {expandedCharts.includes('despesas-mensal') && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
               </div>
 
-              <div 
-                className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
-                  lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
-                }`}
-                onClick={() => setExpandedChart(expandedChart === 'saldo-mensal' ? null : 'saldo-mensal')}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
-                    <p className={`text-2xl font-bold mt-1 ${
-                      lucroLiquido >= 0 ? 'text-green-900' : 'text-red-900'
-                    }`}>
-                      R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
+              {/* Card Saldo */}
+              <div className="space-y-4">
+                <div 
+                  className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
+                    lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
+                  }`}
+                  onClick={() => toggleChart('saldo-mensal')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <BarChart3 className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
+                      <p className={`text-2xl font-bold mt-1 ${
+                        lucroLiquido >= 0 ? 'text-green-900' : 'text-red-900'
+                      }`}>
+                        R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {expandedCharts.includes('saldo-mensal') && renderBarChart(barChartData, `Comparação: Meta vs Real (${mesAtual.nome})`)}
               </div>
             </div>
-
-            {/* Gráficos condicionais para o mês atual */}
-            {expandedChart === 'receitas-mensal' && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
-            {expandedChart === 'despesas-mensal' && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
-            {expandedChart === 'saldo-mensal' && renderBarChart(barChartData, `Comparação: Meta vs Real (${mesAtual.nome})`)}
           </div>
         </div>
 
@@ -309,66 +325,73 @@ function App() {
           
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div 
-                className="bg-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
-                onClick={() => setExpandedChart(expandedChart === 'receitas-anual' ? null : 'receitas-anual')}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas Anuais</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
+              {/* Card Receitas Anuais */}
+              <div className="space-y-4">
+                <div 
+                  className="bg-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  onClick={() => toggleChart('receitas-anual')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas Anuais</p>
+                      <p className="text-2xl font-bold text-white mt-1">
+                        R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {expandedCharts.includes('receitas-anual') && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
               </div>
 
-              <div 
-                className="bg-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
-                onClick={() => setExpandedChart(expandedChart === 'despesas-anual' ? null : 'despesas-anual')}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <TrendingDown className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas Anuais</p>
-                    <p className="text-2xl font-bold text-white mt-1">
-                      R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
+              {/* Card Despesas Anuais */}
+              <div className="space-y-4">
+                <div 
+                  className="bg-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  onClick={() => toggleChart('despesas-anual')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <TrendingDown className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas Anuais</p>
+                      <p className="text-2xl font-bold text-white mt-1">
+                        R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {expandedCharts.includes('despesas-anual') && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
               </div>
 
-              <div 
-                className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
-                  lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-yellow-600'
-                }`}
-                onClick={() => setExpandedChart(expandedChart === 'saldo-anual' ? null : 'saldo-anual')}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
-                    <p className={`text-2xl font-bold mt-1 ${
-                      lucroLiquidoAno >= 0 ? 'text-green-900' : 'text-red-900'
-                    }`}>
-                      R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
+              {/* Card Saldo Anual */}
+              <div className="space-y-4">
+                <div 
+                  className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
+                    lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-yellow-600'
+                  }`}
+                  onClick={() => toggleChart('saldo-anual')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <BarChart3 className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
+                      <p className={`text-2xl font-bold mt-1 ${
+                        lucroLiquidoAno >= 0 ? 'text-green-900' : 'text-red-900'
+                      }`}>
+                        R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {expandedCharts.includes('saldo-anual') && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
               </div>
             </div>
-
-            {/* Gráficos condicionais para dados anuais */}
-            {expandedChart === 'receitas-anual' && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
-            {expandedChart === 'despesas-anual' && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
-            {expandedChart === 'saldo-anual' && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
           </div>
         </div>
 
@@ -1504,7 +1527,10 @@ function App() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as TabType)}
+                  onClick={() => {
+                    setActiveTab(tab.id as TabType)
+                    setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
+                  }}
                   className={`flex items-center px-6 pt-5 pb-3 text-sm font-medium rounded-t-xl transition-all duration-300 ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
