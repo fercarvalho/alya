@@ -1716,18 +1716,18 @@ function App() {
       {/* Header Fixo */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-3">
+          <div className="flex justify-between items-center py-5">
             <div className="flex items-center">
               <img 
                 src="/alya-logo.png" 
                 alt="Alya Velas Logo" 
-                className="w-8 h-8 mr-3 rounded-lg shadow-sm object-contain"
+                className="w-10 h-10 mr-3 rounded-lg shadow-sm object-contain"
               />
               <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   Alya Velas
                 </h1>
-                <p className="text-xs text-amber-600/70 font-medium">Sistema de Gestão Financeira</p>
+                <p className="text-sm text-amber-600/70 font-medium">Sistema de Gestão Financeira</p>
               </div>
             </div>
           </div>
@@ -1735,7 +1735,7 @@ function App() {
       </header>
 
       {/* Navigation */}
-      <nav className="fixed top-[60px] left-0 right-0 z-40 bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
+      <nav className="fixed top-[76px] left-0 right-0 z-40 bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center overflow-x-auto scrollbar-hide">
             <div className="flex items-center space-x-2 min-w-max">
@@ -1754,7 +1754,7 @@ function App() {
                       setActiveTab(tab.id as TabType)
                       setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
                     }}
-                    className={`flex items-center px-6 pt-5 pb-3 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
+                    className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
                       activeTab === tab.id
                         ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
                         : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
@@ -1771,7 +1771,7 @@ function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[120px]">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[150px]">
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'metas' && renderMetas()}
         {activeTab === 'transactions' && renderTransactions()}
