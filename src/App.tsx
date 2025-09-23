@@ -75,10 +75,52 @@ function App() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>()
   const [editingProduct, setEditingProduct] = useState<Product | undefined>()
   const [editingMeta, setEditingMeta] = useState<Meta | undefined>()
+
+  // Estados do formulário de produto
+  const [productForm, setProductForm] = useState({
+    name: '',
+    category: '',
+    price: '',
+    cost: '',
+    stock: '',
+    sold: ''
+  })
+
+  // Estados do formulário de transação
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
+  const [transactionForm, setTransactionForm] = useState({
+    date: '',
+    description: '',
+    value: '',
+    type: 'Receita',
+    category: ''
+  })
+
+  // Função para gerenciar mudanças no formulário de transação
+  const handleTransactionInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setTransactionForm(prev => ({
+      ...prev,
+      [name]: value,
+      // Reset category when type changes
+      ...(name === 'type' ? { category: '' } : {})
+    }))
+  }
+
+  // Função para obter as categorias baseadas no tipo
+  const getCategoriesByType = (type: string) => {
+    if (type === 'Receita') {
+      return ['Atacado', 'Varejo', 'Outros']
+    } else if (type === 'Despesa') {
+      return ['Fixo', 'Variável', 'Atacado', 'Varejo', 'Investimento', 'Mkt']
+    }
+    return []
+  }
   
   // Estado para o mês selecionado (padrão é o mês atual)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
   const [expandedCharts, setExpandedCharts] = useState<string[]>([])
+  const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>([])
 
   // Definição das metas mensais (centralizada)
   const mesesMetas = [
@@ -102,6 +144,15 @@ function App() {
       prev.includes(chartId) 
         ? prev.filter(id => id !== chartId)  // Remove se já existe
         : [...prev, chartId]                 // Adiciona se não existe
+    )
+  }
+
+  // Função para alternar gráficos dos relatórios
+  const toggleReportChart = (chartId: string) => {
+    setExpandedReportCharts(prev => 
+      prev.includes(chartId) 
+        ? prev.filter(id => id !== chartId)
+        : [...prev, chartId]
     )
   }
 
@@ -383,8 +434,8 @@ function App() {
             Dashboard Financeiro
           </h1>
           <button
-            onClick={() => alert("Ferramenta em construção")}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-white font-semibold rounded-xl hover:from-blue-500 hover:to-indigo-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            onClick={() => setIsTransactionModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
             <Plus className="h-5 w-5" />
             Nova Transação
@@ -1580,8 +1631,8 @@ function App() {
           Transações
         </h1>
         <button
-          onClick={() => alert("Ferramenta em construção")}
-          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-400 text-white font-semibold rounded-xl hover:from-green-500 hover:to-emerald-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          onClick={() => setIsTransactionModalOpen(true)}
+          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
         >
           <Plus className="h-5 w-5" />
           Nova Transação
@@ -1605,8 +1656,8 @@ function App() {
           Produtos
         </h1>
         <button
-          onClick={() => alert("Ferramenta em construção")}
-          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-400 to-indigo-400 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-indigo-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          onClick={() => setIsProductModalOpen(true)}
+          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
         >
           <Plus className="h-5 w-5" />
           Novo Produto
@@ -1637,9 +1688,18 @@ function App() {
           { nome: 'Kit Romance', valor: 500, cor: '#06b6d4' }
         ],
         despesasPorCategoria: [
-          { nome: 'Matéria Prima', valor: 1500, cor: '#ef4444' },
-          { nome: 'Embalagens', valor: 800, cor: '#f97316' },
-          { nome: 'Marketing', valor: 400, cor: '#84cc16' }
+          { nome: 'Fixo', valor: 1500, cor: '#ef4444' },
+          { nome: 'Variável', valor: 800, cor: '#f97316' },
+          { nome: 'Outros', valor: 400, cor: '#84cc16' }
+        ],
+        produtosPorDia: [
+          { nome: 'Seg', vela_lavanda: 15, vela_vanilla: 12, kit_romance: 8 },
+          { nome: 'Ter', vela_lavanda: 18, vela_vanilla: 14, kit_romance: 6 },
+          { nome: 'Qua', vela_lavanda: 22, vela_vanilla: 16, kit_romance: 10 },
+          { nome: 'Qui', vela_lavanda: 20, vela_vanilla: 13, kit_romance: 9 },
+          { nome: 'Sex', vela_lavanda: 25, vela_vanilla: 18, kit_romance: 12 },
+          { nome: 'Sáb', vela_lavanda: 30, vela_vanilla: 22, kit_romance: 15 },
+          { nome: 'Dom', vela_lavanda: 28, vela_vanilla: 20, kit_romance: 14 }
         ]
       },
       mes: {
@@ -1654,9 +1714,15 @@ function App() {
           { nome: 'Kit Romance', valor: 2500, cor: '#06b6d4' }
         ],
         despesasPorCategoria: [
-          { nome: 'Matéria Prima', valor: 7500, cor: '#ef4444' },
-          { nome: 'Embalagens', valor: 3200, cor: '#f97316' },
-          { nome: 'Marketing', valor: 1800, cor: '#84cc16' }
+          { nome: 'Fixo', valor: 7500, cor: '#ef4444' },
+          { nome: 'Variável', valor: 3200, cor: '#f97316' },
+          { nome: 'Outros', valor: 1800, cor: '#84cc16' }
+        ],
+        produtosPorSemana: [
+          { nome: 'Sem 1', vela_lavanda: 120, vela_vanilla: 95, kit_romance: 65 },
+          { nome: 'Sem 2', vela_lavanda: 135, vela_vanilla: 110, kit_romance: 75 },
+          { nome: 'Sem 3', vela_lavanda: 140, vela_vanilla: 105, kit_romance: 80 },
+          { nome: 'Sem 4', vela_lavanda: 125, vela_vanilla: 100, kit_romance: 70 }
         ]
       },
       trimestre: {
@@ -1671,9 +1737,14 @@ function App() {
           { nome: 'Kit Romance', valor: 8500, cor: '#06b6d4' }
         ],
         despesasPorCategoria: [
-          { nome: 'Matéria Prima', valor: 22500, cor: '#ef4444' },
-          { nome: 'Embalagens', valor: 12200, cor: '#f97316' },
-          { nome: 'Marketing', valor: 6800, cor: '#84cc16' }
+          { nome: 'Fixo', valor: 22500, cor: '#ef4444' },
+          { nome: 'Variável', valor: 12200, cor: '#f97316' },
+          { nome: 'Outros', valor: 6800, cor: '#84cc16' }
+        ],
+        produtosPorMes: [
+          { nome: 'Mês 1', vela_lavanda: 520, vela_vanilla: 410, kit_romance: 290 },
+          { nome: 'Mês 2', vela_lavanda: 485, vela_vanilla: 395, kit_romance: 275 },
+          { nome: 'Mês 3', vela_lavanda: 510, vela_vanilla: 420, kit_romance: 300 }
         ]
       },
       ano: {
@@ -1688,9 +1759,15 @@ function App() {
           { nome: 'Kit Romance', valor: 38500, cor: '#06b6d4' }
         ],
         despesasPorCategoria: [
-          { nome: 'Matéria Prima', valor: 92500, cor: '#ef4444' },
-          { nome: 'Embalagens', valor: 52200, cor: '#f97316' },
-          { nome: 'Marketing', valor: 28800, cor: '#84cc16' }
+          { nome: 'Fixo', valor: 92500, cor: '#ef4444' },
+          { nome: 'Variável', valor: 52200, cor: '#f97316' },
+          { nome: 'Outros', valor: 28800, cor: '#84cc16' }
+        ],
+        produtosPorTrimestre: [
+          { nome: 'T1', vela_lavanda: 1515, vela_vanilla: 1225, kit_romance: 865 },
+          { nome: 'T2', vela_lavanda: 1620, vela_vanilla: 1380, kit_romance: 920 },
+          { nome: 'T3', vela_lavanda: 1580, vela_vanilla: 1295, kit_romance: 885 },
+          { nome: 'T4', vela_lavanda: 1685, vela_vanilla: 1450, kit_romance: 980 }
         ]
       }
     }
@@ -1723,15 +1800,36 @@ function App() {
                     const backgroundColors = ['bg-green-100', 'bg-green-100', 'bg-green-100'];
                     const labelBgColors = ['bg-green-200', 'bg-green-200', 'bg-green-200'];
                     const textColors = ['text-green-800', 'text-green-800', 'text-green-800'];
+                    const chartId = `vendas-categoria-${periodo}-${index}`;
                     
                     return (
-                      <div key={index} className={`${backgroundColors[index]} p-4 rounded-xl flex justify-between items-center`}>
-                        <span className={`${labelBgColors[index]} ${textColors[index]} font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0`}>
-                          {item.nome}
-                        </span>
-                        <span className="font-bold text-gray-500 ml-4 text-right">
-                          R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
+                      <div key={index} className="space-y-3">
+                        <div 
+                          className={`${backgroundColors[index]} p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity`}
+                          onClick={() => toggleReportChart(chartId)}
+                        >
+                          <span className={`${labelBgColors[index]} ${textColors[index]} font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0`}>
+                            {item.nome}
+                          </span>
+                          <span className="font-bold text-gray-500 ml-4 text-right">
+                            R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        
+                        {/* Gráfico expandido */}
+                        {expandedReportCharts.includes(chartId) && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={[{name: item.nome, valor: item.valor}]}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                                <Bar dataKey="valor" fill={item.cor} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1739,13 +1837,33 @@ function App() {
                 
                 {/* Total Vendas por Categoria */}
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="bg-green-200 p-4 rounded-xl flex justify-between items-center">
-                    <span className="bg-green-300 text-green-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
-                      Total Vendas por Categoria
-                    </span>
-                    <span className="font-bold text-green-800 text-lg ml-4 text-right">
-                      R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
+                  <div className="space-y-3">
+                    <div 
+                      className="bg-green-200 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => toggleReportChart(`total-vendas-categoria-${periodo}`)}
+                    >
+                      <span className="bg-green-300 text-green-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
+                        Total Vendas por Categoria
+                      </span>
+                      <span className="font-bold text-green-800 text-lg ml-4 text-right">
+                        R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    
+                    {/* Gráfico expandido do Total */}
+                    {expandedReportCharts.includes(`total-vendas-categoria-${periodo}`) && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={dados.vendasPorCategoria}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="nome" />
+                            <YAxis />
+                            <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                            <Bar dataKey="valor" fill="#22c55e" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1762,15 +1880,36 @@ function App() {
                     const backgroundColors = ['bg-blue-100', 'bg-blue-100', 'bg-blue-100'];
                     const labelBgColors = ['bg-blue-200', 'bg-blue-200', 'bg-blue-200'];
                     const textColors = ['text-blue-800', 'text-blue-800', 'text-blue-800'];
+                    const chartId = `vendas-produto-${periodo}-${index}`;
                     
                     return (
-                      <div key={index} className={`${backgroundColors[index]} p-3 rounded-lg flex justify-between items-center`}>
-                        <span className={`${labelBgColors[index]} ${textColors[index]} font-medium text-sm px-3 py-2 rounded min-w-0 flex-shrink-0`}>
-                          {item.nome}
-                        </span>
-                        <span className="font-bold text-blue-900 text-sm ml-3 text-right">
-                          R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
+                      <div key={index} className="space-y-3">
+                        <div 
+                          className={`${backgroundColors[index]} p-3 rounded-lg flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity`}
+                          onClick={() => toggleReportChart(chartId)}
+                        >
+                          <span className={`${labelBgColors[index]} ${textColors[index]} font-medium text-sm px-3 py-2 rounded min-w-0 flex-shrink-0`}>
+                            {item.nome}
+                          </span>
+                          <span className="font-bold text-blue-900 text-sm ml-3 text-right">
+                            R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        
+                        {/* Gráfico expandido */}
+                        {expandedReportCharts.includes(chartId) && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={[{name: item.nome, valor: item.valor}]}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                                <Bar dataKey="valor" fill={item.cor} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1778,13 +1917,33 @@ function App() {
                 
                 {/* Total Vendas por Produto */}
                 <div className="mt-4 pt-3 border-t border-gray-200">
-                  <div className="bg-blue-200 p-3 rounded-lg flex justify-between items-center">
-                    <span className="bg-blue-300 text-blue-800 font-bold text-sm px-3 py-2 rounded min-w-0 flex-shrink-0">
-                      Total por Produto
-                    </span>
-                    <span className="font-bold text-blue-800 text-sm ml-3 text-right">
-                      R$ {totalVendasProduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
+                  <div className="space-y-3">
+                    <div 
+                      className="bg-blue-200 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => toggleReportChart(`total-vendas-produto-${periodo}`)}
+                    >
+                      <span className="bg-blue-300 text-blue-800 font-bold text-sm px-3 py-2 rounded min-w-0 flex-shrink-0">
+                        Total por Produto
+                      </span>
+                      <span className="font-bold text-blue-800 text-sm ml-3 text-right">
+                        R$ {totalVendasProduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    
+                    {/* Gráfico expandido do Total */}
+                    {expandedReportCharts.includes(`total-vendas-produto-${periodo}`) && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={dados.vendasPorProduto}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="nome" />
+                            <YAxis />
+                            <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                            <Bar dataKey="valor" fill="#3b82f6" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1799,15 +1958,36 @@ function App() {
               
               <div className="space-y-3">
                 {dados.despesasPorCategoria.map((item: any, index: number) => {
-                  // Todos os itens com a mesma cor (como Materia Prima na imagem)
+                  const chartId = `despesas-categoria-${periodo}-${index}`;
+                  
                   return (
-                    <div key={index} className="bg-orange-50 p-4 rounded-xl flex justify-between items-center">
-                      <span className="bg-orange-100 text-orange-700 font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
-                        {item.nome}
-                      </span>
-                      <span className="font-bold text-gray-500 ml-4 text-right">
-                        R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
+                    <div key={index} className="space-y-3">
+                      <div 
+                        className="bg-orange-50 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => toggleReportChart(chartId)}
+                      >
+                        <span className="bg-orange-100 text-orange-700 font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
+                          {item.nome}
+                        </span>
+                        <span className="font-bold text-gray-500 ml-4 text-right">
+                          R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      
+                      {/* Gráfico expandido */}
+                      {expandedReportCharts.includes(chartId) && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={[{name: item.nome, valor: item.valor}]}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                              <Bar dataKey="valor" fill={item.cor} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1815,16 +1995,74 @@ function App() {
               
               {/* Total de Despesas - Mais escuro */}
               <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="bg-orange-200 p-4 rounded-xl flex justify-between items-center">
-                  <span className="bg-orange-300 text-orange-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
-                    Total de Despesas
-                  </span>
-                  <span className="font-bold text-orange-800 text-lg ml-4 text-right">
-                    R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
+                <div className="space-y-3">
+                  <div 
+                    className="bg-orange-200 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => toggleReportChart(`total-despesas-${periodo}`)}
+                  >
+                    <span className="bg-orange-300 text-orange-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
+                      Total de Despesas
+                    </span>
+                    <span className="font-bold text-orange-800 text-lg ml-4 text-right">
+                      R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  
+                  {/* Gráfico expandido do Total */}
+                  {expandedReportCharts.includes(`total-despesas-${periodo}`) && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={dados.despesasPorCategoria}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="nome" />
+                          <YAxis />
+                          <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                          <Bar dataKey="valor" fill="#f97316" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Card Produtos por Período */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <span className="text-gray-400 text-lg mr-3">📦</span>
+                <h3 className="text-lg font-bold text-gray-800">Produtos Vendidos por {periodo === 'Semana' ? 'Dia' : periodo === 'Mês' ? 'Semana' : periodo === 'Trimestre' ? 'Mês' : 'Trimestre'}</h3>
+              </div>
+              <button 
+                className="text-blue-600 hover:text-blue-800 font-medium"
+                onClick={() => toggleReportChart(`produtos-${periodo}`)}
+              >
+                {expandedReportCharts.includes(`produtos-${periodo}`) ? 'Ocultar Gráfico' : 'Ver Gráfico'}
+              </button>
+            </div>
+            
+            {expandedReportCharts.includes(`produtos-${periodo}`) && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={
+                    periodo === 'Semana' ? dados.produtosPorDia :
+                    periodo === 'Mês' ? dados.produtosPorSemana :
+                    periodo === 'Trimestre' ? dados.produtosPorMes :
+                    dados.produtosPorTrimestre
+                  }>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="nome" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="vela_lavanda" fill="#8b5cf6" name="Vela Lavanda" />
+                    <Bar dataKey="vela_vanilla" fill="#ec4899" name="Vela Vanilla" />
+                    <Bar dataKey="kit_romance" fill="#06b6d4" name="Kit Romance" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           {/* Card Resumo da Seção - Layout único com 4 colunas */}
@@ -1883,6 +2121,13 @@ function App() {
             <BarChart3 className="w-8 h-8 text-blue-600" />
             Relatórios
           </h1>
+          <button
+            onClick={() => alert("Ferramenta em construção")}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Novo Relatório
+          </button>
         </div>
 
         {/* Seção Semana */}
@@ -2032,6 +2277,314 @@ function App() {
         {activeTab === 'products' && renderProducts()}
         {activeTab === 'reports' && renderReports()}
       </main>
+
+      {/* Modal de Produto */}
+      {isProductModalOpen && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsProductModalOpen(false)
+              setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Package className="w-6 h-6 text-amber-700" />
+                  Novo Produto
+                </h2>
+                <button
+                  onClick={() => {
+                    setIsProductModalOpen(false)
+                    setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+                  }}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Formulário */}
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              // Aqui será implementada a lógica de salvamento
+              const newProduct: Product = {
+                id: Date.now().toString(),
+                name: productForm.name,
+                category: productForm.category,
+                price: parseFloat(productForm.price) || 0,
+                cost: parseFloat(productForm.cost) || 0,
+                stock: parseInt(productForm.stock) || 0,
+                sold: parseInt(productForm.sold) || 0
+              }
+              setProducts(prev => [...prev, newProduct])
+              setIsProductModalOpen(false)
+              setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+            }} className="space-y-4">
+              
+              {/* Nome do Produto */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Nome do Produto
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={productForm.name}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  placeholder="Ex: Vela Aromática Lavanda"
+                />
+              </div>
+
+              {/* Categoria */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Categoria
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={productForm.category}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  placeholder="Selecione uma categoria"
+                />
+              </div>
+
+              {/* Preço de Venda */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Preço de Venda (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={productForm.price}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  placeholder="0,00"
+                />
+              </div>
+
+              {/* Custo */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Custo (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={productForm.cost}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, cost: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  placeholder="0,00"
+                />
+              </div>
+
+              {/* Estoque */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Estoque
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={productForm.stock}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, stock: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Quantidade Vendida */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Quantidade Vendida
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={productForm.sold}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, sold: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-6 border-t border-gray-200 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProductModalOpen(false)
+                    setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+                  }}
+                  className="flex-1 px-6 py-3 text-gray-700 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 font-semibold shadow-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Nova Transação */}
+      {isTransactionModalOpen && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsTransactionModalOpen(false)
+              setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <DollarSign className="w-6 h-6 text-amber-700" />
+                  Nova Transação
+                </h2>
+                <button
+                  onClick={() => {
+                    setIsTransactionModalOpen(false)
+                    setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+                  }}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Formulário */}
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              // Aqui será implementada a lógica de salvamento
+              console.log('Nova transação:', transactionForm)
+              setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+              setIsTransactionModalOpen(false)
+            }} className="space-y-5">
+              
+              {/* Data */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Data</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={transactionForm.date}
+                  onChange={handleTransactionInputChange}
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
+                  required
+                />
+              </div>
+
+              {/* Descrição */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <input
+                  type="text"
+                  name="description"
+                  value={transactionForm.description}
+                  onChange={handleTransactionInputChange}
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
+                  placeholder="Digite a descrição da transação..."
+                  required
+                />
+              </div>
+
+              {/* Valor */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$)</label>
+                <input
+                  type="number"
+                  name="value"
+                  value={transactionForm.value}
+                  onChange={handleTransactionInputChange}
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
+                  placeholder="0,00"
+                  step="0.01"
+                  min="0"
+                  required
+                />
+              </div>
+
+              {/* Tipo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                <select
+                  name="type"
+                  value={transactionForm.type}
+                  onChange={handleTransactionInputChange}
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
+                  required
+                >
+                  <option value="Receita">Receita</option>
+                  <option value="Despesa">Despesa</option>
+                </select>
+              </div>
+
+              {/* Categoria */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                <select
+                  name="category"
+                  value={transactionForm.category}
+                  onChange={handleTransactionInputChange}
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white"
+                  required
+                >
+                  <option value="" disabled>Selecione uma categoria</option>
+                  {getCategoriesByType(transactionForm.type).map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTransactionModalOpen(false)
+                    setTransactionForm({ date: '', description: '', value: '', type: 'Receita', category: '' })
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
