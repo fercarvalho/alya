@@ -149,7 +149,7 @@ function App() {
                   <DollarSign className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
+                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas</p>
                   <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
@@ -163,7 +163,7 @@ function App() {
                   <TrendingDown className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
+                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas</p>
                   <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
@@ -172,15 +172,17 @@ function App() {
             </div>
 
             <div className={`p-6 rounded-2xl shadow-lg ${
-              lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-red-500'
+              lucroLiquido >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
             }`}>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
                   <BarChart3 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
+                  <p className={`text-2xl font-bold mt-1 ${
+                    lucroLiquido >= 0 ? 'text-green-900' : 'text-red-900'
+                  }`}>
                     R$ {lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -203,7 +205,7 @@ function App() {
                   <DollarSign className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Receitas Anuais</p>
+                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Receitas Anuais</p>
                   <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
@@ -217,7 +219,7 @@ function App() {
                   <TrendingDown className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Despesas Anuais</p>
+                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Despesas Anuais</p>
                   <p className="text-2xl font-bold text-white mt-1">
                     R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
@@ -226,15 +228,17 @@ function App() {
             </div>
 
             <div className={`p-6 rounded-2xl shadow-lg ${
-              lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-red-600'
+              lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-yellow-600'
             }`}>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
                   <BarChart3 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                  <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
+                  <p className={`text-2xl font-bold mt-1 ${
+                    lucroLiquidoAno >= 0 ? 'text-green-900' : 'text-red-900'
+                  }`}>
                     R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
