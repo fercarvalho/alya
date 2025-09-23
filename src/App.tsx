@@ -158,8 +158,8 @@ function App() {
     </div>
   )
 
-  // Função para renderizar um mês específico
-  const renderMonth = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
+  // Função para renderizar apenas o conteúdo do mês (sem título)
+  const renderMonthContent = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
     // Cálculos para o mês específico
     const currentYear = 2025
     const transacoesDoMes = transactions.filter(t => {
@@ -171,14 +171,7 @@ function App() {
     const totalDespesas = transacoesDoMes.filter(t => t.type === 'despesa').reduce((sum, t) => sum + t.amount, 0)
 
     return (
-      <div key={monthName} className="space-y-6 mb-12">
-        {/* Título Principal do Mês */}
-        <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
-          <h2 className="text-3xl font-bold text-white text-center uppercase tracking-wider">
-            {monthName} - 2025
-          </h2>
-        </div>
-
+      <div className="space-y-6">
         {/* 1. RESULTADO */}
         <div className="space-y-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
@@ -370,6 +363,23 @@ function App() {
             </div>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  // Função para renderizar um mês específico com título
+  const renderMonth = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
+    return (
+      <div key={monthName} className="space-y-6 mb-12">
+        {/* Título Principal do Mês */}
+        <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
+          <h2 className="text-3xl font-bold text-white text-center uppercase tracking-wider">
+            {monthName} - 2025
+          </h2>
+        </div>
+        
+        {/* Conteúdo do Mês */}
+        {renderMonthContent(monthName, monthIndex, metaValue, saldoInicial)}
       </div>
     )
   }
@@ -613,10 +623,6 @@ function App() {
       { nome: 'DEZEMBRO', indice: 11, meta: 28000.00 }
     ]
 
-    // Identificar mês atual
-    const currentDate = new Date()
-    const currentMonthIndex = currentDate.getMonth()
-    
     // Encontrar o mês selecionado na lista
     const mesSelecionado = meses.find(mes => mes.indice === selectedMonth)
 
@@ -627,33 +633,49 @@ function App() {
             <img src="/alya-logo.png" alt="Alya" className="w-8 h-8" />
             Metas
           </h1>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Destacar mês:</label>
-              <select 
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {meses.map((mes) => (
-                  <option key={mes.indice} value={mes.indice}>
-                    {mes.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={() => setIsMetaModalOpen(true)}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-            >
-              <Plus className="h-5 w-5" />
-              Nova Meta
-            </button>
-          </div>
+          <button
+            onClick={() => setIsMetaModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Nova Meta
+          </button>
         </div>
 
-        {/* Renderizar Mês Selecionado (se existir) */}
-        {mesSelecionado && renderMonth(mesSelecionado.nome, mesSelecionado.indice, mesSelecionado.meta, 31970.50)}
+        {/* Renderizar Mês Selecionado com Dropdown Integrado */}
+        {mesSelecionado && (
+          <div className="space-y-6 mb-12">
+            {/* Dropdown do Mês Selecionado */}
+            <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
+              <div className="flex justify-center">
+                <select 
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="px-4 py-2 border border-white/30 rounded-lg bg-white/20 backdrop-blur-sm text-white font-semibold text-lg focus:outline-none focus:ring-2 focus:ring-white/50 hover:bg-white/30 transition-all duration-300"
+                  style={{ 
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem'
+                  }}
+                >
+                  {meses.map((mes) => (
+                    <option key={mes.indice} value={mes.indice} className="text-gray-800 bg-white">
+                      {mes.nome} - 2025
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            {/* Conteúdo do Mês */}
+            {renderMonthContent(mesSelecionado.nome, mesSelecionado.indice, mesSelecionado.meta, 31970.50)}
+          </div>
+        )}
 
         {/* Renderizar Total do Ano */}
         {renderTotalAno()}
