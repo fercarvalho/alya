@@ -296,13 +296,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-emerald-700 mb-1">
                   <span>Progresso</span>
-                  <span>{Math.min(100, ((totalReceitas / 30000) * 100)).toFixed(0)}%</span>
+                  <span>{((totalReceitas / 30000) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-emerald-200 rounded-full h-2">
+                <div className="w-full bg-emerald-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, ((totalReceitas / 30000) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {((totalReceitas / 30000) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-emerald-700 to-emerald-800 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, (((totalReceitas / 30000) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
@@ -322,13 +330,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-green-700 mb-1">
                   <span>Progresso</span>
-                  <span>{Math.min(100, (((totalReceitas * 0.6) / 18000) * 100)).toFixed(0)}%</span>
+                  <span>{(((totalReceitas * 0.6) / 18000) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-green-200 rounded-full h-2">
+                <div className="w-full bg-green-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, (((totalReceitas * 0.6) / 18000) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {(((totalReceitas * 0.6) / 18000) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-green-700 to-green-800 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, ((((totalReceitas * 0.6) / 18000) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
@@ -348,13 +364,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-teal-700 mb-1">
                   <span>Progresso</span>
-                  <span>{Math.min(100, (((totalReceitas * 0.3) / 12000) * 100)).toFixed(0)}%</span>
+                  <span>{(((totalReceitas * 0.3) / 12000) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-teal-200 rounded-full h-2">
+                <div className="w-full bg-teal-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, (((totalReceitas * 0.3) / 12000) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {(((totalReceitas * 0.3) / 12000) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-teal-700 to-teal-800 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, ((((totalReceitas * 0.3) / 12000) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
@@ -384,13 +408,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-red-700 mb-1">
                   <span>Limite</span>
-                  <span>{Math.min(100, ((totalDespesas / 15000) * 100)).toFixed(0)}%</span>
+                  <span>{((totalDespesas / 15000) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-red-200 rounded-full h-2">
+                <div className="w-full bg-red-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, ((totalDespesas / 15000) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {((totalDespesas / 15000) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-red-700 to-red-900 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, (((totalDespesas / 15000) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
@@ -410,13 +442,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-orange-700 mb-1">
                   <span>Limite</span>
-                  <span>{Math.min(100, (((totalDespesas * 0.7) / 10500) * 100)).toFixed(0)}%</span>
+                  <span>{(((totalDespesas * 0.7) / 10500) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-orange-200 rounded-full h-2">
+                <div className="w-full bg-orange-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, (((totalDespesas * 0.7) / 10500) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {(((totalDespesas * 0.7) / 10500) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-orange-700 to-orange-900 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, ((((totalDespesas * 0.7) / 10500) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
@@ -436,13 +476,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-amber-700 mb-1">
                   <span>Limite</span>
-                  <span>{Math.min(100, (((totalDespesas * 0.25) / 4500) * 100)).toFixed(0)}%</span>
+                  <span>{(((totalDespesas * 0.25) / 4500) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-amber-200 rounded-full h-2">
+                <div className="w-full bg-amber-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, (((totalDespesas * 0.25) / 4500) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {(((totalDespesas * 0.25) / 4500) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-amber-700 to-amber-900 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, ((((totalDespesas * 0.25) / 4500) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
@@ -472,13 +520,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-blue-700 mb-1">
                   <span>Meta</span>
-                  <span>{Math.min(100, (((totalDespesas * 0.05) / 2000) * 100)).toFixed(0)}%</span>
+                  <span>{(((totalDespesas * 0.05) / 2000) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
+                <div className="w-full bg-blue-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, (((totalDespesas * 0.05) / 2000) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {(((totalDespesas * 0.05) / 2000) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-blue-700 to-blue-900 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, ((((totalDespesas * 0.05) / 2000) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
@@ -498,13 +554,21 @@ function App() {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-purple-700 mb-1">
                   <span>Meta</span>
-                  <span>{Math.min(100, (((totalReceitas * 0.1) / 3000) * 100)).toFixed(0)}%</span>
+                  <span>{(((totalReceitas * 0.1) / 3000) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-purple-200 rounded-full h-2">
+                <div className="w-full bg-purple-200 rounded-full h-2 relative">
+                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, (((totalReceitas * 0.1) / 3000) * 100))}%` }}
                   ></div>
+                  {/* Barra de excesso (>100%) */}
+                  {(((totalReceitas * 0.1) / 3000) * 100) > 100 && (
+                    <div 
+                      className="absolute top-0 left-0 bg-gradient-to-r from-purple-700 to-purple-900 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, ((((totalReceitas * 0.1) / 3000) * 100) - 100))}%` }}
+                    ></div>
+                  )}
                 </div>
               </div>
               
