@@ -1042,6 +1042,81 @@ function App() {
     )
   }
 
+  // Render Transactions
+  const renderTransactions = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <DollarSign className="w-8 h-8 text-green-600" />
+          Transações
+        </h1>
+        <button
+          onClick={() => alert("Ferramenta em construção")}
+          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-400 text-white font-semibold rounded-xl hover:from-green-500 hover:to-emerald-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+        >
+          <Plus className="h-5 w-5" />
+          Nova Transação
+        </button>
+      </div>
+      
+      <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+        <p className="text-gray-600 text-center">
+          Funcionalidade em desenvolvimento. Em breve você poderá gerenciar todas as suas transações financeiras aqui.
+        </p>
+      </div>
+    </div>
+  )
+
+  // Render Products
+  const renderProducts = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <Package className="w-8 h-8 text-purple-600" />
+          Produtos
+        </h1>
+        <button
+          onClick={() => alert("Ferramenta em construção")}
+          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-400 to-indigo-400 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-indigo-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+        >
+          <Plus className="h-5 w-5" />
+          Novo Produto
+        </button>
+      </div>
+      
+      <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+        <p className="text-gray-600 text-center">
+          Funcionalidade em desenvolvimento. Em breve você poderá gerenciar seu catálogo de produtos aqui.
+        </p>
+      </div>
+    </div>
+  )
+
+  // Render Reports
+  const renderReports = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <BarChart3 className="w-8 h-8 text-blue-600" />
+          Relatórios
+        </h1>
+        <button
+          onClick={() => alert("Ferramenta em construção")}
+          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-white font-semibold rounded-xl hover:from-blue-500 hover:to-indigo-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+        >
+          <Plus className="h-5 w-5" />
+          Novo Relatório
+        </button>
+      </div>
+      
+      <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+        <p className="text-gray-600 text-center">
+          Funcionalidade em desenvolvimento. Em breve você terá acesso a relatórios detalhados e análises financeiras.
+        </p>
+      </div>
+    </div>
+  )
+
   // Render Metas
   const renderMetas = () => {
     const meses = [
@@ -1151,7 +1226,10 @@ function App() {
           <div className="flex space-x-2">
             {[
               { id: 'dashboard', name: 'Dashboard', icon: Home },
-              { id: 'metas', name: 'Metas', icon: TrendingUp }
+              { id: 'metas', name: 'Metas', icon: TrendingUp },
+              { id: 'reports', name: 'Relatórios', icon: BarChart3 },
+              { id: 'transactions', name: 'Transações', icon: DollarSign },
+              { id: 'products', name: 'Produtos', icon: Package }
             ].map(tab => {
               const Icon = tab.icon
               return (
@@ -1177,6 +1255,9 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'metas' && renderMetas()}
+        {activeTab === 'transactions' && renderTransactions()}
+        {activeTab === 'products' && renderProducts()}
+        {activeTab === 'reports' && renderReports()}
       </main>
     </div>
   )
