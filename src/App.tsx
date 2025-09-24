@@ -2881,7 +2881,7 @@ function App() {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
-              <div className="grid grid-cols-6 md:grid-cols-7 gap-2 md:gap-4 items-center text-center">
+               <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -2892,41 +2892,41 @@ function App() {
                 </div>
                 <button 
                   onClick={() => handleSort('date')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Data</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Data</p>
                   {getSortIcon('date')}
                 </button>
                 <button 
                   onClick={() => handleSort('description')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Descrição</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Descrição</p>
                   {getSortIcon('description')}
                 </button>
                 <button 
                   onClick={() => handleSort('type')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
                   {getSortIcon('type')}
                 </button>
                 <button 
                   onClick={() => handleSort('category')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Categoria</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Categoria</p>
                   {getSortIcon('category')}
                 </button>
                 <button 
                   onClick={() => handleSort('value')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
                   {getSortIcon('value')}
                 </button>
-                <div>
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
+                <div className="flex-shrink-0 w-16 sm:w-20">
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
             </div>
@@ -2935,34 +2935,34 @@ function App() {
               <div key={transaction.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === transactions.length - 1 ? 'border-b-0' : ''
               }`}>
-                <div className="grid grid-cols-6 md:grid-cols-7 gap-2 md:gap-4 items-center text-center">
+                <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
                   {/* Checkbox */}
-                  <div className="flex justify-center">
+                  <div className="flex-shrink-0 text-left">
                     <input
                       type="checkbox"
                       checked={selectedTransactions.has(transaction.id)}
                       onChange={() => handleSelectTransaction(transaction.id)}
-                      className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                      className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                     />
                   </div>
                   
                   {/* Data */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
+                   <div className="flex-shrink-0 w-20 sm:w-24 text-left">
+                     <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                       {new Date(transaction.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   
                   {/* Descrição */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 truncate">
-                      {transaction.description}
-                    </h3>
-                  </div>
+                   <div className="flex-1 min-w-0 text-left">
+                     <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
+                        {transaction.description}
+                      </h3>
+                    </div>
                   
                   {/* Tipo */}
-                  <div className="flex justify-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  <div className="flex-shrink-0 w-16 sm:w-20 text-left">
+                    <span className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium ${
                       transaction.type === 'Receita' 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
@@ -2972,29 +2972,29 @@ function App() {
                   </div>
                   
                   {/* Categoria */}
-                  <div className="flex justify-center">
-                    <span className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded-md">
-                      {transaction.category}
-                    </span>
-                  </div>
+                   <div className="flex-shrink-0 w-20 sm:w-24 text-left">
+                     <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
+                        {transaction.category}
+                      </span>
+                    </div>
                   
                   {/* Valor */}
-                  <div>
-                    <p className={`text-lg font-bold ${
+                  <div className="flex-shrink-0 w-20 sm:w-24 text-left">
+                    <p className={`text-xs sm:text-sm md:text-lg font-bold ${
                       transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    } truncate`}>
                       {transaction.type === 'Receita' ? '+' : '-'}R$ {transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   
                   {/* Ações */}
-                  <div className="flex justify-center gap-2">
+                  <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-start">
                     <button
                       onClick={() => handleEditTransaction(transaction)}
-                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
+                      className="p-0.5 sm:p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
                       title="Editar transação"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     </button>
                     <button
                       onClick={async () => {
@@ -3009,10 +3009,10 @@ function App() {
                           }
                         }
                       }}
-                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
+                      className="p-0.5 sm:p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
                       title="Excluir transação"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     </button>
                   </div>
                 </div>
@@ -3169,48 +3169,48 @@ function App() {
                 </div>
                 <button 
                   onClick={() => handleSort('name')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
                   {getSortIcon('name')}
                 </button>
                 <button 
                   onClick={() => handleSort('category')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Categoria</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Categoria</p>
                   {getSortIcon('category')}
                 </button>
                 <button 
                   onClick={() => handleSort('price')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
                   {getSortIcon('price')}
                 </button>
                 <button 
                   onClick={() => handleSort('cost')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Custo</p>
                   {getSortIcon('cost')}
                 </button>
                 <button 
                   onClick={() => handleSort('stock')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
                   {getSortIcon('stock')}
                 </button>
                 <button 
                   onClick={() => handleSort('sold')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Vendidos</p>
                   {getSortIcon('sold')}
                 </button>
                 <div>
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
             </div>
@@ -3219,14 +3219,14 @@ function App() {
               <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === products.length - 1 ? 'border-b-0' : ''
               }`}>
-                <div className="grid grid-cols-6 md:grid-cols-8 gap-2 md:gap-4 items-center text-center">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-1 sm:gap-2 md:gap-3 lg:gap-4 items-center text-center">
                   {/* Checkbox */}
-                  <div className="flex justify-center">
+                  <div className="flex-shrink-0 text-left">
                     <input
                       type="checkbox"
                       checked={selectedProducts.has(product.id)}
                       onChange={() => handleSelectProduct(product.id)}
-                      className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                      className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                     />
                   </div>
                   {/* Nome */}
@@ -3237,48 +3237,48 @@ function App() {
                   </div>
                   
                   {/* Categoria */}
-                  <div className="flex justify-center">
-                    <span className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded-md">
-                      {product.category}
-                    </span>
-                  </div>
+                   <div className="flex-1 min-w-0 text-left">
+                     <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
+                        {product.category}
+                      </span>
+                    </div>
                   
                   {/* Preço */}
                   <div>
-                    <p className="text-lg font-bold text-green-600">
+                    <p className="text-xs sm:text-sm md:text-lg font-bold text-green-600 truncate">
                       R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   
                   {/* Custo */}
-                  <div>
-                    <p className="text-lg font-bold text-orange-600">
+                  <div className="block">
+                    <p className="text-xs sm:text-sm md:text-lg font-bold text-orange-600 truncate">
                       R$ {product.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   
                   {/* Estoque */}
                   <div>
-                    <p className={`text-lg font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    <p className={`text-xs sm:text-sm md:text-lg font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'} truncate`}>
                       {product.stock}
                     </p>
                   </div>
                   
                   {/* Vendidos */}
-                  <div>
-                    <p className="text-lg font-bold text-blue-600">
+                  <div className="block">
+                    <p className="text-xs sm:text-sm md:text-lg font-bold text-blue-600 truncate">
                       {product.sold}
                     </p>
                   </div>
                   
                   {/* Ações */}
-                  <div className="flex justify-center gap-2">
+                  <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-start">
                     <button
                       onClick={() => handleEditProduct(product)}
-                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
+                      className="p-0.5 sm:p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
                       title="Editar produto"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     </button>
                     <button
                       onClick={async () => {
@@ -3293,10 +3293,10 @@ function App() {
                           }
                         }
                       }}
-                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
+                      className="p-0.5 sm:p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
                       title="Excluir produto"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     </button>
                   </div>
                 </div>
