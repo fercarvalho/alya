@@ -1118,9 +1118,9 @@ function App() {
   // Função para obter as categorias baseadas no tipo
   const getCategoriesByType = (type: string) => {
     if (type === 'Receita') {
-      return ['Atacado', 'Varejo', 'Outros']
+      return ['Atacado', 'Varejo', 'Investimentos', 'Outros']
     } else if (type === 'Despesa') {
-      return ['Fixo', 'Variável', 'Atacado', 'Varejo', 'Investimento', 'Mkt']
+      return ['Fixo', 'Variável', 'Investimento', 'Mkt', 'Outros']
     }
     return []
   }
