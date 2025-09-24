@@ -3158,7 +3158,7 @@ function App() {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
-              <div className="grid grid-cols-6 md:grid-cols-8 gap-2 md:gap-4 items-center text-center">
+              <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -3176,40 +3176,40 @@ function App() {
                 </button>
                 <button 
                   onClick={() => handleSort('category')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
                    <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Categoria</p>
                   {getSortIcon('category')}
                 </button>
                 <button 
                   onClick={() => handleSort('price')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
                    <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
                   {getSortIcon('price')}
                 </button>
                 <button 
                   onClick={() => handleSort('cost')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Custo</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Custo</p>
                   {getSortIcon('cost')}
                 </button>
                 <button 
                   onClick={() => handleSort('stock')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
                    <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
                   {getSortIcon('stock')}
                 </button>
                 <button 
                   onClick={() => handleSort('sold')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Vendidos</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Vendidos</p>
                   {getSortIcon('sold')}
                 </button>
-                <div>
+                <div className="flex-shrink-0 w-16 sm:w-20 flex justify-center">
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
@@ -3219,7 +3219,7 @@ function App() {
               <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === products.length - 1 ? 'border-b-0' : ''
               }`}>
-                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-1 sm:gap-2 md:gap-3 lg:gap-4 items-center text-center">
+                <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
                   {/* Checkbox */}
                   <div className="flex-shrink-0 text-left">
                     <input
@@ -3230,42 +3230,42 @@ function App() {
                     />
                   </div>
                   {/* Nome */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 truncate">
+                  <div className="flex-1 min-w-0 text-left">
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
                       {product.name}
                     </h3>
                   </div>
                   
                   {/* Categoria */}
-                   <div className="flex-1 min-w-0 text-left">
+                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
                      <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
                         {product.category}
                       </span>
                     </div>
                   
                   {/* Preço */}
-                  <div>
+                  <div className="flex-shrink-0 w-20 sm:w-24 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-green-600 truncate">
                       R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   
                   {/* Custo */}
-                  <div className="block">
+                  <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-orange-600 truncate">
                       R$ {product.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   
                   {/* Estoque */}
-                  <div>
+                  <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <p className={`text-xs sm:text-sm md:text-lg font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'} truncate`}>
                       {product.stock}
                     </p>
                   </div>
                   
                   {/* Vendidos */}
-                  <div className="block">
+                  <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-blue-600 truncate">
                       {product.sold}
                     </p>
