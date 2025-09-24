@@ -135,6 +135,15 @@ function App() {
   // Estados do calendário personalizado
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [calendarDate, setCalendarDate] = useState(new Date())
+  
+  // Estados para ordenação
+  const [sortConfig, setSortConfig] = useState<{
+    field: string | null
+    direction: 'asc' | 'desc'
+  }>({
+    field: null,
+    direction: 'asc'
+  })
 
   // Função para fechar modais com ESC
   useEffect(() => {
@@ -337,6 +346,81 @@ function App() {
       setTransactions(prev => prev.filter(transaction => !selectedTransactions.has(transaction.id)))
       setSelectedTransactions(new Set())
     }
+  }
+
+  // Funções de ordenação
+  const handleSort = (field: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    
+    if (sortConfig.field === field && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    
+    setSortConfig({ field, direction })
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortConfig.field !== field) {
+      return <span className="text-gray-400">↕</span>
+    }
+    return sortConfig.direction === 'asc' ? 
+      <span className="text-amber-600">↑</span> : 
+      <span className="text-amber-600">↓</span>
+  }
+
+  const getSortedTransactions = () => {
+    if (!sortConfig.field) return transactions
+
+    return [...transactions].sort((a, b) => {
+      let aValue: any = a[sortConfig.field as keyof NewTransaction]
+      let bValue: any = b[sortConfig.field as keyof NewTransaction]
+
+      // Tratamento especial para diferentes tipos de dados
+      if (sortConfig.field === 'date') {
+        aValue = new Date(aValue).getTime()
+        bValue = new Date(bValue).getTime()
+      } else if (sortConfig.field === 'value') {
+        aValue = Number(aValue)
+        bValue = Number(bValue)
+      } else if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+  }
+
+  const getSortedProducts = () => {
+    if (!sortConfig.field) return products
+
+    return [...products].sort((a, b) => {
+      let aValue: any = a[sortConfig.field as keyof Product]
+      let bValue: any = b[sortConfig.field as keyof Product]
+
+      // Tratamento especial para diferentes tipos de dados
+      if (sortConfig.field === 'price' || sortConfig.field === 'cost' || sortConfig.field === 'stock' || sortConfig.field === 'sold') {
+        aValue = Number(aValue)
+        bValue = Number(bValue)
+      } else if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1
+      }
+      return 0
+    })
   }
 
   // Função para validar formulário de transação
@@ -2114,28 +2198,48 @@ function App() {
                     className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                   />
                 </div>
-                <div>
+                <button 
+                  onClick={() => handleSort('date')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Data</p>
-                </div>
-                <div>
+                  {getSortIcon('date')}
+                </button>
+                <button 
+                  onClick={() => handleSort('description')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Descrição</p>
-                </div>
-                <div>
+                  {getSortIcon('description')}
+                </button>
+                <button 
+                  onClick={() => handleSort('type')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
-                </div>
-                <div>
+                  {getSortIcon('type')}
+                </button>
+                <button 
+                  onClick={() => handleSort('category')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Categoria</p>
-                </div>
-                <div>
+                  {getSortIcon('category')}
+                </button>
+                <button 
+                  onClick={() => handleSort('value')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
-                </div>
+                  {getSortIcon('value')}
+                </button>
                 <div>
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
             </div>
             
-            {transactions.map((transaction, index) => (
+            {getSortedTransactions().map((transaction, index) => (
               <div key={transaction.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === transactions.length - 1 ? 'border-b-0' : ''
               }`}>
@@ -2283,31 +2387,55 @@ function App() {
                     className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                   />
                 </div>
-                <div>
+                <button 
+                  onClick={() => handleSort('name')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
-                </div>
-                <div>
+                  {getSortIcon('name')}
+                </button>
+                <button 
+                  onClick={() => handleSort('category')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Categoria</p>
-                </div>
-                <div>
+                  {getSortIcon('category')}
+                </button>
+                <button 
+                  onClick={() => handleSort('price')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
-                </div>
-                <div>
+                  {getSortIcon('price')}
+                </button>
+                <button 
+                  onClick={() => handleSort('cost')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Custo</p>
-                </div>
-                <div>
+                  {getSortIcon('cost')}
+                </button>
+                <button 
+                  onClick={() => handleSort('stock')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
-                </div>
-                <div>
+                  {getSortIcon('stock')}
+                </button>
+                <button 
+                  onClick={() => handleSort('sold')}
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
+                >
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Vendidos</p>
-                </div>
+                  {getSortIcon('sold')}
+                </button>
                 <div>
                   <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
             </div>
             
-            {products.map((product, index) => (
+            {getSortedProducts().map((product, index) => (
               <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === products.length - 1 ? 'border-b-0' : ''
               }`}>
@@ -3846,16 +3974,16 @@ function App() {
                         
                         if (importExportType === 'transactions') {
                           const mockTransactions = [
-                            { id: Date.now() + 1, date: new Date().toISOString().split('T')[0], description: 'Transação Importada 1', value: 150, type: 'Entrada', category: 'Vendas' },
-                            { id: Date.now() + 2, date: new Date().toISOString().split('T')[0], description: 'Transação Importada 2', value: 75, type: 'Saída', category: 'Compras' }
+                            { id: (Date.now() + 1).toString(), date: new Date().toISOString().split('T')[0], description: 'Transação Importada 1', value: 150, type: 'Receita' as const, category: 'Vendas', createdAt: new Date() },
+                            { id: (Date.now() + 2).toString(), date: new Date().toISOString().split('T')[0], description: 'Transação Importada 2', value: 75, type: 'Despesa' as const, category: 'Compras', createdAt: new Date() }
                           ]
                           setTransactions(prev => [...prev, ...mockTransactions])
                           localStorage.setItem('transactions', JSON.stringify([...transactions, ...mockTransactions]))
                           alert(`Arquivo "${selectedFile.name}" processado localmente!\n\n${mockTransactions.length} transações adicionadas como exemplo.`)
                         } else if (importExportType === 'products') {
                           const mockProducts = [
-                            { id: Date.now() + 1, name: 'Produto Importado 1', category: 'Importados', price: 120, cost: 60, stock: 15, sold: 3 },
-                            { id: Date.now() + 2, name: 'Produto Importado 2', category: 'Importados', price: 80, cost: 40, stock: 25, sold: 8 }
+                            { id: (Date.now() + 1).toString(), name: 'Produto Importado 1', category: 'Importados', price: 120, cost: 60, stock: 15, sold: 3 },
+                            { id: (Date.now() + 2).toString(), name: 'Produto Importado 2', category: 'Importados', price: 80, cost: 40, stock: 25, sold: 8 }
                           ]
                           setProducts(prev => [...prev, ...mockProducts])
                           localStorage.setItem('products', JSON.stringify([...products, ...mockProducts]))
