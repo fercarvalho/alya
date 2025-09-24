@@ -2961,7 +2961,7 @@ function App() {
                     </div>
                   
                   {/* Tipo */}
-                  <div className="flex-shrink-0 w-16 sm:w-20 text-left">
+                  <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <span className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium ${
                       transaction.type === 'Receita' 
                         ? 'bg-green-100 text-green-800' 
@@ -2979,7 +2979,7 @@ function App() {
                     </div>
                   
                   {/* Valor */}
-                  <div className="flex-shrink-0 w-20 sm:w-24 text-left">
+                  <div className="flex-shrink-0 w-20 sm:w-24 text-center">
                     <p className={`text-xs sm:text-sm md:text-lg font-bold ${
                       transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
                     } truncate`}>
@@ -2988,7 +2988,7 @@ function App() {
                   </div>
                   
                   {/* Ações */}
-                  <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-start">
+                  <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-center">
                     <button
                       onClick={() => handleEditTransaction(transaction)}
                       className="p-0.5 sm:p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
@@ -3272,7 +3272,7 @@ function App() {
                   </div>
                   
                   {/* Ações */}
-                  <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-start">
+                  <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-center">
                     <button
                       onClick={() => handleEditProduct(product)}
                       className="p-0.5 sm:p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-all duration-200"
