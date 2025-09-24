@@ -17,7 +17,8 @@ import {
   AlertCircle,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Filter
 } from 'lucide-react'
 import { 
   PieChart as RechartsPieChart, 
@@ -2318,6 +2319,12 @@ function App() {
         </div>
       </div>
       
+      {/* Título dos Filtros */}
+      <div className="flex items-center gap-2">
+        <Filter className="w-5 h-5 text-amber-600" />
+        <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
+      </div>
+      
       {/* Filtros de Transações */}
       <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 shadow-sm">
         <select
@@ -2549,6 +2556,12 @@ function App() {
             Novo Produto
           </button>
         </div>
+      </div>
+      
+      {/* Título dos Filtros */}
+      <div className="flex items-center gap-2">
+        <Filter className="w-5 h-5 text-amber-600" />
+        <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
       </div>
       
       {/* Filtros de Produtos */}
