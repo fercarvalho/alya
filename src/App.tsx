@@ -2760,12 +2760,15 @@ function App() {
       
       {/* Filtros de Transações */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-amber-600" />
-          <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex items-center gap-6">
+          {/* Título */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-amber-600" />
+            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
+          </div>
+          
+          {/* Campos de Filtro */}
+          <div className="flex items-end gap-4">
           {/* Filtro Tipo */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-gray-700 mb-1">Tipo</label>
@@ -2855,16 +2858,17 @@ function App() {
               {isFilterCalendarToOpen && renderFilterCalendarTo()}
             </div>
           </div>
-        </div>
-        
-        {/* Botão Limpar Filtros */}
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={clearTransactionFilters}
-            className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
-          >
-            Limpar Filtros
-          </button>
+          </div>
+          
+          {/* Botão Limpar Filtros */}
+          <div className="ml-auto">
+            <button
+              onClick={clearTransactionFilters}
+              className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+            >
+              Limpar Filtros
+            </button>
+          </div>
         </div>
       </div>
       
@@ -3066,12 +3070,15 @@ function App() {
       
       {/* Filtros de Produtos */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-amber-600" />
-          <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex items-center gap-6">
+          {/* Título */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-amber-600" />
+            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
+          </div>
+          
+          {/* Campos de Filtro */}
+          <div className="flex items-end gap-4">
           {/* Filtro Categoria */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
@@ -3128,16 +3135,17 @@ function App() {
               <option value="withoutCost">Sem preço de custo</option>
             </select>
           </div>
-        </div>
-        
-        {/* Botão Limpar Filtros */}
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={clearProductFilters}
-            className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
-          >
-            Limpar Filtros
-          </button>
+          </div>
+          
+          {/* Botão Limpar Filtros */}
+          <div className="ml-auto">
+            <button
+              onClick={clearProductFilters}
+              className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+            >
+              Limpar Filtros
+            </button>
+          </div>
         </div>
       </div>
       
