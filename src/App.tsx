@@ -2760,7 +2760,7 @@ function App() {
       
       {/* Filtros de Transações */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-amber-600" />
@@ -2768,9 +2768,9 @@ function App() {
           </div>
           
           {/* Campos de Filtro */}
-          <div className="flex items-end gap-4">
+          <div className="flex flex-wrap items-end gap-3 lg:gap-4">
           {/* Filtro Tipo */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[120px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Tipo</label>
             <select
               value={transactionFilters.type}
@@ -2788,7 +2788,7 @@ function App() {
           </div>
           
           {/* Filtro Categoria */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[140px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
             <select
               value={transactionFilters.category}
@@ -2820,7 +2820,7 @@ function App() {
           </div>
           
           {/* Filtro Data Início */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[130px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Data Início</label>
             <div className="relative">
           
@@ -2840,7 +2840,7 @@ function App() {
           </div>
           
           {/* Filtro Data Fim */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[130px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Data Fim</label>
             <div className="relative">
           
@@ -2861,10 +2861,10 @@ function App() {
           </div>
           
           {/* Botão Limpar Filtros */}
-          <div className="ml-auto">
+          <div className="lg:ml-auto">
             <button
               onClick={clearTransactionFilters}
-              className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+              className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors w-full lg:w-auto"
             >
               Limpar Filtros
             </button>
@@ -2883,7 +2883,7 @@ function App() {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
-              <div className="grid grid-cols-7 gap-4 items-center text-center">
+              <div className="grid grid-cols-6 md:grid-cols-7 gap-2 md:gap-4 items-center text-center">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -2896,39 +2896,39 @@ function App() {
                   onClick={() => handleSort('date')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Data</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block hidden md:block">Data</p>
                   {getSortIcon('date')}
                 </button>
                 <button 
                   onClick={() => handleSort('description')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Descrição</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Descrição</p>
                   {getSortIcon('description')}
                 </button>
                 <button 
                   onClick={() => handleSort('type')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Tipo</p>
                   {getSortIcon('type')}
                 </button>
                 <button 
                   onClick={() => handleSort('category')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Categoria</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Categoria</p>
                   {getSortIcon('category')}
                 </button>
                 <button 
                   onClick={() => handleSort('value')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Valor</p>
                   {getSortIcon('value')}
                 </button>
                 <div>
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Ações</p>
                 </div>
               </div>
             </div>
@@ -2937,7 +2937,7 @@ function App() {
               <div key={transaction.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === transactions.length - 1 ? 'border-b-0' : ''
               }`}>
-                <div className="grid grid-cols-7 gap-4 items-center text-center">
+                <div className="grid grid-cols-6 md:grid-cols-7 gap-2 md:gap-4 items-center text-center">
                   {/* Checkbox */}
                   <div className="flex justify-center">
                     <input
@@ -3070,7 +3070,7 @@ function App() {
       
       {/* Filtros de Produtos */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-amber-600" />
@@ -3078,9 +3078,9 @@ function App() {
           </div>
           
           {/* Campos de Filtro */}
-          <div className="flex items-end gap-4">
+          <div className="flex flex-wrap items-end gap-3 lg:gap-4">
           {/* Filtro Categoria */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[140px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
             <input
               type="text"
@@ -3092,7 +3092,7 @@ function App() {
           </div>
           
           {/* Filtro Estoque */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[120px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Estoque</label>
           
             <select
@@ -3107,7 +3107,7 @@ function App() {
           </div>
           
           {/* Filtro Vendidos */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[120px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Vendidos</label>
           
             <select
@@ -3122,7 +3122,7 @@ function App() {
           </div>
           
           {/* Filtro Preço de Custo */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[150px]">
             <label className="text-sm font-semibold text-gray-700 mb-1">Preço de Custo</label>
           
             <select
@@ -3138,10 +3138,10 @@ function App() {
           </div>
           
           {/* Botão Limpar Filtros */}
-          <div className="ml-auto">
+          <div className="lg:ml-auto">
             <button
               onClick={clearProductFilters}
-              className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+              className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors w-full lg:w-auto"
             >
               Limpar Filtros
             </button>
@@ -3160,7 +3160,7 @@ function App() {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
-              <div className="grid grid-cols-8 gap-4 items-center text-center">
+              <div className="grid grid-cols-6 md:grid-cols-8 gap-2 md:gap-4 items-center text-center">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -3173,46 +3173,46 @@ function App() {
                   onClick={() => handleSort('name')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Nome</p>
                   {getSortIcon('name')}
                 </button>
                 <button 
                   onClick={() => handleSort('category')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Categoria</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Categoria</p>
                   {getSortIcon('category')}
                 </button>
                 <button 
                   onClick={() => handleSort('price')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Preço</p>
                   {getSortIcon('price')}
                 </button>
                 <button 
                   onClick={() => handleSort('cost')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Custo</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Custo</p>
                   {getSortIcon('cost')}
                 </button>
                 <button 
                   onClick={() => handleSort('stock')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Estoque</p>
                   {getSortIcon('stock')}
                 </button>
                 <button 
                   onClick={() => handleSort('sold')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Vendidos</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Vendidos</p>
                   {getSortIcon('sold')}
                 </button>
                 <div>
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Ações</p>
                 </div>
               </div>
             </div>
@@ -3221,7 +3221,7 @@ function App() {
               <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === products.length - 1 ? 'border-b-0' : ''
               }`}>
-                <div className="grid grid-cols-8 gap-4 items-center text-center">
+                <div className="grid grid-cols-6 md:grid-cols-8 gap-2 md:gap-4 items-center text-center">
                   {/* Checkbox */}
                   <div className="flex justify-center">
                     <input
