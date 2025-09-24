@@ -4727,19 +4727,42 @@ function App() {
                           
                           // Atualizar os dados no frontend baseado na resposta
                           if (importExportType === 'transactions' && result.data) {
-                            const newTransactions = result.data.map((t: any) => ({
-                              ...t,
-                              id: t.id || Date.now() + Math.random()
-                            }))
-                            setTransactions(prev => [...prev, ...newTransactions])
-                            localStorage.setItem('transactions', JSON.stringify([...transactions, ...newTransactions]))
+                            // Salvar cada transação no banco de dados
+                            for (const transactionData of result.data) {
+                              try {
+                                const savedTransaction = await saveTransaction({
+                                  date: transactionData.date,
+                                  description: transactionData.description,
+                                  value: transactionData.value,
+                                  type: transactionData.type,
+                                  category: transactionData.category
+                                })
+                                if (savedTransaction) {
+                                  setTransactions(prev => [...prev, savedTransaction])
+                                }
+                              } catch (error) {
+                                console.error('Erro ao salvar transação:', error)
+                              }
+                            }
                           } else if (importExportType === 'products' && result.data) {
-                            const newProducts = result.data.map((p: any) => ({
-                              ...p,
-                              id: p.id || Date.now() + Math.random()
-                            }))
-                            setProducts(prev => [...prev, ...newProducts])
-                            localStorage.setItem('products', JSON.stringify([...products, ...newProducts]))
+                            // Salvar cada produto no banco de dados
+                            for (const productData of result.data) {
+                              try {
+                                const savedProduct = await saveProduct({
+                                  name: productData.name,
+                                  category: productData.category,
+                                  price: productData.price,
+                                  cost: productData.cost,
+                                  stock: productData.stock,
+                                  sold: productData.sold
+                                })
+                                if (savedProduct) {
+                                  setProducts(prev => [...prev, savedProduct])
+                                }
+                              } catch (error) {
+                                console.error('Erro ao salvar produto:', error)
+                              }
+                            }
                           }
                           
                           alert(`Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || 'Dados processados com sucesso.'}`)

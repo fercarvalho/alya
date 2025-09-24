@@ -104,6 +104,30 @@ function processProducts(worksheet) {
   return products;
 }
 
+// Rota para baixar modelo de arquivo
+app.get('/api/modelo/:type', (req, res) => {
+  try {
+    const { type } = req.params;
+    
+    if (!['transactions', 'products'].includes(type)) {
+      return res.status(400).json({ error: 'Tipo inválido! Use "transactions" ou "products"' });
+    }
+    
+    const fileName = type === 'transactions' ? 'modelo-transacoes.xlsx' : 'modelo-produtos.xlsx';
+    const filePath = path.join(__dirname, 'public', fileName);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Arquivo modelo não encontrado' });
+    }
+    
+    res.download(filePath, fileName);
+    
+  } catch (error) {
+    console.error('Erro ao baixar modelo:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Rota para importar arquivos
 app.post('/api/import', upload.single('file'), (req, res) => {
   try {
