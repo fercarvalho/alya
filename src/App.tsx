@@ -2297,71 +2297,69 @@ function App() {
           <DollarSign className="w-8 h-8 text-green-600" />
           Transações
         </h1>
-        <div className="flex items-center gap-4">
-          {/* Filtros de Transações */}
-          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 shadow-sm">
-            <select
-              value={transactionFilters.type}
-              onChange={(e) => setTransactionFilters(prev => ({ ...prev, type: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-            >
-              <option value="">Todos os tipos</option>
-              <option value="Receita">Receitas</option>
-              <option value="Despesa">Despesas</option>
-            </select>
-            
-            <input
-              type="text"
-              placeholder="Categoria..."
-              value={transactionFilters.category}
-              onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-32"
-            />
-            
-            <input
-              type="date"
-              placeholder="Data início"
-              value={transactionFilters.dateFrom}
-              onChange={(e) => setTransactionFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-            />
-            
-            <input
-              type="date"
-              placeholder="Data fim"
-              value={transactionFilters.dateTo}
-              onChange={(e) => setTransactionFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-            />
-            
-            <button
-              onClick={clearTransactionFilters}
-              className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
-            >
-              Limpar Filtros
-            </button>
-          </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setImportExportType('transactions')
-                setIsImportExportModalOpen(true)
-              }}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-            >
-              <Download className="h-5 w-5" />
-              Importar/Exportar
-            </button>
-            <button
-              onClick={() => setIsTransactionModalOpen(true)}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-            >
-              <Plus className="h-5 w-5" />
-              Nova Transação
-            </button>
-          </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              setImportExportType('transactions')
+              setIsImportExportModalOpen(true)
+            }}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Download className="h-5 w-5" />
+            Importar/Exportar
+          </button>
+          <button
+            onClick={() => setIsTransactionModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Nova Transação
+          </button>
         </div>
+      </div>
+      
+      {/* Filtros de Transações */}
+      <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 shadow-sm">
+        <select
+          value={transactionFilters.type}
+          onChange={(e) => setTransactionFilters(prev => ({ ...prev, type: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+        >
+          <option value="">Todos os tipos</option>
+          <option value="Receita">Receitas</option>
+          <option value="Despesa">Despesas</option>
+        </select>
+        
+        <input
+          type="text"
+          placeholder="Categoria..."
+          value={transactionFilters.category}
+          onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-32"
+        />
+        
+        <input
+          type="date"
+          placeholder="Data início"
+          value={transactionFilters.dateFrom}
+          onChange={(e) => setTransactionFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+        />
+        
+        <input
+          type="date"
+          placeholder="Data fim"
+          value={transactionFilters.dateTo}
+          onChange={(e) => setTransactionFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+        />
+        
+        <button
+          onClick={clearTransactionFilters}
+          className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+        >
+          Limpar Filtros
+        </button>
       </div>
       
       {/* Lista de Transações */}
@@ -2532,75 +2530,73 @@ function App() {
           <Package className="w-8 h-8 text-purple-600" />
           Produtos
         </h1>
-        <div className="flex items-center gap-4">
-          {/* Filtros de Produtos */}
-          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 shadow-sm">
-            <input
-              type="text"
-              placeholder="Categoria..."
-              value={productFilters.category}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, category: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-32"
-            />
-            
-            <select
-              value={productFilters.stockFilter}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, stockFilter: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-            >
-              <option value="">Todos os estoques</option>
-              <option value="inStock">Em estoque</option>
-              <option value="outOfStock">Sem estoque</option>
-            </select>
-            
-            <select
-              value={productFilters.soldFilter}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, soldFilter: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-            >
-              <option value="">Todos os vendidos</option>
-              <option value="sold">Vendidos</option>
-              <option value="notSold">Não vendidos</option>
-            </select>
-            
-            <select
-              value={productFilters.costFilter}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, costFilter: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-            >
-              <option value="">Todos os custos</option>
-              <option value="withCost">Com preço de custo</option>
-              <option value="withoutCost">Sem preço de custo</option>
-            </select>
-            
-            <button
-              onClick={clearProductFilters}
-              className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
-            >
-              Limpar Filtros
-            </button>
-          </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setImportExportType('products')
-                setIsImportExportModalOpen(true)
-              }}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-            >
-              <Download className="h-5 w-5" />
-              Importar/Exportar
-            </button>
-            <button
-              onClick={() => setIsProductModalOpen(true)}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-            >
-              <Plus className="h-5 w-5" />
-              Novo Produto
-            </button>
-          </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              setImportExportType('products')
+              setIsImportExportModalOpen(true)
+            }}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Download className="h-5 w-5" />
+            Importar/Exportar
+          </button>
+          <button
+            onClick={() => setIsProductModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Novo Produto
+          </button>
         </div>
+      </div>
+      
+      {/* Filtros de Produtos */}
+      <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 shadow-sm">
+        <input
+          type="text"
+          placeholder="Categoria..."
+          value={productFilters.category}
+          onChange={(e) => setProductFilters(prev => ({ ...prev, category: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-32"
+        />
+        
+        <select
+          value={productFilters.stockFilter}
+          onChange={(e) => setProductFilters(prev => ({ ...prev, stockFilter: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+        >
+          <option value="">Todos os estoques</option>
+          <option value="inStock">Em estoque</option>
+          <option value="outOfStock">Sem estoque</option>
+        </select>
+        
+        <select
+          value={productFilters.soldFilter}
+          onChange={(e) => setProductFilters(prev => ({ ...prev, soldFilter: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+        >
+          <option value="">Todos os vendidos</option>
+          <option value="sold">Vendidos</option>
+          <option value="notSold">Não vendidos</option>
+        </select>
+        
+        <select
+          value={productFilters.costFilter}
+          onChange={(e) => setProductFilters(prev => ({ ...prev, costFilter: e.target.value }))}
+          className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+        >
+          <option value="">Todos os custos</option>
+          <option value="withCost">Com preço de custo</option>
+          <option value="withoutCost">Sem preço de custo</option>
+        </select>
+        
+        <button
+          onClick={clearProductFilters}
+          className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+        >
+          Limpar Filtros
+        </button>
       </div>
       
       {/* Lista de Produtos */}
