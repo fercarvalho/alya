@@ -4687,10 +4687,54 @@ function App() {
 
               {/* Botão Exportar */}
               <button
-                onClick={() => {
-                  // TODO: Implementar função de exportar
-                  console.log(`Exportar ${importExportType}`)
-                  alert(`Funcionalidade de exportar ${importExportType === 'transactions' ? 'transações' : 'produtos'} será implementada em breve!`)
+                onClick={async () => {
+                  try {
+                    setIsUploading(true)
+                    
+                    // Preparar dados para exportação
+                    const dataToExport = importExportType === 'transactions' ? transactions : products
+                    
+                    if (dataToExport.length === 0) {
+                      alert(`Nenhuma ${importExportType === 'transactions' ? 'transação' : 'produto'} encontrada para exportar!`)
+                      return
+                    }
+                    
+                    // Chamar API de exportação
+                    const response = await fetch('http://localhost:3001/api/export', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        type: importExportType,
+                        data: dataToExport
+                      })
+                    })
+                    
+                    if (response.ok) {
+                      // Baixar arquivo
+                      const blob = await response.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${importExportType === 'transactions' ? 'transacoes' : 'produtos'}_${new Date().toISOString().split('T')[0]}.xlsx`
+                      document.body.appendChild(a)
+                      a.click()
+                      window.URL.revokeObjectURL(url)
+                      document.body.removeChild(a)
+                      
+                      alert(`Arquivo ${importExportType === 'transactions' ? 'de transações' : 'de produtos'} exportado com sucesso!`)
+                    } else {
+                      const error = await response.text()
+                      console.error('Erro do servidor:', error)
+                      alert(`Erro ao exportar arquivo: ${error}`)
+                    }
+                  } catch (error) {
+                    console.error('Erro ao exportar:', error)
+                    alert(`Erro ao exportar arquivo: ${error.message}`)
+                  } finally {
+                    setIsUploading(false)
+                  }
                 }}
                 className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
               >
@@ -4826,57 +4870,6 @@ function App() {
                 </div>
               )}
 
-              {/* Botão de Exportar */}
-              {!selectedFile && (
-                <button
-                  onClick={async () => {
-                    try {
-                      const dataToExport = importExportType === 'transactions' ? transactions : products
-                      
-                      if (dataToExport.length === 0) {
-                        alert(`Nenhum ${importExportType === 'transactions' ? 'transação' : 'produto'} para exportar!`)
-                        return
-                      }
-
-                      // Fallback: download CSV local (servidor offline por enquanto)
-                      console.log('Fazendo download CSV local...')
-                      
-                      let csvContent = ''
-                      if (importExportType === 'transactions') {
-                        csvContent = 'Data,Descrição,Valor,Tipo,Categoria\n'
-                        csvContent += dataToExport.map(t => 
-                          `"${t.date}","${t.description}",${t.value},"${t.type}","${t.category}"`
-                        ).join('\n')
-                      } else {
-                        csvContent = 'Nome,Categoria,Preço,Custo,Estoque,Vendido\n'
-                        csvContent += dataToExport.map(p => 
-                          `"${p.name}","${p.category}",${p.price},${p.cost},${p.stock},${p.sold}`
-                        ).join('\n')
-                      }
-                      
-                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-                      const url = window.URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `${importExportType}_${new Date().toISOString().split('T')[0]}.csv`
-                      document.body.appendChild(a)
-                      a.click()
-                      window.URL.revokeObjectURL(url)
-                      document.body.removeChild(a)
-                      
-                      alert(`${dataToExport.length} ${importExportType === 'transactions' ? 'transações' : 'produtos'} exportados como CSV!`)
-                      setIsImportExportModalOpen(false)
-                    } catch (error) {
-                      console.error('Erro no export:', error)
-                      alert('Erro ao exportar dados')
-                    }
-                  }}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold rounded-lg hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  Exportar {importExportType === 'transactions' ? 'Transações' : 'Produtos'}
-                </button>
-              )}
 
               {/* Botão Cancelar */}
               <button
