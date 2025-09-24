@@ -2768,10 +2768,10 @@ function App() {
           </div>
           
           {/* Campos de Filtro */}
-          <div className="flex flex-wrap items-end gap-3 lg:gap-4">
+          <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
           {/* Filtro Tipo */}
-          <div className="flex flex-col min-w-[120px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Tipo</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Tipo</label>
             <select
               value={transactionFilters.type}
               onChange={(e) => setTransactionFilters(prev => ({ 
@@ -2779,7 +2779,7 @@ function App() {
                 type: e.target.value,
                 category: '' // Limpar categoria quando tipo mudar
               }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
             >
               <option value="">Todos os tipos</option>
               <option value="Receita">Receitas</option>
@@ -2788,12 +2788,12 @@ function App() {
           </div>
           
           {/* Filtro Categoria */}
-          <div className="flex flex-col min-w-[140px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Categoria</label>
             <select
               value={transactionFilters.category}
               onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
             >
               <option value="">Todas as categorias</option>
               {transactionFilters.type ? (
@@ -2820,40 +2820,38 @@ function App() {
           </div>
           
           {/* Filtro Data Início */}
-          <div className="flex flex-col min-w-[130px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Data Início</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Data Início</label>
             <div className="relative">
-          
               <input
                 type="text"
-                placeholder="Data início"
+                placeholder="Início"
                 value={transactionFilters.dateFrom ? formatDateToDisplay(transactionFilters.dateFrom) : ''}
                 readOnly
                 onClick={handleFilterCalendarFromToggle}
-                className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
               />
               <Calendar 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
+                className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none" 
               />
               {isFilterCalendarFromOpen && renderFilterCalendarFrom()}
             </div>
           </div>
           
           {/* Filtro Data Fim */}
-          <div className="flex flex-col min-w-[130px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Data Fim</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Data Fim</label>
             <div className="relative">
-          
               <input
                 type="text"
-                placeholder="Data fim"
+                placeholder="Fim"
                 value={transactionFilters.dateTo ? formatDateToDisplay(transactionFilters.dateTo) : ''}
                 readOnly
                 onClick={handleFilterCalendarToToggle}
-                className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
               />
               <Calendar 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
+                className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none" 
               />
               {isFilterCalendarToOpen && renderFilterCalendarTo()}
             </div>
@@ -2864,7 +2862,7 @@ function App() {
           <div className="lg:ml-auto">
             <button
               onClick={clearTransactionFilters}
-              className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors w-full lg:w-auto"
+              className="px-2 sm:px-3 md:px-4 py-1 sm:py-2 bg-amber-600 text-white rounded-md text-xs sm:text-sm hover:bg-amber-700 transition-colors w-full lg:w-auto"
             >
               Limpar Filtros
             </button>
@@ -2896,7 +2894,7 @@ function App() {
                   onClick={() => handleSort('date')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block hidden md:block">Data</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Data</p>
                   {getSortIcon('date')}
                 </button>
                 <button 
@@ -2910,7 +2908,7 @@ function App() {
                   onClick={() => handleSort('type')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Tipo</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
                   {getSortIcon('type')}
                 </button>
                 <button 
@@ -2924,11 +2922,11 @@ function App() {
                   onClick={() => handleSort('value')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Valor</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
                   {getSortIcon('value')}
                 </button>
                 <div>
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Ações</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
             </div>
@@ -3078,27 +3076,27 @@ function App() {
           </div>
           
           {/* Campos de Filtro */}
-          <div className="flex flex-wrap items-end gap-3 lg:gap-4">
+          <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
           {/* Filtro Categoria */}
-          <div className="flex flex-col min-w-[140px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Categoria</label>
             <input
               type="text"
               placeholder="Categoria..."
               value={productFilters.category}
               onChange={(e) => setProductFilters(prev => ({ ...prev, category: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
             />
           </div>
           
           {/* Filtro Estoque */}
-          <div className="flex flex-col min-w-[120px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Estoque</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Estoque</label>
           
             <select
               value={productFilters.stockFilter}
               onChange={(e) => setProductFilters(prev => ({ ...prev, stockFilter: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
             >
               <option value="">Todos os estoques</option>
               <option value="inStock">Em estoque</option>
@@ -3107,13 +3105,13 @@ function App() {
           </div>
           
           {/* Filtro Vendidos */}
-          <div className="flex flex-col min-w-[120px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Vendidos</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Vendidos</label>
           
             <select
               value={productFilters.soldFilter}
               onChange={(e) => setProductFilters(prev => ({ ...prev, soldFilter: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
             >
               <option value="">Todos os vendidos</option>
               <option value="sold">Vendidos</option>
@@ -3122,13 +3120,13 @@ function App() {
           </div>
           
           {/* Filtro Preço de Custo */}
-          <div className="flex flex-col min-w-[150px]">
-            <label className="text-sm font-semibold text-gray-700 mb-1">Preço de Custo</label>
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Preço de Custo</label>
           
             <select
               value={productFilters.costFilter}
               onChange={(e) => setProductFilters(prev => ({ ...prev, costFilter: e.target.value }))}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
             >
               <option value="">Todos os custos</option>
               <option value="withCost">Com preço de custo</option>
@@ -3173,7 +3171,7 @@ function App() {
                   onClick={() => handleSort('name')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Nome</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
                   {getSortIcon('name')}
                 </button>
                 <button 
@@ -3187,7 +3185,7 @@ function App() {
                   onClick={() => handleSort('price')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Preço</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
                   {getSortIcon('price')}
                 </button>
                 <button 
@@ -3201,7 +3199,7 @@ function App() {
                   onClick={() => handleSort('stock')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-2 py-1 transition-colors"
                 >
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Estoque</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
                   {getSortIcon('stock')}
                 </button>
                 <button 
@@ -3212,7 +3210,7 @@ function App() {
                   {getSortIcon('sold')}
                 </button>
                 <div>
-                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide hidden md:block">Ações</p>
+                  <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
             </div>
