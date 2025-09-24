@@ -2925,7 +2925,7 @@ function App() {
                    <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
                   {getSortIcon('value')}
                 </button>
-                <div className="flex-shrink-0 w-16 sm:w-20">
+                <div className="flex-shrink-0 w-16 sm:w-20 flex justify-center">
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
