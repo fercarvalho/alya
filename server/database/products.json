@@ -1,0 +1,13 @@
+[
+  {
+    "id": "mfxjc902534aqvlapk",
+    "name": "teste1",
+    "category": "teste",
+    "price": 30,
+    "cost": 10,
+    "stock": 10,
+    "sold": 5,
+    "createdAt": "2025-09-24T05:20:13.202Z",
+    "updatedAt": "2025-09-24T05:20:13.202Z"
+  }
+]

@@ -20,6 +20,100 @@ import {
   ChevronRight,
   Filter
 } from 'lucide-react'
+
+// Funções para comunicação com a API
+const API_BASE_URL = 'http://localhost:3001/api'
+
+// Funções para Transações
+const fetchTransactions = async () => {
+  const response = await fetch(`${API_BASE_URL}/transactions`)
+  const result = await response.json()
+  return result.success ? result.data : []
+}
+
+const saveTransaction = async (transaction: any) => {
+  const response = await fetch(`${API_BASE_URL}/transactions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(transaction)
+  })
+  const result = await response.json()
+  return result.success ? result.data : null
+}
+
+const updateTransaction = async (id: string, transaction: any) => {
+  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(transaction)
+  })
+  const result = await response.json()
+  return result.success ? result.data : null
+}
+
+const deleteTransaction = async (id: string) => {
+  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+    method: 'DELETE'
+  })
+  const result = await response.json()
+  return result.success
+}
+
+const deleteMultipleTransactions = async (ids: string[]) => {
+  const response = await fetch(`${API_BASE_URL}/transactions`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  })
+  const result = await response.json()
+  return result.success
+}
+
+// Funções para Produtos
+const fetchProducts = async () => {
+  const response = await fetch(`${API_BASE_URL}/products`)
+  const result = await response.json()
+  return result.success ? result.data : []
+}
+
+const saveProduct = async (product: any) => {
+  const response = await fetch(`${API_BASE_URL}/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(product)
+  })
+  const result = await response.json()
+  return result.success ? result.data : null
+}
+
+const updateProduct = async (id: string, product: any) => {
+  const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(product)
+  })
+  const result = await response.json()
+  return result.success ? result.data : null
+}
+
+const deleteProduct = async (id: string) => {
+  const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+    method: 'DELETE'
+  })
+  const result = await response.json()
+  return result.success
+}
+
+const deleteMultipleProducts = async (ids: string[]) => {
+  const response = await fetch(`${API_BASE_URL}/products`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  })
+  const result = await response.json()
+  return result.success
+}
+
 import { 
   PieChart as RechartsPieChart, 
   Pie,
@@ -167,6 +261,24 @@ function App() {
     soldFilter: '', // 'sold', 'notSold', ''
     costFilter: '', // 'withCost', 'withoutCost', ''
   })
+
+  // Carregar dados do banco de dados
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [transactionsData, productsData] = await Promise.all([
+          fetchTransactions(),
+          fetchProducts()
+        ])
+        setTransactions(transactionsData)
+        setProducts(productsData)
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      }
+    }
+    
+    loadData()
+  }, [])
 
   // Função para fechar modais com ESC
   useEffect(() => {
@@ -420,7 +532,7 @@ function App() {
     }
   }
 
-  const handleDeleteSelectedProducts = () => {
+  const handleDeleteSelectedProducts = async () => {
     if (selectedProducts.size === 0) return
     
     const confirmMessage = selectedProducts.size === 1 
@@ -428,8 +540,16 @@ function App() {
       : `Tem certeza que deseja deletar ${selectedProducts.size} produtos?`
     
     if (confirm(confirmMessage)) {
-      setProducts(prev => prev.filter(product => !selectedProducts.has(product.id)))
-      setSelectedProducts(new Set())
+      try {
+        const ids = Array.from(selectedProducts)
+        const success = await deleteMultipleProducts(ids)
+        if (success) {
+          setProducts(prev => prev.filter(product => !selectedProducts.has(product.id)))
+          setSelectedProducts(new Set())
+        }
+      } catch (error) {
+        console.error('Erro ao deletar produtos:', error)
+      }
     }
   }
 
@@ -454,7 +574,7 @@ function App() {
     }
   }
 
-  const handleDeleteSelectedTransactions = () => {
+  const handleDeleteSelectedTransactions = async () => {
     if (selectedTransactions.size === 0) return
     
     const confirmMessage = selectedTransactions.size === 1 
@@ -462,8 +582,16 @@ function App() {
       : `Tem certeza que deseja deletar ${selectedTransactions.size} transações?`
     
     if (confirm(confirmMessage)) {
-      setTransactions(prev => prev.filter(transaction => !selectedTransactions.has(transaction.id)))
-      setSelectedTransactions(new Set())
+      try {
+        const ids = Array.from(selectedTransactions)
+        const success = await deleteMultipleTransactions(ids)
+        if (success) {
+          setTransactions(prev => prev.filter(transaction => !selectedTransactions.has(transaction.id)))
+          setSelectedTransactions(new Set())
+        }
+      } catch (error) {
+        console.error('Erro ao deletar transações:', error)
+      }
     }
   }
 
@@ -2808,9 +2936,16 @@ function App() {
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (confirm('Tem certeza que deseja excluir esta transação?')) {
-                          setTransactions(prev => prev.filter(t => t.id !== transaction.id))
+                          try {
+                            const success = await deleteTransaction(transaction.id)
+                            if (success) {
+                              setTransactions(prev => prev.filter(t => t.id !== transaction.id))
+                            }
+                          } catch (error) {
+                            console.error('Erro ao deletar transação:', error)
+                          }
                         }
                       }}
                       className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
@@ -3059,9 +3194,16 @@ function App() {
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (confirm('Tem certeza que deseja excluir este produto?')) {
-                          setProducts(prev => prev.filter(p => p.id !== product.id))
+                          try {
+                            const success = await deleteProduct(product.id)
+                            if (success) {
+                              setProducts(prev => prev.filter(p => p.id !== product.id))
+                            }
+                          } catch (error) {
+                            console.error('Erro ao deletar produto:', error)
+                          }
                         }
                       }}
                       className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200"
@@ -3748,7 +3890,7 @@ function App() {
             </div>
 
             {/* Formulário */}
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault()
               
               // Validar formulário antes de prosseguir
@@ -3758,34 +3900,42 @@ function App() {
               
               if (editingProduct) {
                 // Editar produto existente
-                const updatedProduct = {
-                  ...editingProduct,
-                  name: productForm.name,
-                  category: productForm.category,
-                  price: parseFloat(productForm.price) || 0,
-                  cost: parseFloat(productForm.cost) || 0,
-                  stock: parseInt(productForm.stock) || 0,
-                  sold: parseInt(productForm.sold) || 0
+                try {
+                  const updatedProduct = await updateProduct(editingProduct.id, {
+                    name: productForm.name,
+                    category: productForm.category,
+                    price: parseFloat(productForm.price) || 0,
+                    cost: parseFloat(productForm.cost) || 0,
+                    stock: parseInt(productForm.stock) || 0,
+                    sold: parseInt(productForm.sold) || 0
+                  })
+                  
+                  if (updatedProduct) {
+                    setProducts(prev => prev.map(p => 
+                      p.id === editingProduct.id ? updatedProduct : p
+                    ))
+                  }
+                } catch (error) {
+                  console.error('Erro ao atualizar produto:', error)
                 }
-                
-                // Atualizar na lista de produtos
-                setProducts(prev => prev.map(p => 
-                  p.id === editingProduct.id ? updatedProduct : p
-                ))
               } else {
                 // Criar novo produto
-                const newProduct: Product = {
-                  id: Date.now().toString(),
-                  name: productForm.name,
-                  category: productForm.category,
-                  price: parseFloat(productForm.price) || 0,
-                  cost: parseFloat(productForm.cost) || 0,
-                  stock: parseInt(productForm.stock) || 0,
-                  sold: parseInt(productForm.sold) || 0
+                try {
+                  const newProduct = await saveProduct({
+                    name: productForm.name,
+                    category: productForm.category,
+                    price: parseFloat(productForm.price) || 0,
+                    cost: parseFloat(productForm.cost) || 0,
+                    stock: parseInt(productForm.stock) || 0,
+                    sold: parseInt(productForm.sold) || 0
+                  })
+                  
+                  if (newProduct) {
+                    setProducts(prev => [newProduct, ...prev])
+                  }
+                } catch (error) {
+                  console.error('Erro ao salvar produto:', error)
                 }
-                
-                // Adicionar à lista de produtos
-                setProducts(prev => [newProduct, ...prev])
               }
               
               // Limpar formulário e fechar modal
@@ -3998,7 +4148,7 @@ function App() {
             </div>
 
             {/* Formulário */}
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault()
               
               // Validar formulário antes de prosseguir
@@ -4008,33 +4158,40 @@ function App() {
               
               if (editingTransaction) {
                 // Editar transação existente
-                const updatedTransaction = {
-                  ...editingTransaction,
-                  date: transactionForm.date,
-                  description: transactionForm.description,
-                  value: parseFloat(transactionForm.value) || 0,
-                  type: transactionForm.type as 'Receita' | 'Despesa',
-                  category: transactionForm.category
+                try {
+                  const updatedTransaction = await updateTransaction(editingTransaction.id, {
+                    date: transactionForm.date,
+                    description: transactionForm.description,
+                    value: parseFloat(transactionForm.value) || 0,
+                    type: transactionForm.type as 'Receita' | 'Despesa',
+                    category: transactionForm.category
+                  })
+                  
+                  if (updatedTransaction) {
+                    setTransactions(prev => prev.map(t => 
+                      t.id === editingTransaction.id ? updatedTransaction : t
+                    ))
+                  }
+                } catch (error) {
+                  console.error('Erro ao atualizar transação:', error)
                 }
-                
-                // Atualizar na lista de transações
-                setTransactions(prev => prev.map(t => 
-                  t.id === editingTransaction.id ? updatedTransaction : t
-                ))
               } else {
                 // Criar nova transação
-                const newTransaction = {
-                  id: Date.now().toString(),
-                  date: transactionForm.date,
-                  description: transactionForm.description,
-                  value: parseFloat(transactionForm.value) || 0,
-                  type: transactionForm.type as 'Receita' | 'Despesa',
-                  category: transactionForm.category,
-                  createdAt: new Date()
+                try {
+                  const newTransaction = await saveTransaction({
+                    date: transactionForm.date,
+                    description: transactionForm.description,
+                    value: parseFloat(transactionForm.value) || 0,
+                    type: transactionForm.type as 'Receita' | 'Despesa',
+                    category: transactionForm.category
+                  })
+                  
+                  if (newTransaction) {
+                    setTransactions(prev => [newTransaction, ...prev])
+                  }
+                } catch (error) {
+                  console.error('Erro ao salvar transação:', error)
                 }
-                
-                // Adicionar à lista de transações
-                setTransactions(prev => [newTransaction, ...prev])
               }
               
               // Limpar formulário e fechar modal

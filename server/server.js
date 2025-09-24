@@ -4,9 +4,11 @@ const XLSX = require('xlsx');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const Database = require('./database');
 
 const app = express();
 const port = 3001;
+const db = new Database();
 
 // Middleware
 app.use(cors());
@@ -215,12 +217,126 @@ app.post('/api/export', (req, res) => {
   }
 });
 
+// APIs para Transações
+app.get('/api/transactions', (req, res) => {
+  try {
+    const transactions = db.getAllTransactions();
+    res.json({ success: true, data: transactions });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/transactions', (req, res) => {
+  try {
+    const transaction = db.saveTransaction(req.body);
+    res.json({ success: true, data: transaction });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/transactions/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const transaction = db.updateTransaction(id, req.body);
+    res.json({ success: true, data: transaction });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/transactions/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.deleteTransaction(id);
+    res.json({ success: true, message: 'Transação deletada com sucesso' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/transactions', (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
+    }
+    db.deleteMultipleTransactions(ids);
+    res.json({ success: true, message: `${ids.length} transações deletadas com sucesso` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// APIs para Produtos
+app.get('/api/products', (req, res) => {
+  try {
+    const products = db.getAllProducts();
+    res.json({ success: true, data: products });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/products', (req, res) => {
+  try {
+    const product = db.saveProduct(req.body);
+    res.json({ success: true, data: product });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/products/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = db.updateProduct(id, req.body);
+    res.json({ success: true, data: product });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/products/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    db.deleteProduct(id);
+    res.json({ success: true, message: 'Produto deletado com sucesso' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/products', (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
+    }
+    db.deleteMultipleProducts(ids);
+    res.json({ success: true, message: `${ids.length} produtos deletados com sucesso` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Rota de teste
 app.get('/api/test', (req, res) => {
   res.json({ 
     message: 'API funcionando!', 
     timestamp: new Date().toISOString(),
     endpoints: [
+      'GET /api/transactions - Listar transações',
+      'POST /api/transactions - Criar transação',
+      'PUT /api/transactions/:id - Atualizar transação',
+      'DELETE /api/transactions/:id - Deletar transação',
+      'DELETE /api/transactions - Deletar múltiplas transações',
+      'GET /api/products - Listar produtos',
+      'POST /api/products - Criar produto',
+      'PUT /api/products/:id - Atualizar produto',
+      'DELETE /api/products/:id - Deletar produto',
+      'DELETE /api/products - Deletar múltiplos produtos',
       'POST /api/import - Importar arquivos Excel',
       'POST /api/export - Exportar dados para Excel',
       'GET /api/test - Testar API'
