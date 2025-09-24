@@ -2759,64 +2759,86 @@ function App() {
       </div>
       
       {/* Filtros de Transações */}
-      <div className="flex items-center justify-between gap-2 bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 shadow-sm">
-        <div className="flex items-center gap-2">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5 text-amber-600" />
           <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
         </div>
         
-        <div className="flex items-center gap-2">
-          <select
-            value={transactionFilters.type}
-            onChange={(e) => setTransactionFilters(prev => ({ ...prev, type: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-          >
-            <option value="">Todos os tipos</option>
-            <option value="Receita">Receitas</option>
-            <option value="Despesa">Despesas</option>
-          </select>
-          
-          <input
-            type="text"
-            placeholder="Categoria..."
-            value={transactionFilters.category}
-            onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-32"
-          />
-          
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Data início"
-              value={transactionFilters.dateFrom ? formatDateToDisplay(transactionFilters.dateFrom) : ''}
-              readOnly
-              onClick={handleFilterCalendarFromToggle}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-32"
-            />
-            <Calendar 
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
-            />
-            {isFilterCalendarFromOpen && renderFilterCalendarFrom()}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Filtro Tipo */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Tipo</label>
+            <select
+              value={transactionFilters.type}
+              onChange={(e) => setTransactionFilters(prev => ({ ...prev, type: e.target.value }))}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+            >
+              <option value="">Todos os tipos</option>
+              <option value="Receita">Receitas</option>
+              <option value="Despesa">Despesas</option>
+            </select>
           </div>
           
-          <div className="relative">
+          {/* Filtro Categoria */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
+          
             <input
               type="text"
-              placeholder="Data fim"
-              value={transactionFilters.dateTo ? formatDateToDisplay(transactionFilters.dateTo) : ''}
-              readOnly
-              onClick={handleFilterCalendarToToggle}
-              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-32"
+              placeholder="Categoria..."
+              value={transactionFilters.category}
+              onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
             />
-            <Calendar 
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
-            />
-            {isFilterCalendarToOpen && renderFilterCalendarTo()}
           </div>
           
+          {/* Filtro Data Início */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Data Início</label>
+            <div className="relative">
+          
+              <input
+                type="text"
+                placeholder="Data início"
+                value={transactionFilters.dateFrom ? formatDateToDisplay(transactionFilters.dateFrom) : ''}
+                readOnly
+                onClick={handleFilterCalendarFromToggle}
+                className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+              />
+              <Calendar 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
+              />
+              {isFilterCalendarFromOpen && renderFilterCalendarFrom()}
+            </div>
+          </div>
+          
+          {/* Filtro Data Fim */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Data Fim</label>
+            <div className="relative">
+          
+              <input
+                type="text"
+                placeholder="Data fim"
+                value={transactionFilters.dateTo ? formatDateToDisplay(transactionFilters.dateTo) : ''}
+                readOnly
+                onClick={handleFilterCalendarToToggle}
+                className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+              />
+              <Calendar 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
+              />
+              {isFilterCalendarToOpen && renderFilterCalendarTo()}
+            </div>
+          </div>
+        </div>
+        
+        {/* Botão Limpar Filtros */}
+        <div className="mt-4 flex justify-end">
           <button
             onClick={clearTransactionFilters}
-            className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+            className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
           >
             Limpar Filtros
           </button>
@@ -3020,54 +3042,76 @@ function App() {
       </div>
       
       {/* Filtros de Produtos */}
-      <div className="flex items-center justify-between gap-2 bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 shadow-sm">
-        <div className="flex items-center gap-2">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5 text-amber-600" />
           <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
         </div>
         
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Categoria..."
-            value={productFilters.category}
-            onChange={(e) => setProductFilters(prev => ({ ...prev, category: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-32"
-          />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Filtro Categoria */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
+            <input
+              type="text"
+              placeholder="Categoria..."
+              value={productFilters.category}
+              onChange={(e) => setProductFilters(prev => ({ ...prev, category: e.target.value }))}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+            />
+          </div>
           
-          <select
-            value={productFilters.stockFilter}
-            onChange={(e) => setProductFilters(prev => ({ ...prev, stockFilter: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-          >
-            <option value="">Todos os estoques</option>
-            <option value="inStock">Em estoque</option>
-            <option value="outOfStock">Sem estoque</option>
-          </select>
+          {/* Filtro Estoque */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Estoque</label>
           
-          <select
-            value={productFilters.soldFilter}
-            onChange={(e) => setProductFilters(prev => ({ ...prev, soldFilter: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-          >
-            <option value="">Todos os vendidos</option>
-            <option value="sold">Vendidos</option>
-            <option value="notSold">Não vendidos</option>
-          </select>
+            <select
+              value={productFilters.stockFilter}
+              onChange={(e) => setProductFilters(prev => ({ ...prev, stockFilter: e.target.value }))}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+            >
+              <option value="">Todos os estoques</option>
+              <option value="inStock">Em estoque</option>
+              <option value="outOfStock">Sem estoque</option>
+            </select>
+          </div>
           
-          <select
-            value={productFilters.costFilter}
-            onChange={(e) => setProductFilters(prev => ({ ...prev, costFilter: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-          >
-            <option value="">Todos os custos</option>
-            <option value="withCost">Com preço de custo</option>
-            <option value="withoutCost">Sem preço de custo</option>
-          </select>
+          {/* Filtro Vendidos */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Vendidos</label>
           
+            <select
+              value={productFilters.soldFilter}
+              onChange={(e) => setProductFilters(prev => ({ ...prev, soldFilter: e.target.value }))}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+            >
+              <option value="">Todos os vendidos</option>
+              <option value="sold">Vendidos</option>
+              <option value="notSold">Não vendidos</option>
+            </select>
+          </div>
+          
+          {/* Filtro Preço de Custo */}
+          <div className="flex flex-col">
+            <label className="text-sm font-semibold text-gray-700 mb-1">Preço de Custo</label>
+          
+            <select
+              value={productFilters.costFilter}
+              onChange={(e) => setProductFilters(prev => ({ ...prev, costFilter: e.target.value }))}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+            >
+              <option value="">Todos os custos</option>
+              <option value="withCost">Com preço de custo</option>
+              <option value="withoutCost">Sem preço de custo</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Botão Limpar Filtros */}
+        <div className="mt-4 flex justify-end">
           <button
             onClick={clearProductFilters}
-            className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
+            className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700 transition-colors"
           >
             Limpar Filtros
           </button>
