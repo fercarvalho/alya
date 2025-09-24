@@ -2771,7 +2771,11 @@ function App() {
             <label className="text-sm font-semibold text-gray-700 mb-1">Tipo</label>
             <select
               value={transactionFilters.type}
-              onChange={(e) => setTransactionFilters(prev => ({ ...prev, type: e.target.value }))}
+              onChange={(e) => setTransactionFilters(prev => ({ 
+                ...prev, 
+                type: e.target.value,
+                category: '' // Limpar categoria quando tipo mudar
+              }))}
               className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
             >
               <option value="">Todos os tipos</option>
@@ -2783,14 +2787,33 @@ function App() {
           {/* Filtro Categoria */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-gray-700 mb-1">Categoria</label>
-          
-            <input
-              type="text"
-              placeholder="Categoria..."
+            <select
               value={transactionFilters.category}
               onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
               className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-            />
+            >
+              <option value="">Todas as categorias</option>
+              {transactionFilters.type ? (
+                getCategoriesByType(transactionFilters.type).map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))
+              ) : (
+                <>
+                  {/* Opções para Receita */}
+                  <optgroup label="Receita">
+                    {getCategoriesByType('Receita').map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </optgroup>
+                  {/* Opções para Despesa */}
+                  <optgroup label="Despesa">
+                    {getCategoriesByType('Despesa').map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </optgroup>
+                </>
+              )}
+            </select>
           </div>
           
           {/* Filtro Data Início */}
