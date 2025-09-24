@@ -173,7 +173,7 @@ interface Meta {
 type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('metas')
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard')
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
