@@ -137,6 +137,12 @@ function App() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [calendarDate, setCalendarDate] = useState(new Date())
   
+  // Estados para calendários dos filtros
+  const [isFilterCalendarFromOpen, setIsFilterCalendarFromOpen] = useState(false)
+  const [isFilterCalendarToOpen, setIsFilterCalendarToOpen] = useState(false)
+  const [filterCalendarFromDate, setFilterCalendarFromDate] = useState<Date | null>(null)
+  const [filterCalendarToDate, setFilterCalendarToDate] = useState<Date | null>(null)
+  
   // Estados para ordenação
   const [sortConfig, setSortConfig] = useState<{
     field: string | null
@@ -166,6 +172,17 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        // Fechar calendários dos filtros se estiverem abertos
+        if (isFilterCalendarFromOpen) {
+          setIsFilterCalendarFromOpen(false)
+          return
+        }
+        
+        if (isFilterCalendarToOpen) {
+          setIsFilterCalendarToOpen(false)
+          return
+        }
+        
         // Fechar calendário se estiver aberto
         if (isCalendarOpen) {
           setIsCalendarOpen(false)
@@ -223,7 +240,7 @@ function App() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isCalendarOpen, isProductModalOpen, isTransactionModalOpen, isImportExportModalOpen])
+  }, [isFilterCalendarFromOpen, isFilterCalendarToOpen, isCalendarOpen, isProductModalOpen, isTransactionModalOpen, isImportExportModalOpen])
 
   // Funções para gerenciar o calendário personalizado
   const formatDateToInput = (date: Date) => {
@@ -278,6 +295,91 @@ function App() {
       date: ''
     }))
     setIsCalendarOpen(false)
+  }
+
+  // Funções para calendários dos filtros
+  const handleFilterDateFromSelect = (date: Date) => {
+    setTransactionFilters(prev => ({
+      ...prev,
+      dateFrom: formatDateToInput(date)
+    }))
+    setFilterCalendarFromDate(date)
+    setIsFilterCalendarFromOpen(false)
+  }
+
+  const handleFilterDateToSelect = (date: Date) => {
+    setTransactionFilters(prev => ({
+      ...prev,
+      dateTo: formatDateToInput(date)
+    }))
+    setFilterCalendarToDate(date)
+    setIsFilterCalendarToOpen(false)
+  }
+
+  const handleFilterCalendarFromToggle = () => {
+    setIsFilterCalendarFromOpen(!isFilterCalendarFromOpen)
+    setIsFilterCalendarToOpen(false) // Fechar o outro calendário
+  }
+
+  const handleFilterCalendarToToggle = () => {
+    setIsFilterCalendarToOpen(!isFilterCalendarToOpen)
+    setIsFilterCalendarFromOpen(false) // Fechar o outro calendário
+  }
+
+  const navigateFilterMonthFrom = (direction: 'prev' | 'next') => {
+    setFilterCalendarFromDate(prev => {
+      const currentDate = prev || new Date()
+      const newDate = new Date(currentDate)
+      if (direction === 'prev') {
+        newDate.setMonth(currentDate.getMonth() - 1)
+      } else {
+        newDate.setMonth(currentDate.getMonth() + 1)
+      }
+      return newDate
+    })
+  }
+
+  const navigateFilterMonthTo = (direction: 'prev' | 'next') => {
+    setFilterCalendarToDate(prev => {
+      const currentDate = prev || new Date()
+      const newDate = new Date(currentDate)
+      if (direction === 'prev') {
+        newDate.setMonth(currentDate.getMonth() - 1)
+      } else {
+        newDate.setMonth(currentDate.getMonth() + 1)
+      }
+      return newDate
+    })
+  }
+
+  const goToTodayFilterFrom = () => {
+    const today = new Date()
+    setFilterCalendarFromDate(today)
+    handleFilterDateFromSelect(today)
+  }
+
+  const goToTodayFilterTo = () => {
+    const today = new Date()
+    setFilterCalendarToDate(today)
+    handleFilterDateToSelect(today)
+  }
+
+  const clearFilterDateFrom = () => {
+    setTransactionFilters(prev => ({
+      ...prev,
+      dateFrom: ''
+    }))
+    setFilterCalendarFromDate(null)
+    setIsFilterCalendarFromOpen(false)
+  }
+
+  const clearFilterDateTo = () => {
+    setTransactionFilters(prev => ({
+      ...prev,
+      dateTo: ''
+    }))
+    setFilterCalendarToDate(null)
+    setIsFilterCalendarToOpen(false)
   }
 
   // Função para gerenciar mudanças no formulário de transação
@@ -681,6 +783,201 @@ function App() {
           </button>
           <button
             onClick={goToToday}
+            className="flex-1 px-3 py-2 text-sm text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors"
+          >
+            Hoje
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Funções para renderizar calendários dos filtros
+  const renderFilterCalendarFrom = () => {
+    const today = new Date()
+    const currentDate = filterCalendarFromDate || new Date()
+    const currentMonth = currentDate.getMonth()
+    const currentYear = currentDate.getFullYear()
+    
+    const firstDay = new Date(currentYear, currentMonth, 1)
+    const lastDay = new Date(currentYear, currentMonth + 1, 0)
+    const startDate = new Date(firstDay)
+    startDate.setDate(startDate.getDate() - firstDay.getDay())
+    
+    const days = []
+    const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+    
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + i)
+      days.push(date)
+    }
+    
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ]
+    
+    return (
+      <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigateFilterMonthFrom('prev')}
+            className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-amber-600" />
+          </button>
+          
+          <h3 className="text-lg font-semibold text-amber-800">
+            {monthNames[currentMonth]} {currentYear}
+          </h3>
+          
+          <button
+            onClick={() => navigateFilterMonthFrom('next')}
+            className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-amber-600" />
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {weekDays.map((day, index) => (
+            <div key={index} className="text-center text-sm font-semibold text-gray-600 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((date, index) => {
+            const isCurrentMonth = date.getMonth() === currentMonth
+            const isToday = date.toDateString() === today.toDateString()
+            const isSelected = transactionFilters.dateFrom === formatDateToInput(date)
+            
+            return (
+              <button
+                key={index}
+                onClick={() => handleFilterDateFromSelect(date)}
+                className={`
+                  w-10 h-10 text-sm rounded-lg transition-all duration-200
+                  ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
+                  ${isToday ? 'bg-amber-100 text-amber-800 font-semibold' : ''}
+                  ${isSelected ? 'bg-amber-500 text-white font-semibold' : ''}
+                  ${!isSelected && !isToday ? 'hover:bg-amber-50' : ''}
+                `}
+              >
+                {date.getDate()}
+              </button>
+            )
+          })}
+        </div>
+        
+        <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={clearFilterDateFrom}
+            className="flex-1 px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Limpar
+          </button>
+          <button
+            onClick={goToTodayFilterFrom}
+            className="flex-1 px-3 py-2 text-sm text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors"
+          >
+            Hoje
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const renderFilterCalendarTo = () => {
+    const today = new Date()
+    const currentDate = filterCalendarToDate || new Date()
+    const currentMonth = currentDate.getMonth()
+    const currentYear = currentDate.getFullYear()
+    
+    const firstDay = new Date(currentYear, currentMonth, 1)
+    const lastDay = new Date(currentYear, currentMonth + 1, 0)
+    const startDate = new Date(firstDay)
+    startDate.setDate(startDate.getDate() - firstDay.getDay())
+    
+    const days = []
+    const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+    
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + i)
+      days.push(date)
+    }
+    
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ]
+    
+    return (
+      <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigateFilterMonthTo('prev')}
+            className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-amber-600" />
+          </button>
+          
+          <h3 className="text-lg font-semibold text-amber-800">
+            {monthNames[currentMonth]} {currentYear}
+          </h3>
+          
+          <button
+            onClick={() => navigateFilterMonthTo('next')}
+            className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-amber-600" />
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {weekDays.map((day, index) => (
+            <div key={index} className="text-center text-sm font-semibold text-gray-600 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((date, index) => {
+            const isCurrentMonth = date.getMonth() === currentMonth
+            const isToday = date.toDateString() === today.toDateString()
+            const isSelected = transactionFilters.dateTo === formatDateToInput(date)
+            
+            return (
+              <button
+                key={index}
+                onClick={() => handleFilterDateToSelect(date)}
+                className={`
+                  w-10 h-10 text-sm rounded-lg transition-all duration-200
+                  ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
+                  ${isToday ? 'bg-amber-100 text-amber-800 font-semibold' : ''}
+                  ${isSelected ? 'bg-amber-500 text-white font-semibold' : ''}
+                  ${!isSelected && !isToday ? 'hover:bg-amber-50' : ''}
+                `}
+              >
+                {date.getDate()}
+              </button>
+            )
+          })}
+        </div>
+        
+        <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={clearFilterDateTo}
+            className="flex-1 px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Limpar
+          </button>
+          <button
+            onClick={goToTodayFilterTo}
             className="flex-1 px-3 py-2 text-sm text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors"
           >
             Hoje
@@ -2345,21 +2642,35 @@ function App() {
             className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-32"
           />
           
-          <input
-            type="date"
-            placeholder="Data início"
-            value={transactionFilters.dateFrom}
-            onChange={(e) => setTransactionFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Data início"
+              value={transactionFilters.dateFrom ? formatDateToDisplay(transactionFilters.dateFrom) : ''}
+              readOnly
+              onClick={handleFilterCalendarFromToggle}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-32"
+            />
+            <Calendar 
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
+            />
+            {isFilterCalendarFromOpen && renderFilterCalendarFrom()}
+          </div>
           
-          <input
-            type="date"
-            placeholder="Data fim"
-            value={transactionFilters.dateTo}
-            onChange={(e) => setTransactionFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-            className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Data fim"
+              value={transactionFilters.dateTo ? formatDateToDisplay(transactionFilters.dateTo) : ''}
+              readOnly
+              onClick={handleFilterCalendarToToggle}
+              className="px-3 py-2 border border-amber-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-32"
+            />
+            <Calendar 
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" 
+            />
+            {isFilterCalendarToOpen && renderFilterCalendarTo()}
+          </div>
           
           <button
             onClick={clearTransactionFilters}
