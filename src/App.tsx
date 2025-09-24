@@ -2972,7 +2972,7 @@ function App() {
                   </div>
                   
                   {/* Categoria */}
-                   <div className="flex-shrink-0 w-20 sm:w-24 text-left">
+                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
                      <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
                         {transaction.category}
                       </span>
