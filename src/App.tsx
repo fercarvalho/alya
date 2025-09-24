@@ -1340,9 +1340,13 @@ function App() {
       return mesesDoTrimestre.includes(transactionMonth)
     })
     
-    // Dados trimestrais (usando dados atuais das transações)
-    const totalReceitasTrimestre = 0 // Simplificado por enquanto
-    const totalDespesasTrimestre = 0 // Simplificado por enquanto  
+    // Dados trimestrais (usando dados reais das transações)
+    const totalReceitasTrimestre = transacoesTrimestre
+      .filter(t => t.type === 'Receita')
+      .reduce((sum, t) => sum + t.value, 0)
+    const totalDespesasTrimestre = transacoesTrimestre
+      .filter(t => t.type === 'Despesa')
+      .reduce((sum, t) => sum + t.value, 0)
     const lucroLiquidoTrimestre = totalReceitasTrimestre - totalDespesasTrimestre
     
     // Meta do trimestre (soma das metas dos 3 meses)
@@ -1350,9 +1354,19 @@ function App() {
       total + (mesesMetas[mesIndex]?.meta || 0), 0
     )
     
-    // Dados anuais (usando dados atuais das transações)
-    const totalReceitasAno = 0 // Simplificado por enquanto
-    const totalDespesasAno = 0 // Simplificado por enquanto
+    // Filtrar transações do ano atual
+    const transacoesAno = transactions.filter(t => {
+      const transactionYear = new Date(t.date).getFullYear()
+      return transactionYear === new Date().getFullYear()
+    })
+    
+    // Dados anuais (usando dados reais das transações)
+    const totalReceitasAno = transacoesAno
+      .filter(t => t.type === 'Receita')
+      .reduce((sum, t) => sum + t.value, 0)
+    const totalDespesasAno = transacoesAno
+      .filter(t => t.type === 'Despesa')
+      .reduce((sum, t) => sum + t.value, 0)
     const lucroLiquidoAno = totalReceitasAno - totalDespesasAno
 
     // Transações recentes (últimas 5)
@@ -3236,101 +3250,154 @@ function App() {
 
   // Render Reports
   const renderReports = () => {
-    // Dados simulados - futuramente virão das transações
-    const dadosSimulados = {
+    // Calcular dados reais das transações
+    const agora = new Date()
+    const inicioSemana = new Date(agora)
+    inicioSemana.setDate(agora.getDate() - agora.getDay())
+    inicioSemana.setHours(0, 0, 0, 0)
+    
+    const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
+    const inicioTrimestre = new Date(agora.getFullYear(), Math.floor(agora.getMonth() / 3) * 3, 1)
+    const inicioAno = new Date(agora.getFullYear(), 0, 1)
+
+    // Filtrar transações por período
+    const transacoesSemana = transactions.filter(t => {
+      const dataTransacao = new Date(t.date)
+      return dataTransacao >= inicioSemana
+    })
+
+    const transacoesMes = transactions.filter(t => {
+      const dataTransacao = new Date(t.date)
+      return dataTransacao >= inicioMes
+    })
+
+    const transacoesTrimestre = transactions.filter(t => {
+      const dataTransacao = new Date(t.date)
+      return dataTransacao >= inicioTrimestre
+    })
+
+    const transacoesAno = transactions.filter(t => {
+      const dataTransacao = new Date(t.date)
+      return dataTransacao >= inicioAno
+    })
+
+    // Função para calcular vendas por categoria
+    const calcularVendasPorCategoria = (transacoes: any[]) => {
+      const vendasPorCategoria: { [key: string]: number } = {}
+      
+      transacoes.forEach(t => {
+        if (t.type === 'Receita') {
+          vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + t.value
+        }
+      })
+      
+      const cores = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
+      return Object.entries(vendasPorCategoria).map(([nome, valor], index) => ({
+        nome,
+        valor,
+        cor: cores[index % cores.length]
+      }))
+    }
+
+    // Função para calcular despesas por categoria
+    const calcularDespesasPorCategoria = (transacoes: any[]) => {
+      const despesasPorCategoria: { [key: string]: number } = {}
+      
+      transacoes.forEach(t => {
+        if (t.type === 'Despesa') {
+          despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + t.value
+        }
+      })
+      
+      const cores = ['#ef4444', '#f97316', '#84cc16', '#f59e0b', '#8b5cf6']
+      return Object.entries(despesasPorCategoria).map(([nome, valor], index) => ({
+        nome,
+        valor,
+        cor: cores[index % cores.length]
+      }))
+    }
+
+    // Função para calcular vendas por produto (baseado nas transações)
+    const calcularVendasPorProduto = (transacoes: any[]) => {
+      const vendasPorProduto: { [key: string]: number } = {}
+      
+      transacoes.forEach(t => {
+        if (t.type === 'Receita') {
+          // Usar a descrição como nome do produto
+          const nomeProduto = t.description || 'Produto sem nome'
+          vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + t.value
+        }
+      })
+      
+      const cores = ['#8b5cf6', '#ec4899', '#06b6d4', '#22c55e', '#3b82f6']
+      return Object.entries(vendasPorProduto)
+        .sort(([,a], [,b]) => b - a) // Ordenar por valor decrescente
+        .slice(0, 5) // Pegar apenas os 5 primeiros
+        .map(([nome, valor], index) => ({
+          nome,
+          valor,
+          cor: cores[index % cores.length]
+        }))
+    }
+
+    // Função para calcular produtos vendidos por período
+    const calcularProdutosPorPeriodo = (transacoes: any[], tipo: 'dia' | 'semana') => {
+      const produtosPorPeriodo: { [key: string]: { [key: string]: number } } = {}
+      
+      transacoes.forEach(t => {
+        if (t.type === 'Receita') {
+          const dataTransacao = new Date(t.date)
+          let chavePeriodo: string
+          
+          if (tipo === 'dia') {
+            const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+            chavePeriodo = diasSemana[dataTransacao.getDay()]
+          } else {
+            const semanaDoMes = Math.ceil(dataTransacao.getDate() / 7)
+            chavePeriodo = `Sem ${semanaDoMes}`
+          }
+          
+          if (!produtosPorPeriodo[chavePeriodo]) {
+            produtosPorPeriodo[chavePeriodo] = {}
+          }
+          
+          const nomeProduto = t.description || 'Produto sem nome'
+          produtosPorPeriodo[chavePeriodo][nomeProduto] = 
+            (produtosPorPeriodo[chavePeriodo][nomeProduto] || 0) + 1
+        }
+      })
+      
+      return Object.entries(produtosPorPeriodo).map(([nome, produtos]) => ({
+        nome,
+        ...produtos
+      }))
+    }
+
+    // Calcular dados reais
+    const dadosReais = {
       semana: {
-        vendasPorCategoria: [
-          { nome: 'Velas Aromáticas', valor: 2500, cor: '#22c55e' },
-          { nome: 'Velas Decorativas', valor: 1800, cor: '#3b82f6' },
-          { nome: 'Kits Presente', valor: 1200, cor: '#f59e0b' }
-        ],
-        vendasPorProduto: [
-          { nome: 'Vela Lavanda', valor: 800, cor: '#8b5cf6' },
-          { nome: 'Vela Vanilla', valor: 650, cor: '#ec4899' },
-          { nome: 'Kit Romance', valor: 500, cor: '#06b6d4' }
-        ],
-        despesasPorCategoria: [
-          { nome: 'Fixo', valor: 1500, cor: '#ef4444' },
-          { nome: 'Variável', valor: 800, cor: '#f97316' },
-          { nome: 'Outros', valor: 400, cor: '#84cc16' }
-        ],
-        produtosPorDia: [
-          { nome: 'Seg', vela_lavanda: 15, vela_vanilla: 12, kit_romance: 8 },
-          { nome: 'Ter', vela_lavanda: 18, vela_vanilla: 14, kit_romance: 6 },
-          { nome: 'Qua', vela_lavanda: 22, vela_vanilla: 16, kit_romance: 10 },
-          { nome: 'Qui', vela_lavanda: 20, vela_vanilla: 13, kit_romance: 9 },
-          { nome: 'Sex', vela_lavanda: 25, vela_vanilla: 18, kit_romance: 12 },
-          { nome: 'Sáb', vela_lavanda: 30, vela_vanilla: 22, kit_romance: 15 },
-          { nome: 'Dom', vela_lavanda: 28, vela_vanilla: 20, kit_romance: 14 }
-        ]
+        vendasPorCategoria: calcularVendasPorCategoria(transacoesSemana),
+        vendasPorProduto: calcularVendasPorProduto(transacoesSemana),
+        despesasPorCategoria: calcularDespesasPorCategoria(transacoesSemana),
+        produtosPorDia: calcularProdutosPorPeriodo(transacoesSemana, 'dia')
       },
       mes: {
-        vendasPorCategoria: [
-          { nome: 'Velas Aromáticas', valor: 12000, cor: '#22c55e' },
-          { nome: 'Velas Decorativas', valor: 8500, cor: '#3b82f6' },
-          { nome: 'Kits Presente', valor: 5200, cor: '#f59e0b' }
-        ],
-        vendasPorProduto: [
-          { nome: 'Vela Lavanda', valor: 4200, cor: '#8b5cf6' },
-          { nome: 'Vela Vanilla', valor: 3800, cor: '#ec4899' },
-          { nome: 'Kit Romance', valor: 2500, cor: '#06b6d4' }
-        ],
-        despesasPorCategoria: [
-          { nome: 'Fixo', valor: 7500, cor: '#ef4444' },
-          { nome: 'Variável', valor: 3200, cor: '#f97316' },
-          { nome: 'Outros', valor: 1800, cor: '#84cc16' }
-        ],
-        produtosPorSemana: [
-          { nome: 'Sem 1', vela_lavanda: 120, vela_vanilla: 95, kit_romance: 65 },
-          { nome: 'Sem 2', vela_lavanda: 135, vela_vanilla: 110, kit_romance: 75 },
-          { nome: 'Sem 3', vela_lavanda: 140, vela_vanilla: 105, kit_romance: 80 },
-          { nome: 'Sem 4', vela_lavanda: 125, vela_vanilla: 100, kit_romance: 70 }
-        ]
+        vendasPorCategoria: calcularVendasPorCategoria(transacoesMes),
+        vendasPorProduto: calcularVendasPorProduto(transacoesMes),
+        despesasPorCategoria: calcularDespesasPorCategoria(transacoesMes),
+        produtosPorSemana: calcularProdutosPorPeriodo(transacoesMes, 'semana')
       },
       trimestre: {
-        vendasPorCategoria: [
-          { nome: 'Velas Aromáticas', valor: 35000, cor: '#22c55e' },
-          { nome: 'Velas Decorativas', valor: 28500, cor: '#3b82f6' },
-          { nome: 'Kits Presente', valor: 18200, cor: '#f59e0b' }
-        ],
-        vendasPorProduto: [
-          { nome: 'Vela Lavanda', valor: 15200, cor: '#8b5cf6' },
-          { nome: 'Vela Vanilla', valor: 12800, cor: '#ec4899' },
-          { nome: 'Kit Romance', valor: 8500, cor: '#06b6d4' }
-        ],
-        despesasPorCategoria: [
-          { nome: 'Fixo', valor: 22500, cor: '#ef4444' },
-          { nome: 'Variável', valor: 12200, cor: '#f97316' },
-          { nome: 'Outros', valor: 6800, cor: '#84cc16' }
-        ],
-        produtosPorMes: [
-          { nome: 'Mês 1', vela_lavanda: 520, vela_vanilla: 410, kit_romance: 290 },
-          { nome: 'Mês 2', vela_lavanda: 485, vela_vanilla: 395, kit_romance: 275 },
-          { nome: 'Mês 3', vela_lavanda: 510, vela_vanilla: 420, kit_romance: 300 }
-        ]
+        vendasPorCategoria: calcularVendasPorCategoria(transacoesTrimestre),
+        vendasPorProduto: calcularVendasPorProduto(transacoesTrimestre),
+        despesasPorCategoria: calcularDespesasPorCategoria(transacoesTrimestre),
+        produtosPorMes: calcularProdutosPorPeriodo(transacoesTrimestre, 'semana')
       },
       ano: {
-        vendasPorCategoria: [
-          { nome: 'Velas Aromáticas', valor: 145000, cor: '#22c55e' },
-          { nome: 'Velas Decorativas', valor: 118500, cor: '#3b82f6' },
-          { nome: 'Kits Presente', valor: 78200, cor: '#f59e0b' }
-        ],
-        vendasPorProduto: [
-          { nome: 'Vela Lavanda', valor: 65200, cor: '#8b5cf6' },
-          { nome: 'Vela Vanilla', valor: 58800, cor: '#ec4899' },
-          { nome: 'Kit Romance', valor: 38500, cor: '#06b6d4' }
-        ],
-        despesasPorCategoria: [
-          { nome: 'Fixo', valor: 92500, cor: '#ef4444' },
-          { nome: 'Variável', valor: 52200, cor: '#f97316' },
-          { nome: 'Outros', valor: 28800, cor: '#84cc16' }
-        ],
-        produtosPorTrimestre: [
-          { nome: 'T1', vela_lavanda: 1515, vela_vanilla: 1225, kit_romance: 865 },
-          { nome: 'T2', vela_lavanda: 1620, vela_vanilla: 1380, kit_romance: 920 },
-          { nome: 'T3', vela_lavanda: 1580, vela_vanilla: 1295, kit_romance: 885 },
-          { nome: 'T4', vela_lavanda: 1685, vela_vanilla: 1450, kit_romance: 980 }
-        ]
+        vendasPorCategoria: calcularVendasPorCategoria(transacoesAno),
+        vendasPorProduto: calcularVendasPorProduto(transacoesAno),
+        despesasPorCategoria: calcularDespesasPorCategoria(transacoesAno),
+        produtosPorTrimestre: calcularProdutosPorPeriodo(transacoesAno, 'semana')
       }
     }
 
@@ -3693,16 +3760,16 @@ function App() {
         </div>
 
         {/* Seção Semana */}
-        {renderSecaoRelatorio('Relatório Semanal', dadosSimulados.semana, 'Semana')}
+        {renderSecaoRelatorio('Relatório Semanal', dadosReais.semana, 'Semana')}
         
         {/* Seção Mês */}
-        {renderSecaoRelatorio('Relatório Mensal', dadosSimulados.mes, 'Mês')}
+        {renderSecaoRelatorio('Relatório Mensal', dadosReais.mes, 'Mês')}
         
         {/* Seção Trimestre */}
-        {renderSecaoRelatorio('Relatório Trimestral', dadosSimulados.trimestre, 'Trimestre')}
+        {renderSecaoRelatorio('Relatório Trimestral', dadosReais.trimestre, 'Trimestre')}
         
         {/* Seção Ano */}
-        {renderSecaoRelatorio('Relatório Anual', dadosSimulados.ano, 'Ano')}
+        {renderSecaoRelatorio('Relatório Anual', dadosReais.ano, 'Ano')}
       </div>
     )
   }

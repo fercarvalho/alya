@@ -8,5 +8,15 @@
     "category": "Varejo",
     "createdAt": "2025-09-24T05:19:49.766Z",
     "updatedAt": "2025-09-24T05:19:49.766Z"
+  },
+  {
+    "id": "mfxju6685g8pkxlm71r",
+    "date": "2025-09-25",
+    "description": "teste3",
+    "value": 20,
+    "type": "Despesa",
+    "category": "Fixo",
+    "createdAt": "2025-09-24T05:34:09.344Z",
+    "updatedAt": "2025-09-24T05:34:09.344Z"
   }
 ]
