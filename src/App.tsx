@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 
 // Funções para comunicação com a API
-const API_BASE_URL = 'http://localhost:3001/api'
+const API_BASE_URL = 'http://localhost:8001/api'
 
 // Funções para Transações
 const fetchTransactions = async () => {
@@ -127,16 +127,6 @@ import {
   Tooltip, 
   Legend 
 } from 'recharts'
-
-// Tipos
-interface OldTransaction {
-  id: string
-  description: string
-  amount: number
-  type: 'receita' | 'despesa' | 'investimento'
-  category: string
-  date: string
-}
 
 interface NewTransaction {
   id: string;
@@ -615,60 +605,7 @@ function App() {
       <span className="text-amber-600">↓</span>
   }
 
-  const getSortedTransactions = () => {
-    if (!sortConfig.field) return transactions
-
-    return [...transactions].sort((a, b) => {
-      let aValue: any = a[sortConfig.field as keyof NewTransaction]
-      let bValue: any = b[sortConfig.field as keyof NewTransaction]
-
-      // Tratamento especial para diferentes tipos de dados
-      if (sortConfig.field === 'date') {
-        aValue = new Date(aValue).getTime()
-        bValue = new Date(bValue).getTime()
-      } else if (sortConfig.field === 'value') {
-        aValue = Number(aValue)
-        bValue = Number(bValue)
-      } else if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase()
-        bValue = bValue.toLowerCase()
-      }
-
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1
-      }
-      return 0
-    })
-  }
-
-  const getSortedProducts = () => {
-    if (!sortConfig.field) return products
-
-    return [...products].sort((a, b) => {
-      let aValue: any = a[sortConfig.field as keyof Product]
-      let bValue: any = b[sortConfig.field as keyof Product]
-
-      // Tratamento especial para diferentes tipos de dados
-      if (sortConfig.field === 'price' || sortConfig.field === 'cost' || sortConfig.field === 'stock' || sortConfig.field === 'sold') {
-        aValue = Number(aValue)
-        bValue = Number(bValue)
-      } else if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase()
-        bValue = bValue.toLowerCase()
-      }
-
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1
-      }
-      return 0
-    })
-  }
+  // Removido: funções de ordenação não utilizadas (agora usamos filtros + ordenação combinada)
 
   // Funções de filtro
   const getFilteredAndSortedTransactions = () => {
@@ -825,7 +762,6 @@ function App() {
     
     // Primeiro dia do mês
     const firstDay = new Date(currentYear, currentMonth, 1)
-    const lastDay = new Date(currentYear, currentMonth + 1, 0)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay())
     
@@ -928,7 +864,6 @@ function App() {
     const currentYear = currentDate.getFullYear()
     
     const firstDay = new Date(currentYear, currentMonth, 1)
-    const lastDay = new Date(currentYear, currentMonth + 1, 0)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay())
     
@@ -1025,7 +960,6 @@ function App() {
     const currentYear = currentDate.getFullYear()
     
     const firstDay = new Date(currentYear, currentMonth, 1)
-    const lastDay = new Date(currentYear, currentMonth + 1, 0)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay())
     
@@ -1295,23 +1229,17 @@ function App() {
   }, [metas])
 
   // Calcular resumo financeiro (mantendo para compatibilidade)
-  const totalReceitas = 0 // Agora usando calculateTotals()
-  const totalDespesas = 0 // Agora usando calculateTotals()
-  const lucroLiquido = totalReceitas - totalDespesas
+  // Removido: totais fictícios (usar calculateTotals())
 
   // Render Dashboard
   const renderDashboard = () => {
     // Calcular totais das transações reais (movido para dentro da função)
-    const { receitas, despesas, faturamento, resultado } = calculateTotals()
+    const { receitas, despesas, resultado } = calculateTotals()
     
     // Obter o mês selecionado nas metas
     const mesSelecionadoMetas = mesesMetas.find(mes => mes.indice === selectedMonth) || mesesMetas[new Date().getMonth()]
     
-    // Filtrar transações do mês selecionado
-    const transacoesMesSelecionado = transactions.filter(t => {
-      const transactionMonth = new Date(t.date).getMonth()
-      return transactionMonth === selectedMonth
-    })
+    // (removido) Lista de transações do mês selecionado — não utilizada diretamente
     
     // Usar dados reais das transações para o mês atual
     const totalReceitasMes = receitas
@@ -1850,7 +1778,7 @@ function App() {
   }
 
   // Função para renderizar apenas o conteúdo do mês (sem título)
-  const renderMonthContent = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
+  const renderMonthContent = (_monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
     // Cálculos para o mês específico
     const currentYear = 2025
     const transacoesDoMes = transactions.filter(t => {
@@ -4642,7 +4570,7 @@ function App() {
                       console.log('Baixando modelo para:', importExportType)
                       
                       // Tentar baixar do servidor
-                      const response = await fetch(`http://localhost:3001/api/modelo/${importExportType}`)
+                      const response = await fetch(`http://localhost:8001/api/modelo/${importExportType}`)
                       
                       if (response.ok) {
                         const blob = await response.blob()
@@ -4773,7 +4701,7 @@ function App() {
                     }
                     
                     // Chamar API de exportação
-                    const response = await fetch('http://localhost:3001/api/export', {
+                    const response = await fetch('http://localhost:8001/api/export', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json'
@@ -4804,7 +4732,7 @@ function App() {
                     }
                   } catch (error) {
                     console.error('Erro ao exportar:', error)
-                    alert(`Erro ao exportar arquivo: ${error.message}`)
+                    alert(`Erro ao exportar arquivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
                   } finally {
                     setIsUploading(false)
                   }
@@ -4833,7 +4761,7 @@ function App() {
                       
                       // Tentar fazer requisição para o servidor backend
                       try {
-                        const response = await fetch('http://localhost:3001/api/import', {
+                        const response = await fetch('http://localhost:8001/api/import', {
                           method: 'POST',
                           body: formData
                         })

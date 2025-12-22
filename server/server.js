@@ -7,7 +7,7 @@ const fs = require('fs');
 const Database = require('./database');
 
 const app = express();
-const port = 3001;
+const port = 8001;
 const db = new Database();
 
 // Middleware
