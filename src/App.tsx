@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Users
+  Users,
+  X
 } from 'lucide-react'
 import Clients from './components/Clients'
 import jsPDF from 'jspdf'
@@ -206,6 +207,9 @@ function App() {
   const [importExportType, setImportExportType] = useState<'transactions' | 'products'>('transactions')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  
+  // Estado do modal de seleção de período para exportar relatórios
+  const [isPeriodoExportModalOpen, setIsPeriodoExportModalOpen] = useState(false)
   const [transactionForm, setTransactionForm] = useState({
     date: new Date().toISOString().split('T')[0], // Data atual por padrão
     description: '',
@@ -3253,26 +3257,15 @@ function App() {
     </div>
   )
 
+  // Função para abrir modal de seleção de período
+  const abrirModalSelecaoPeriodo = () => {
+    setIsPeriodoExportModalOpen(true)
+  }
+
   // Função para exportar relatórios em PDF
-  const exportarRelatoriosPDF = async () => {
+  const exportarRelatoriosPDF = async (periodoSelecionado: string) => {
     try {
-      // Seleção de período
-      const periodos = ['Semana', 'Mês', 'Trimestre', 'Ano', 'Todos']
-      const periodoEscolhido = prompt(
-        `Escolha o período para exportar:\n\n1 - Semana\n2 - Mês\n3 - Trimestre\n4 - Ano\n5 - Todos os períodos\n\nDigite o número (1-5):`
-      )
-      
-      if (!periodoEscolhido) {
-        return // Usuário cancelou
-      }
-      
-      const indicePeriodo = parseInt(periodoEscolhido) - 1
-      if (indicePeriodo < 0 || indicePeriodo >= periodos.length) {
-        alert('Opção inválida!')
-        return
-      }
-      
-      const periodoSelecionado = periodos[indicePeriodo]
+      setIsPeriodoExportModalOpen(false)
       
       // Calcular dados reais das transações (mesma lógica de renderReports)
       const agora = new Date()
@@ -4063,7 +4056,7 @@ function App() {
           </h1>
           <div className="flex gap-3">
             <button
-              onClick={exportarRelatoriosPDF}
+              onClick={abrirModalSelecaoPeriodo}
               className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
             >
               <Download className="h-5 w-5" />
@@ -5382,6 +5375,109 @@ function App() {
               >
                 Cancelar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Seleção de Período para Exportar Relatórios */}
+      {isPeriodoExportModalOpen && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsPeriodoExportModalOpen(false)
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Download className="w-6 h-6 text-amber-700" />
+                  Exportar Relatório PDF
+                </h2>
+                <button
+                  onClick={() => setIsPeriodoExportModalOpen(false)}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="space-y-4">
+              <p className="text-gray-700 text-center mb-6">
+                Selecione o período que deseja exportar:
+              </p>
+              
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  onClick={() => exportarRelatoriosPDF('Semana')}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-amber-600" />
+                    <span className="font-semibold text-gray-800">Semana</span>
+                  </div>
+                  <ArrowUpCircle className="w-5 h-5 text-amber-600" />
+                </button>
+
+                <button
+                  onClick={() => exportarRelatoriosPDF('Mês')}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-amber-600" />
+                    <span className="font-semibold text-gray-800">Mês</span>
+                  </div>
+                  <ArrowUpCircle className="w-5 h-5 text-amber-600" />
+                </button>
+
+                <button
+                  onClick={() => exportarRelatoriosPDF('Trimestre')}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-amber-600" />
+                    <span className="font-semibold text-gray-800">Trimestre</span>
+                  </div>
+                  <ArrowUpCircle className="w-5 h-5 text-amber-600" />
+                </button>
+
+                <button
+                  onClick={() => exportarRelatoriosPDF('Ano')}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-amber-600" />
+                    <span className="font-semibold text-gray-800">Ano</span>
+                  </div>
+                  <ArrowUpCircle className="w-5 h-5 text-amber-600" />
+                </button>
+
+                <button
+                  onClick={() => exportarRelatoriosPDF('Todos')}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-2 border-amber-400 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-semibold"
+                >
+                  <div className="flex items-center gap-3">
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Todos os Períodos</span>
+                  </div>
+                  <ArrowUpCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setIsPeriodoExportModalOpen(false)}
+                  className="w-full py-2 px-4 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         </div>
