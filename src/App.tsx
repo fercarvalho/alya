@@ -3253,6 +3253,312 @@ function App() {
     </div>
   )
 
+  // Função para exportar relatórios em PDF
+  const exportarRelatoriosPDF = async () => {
+    try {
+      // Seleção de período
+      const periodos = ['Semana', 'Mês', 'Trimestre', 'Ano', 'Todos']
+      const periodoEscolhido = prompt(
+        `Escolha o período para exportar:\n\n1 - Semana\n2 - Mês\n3 - Trimestre\n4 - Ano\n5 - Todos os períodos\n\nDigite o número (1-5):`
+      )
+      
+      if (!periodoEscolhido) {
+        return // Usuário cancelou
+      }
+      
+      const indicePeriodo = parseInt(periodoEscolhido) - 1
+      if (indicePeriodo < 0 || indicePeriodo >= periodos.length) {
+        alert('Opção inválida!')
+        return
+      }
+      
+      const periodoSelecionado = periodos[indicePeriodo]
+      
+      // Calcular dados reais das transações (mesma lógica de renderReports)
+      const agora = new Date()
+      const inicioSemana = new Date(agora)
+      inicioSemana.setDate(agora.getDate() - agora.getDay())
+      inicioSemana.setHours(0, 0, 0, 0)
+      
+      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
+      const inicioTrimestre = new Date(agora.getFullYear(), Math.floor(agora.getMonth() / 3) * 3, 1)
+      const inicioAno = new Date(agora.getFullYear(), 0, 1)
+
+      // Filtrar transações por período
+      const transacoesSemana = transactions.filter(t => {
+        const dataTransacao = new Date(t.date)
+        return dataTransacao >= inicioSemana
+      })
+
+      const transacoesMes = transactions.filter(t => {
+        const dataTransacao = new Date(t.date)
+        return dataTransacao >= inicioMes
+      })
+
+      const transacoesTrimestre = transactions.filter(t => {
+        const dataTransacao = new Date(t.date)
+        return dataTransacao >= inicioTrimestre
+      })
+
+      const transacoesAno = transactions.filter(t => {
+        const dataTransacao = new Date(t.date)
+        return dataTransacao >= inicioAno
+      })
+
+      // Funções auxiliares de cálculo (reutilizadas de renderReports)
+      const calcularVendasPorCategoria = (transacoes: any[]) => {
+        const vendasPorCategoria: { [key: string]: number } = {}
+        
+        transacoes.forEach(t => {
+          if (t.type === 'Receita') {
+            vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + t.value
+          }
+        })
+        
+        const cores = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
+        return Object.entries(vendasPorCategoria).map(([nome, valor], index) => ({
+          nome,
+          valor,
+          cor: cores[index % cores.length]
+        }))
+      }
+
+      const calcularDespesasPorCategoria = (transacoes: any[]) => {
+        const despesasPorCategoria: { [key: string]: number } = {}
+        
+        transacoes.forEach(t => {
+          if (t.type === 'Despesa') {
+            despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + t.value
+          }
+        })
+        
+        const cores = ['#ef4444', '#f97316', '#84cc16', '#f59e0b', '#8b5cf6']
+        return Object.entries(despesasPorCategoria).map(([nome, valor], index) => ({
+          nome,
+          valor,
+          cor: cores[index % cores.length]
+        }))
+      }
+
+      const calcularVendasPorProduto = (transacoes: any[]) => {
+        const vendasPorProduto: { [key: string]: number } = {}
+        
+        transacoes.forEach(t => {
+          if (t.type === 'Receita') {
+            const nomeProduto = t.description || 'Produto sem nome'
+            vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + t.value
+          }
+        })
+        
+        const cores = ['#8b5cf6', '#ec4899', '#06b6d4', '#22c55e', '#3b82f6']
+        return Object.entries(vendasPorProduto)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 5)
+          .map(([nome, valor], index) => ({
+            nome,
+            valor,
+            cor: cores[index % cores.length]
+          }))
+      }
+
+      // Determinar quais períodos exportar
+      const periodosParaExportar: Array<{nome: string, transacoes: any[]}> = []
+      
+      if (periodoSelecionado === 'Todos') {
+        periodosParaExportar.push(
+          { nome: 'Semana', transacoes: transacoesSemana },
+          { nome: 'Mês', transacoes: transacoesMes },
+          { nome: 'Trimestre', transacoes: transacoesTrimestre },
+          { nome: 'Ano', transacoes: transacoesAno }
+        )
+      } else {
+        const transacoesMap: { [key: string]: any[] } = {
+          'Semana': transacoesSemana,
+          'Mês': transacoesMes,
+          'Trimestre': transacoesTrimestre,
+          'Ano': transacoesAno
+        }
+        periodosParaExportar.push({
+          nome: periodoSelecionado,
+          transacoes: transacoesMap[periodoSelecionado] || []
+        })
+      }
+
+      // Validar se há dados
+      const temDados = periodosParaExportar.some(p => p.transacoes.length > 0)
+      if (!temDados) {
+        alert('Não há dados para exportar no período selecionado!')
+        return
+      }
+
+      // Criar elemento temporário para capturar o conteúdo
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'absolute'
+      tempElement.style.left = '-9999px'
+      tempElement.style.top = '-9999px'
+      tempElement.style.width = '800px'
+      tempElement.style.backgroundColor = 'white'
+      tempElement.style.padding = '20px'
+      tempElement.style.fontFamily = 'Arial, sans-serif'
+
+      // Construir HTML do relatório
+      let htmlContent = ''
+
+      // Cabeçalho principal
+      htmlContent += `
+        <div style="text-align: center; margin-bottom: 40px;">
+          <h1 style="color: #f59e0b; font-size: 28px; margin: 0; font-weight: bold;">ALYA VELAS</h1>
+          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório Financeiro${periodoSelecionado === 'Todos' ? '' : ' - ' + periodoSelecionado}</h2>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        </div>
+      `
+
+      // Processar cada período
+      periodosParaExportar.forEach((periodo, periodoIndex) => {
+        const vendasPorCategoria = calcularVendasPorCategoria(periodo.transacoes)
+        const vendasPorProduto = calcularVendasPorProduto(periodo.transacoes)
+        const despesasPorCategoria = calcularDespesasPorCategoria(periodo.transacoes)
+        
+        const totalVendasCategoria = vendasPorCategoria.reduce((sum, item) => sum + item.valor, 0)
+        const totalDespesas = despesasPorCategoria.reduce((sum, item) => sum + item.valor, 0)
+        const lucroLiquido = totalVendasCategoria - totalDespesas
+        const margemLucro = totalVendasCategoria > 0 ? ((lucroLiquido / totalVendasCategoria) * 100) : 0
+
+        // Seção do período
+        htmlContent += `
+          <div style="margin-bottom: ${periodoIndex < periodosParaExportar.length - 1 ? '50px' : '30px'}; page-break-after: ${periodoIndex < periodosParaExportar.length - 1 ? 'always' : 'auto'};">
+            <h3 style="color: #f59e0b; font-size: 22px; margin-bottom: 20px; border-bottom: 3px solid #f59e0b; padding-bottom: 10px;">📊 Relatório ${periodo.nome}</h3>
+            
+            <!-- Resumo Executivo -->
+            <div style="margin-bottom: 30px;">
+              <h4 style="color: #f59e0b; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">Resumo Executivo</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                  <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Total Vendas</div>
+                  <div style="font-size: 18px; font-weight: bold; color: #059669;">R$ ${totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                  <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Total Despesas</div>
+                  <div style="font-size: 18px; font-weight: bold; color: #dc2626;">R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div style="background: ${lucroLiquido >= 0 ? '#f0fdf4' : '#fef2f2'}; padding: 15px; border-radius: 8px; border-left: 4px solid ${lucroLiquido >= 0 ? '#10b981' : '#ef4444'};">
+                  <div style="font-weight: bold; color: ${lucroLiquido >= 0 ? '#10b981' : '#ef4444'}; margin-bottom: 5px;">Lucro Líquido</div>
+                  <div style="font-size: 18px; font-weight: bold; color: ${lucroLiquido >= 0 ? '#059669' : '#dc2626'};">R$ ${lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                  <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Margem de Lucro</div>
+                  <div style="font-size: 18px; font-weight: bold; color: #d97706;">${margemLucro.toFixed(1)}%</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vendas por Categoria -->
+            <div style="margin-bottom: 30px;">
+              <h4 style="color: #f59e0b; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📈 Vendas por Categoria</h4>
+              <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                ${vendasPorCategoria.length > 0 ? vendasPorCategoria.map(item => `
+                  <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                    <span style="font-weight: bold; color: #374151;">${item.nome}</span>
+                    <span style="font-weight: bold; color: #10b981;">R$ ${item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                `).join('') : '<p style="color: #6b7280; text-align: center;">Nenhuma venda registrada</p>'}
+                <div style="display: flex; justify-content: space-between; padding: 15px; margin-top: 10px; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
+                  <span style="font-weight: bold; color: #10b981; font-size: 16px;">Total</span>
+                  <span style="font-weight: bold; color: #10b981; font-size: 16px;">R$ ${totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vendas por Produto (Top 5) -->
+            <div style="margin-bottom: 30px;">
+              <h4 style="color: #f59e0b; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📦 Top 5 Produtos</h4>
+              <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                ${vendasPorProduto.length > 0 ? vendasPorProduto.map((item, index) => `
+                  <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                    <span style="font-weight: bold; color: #374151;">${index + 1}. ${item.nome}</span>
+                    <span style="font-weight: bold; color: #3b82f6;">R$ ${item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                `).join('') : '<p style="color: #6b7280; text-align: center;">Nenhum produto vendido</p>'}
+              </div>
+            </div>
+
+            <!-- Despesas por Categoria -->
+            <div style="margin-bottom: 30px;">
+              <h4 style="color: #f59e0b; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">💸 Despesas por Categoria</h4>
+              <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                ${despesasPorCategoria.length > 0 ? despesasPorCategoria.map(item => `
+                  <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                    <span style="font-weight: bold; color: #374151;">${item.nome}</span>
+                    <span style="font-weight: bold; color: #ef4444;">R$ ${item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                `).join('') : '<p style="color: #6b7280; text-align: center;">Nenhuma despesa registrada</p>'}
+                <div style="display: flex; justify-content: space-between; padding: 15px; margin-top: 10px; background: #fef2f2; border-radius: 8px; border: 2px solid #ef4444;">
+                  <span style="font-weight: bold; color: #ef4444; font-size: 16px;">Total</span>
+                  <span style="font-weight: bold; color: #ef4444; font-size: 16px;">R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      })
+
+      // Rodapé
+      htmlContent += `
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            Relatório gerado automaticamente pelo sistema Alya Velas<br>
+            Dados baseados em transações reais do período<br>
+            Para mais informações, acesse o painel administrativo
+          </p>
+        </div>
+      `
+
+      tempElement.innerHTML = htmlContent
+      document.body.appendChild(tempElement)
+
+      // Capturar o elemento como imagem
+      const canvas = await html2canvas(tempElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+
+      // Remover elemento temporário
+      document.body.removeChild(tempElement)
+
+      // Criar PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      
+      let position = 0
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      // Salvar PDF
+      const fileName = `Relatorio_${periodoSelecionado === 'Todos' ? 'Completo' : periodoSelecionado}_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+
+      alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Período: ${periodoSelecionado}\n📈 Total de períodos: ${periodosParaExportar.length}`)
+
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      alert('❌ Erro ao exportar PDF. Tente novamente.')
+    }
+  }
+
   // Render Reports
   const renderReports = () => {
     // Calcular dados reais das transações
@@ -3755,13 +4061,22 @@ function App() {
             <BarChart3 className="w-8 h-8 text-blue-600" />
             Relatórios
           </h1>
-          <button
-            onClick={() => alert("Ferramenta em construção")}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <Plus className="h-5 w-5" />
-            Novo Relatório
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={exportarRelatoriosPDF}
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            >
+              <Download className="h-5 w-5" />
+              Exportar PDF
+            </button>
+            <button
+              onClick={() => alert("Ferramenta em construção")}
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            >
+              <Plus className="h-5 w-5" />
+              Novo Relatório
+            </button>
+          </div>
         </div>
 
         {/* Seção Semana */}
