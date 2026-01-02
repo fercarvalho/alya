@@ -18,8 +18,10 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  Users
 } from 'lucide-react'
+import Clients from './components/Clients'
 
 // Funções para comunicação com a API
 const API_BASE_URL = 'http://localhost:8001/api'
@@ -160,7 +162,7 @@ interface Meta {
   status: 'ativa' | 'pausada' | 'concluida'
 }
 
-type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas'
+type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients'
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
@@ -3873,7 +3875,8 @@ function App() {
                 { id: 'metas', name: 'Metas', icon: TrendingUp },
                 { id: 'reports', name: 'Relatórios', icon: BarChart3 },
                 { id: 'transactions', name: 'Transações', icon: DollarSign },
-                { id: 'products', name: 'Produtos', icon: Package }
+                { id: 'products', name: 'Produtos', icon: Package },
+                { id: 'clients', name: 'Clientes', icon: Users }
               ].map(tab => {
                 const Icon = tab.icon
                 return (
@@ -3906,6 +3909,7 @@ function App() {
         {activeTab === 'transactions' && renderTransactions()}
         {activeTab === 'products' && renderProducts()}
         {activeTab === 'reports' && renderReports()}
+        {activeTab === 'clients' && <Clients />}
       </main>
 
       {/* Modal de Produto */}
