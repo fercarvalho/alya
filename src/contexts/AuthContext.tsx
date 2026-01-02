@@ -4,6 +4,9 @@ interface User {
   id: string;
   username: string;
   role: string;
+  modules?: string[];
+  isActive?: boolean;
+  lastLogin?: string;
 }
 
 interface AuthContextType {

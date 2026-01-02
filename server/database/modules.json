@@ -1,0 +1,86 @@
+[
+  {
+    "id": "mjx45q91lkhoelmuru",
+    "name": "Dashboard",
+    "key": "dashboard",
+    "icon": "Home",
+    "description": "Painel principal com visão geral do sistema",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.069Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
+    "id": "mjx45q9475z4pbd5gy9",
+    "name": "Transações",
+    "key": "transactions",
+    "icon": "DollarSign",
+    "description": "Gerenciamento de transações financeiras",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.072Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
+    "id": "mjx45q94091pcvs57jgx",
+    "name": "Produtos",
+    "key": "products",
+    "icon": "Package",
+    "description": "Gerenciamento de produtos e estoque",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.072Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
+    "id": "mjx45q94rlt92s9bbjo",
+    "name": "Clientes",
+    "key": "clients",
+    "icon": "Users",
+    "description": "Gerenciamento de clientes",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.072Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
+    "id": "mjx45q94xe3pzawvgw",
+    "name": "Relatórios",
+    "key": "reports",
+    "icon": "BarChart3",
+    "description": "Relatórios e análises",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.072Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
+    "id": "mjx45q94wspg0te9rqo",
+    "name": "Metas",
+    "key": "metas",
+    "icon": "Target",
+    "description": "Gerenciamento de metas",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.072Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
+    "id": "mjx45q94onj5v4u5vx",
+    "name": "Administração",
+    "key": "admin",
+    "icon": "Shield",
+    "description": "Painel administrativo",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.072Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  }
+]

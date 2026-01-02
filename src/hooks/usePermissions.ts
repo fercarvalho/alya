@@ -9,10 +9,22 @@ export interface Permissions {
   canExport: boolean;
 }
 
-export const usePermissions = (): Permissions => {
+export const usePermissions = (module?: string): Permissions => {
   const { user } = useAuth();
 
   if (!user) {
+    return {
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canView: false,
+      canImport: false,
+      canExport: false
+    };
+  }
+
+  // Se o usuário tem módulos definidos e o módulo atual não está na lista, negar acesso
+  if (user.modules && user.modules.length > 0 && module && !user.modules.includes(module)) {
     return {
       canCreate: false,
       canEdit: false,

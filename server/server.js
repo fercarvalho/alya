@@ -250,6 +250,35 @@ app.get('/api/modelo/:type', (req, res) => {
   }
 });
 
+// Função auxiliar para log de atividades
+function logActivity(userId, username, action, module, entityType = null, entityId = null, details = {}) {
+  try {
+    const log = {
+      id: db.generateId(),
+      userId,
+      username,
+      action,
+      module: module || 'general',
+      entityType,
+      entityId,
+      details,
+      timestamp: new Date().toISOString(),
+      ipAddress: null // Será preenchido nas rotas quando disponível
+    };
+    db.saveActivityLog(log);
+  } catch (error) {
+    console.error('Erro ao salvar log de atividade:', error);
+  }
+}
+
+// Middleware para verificar se é admin
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar esta rota.' });
+  }
+  next();
+};
+
 // Rotas de Autenticação
 app.post('/api/auth/login', (req, res) => {
   try {
@@ -269,19 +298,33 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
+    // Atualizar lastLogin
+    const now = new Date().toISOString();
+    db.updateUser(user.id, { lastLogin: now });
+
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
+    // Logar ação de login
+    logActivity(user.id, user.username, 'login', 'auth', 'user', user.id);
+
+    // Retornar dados completos do usuário
+    const userData = db.getUserById(user.id);
+    const { password: _, ...safeUser } = userData;
+
     res.json({
       success: true,
       token,
       user: {
-        id: user.id,
-        username: user.username,
-        role: user.role
+        id: safeUser.id,
+        username: safeUser.username,
+        role: safeUser.role,
+        modules: safeUser.modules || [],
+        isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
+        lastLogin: safeUser.lastLogin
       }
     });
   } catch (error) {
@@ -290,10 +333,28 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.post('/api/auth/verify', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    user: req.user
-  });
+  try {
+    // Buscar dados completos do usuário
+    const user = db.getUserById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+    
+    const { password: _, ...safeUser } = user;
+    res.json({
+      success: true,
+      user: {
+        id: safeUser.id,
+        username: safeUser.username,
+        role: safeUser.role,
+        modules: safeUser.modules || [],
+        isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
+        lastLogin: safeUser.lastLogin
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 // Rota para importar arquivos
@@ -446,6 +507,7 @@ app.get('/api/transactions', (req, res) => {
 app.post('/api/transactions', authenticateToken, (req, res) => {
   try {
     const transaction = db.saveTransaction(req.body);
+    logActivity(req.user.id, req.user.username, 'create', 'transactions', 'transaction', transaction.id);
     res.json({ success: true, data: transaction });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -456,6 +518,7 @@ app.put('/api/transactions/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     const transaction = db.updateTransaction(id, req.body);
+    logActivity(req.user.id, req.user.username, 'edit', 'transactions', 'transaction', id);
     res.json({ success: true, data: transaction });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -466,6 +529,7 @@ app.delete('/api/transactions/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     db.deleteTransaction(id);
+    logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', id);
     res.json({ success: true, message: 'Transação deletada com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -479,6 +543,7 @@ app.delete('/api/transactions', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
     }
     db.deleteMultipleTransactions(ids);
+    logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', null, { count: ids.length });
     res.json({ success: true, message: `${ids.length} transações deletadas com sucesso` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -498,6 +563,7 @@ app.get('/api/products', (req, res) => {
 app.post('/api/products', authenticateToken, (req, res) => {
   try {
     const product = db.saveProduct(req.body);
+    logActivity(req.user.id, req.user.username, 'create', 'products', 'product', product.id);
     res.json({ success: true, data: product });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -508,6 +574,7 @@ app.put('/api/products/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     const product = db.updateProduct(id, req.body);
+    logActivity(req.user.id, req.user.username, 'edit', 'products', 'product', id);
     res.json({ success: true, data: product });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -518,6 +585,7 @@ app.delete('/api/products/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     db.deleteProduct(id);
+    logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', id);
     res.json({ success: true, message: 'Produto deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -531,6 +599,7 @@ app.delete('/api/products', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
     }
     db.deleteMultipleProducts(ids);
+    logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', null, { count: ids.length });
     res.json({ success: true, message: `${ids.length} produtos deletados com sucesso` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -550,6 +619,7 @@ app.get('/api/clients', (req, res) => {
 app.post('/api/clients', authenticateToken, (req, res) => {
   try {
     const client = db.saveClient(req.body);
+    logActivity(req.user.id, req.user.username, 'create', 'clients', 'client', client.id);
     res.json({ success: true, data: client });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -560,6 +630,7 @@ app.put('/api/clients/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     const client = db.updateClient(id, req.body);
+    logActivity(req.user.id, req.user.username, 'edit', 'clients', 'client', id);
     res.json({ success: true, data: client });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -570,6 +641,7 @@ app.delete('/api/clients/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     db.deleteClient(id);
+    logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', id);
     res.json({ success: true, message: 'Cliente deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -583,7 +655,283 @@ app.delete('/api/clients', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
     }
     db.deleteMultipleClients(ids);
+    logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', null, { count: ids.length });
     res.json({ success: true, message: `${ids.length} clientes deletados com sucesso` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ===== ROTAS ADMINISTRATIVAS =====
+
+// Rotas de Usuários
+app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const users = db.getAllUsers();
+    // Remover senhas antes de enviar
+    const safeUsers = users.map(({ password, ...user }) => user);
+    res.json({ success: true, data: safeUsers });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = db.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    }
+    const { password: _, ...safeUser } = user;
+    res.json({ success: true, data: safeUser });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { username, password, role, modules, isActive } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Username e senha são obrigatórios' });
+    }
+    
+    // Verificar se usuário já existe
+    if (db.getUserByUsername(username)) {
+      return res.status(400).json({ success: false, error: 'Usuário já existe' });
+    }
+    
+    // Validar senha forte (mínimo 6 caracteres)
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Senha deve ter no mínimo 6 caracteres' });
+    }
+    
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    const newUser = {
+      username,
+      password: hashedPassword,
+      role: role || 'user',
+      modules: modules || [],
+      isActive: isActive !== undefined ? isActive : true
+    };
+    
+    const user = db.saveUser(newUser);
+    logActivity(req.user.id, req.user.username, 'create', 'admin', 'user', user.id, { username: user.username, role: user.role });
+    
+    const { password: _, ...safeUser } = user;
+    res.json({ success: true, data: safeUser });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = { ...req.body };
+    
+    // Se houver senha, hash ela
+    if (updates.password) {
+      if (updates.password.length < 6) {
+        return res.status(400).json({ success: false, error: 'Senha deve ter no mínimo 6 caracteres' });
+      }
+      updates.password = bcrypt.hashSync(updates.password, 10);
+    }
+    
+    // Não permitir mudar role para admin de outro usuário (apenas o próprio admin pode ser admin)
+    // Isso pode ser ajustado conforme necessário
+    
+    const updatedUser = db.updateUser(id, updates);
+    logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', id, { changes: Object.keys(updates) });
+    
+    const { password: _, ...safeUser } = updatedUser;
+    res.json({ success: true, data: safeUser });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Não permitir deletar a si mesmo
+    if (id === req.user.id) {
+      return res.status(400).json({ success: false, error: 'Não é possível deletar seu próprio usuário' });
+    }
+    
+    const user = db.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    }
+    
+    db.deleteUser(id);
+    logActivity(req.user.id, req.user.username, 'delete', 'admin', 'user', id, { username: user.username });
+    
+    res.json({ success: true, message: 'Usuário deletado com sucesso' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Rota pública para listar módulos (todos os usuários precisam ver módulos disponíveis)
+app.get('/api/modules', authenticateToken, (req, res) => {
+  try {
+    const modules = db.getAllSystemModules();
+    // Retornar apenas módulos ativos para usuários não-admin
+    if (req.user.role !== 'admin') {
+      const activeModules = modules.filter(m => m.isActive);
+      return res.json({ success: true, data: activeModules });
+    }
+    res.json({ success: true, data: modules });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Rotas de Módulos (Admin)
+app.get('/api/admin/modules', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const modules = db.getAllSystemModules();
+    res.json({ success: true, data: modules });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const module = db.getSystemModuleById(id);
+    if (!module) {
+      return res.status(404).json({ success: false, error: 'Módulo não encontrado' });
+    }
+    res.json({ success: true, data: module });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/admin/modules', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { name, key, icon, description, route, isActive } = req.body;
+    
+    if (!name || !key) {
+      return res.status(400).json({ success: false, error: 'Nome e key são obrigatórios' });
+    }
+    
+    const moduleData = {
+      name,
+      key,
+      icon: icon || 'Package',
+      description: description || '',
+      route: route || null,
+      isActive: isActive !== undefined ? isActive : true,
+      isSystem: false
+    };
+    
+    const module = db.saveSystemModule(moduleData);
+    logActivity(req.user.id, req.user.username, 'create', 'admin', 'module', module.id, { name: module.name, key: module.key });
+    
+    res.json({ success: true, data: module });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // Não permitir mudar isSystem
+    delete updates.isSystem;
+    
+    const module = db.updateSystemModule(id, updates);
+    logActivity(req.user.id, req.user.username, 'edit', 'admin', 'module', id, { changes: Object.keys(updates) });
+    
+    res.json({ success: true, data: module });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const module = db.getSystemModuleById(id);
+    if (!module) {
+      return res.status(404).json({ success: false, error: 'Módulo não encontrado' });
+    }
+    
+    db.deleteSystemModule(id);
+    logActivity(req.user.id, req.user.username, 'delete', 'admin', 'module', id, { name: module.name, key: module.key });
+    
+    res.json({ success: true, message: 'Módulo deletado com sucesso' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Rotas de Activity Log
+app.get('/api/admin/activity-log', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { userId, module, action, startDate, endDate, limit, page } = req.query;
+    
+    const filters = {};
+    if (userId) filters.userId = userId;
+    if (module) filters.module = module;
+    if (action) filters.action = action;
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+    if (limit) filters.limit = limit;
+    if (page) filters.page = page;
+    
+    const logs = db.getActivityLogs(filters);
+    res.json({ success: true, data: logs, count: logs.length });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Rotas de Estatísticas
+app.get('/api/admin/statistics', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const stats = db.getSystemStatistics();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/statistics/users/:userId', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { userId } = req.params;
+    const stats = db.getUserStatistics(userId);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/statistics/modules/:moduleKey', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { moduleKey } = req.params;
+    const stats = db.getModuleStatistics(moduleKey);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/admin/statistics/usage-timeline', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { startDate, endDate, groupBy } = req.query;
+    const timeline = db.getUsageTimeline(startDate, endDate, groupBy || 'day');
+    res.json({ success: true, data: timeline });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -21,11 +21,14 @@ import {
   Filter,
   Users,
   X,
-  LogOut
+  LogOut,
+  Shield
 } from 'lucide-react'
 import Clients from './components/Clients'
 import Login from './components/Login'
+import AdminPanel from './components/AdminPanel'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useModules } from './hooks/useModules'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -78,11 +81,24 @@ interface Meta {
   status: 'ativa' | 'pausada' | 'concluida'
 }
 
-type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients'
+type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients' | 'admin'
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
   const { user, token, logout, isLoading } = useAuth();
+  const { getVisibleModules } = useModules();
+  
+  // Mapeamento de ícones para os módulos
+  const iconMap: Record<string, any> = {
+    'Home': Home,
+    'DollarSign': DollarSign,
+    'Package': Package,
+    'Users': Users,
+    'BarChart3': BarChart3,
+    'Target': Target,
+    'Shield': Shield,
+    'TrendingUp': TrendingUp
+  };
 
   // Funções para comunicação com a API (com token)
   const fetchTransactions = async () => {
@@ -4988,33 +5004,53 @@ const AppContent: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center overflow-x-auto scrollbar-hide">
             <div className="flex items-center space-x-2 min-w-max">
-              {[
-                { id: 'dashboard', name: 'Dashboard', icon: Home },
-                { id: 'metas', name: 'Metas', icon: TrendingUp },
-                { id: 'reports', name: 'Relatórios', icon: BarChart3 },
-                { id: 'transactions', name: 'Transações', icon: DollarSign },
-                { id: 'products', name: 'Produtos', icon: Package },
-                { id: 'clients', name: 'Clientes', icon: Users }
-              ].map(tab => {
-                const Icon = tab.icon
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveTab(tab.id as TabType)
-                      setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
-                    }}
-                    className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
-                        : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 mr-2" />
-                    {tab.name}
-                  </button>
-                )
-              })}
+              {(() => {
+                const visibleModules = getVisibleModules();
+                const allTabs = [
+                  { id: 'dashboard', name: 'Dashboard', icon: Home, key: 'dashboard' },
+                  { id: 'metas', name: 'Metas', icon: TrendingUp, key: 'metas' },
+                  { id: 'reports', name: 'Relatórios', icon: BarChart3, key: 'reports' },
+                  { id: 'transactions', name: 'Transações', icon: DollarSign, key: 'transactions' },
+                  { id: 'products', name: 'Produtos', icon: Package, key: 'products' },
+                  { id: 'clients', name: 'Clientes', icon: Users, key: 'clients' }
+                ];
+                
+                // Filtrar abas baseado nos módulos visíveis
+                const filteredTabs = allTabs.filter(tab => {
+                  // Se não há módulos definidos ou usuário é admin, mostrar todos
+                  if (!user?.modules || user.modules.length === 0 || user.role === 'admin') {
+                    return true;
+                  }
+                  // Caso contrário, mostrar apenas módulos na lista do usuário
+                  return user.modules.includes(tab.key);
+                });
+                
+                // Adicionar aba Admin se o usuário for admin
+                if (user?.role === 'admin') {
+                  filteredTabs.push({ id: 'admin', name: 'Admin', icon: Shield, key: 'admin' });
+                }
+                
+                return filteredTabs.map(tab => {
+                  const Icon = tab.icon
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as TabType)
+                        setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
+                      }}
+                      className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
+                          : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 mr-2" />
+                      {tab.name}
+                    </button>
+                  )
+                })
+              })()}
             </div>
           </div>
         </div>
@@ -5028,6 +5064,7 @@ const AppContent: React.FC = () => {
         {activeTab === 'products' && renderProducts()}
         {activeTab === 'reports' && renderReports()}
         {activeTab === 'clients' && <Clients />}
+        {activeTab === 'admin' && <AdminPanel />}
       </main>
 
       {/* Modal de Produto */}

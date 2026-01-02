@@ -8,6 +8,8 @@ class Database {
     this.productsFile = path.join(this.dbPath, 'products.json');
     this.clientsFile = path.join(this.dbPath, 'clients.json');
     this.usersFile = path.join(this.dbPath, 'users.json');
+    this.activityLogsFile = path.join(this.dbPath, 'activity-logs.json');
+    this.modulesFile = path.join(this.dbPath, 'modules.json');
     
     // Garantir que os arquivos existam
     this.ensureFilesExist();
@@ -39,6 +41,8 @@ class Database {
           username: 'admin',
           password: bcrypt.hashSync('123456', 10),
           role: 'admin',
+          modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'admin'],
+          isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         },
@@ -47,6 +51,8 @@ class Database {
           username: 'user',
           password: bcrypt.hashSync('135246', 10),
           role: 'user',
+          modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas'],
+          isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         },
@@ -55,11 +61,108 @@ class Database {
           username: 'guest',
           password: bcrypt.hashSync('654321', 10),
           role: 'guest',
+          modules: ['dashboard', 'reports'],
+          isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
       ];
       fs.writeFileSync(this.usersFile, JSON.stringify(defaultUsers, null, 2));
+    }
+    
+    if (!fs.existsSync(this.activityLogsFile)) {
+      fs.writeFileSync(this.activityLogsFile, '[]');
+    }
+    
+    if (!fs.existsSync(this.modulesFile)) {
+      // Criar módulos padrão do sistema
+      const defaultModules = [
+        {
+          id: this.generateId(),
+          name: 'Dashboard',
+          key: 'dashboard',
+          icon: 'Home',
+          description: 'Painel principal com visão geral do sistema',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
+          name: 'Transações',
+          key: 'transactions',
+          icon: 'DollarSign',
+          description: 'Gerenciamento de transações financeiras',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
+          name: 'Produtos',
+          key: 'products',
+          icon: 'Package',
+          description: 'Gerenciamento de produtos e estoque',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
+          name: 'Clientes',
+          key: 'clients',
+          icon: 'Users',
+          description: 'Gerenciamento de clientes',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
+          name: 'Relatórios',
+          key: 'reports',
+          icon: 'BarChart3',
+          description: 'Relatórios e análises',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
+          name: 'Metas',
+          key: 'metas',
+          icon: 'Target',
+          description: 'Gerenciamento de metas',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
+          name: 'Administração',
+          key: 'admin',
+          icon: 'Shield',
+          description: 'Painel administrativo',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      fs.writeFileSync(this.modulesFile, JSON.stringify(defaultModules, null, 2));
     }
   }
 
@@ -309,6 +412,16 @@ class Database {
     }
   }
 
+  getUserById(id) {
+    try {
+      const users = this.getAllUsers();
+      return users.find(user => user.id === id);
+    } catch (error) {
+      console.error('Erro ao buscar usuário:', error);
+      return null;
+    }
+  }
+
   saveUser(userData) {
     try {
       const users = this.getAllUsers();
@@ -355,6 +468,435 @@ class Database {
       fs.writeFileSync(this.usersFile, JSON.stringify(filteredUsers, null, 2));
     } catch (error) {
       throw new Error('Erro ao excluir usuário: ' + error.message);
+    }
+  }
+
+  // Métodos para Activity Logs
+  getAllActivityLogs() {
+    try {
+      const data = fs.readFileSync(this.activityLogsFile, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('Erro ao ler logs de atividade:', error);
+      return [];
+    }
+  }
+
+  getActivityLogs(filters = {}) {
+    try {
+      let logs = this.getAllActivityLogs();
+      
+      if (filters.userId) {
+        logs = logs.filter(log => log.userId === filters.userId);
+      }
+      if (filters.module) {
+        logs = logs.filter(log => log.module === filters.module);
+      }
+      if (filters.action) {
+        logs = logs.filter(log => log.action === filters.action);
+      }
+      if (filters.startDate) {
+        logs = logs.filter(log => new Date(log.timestamp) >= new Date(filters.startDate));
+      }
+      if (filters.endDate) {
+        logs = logs.filter(log => new Date(log.timestamp) <= new Date(filters.endDate));
+      }
+      
+      // Ordenar por timestamp (mais recente primeiro)
+      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      // Paginação
+      if (filters.page && filters.limit) {
+        const page = parseInt(filters.page) || 1;
+        const limit = parseInt(filters.limit) || 100;
+        const startIndex = (page - 1) * limit;
+        logs = logs.slice(startIndex, startIndex + limit);
+      } else if (filters.limit) {
+        logs = logs.slice(0, parseInt(filters.limit));
+      }
+      
+      return logs;
+    } catch (error) {
+      console.error('Erro ao filtrar logs:', error);
+      return [];
+    }
+  }
+
+  saveActivityLog(log) {
+    try {
+      const logs = this.getAllActivityLogs();
+      logs.push(log);
+      // Manter apenas os últimos 10000 logs
+      if (logs.length > 10000) {
+        logs.shift();
+      }
+      fs.writeFileSync(this.activityLogsFile, JSON.stringify(logs, null, 2));
+      return log;
+    } catch (error) {
+      console.error('Erro ao salvar log:', error);
+      throw error;
+    }
+  }
+
+  // Métodos para Módulos do Sistema
+  getAllSystemModules() {
+    try {
+      const data = fs.readFileSync(this.modulesFile, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('Erro ao ler módulos:', error);
+      return [];
+    }
+  }
+
+  getSystemModuleByKey(key) {
+    try {
+      const modules = this.getAllSystemModules();
+      return modules.find(module => module.key === key);
+    } catch (error) {
+      console.error('Erro ao buscar módulo:', error);
+      return null;
+    }
+  }
+
+  getSystemModuleById(id) {
+    try {
+      const modules = this.getAllSystemModules();
+      return modules.find(module => module.id === id);
+    } catch (error) {
+      console.error('Erro ao buscar módulo:', error);
+      return null;
+    }
+  }
+
+  saveSystemModule(moduleData) {
+    try {
+      const modules = this.getAllSystemModules();
+      
+      // Verificar se já existe módulo com a mesma key
+      if (moduleData.key && modules.find(m => m.key === moduleData.key && m.id !== moduleData.id)) {
+        throw new Error('Já existe um módulo com esta key');
+      }
+      
+      const newModule = {
+        id: this.generateId(),
+        ...moduleData,
+        isSystem: moduleData.isSystem || false,
+        isActive: moduleData.isActive !== undefined ? moduleData.isActive : true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      modules.push(newModule);
+      fs.writeFileSync(this.modulesFile, JSON.stringify(modules, null, 2));
+      return newModule;
+    } catch (error) {
+      throw new Error('Erro ao salvar módulo: ' + error.message);
+    }
+  }
+
+  updateSystemModule(id, updatedData) {
+    try {
+      const modules = this.getAllSystemModules();
+      const index = modules.findIndex(m => m.id === id);
+      if (index === -1) {
+        throw new Error('Módulo não encontrado');
+      }
+      
+      // Verificar se está tentando mudar a key e se já existe outra com essa key
+      if (updatedData.key && updatedData.key !== modules[index].key) {
+        if (modules.find(m => m.key === updatedData.key && m.id !== id)) {
+          throw new Error('Já existe um módulo com esta key');
+        }
+      }
+      
+      modules[index] = {
+        ...modules[index],
+        ...updatedData,
+        updatedAt: new Date().toISOString()
+      };
+      fs.writeFileSync(this.modulesFile, JSON.stringify(modules, null, 2));
+      return modules[index];
+    } catch (error) {
+      throw new Error('Erro ao atualizar módulo: ' + error.message);
+    }
+  }
+
+  deleteSystemModule(id) {
+    try {
+      const modules = this.getAllSystemModules();
+      const module = modules.find(m => m.id === id);
+      
+      if (!module) {
+        throw new Error('Módulo não encontrado');
+      }
+      
+      if (module.isSystem) {
+        throw new Error('Não é possível deletar módulos do sistema');
+      }
+      
+      const filteredModules = modules.filter(m => m.id !== id);
+      fs.writeFileSync(this.modulesFile, JSON.stringify(filteredModules, null, 2));
+      return true;
+    } catch (error) {
+      throw new Error('Erro ao deletar módulo: ' + error.message);
+    }
+  }
+
+  // Métodos para Estatísticas
+  getSystemStatistics() {
+    try {
+      const users = this.getAllUsers();
+      const logs = this.getAllActivityLogs();
+      const transactions = this.getAllTransactions();
+      const products = this.getAllProducts();
+      const clients = this.getAllClients();
+      const modules = this.getAllSystemModules();
+      
+      // Estatísticas de usuários
+      const activeUsers = users.filter(u => u.isActive !== false).length;
+      const totalLogins = logs.filter(l => l.action === 'login').length;
+      
+      // Estatísticas por módulo
+      const moduleStats = {};
+      logs.forEach(log => {
+        if (!moduleStats[log.module]) {
+          moduleStats[log.module] = { actions: 0, users: new Set() };
+        }
+        moduleStats[log.module].actions++;
+        moduleStats[log.module].users.add(log.userId);
+      });
+      
+      // Converter Sets para números
+      Object.keys(moduleStats).forEach(module => {
+        moduleStats[module].users = moduleStats[module].users.size;
+      });
+      
+      // Estatísticas de uso por período
+      const last30Days = new Date();
+      last30Days.setDate(last30Days.getDate() - 30);
+      const recentLogs = logs.filter(l => new Date(l.timestamp) >= last30Days);
+      
+      // Usuários mais ativos
+      const userActivityCount = {};
+      logs.forEach(log => {
+        if (!userActivityCount[log.userId]) {
+          userActivityCount[log.userId] = { count: 0, username: log.username };
+        }
+        userActivityCount[log.userId].count++;
+      });
+      const topUsers = Object.values(userActivityCount)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+      
+      // Módulos mais usados
+      const moduleUsage = {};
+      logs.forEach(log => {
+        if (!moduleUsage[log.module]) {
+          moduleUsage[log.module] = 0;
+        }
+        moduleUsage[log.module]++;
+      });
+      const topModules = Object.entries(moduleUsage)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([key, count]) => ({ key, count }));
+      
+      return {
+        users: {
+          total: users.length,
+          active: activeUsers,
+          inactive: users.length - activeUsers,
+          byRole: {
+            admin: users.filter(u => u.role === 'admin').length,
+            user: users.filter(u => u.role === 'user').length,
+            guest: users.filter(u => u.role === 'guest').length
+          }
+        },
+        activity: {
+          totalLogins,
+          totalActions: logs.length,
+          actionsLast30Days: recentLogs.length,
+          byModule: moduleStats,
+          topUsers,
+          topModules
+        },
+        data: {
+          transactions: transactions.length,
+          products: products.length,
+          clients: clients.length
+        },
+        modules: {
+          total: modules.length,
+          active: modules.filter(m => m.isActive).length,
+          system: modules.filter(m => m.isSystem).length,
+          custom: modules.filter(m => !m.isSystem).length
+        },
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Erro ao calcular estatísticas:', error);
+      return {};
+    }
+  }
+
+  getUserStatistics(userId) {
+    try {
+      const logs = this.getAllActivityLogs().filter(l => l.userId === userId);
+      const user = this.getAllUsers().find(u => u.id === userId);
+      
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+      
+      const actionsByModule = {};
+      const actionsByType = {};
+      
+      logs.forEach(log => {
+        // Por módulo
+        if (!actionsByModule[log.module]) {
+          actionsByModule[log.module] = 0;
+        }
+        actionsByModule[log.module]++;
+        
+        // Por tipo de ação
+        if (!actionsByType[log.action]) {
+          actionsByType[log.action] = 0;
+        }
+        actionsByType[log.action]++;
+      });
+      
+      const last30Days = new Date();
+      last30Days.setDate(last30Days.getDate() - 30);
+      const recentLogs = logs.filter(l => new Date(l.timestamp) >= last30Days);
+      
+      // Timeline de uso (últimos 30 dias)
+      const timeline = {};
+      recentLogs.forEach(log => {
+        const date = new Date(log.timestamp).toISOString().split('T')[0];
+        if (!timeline[date]) {
+          timeline[date] = 0;
+        }
+        timeline[date]++;
+      });
+      
+      return {
+        userId,
+        username: user.username,
+        role: user.role,
+        totalActions: logs.length,
+        actionsLast30Days: recentLogs.length,
+        actionsByModule,
+        actionsByType,
+        lastLogin: user.lastLogin || null,
+        createdAt: user.createdAt,
+        timeline: Object.entries(timeline).map(([date, count]) => ({ date, count })),
+        recentActivity: recentLogs.slice(0, 20)
+      };
+    } catch (error) {
+      throw new Error('Erro ao calcular estatísticas do usuário: ' + error.message);
+    }
+  }
+
+  getModuleStatistics(moduleKey) {
+    try {
+      const logs = this.getAllActivityLogs().filter(l => l.module === moduleKey);
+      const module = this.getSystemModuleByKey(moduleKey);
+      
+      if (!module) {
+        throw new Error('Módulo não encontrado');
+      }
+      
+      const actionsByType = {};
+      const usersByModule = new Set();
+      
+      logs.forEach(log => {
+        if (!actionsByType[log.action]) {
+          actionsByType[log.action] = 0;
+        }
+        actionsByType[log.action]++;
+        usersByModule.add(log.userId);
+      });
+      
+      const last30Days = new Date();
+      last30Days.setDate(last30Days.getDate() - 30);
+      const recentLogs = logs.filter(l => new Date(l.timestamp) >= last30Days);
+      
+      // Timeline de uso
+      const timeline = {};
+      recentLogs.forEach(log => {
+        const date = new Date(log.timestamp).toISOString().split('T')[0];
+        if (!timeline[date]) {
+          timeline[date] = 0;
+        }
+        timeline[date]++;
+      });
+      
+      return {
+        moduleKey,
+        moduleName: module.name,
+        totalActions: logs.length,
+        actionsLast30Days: recentLogs.length,
+        uniqueUsers: usersByModule.size,
+        actionsByType,
+        timeline: Object.entries(timeline).map(([date, count]) => ({ date, count }))
+      };
+    } catch (error) {
+      throw new Error('Erro ao calcular estatísticas do módulo: ' + error.message);
+    }
+  }
+
+  getUsageTimeline(startDate, endDate, groupBy = 'day') {
+    try {
+      const logs = this.getAllActivityLogs();
+      let filteredLogs = logs;
+      
+      if (startDate) {
+        filteredLogs = filteredLogs.filter(l => new Date(l.timestamp) >= new Date(startDate));
+      }
+      if (endDate) {
+        filteredLogs = filteredLogs.filter(l => new Date(l.timestamp) <= new Date(endDate));
+      }
+      
+      const timeline = {};
+      
+      filteredLogs.forEach(log => {
+        const date = new Date(log.timestamp);
+        let key;
+        
+        if (groupBy === 'day') {
+          key = date.toISOString().split('T')[0];
+        } else if (groupBy === 'hour') {
+          key = `${date.toISOString().split('T')[0]} ${date.getHours()}:00`;
+        } else if (groupBy === 'week') {
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          key = weekStart.toISOString().split('T')[0];
+        } else if (groupBy === 'month') {
+          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        if (!timeline[key]) {
+          timeline[key] = { date: key, count: 0, byModule: {}, byAction: {} };
+        }
+        timeline[key].count++;
+        
+        if (!timeline[key].byModule[log.module]) {
+          timeline[key].byModule[log.module] = 0;
+        }
+        timeline[key].byModule[log.module]++;
+        
+        if (!timeline[key].byAction[log.action]) {
+          timeline[key].byAction[log.action] = 0;
+        }
+        timeline[key].byAction[log.action]++;
+      });
+      
+      return Object.values(timeline).sort((a, b) => 
+        new Date(a.date) - new Date(b.date)
+      );
+    } catch (error) {
+      console.error('Erro ao calcular timeline:', error);
+      return [];
     }
   }
 
