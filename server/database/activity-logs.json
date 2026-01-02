@@ -52,5 +52,17 @@
     "details": {},
     "timestamp": "2026-01-02T20:39:47.382Z",
     "ipAddress": null
+  },
+  {
+    "id": "mjxcc4i9ahz7t77p4sq",
+    "userId": "mjx3gpze75vpx1kwfej",
+    "username": "admin",
+    "action": "login",
+    "module": "auth",
+    "entityType": "user",
+    "entityId": "mjx3gpze75vpx1kwfej",
+    "details": {},
+    "timestamp": "2026-01-02T20:42:59.410Z",
+    "ipAddress": null
   }
 ]

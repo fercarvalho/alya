@@ -271,23 +271,8 @@ const AppContent: React.FC = () => {
     return result.success;
   }
 
-  // Verificar autenticação
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
-
-  // Todo o conteúdo da aplicação continua aqui
+  // ⚠️ IMPORTANTE: Todos os hooks devem ser declarados ANTES de qualquer return condicional
+  // Estados principais
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
@@ -389,6 +374,28 @@ const AppContent: React.FC = () => {
     soldFilter: '', // 'sold', 'notSold', ''
     costFilter: '', // 'withCost', 'withoutCost', ''
   })
+
+  // Estados adicionais que aparecem mais tarde no código
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
+  const [expandedCharts, setExpandedCharts] = useState<string[]>([])
+  const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>([])
+
+  // Verificar autenticação (depois de todos os hooks)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   // Carregar dados do banco de dados
   useEffect(() => {
@@ -1216,9 +1223,6 @@ const AppContent: React.FC = () => {
     setIsTransactionModalOpen(true)
   }
 
-  // Estados e funções para produtos
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-
   // Função para gerenciar mudanças no formulário de produto
   const handleProductInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -1308,11 +1312,6 @@ const AppContent: React.FC = () => {
       return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0 }
     }
   }
-  
-  // Estado para o mês selecionado (padrão é o mês atual)
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
-  const [expandedCharts, setExpandedCharts] = useState<string[]>([])
-  const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>([])
 
   // Definição das metas mensais (centralizada)
   const mesesMetas = [
