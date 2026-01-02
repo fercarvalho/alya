@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import { 
   Home, 
   DollarSign, 
@@ -26,7 +26,8 @@ import {
 } from 'lucide-react'
 import Clients from './components/Clients'
 import Login from './components/Login'
-import AdminPanel from './components/AdminPanel'
+// Lazy load AdminPanel (só carrega quando necessário)
+const AdminPanel = lazy(() => import('./components/AdminPanel'))
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { useModules } from './hooks/useModules'
 import jsPDF from 'jspdf'
@@ -5062,7 +5063,11 @@ const AppContent: React.FC = () => {
         {activeTab === 'products' && renderProducts()}
         {activeTab === 'reports' && renderReports()}
         {activeTab === 'clients' && <Clients />}
-        {activeTab === 'admin' && <AdminPanel />}
+        {activeTab === 'admin' && (
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-gray-500">Carregando painel administrativo...</div></div>}>
+            <AdminPanel />
+          </Suspense>
+        )}
       </main>
 
       {/* Modal de Produto */}
