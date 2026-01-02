@@ -22,6 +22,8 @@ import {
   Users
 } from 'lucide-react'
 import Clients from './components/Clients'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 // Funções para comunicação com a API
 const API_BASE_URL = 'http://localhost:8001/api'
@@ -3777,6 +3779,184 @@ function App() {
     )
   }
 
+  // Função para exportar dados do mês selecionado em PDF
+  const exportarMetasPDF = async () => {
+    try {
+      const mesSelecionado = mesesMetas.find(mes => mes.indice === selectedMonth)
+      if (!mesSelecionado) {
+        alert('Mês selecionado não encontrado!')
+        return
+      }
+
+      // Criar elemento temporário para capturar o conteúdo
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'absolute'
+      tempElement.style.left = '-9999px'
+      tempElement.style.top = '-9999px'
+      tempElement.style.width = '800px'
+      tempElement.style.backgroundColor = 'white'
+      tempElement.style.padding = '20px'
+      tempElement.style.fontFamily = 'Arial, sans-serif'
+      
+      // Obter dados REAIS do mês selecionado usando a mesma lógica de renderMonthContent
+      const monthIndex = selectedMonth
+      const currentYear = 2025
+      
+      // Filtrar transações do mês selecionado
+      const transacoesDoMes = transactions.filter(t => {
+        const transactionDate = new Date(t.date)
+        return transactionDate.getMonth() === monthIndex && transactionDate.getFullYear() === currentYear
+      })
+      
+      const totalReceitas = transacoesDoMes.filter(t => t.type === 'Receita').reduce((sum, t) => sum + t.value, 0)
+      const totalDespesas = transacoesDoMes.filter(t => t.type === 'Despesa').reduce((sum, t) => sum + t.value, 0)
+      
+      // Meta de faturamento = meta do mês selecionado
+      const metaFaturamento = mesSelecionado.meta
+      
+      // Resultado financeiro
+      const resultadoFinanceiro = totalReceitas - totalDespesas
+      
+      // Criar HTML do relatório com dados REAIS
+      tempElement.innerHTML = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #f59e0b; font-size: 28px; margin: 0; font-weight: bold;">ALYA VELAS</h1>
+          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório de Metas - ${mesSelecionado.nome} 2025</h2>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📊 Resumo Executivo</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+              <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Meta de Faturamento</div>
+              <div style="font-size: 18px; font-weight: bold; color: #d97706;">R$ ${metaFaturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            </div>
+            <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+              <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Faturamento Realizado</div>
+              <div style="font-size: 18px; font-weight: bold; color: #059669;">R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            </div>
+            <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+              <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Total de Despesas</div>
+              <div style="font-size: 18px; font-weight: bold; color: #dc2626;">R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            </div>
+            <div style="background: ${resultadoFinanceiro >= 0 ? '#f0fdf4' : '#fef2f2'}; padding: 15px; border-radius: 8px; border-left: 4px solid ${resultadoFinanceiro >= 0 ? '#10b981' : '#ef4444'};">
+              <div style="font-weight: bold; color: ${resultadoFinanceiro >= 0 ? '#10b981' : '#ef4444'}; margin-bottom: 5px;">Resultado Financeiro</div>
+              <div style="font-size: 18px; font-weight: bold; color: ${resultadoFinanceiro >= 0 ? '#059669' : '#dc2626'};">R$ ${resultadoFinanceiro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📈 Análise de Performance</h3>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-weight: bold;">Meta vs Realizado:</span>
+                <span style="font-weight: bold; color: ${totalReceitas >= metaFaturamento ? '#10b981' : '#ef4444'};">${totalReceitas >= metaFaturamento ? '✅ Meta Atingida' : '❌ Meta Não Atingida'}</span>
+              </div>
+              <div style="background: #e2e8f0; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div style="background: ${totalReceitas >= metaFaturamento ? '#10b981' : '#ef4444'}; height: 100%; width: ${metaFaturamento > 0 ? Math.min((totalReceitas / metaFaturamento) * 100, 100) : 0}%; transition: width 0.3s ease;"></div>
+              </div>
+              <div style="text-align: center; margin-top: 5px; font-size: 14px; color: #6b7280;">
+                ${metaFaturamento > 0 ? ((totalReceitas / metaFaturamento) * 100).toFixed(1) : 0}% da meta
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+              <div>
+                <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">Diferença da Meta:</div>
+                <div style="font-size: 16px; color: ${totalReceitas >= metaFaturamento ? '#10b981' : '#ef4444'}; font-weight: bold;">
+                  R$ ${(totalReceitas - metaFaturamento).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div>
+                <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">Margem de Lucro:</div>
+                <div style="font-size: 16px; color: ${resultadoFinanceiro >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold;">
+                  ${totalReceitas > 0 ? ((resultadoFinanceiro / totalReceitas) * 100).toFixed(1) : 0}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📋 Dados de Transações Reais</h3>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">Total de Transações:</div>
+                <div style="font-size: 16px; color: #f59e0b; font-weight: bold;">${transacoesDoMes.length} transações</div>
+              </div>
+              <div>
+                <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">Receitas Reais:</div>
+                <div style="font-size: 16px; color: #10b981; font-weight: bold;">R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div>
+                <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">Despesas Reais:</div>
+                <div style="font-size: 16px; color: #ef4444; font-weight: bold;">R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div>
+                <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">Meta de Faturamento:</div>
+                <div style="font-size: 16px; color: #f59e0b; font-weight: bold;">R$ ${metaFaturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            Relatório gerado automaticamente pelo sistema Alya Velas<br>
+            Dados baseados em metas e transações reais do mês<br>
+            Para mais informações, acesse o painel administrativo
+          </p>
+        </div>
+      `
+      
+      document.body.appendChild(tempElement)
+      
+      // Capturar o elemento como imagem
+      const canvas = await html2canvas(tempElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+      
+      // Remover elemento temporário
+      document.body.removeChild(tempElement)
+      
+      // Criar PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      
+      let position = 0
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+      
+      // Salvar PDF
+      const fileName = `Metas_${mesSelecionado.nome}_2025_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+      
+      alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Meta de Faturamento: R$ ${metaFaturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Faturamento Realizado: R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Total de Despesas: R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Resultado Financeiro: R$ ${resultadoFinanceiro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
+      
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      alert('❌ Erro ao exportar PDF. Tente novamente.')
+    }
+  }
+
   // Render Metas
   const renderMetas = () => {
     // Encontrar o mês selecionado na lista
@@ -3789,13 +3969,22 @@ function App() {
             <Target className="w-8 h-8 text-amber-600" />
             Metas
           </h1>
-          <button
-            onClick={() => alert("Ferramenta em construção")}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <Plus className="h-5 w-5" />
-            Nova Meta
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={exportarMetasPDF}
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            >
+              <Download className="h-5 w-5" />
+              Exportar PDF
+            </button>
+            <button
+              onClick={() => alert("Ferramenta em construção")}
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            >
+              <Plus className="h-5 w-5" />
+              Nova Meta
+            </button>
+          </div>
         </div>
 
         {/* Renderizar Mês Selecionado com Dropdown Integrado */}
