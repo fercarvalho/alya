@@ -4,15 +4,36 @@ const XLSX = require('xlsx');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Database = require('./database');
 
 const app = express();
 const port = 8001;
 const db = new Database();
+const JWT_SECRET = 'alya_secret_key_2024';
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Middleware de autenticação
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token de acesso requerido' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Token inválido' });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 // Configuração do Multer para upload de arquivos
 const storage = multer.diskStorage({
@@ -229,8 +250,54 @@ app.get('/api/modelo/:type', (req, res) => {
   }
 });
 
+// Rotas de Autenticação
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
+    }
+
+    const user = db.getUserByUsername(username);
+    if (!user) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    const isValidPassword = bcrypt.compareSync(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+app.post('/api/auth/verify', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    user: req.user
+  });
+});
+
 // Rota para importar arquivos
-app.post('/api/import', upload.single('file'), (req, res) => {
+app.post('/api/import', authenticateToken, upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Nenhum arquivo foi enviado!' });
@@ -376,7 +443,7 @@ app.get('/api/transactions', (req, res) => {
   }
 });
 
-app.post('/api/transactions', (req, res) => {
+app.post('/api/transactions', authenticateToken, (req, res) => {
   try {
     const transaction = db.saveTransaction(req.body);
     res.json({ success: true, data: transaction });
@@ -385,7 +452,7 @@ app.post('/api/transactions', (req, res) => {
   }
 });
 
-app.put('/api/transactions/:id', (req, res) => {
+app.put('/api/transactions/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     const transaction = db.updateTransaction(id, req.body);
@@ -395,7 +462,7 @@ app.put('/api/transactions/:id', (req, res) => {
   }
 });
 
-app.delete('/api/transactions/:id', (req, res) => {
+app.delete('/api/transactions/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     db.deleteTransaction(id);
@@ -405,7 +472,7 @@ app.delete('/api/transactions/:id', (req, res) => {
   }
 });
 
-app.delete('/api/transactions', (req, res) => {
+app.delete('/api/transactions', authenticateToken, (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
@@ -428,7 +495,7 @@ app.get('/api/products', (req, res) => {
   }
 });
 
-app.post('/api/products', (req, res) => {
+app.post('/api/products', authenticateToken, (req, res) => {
   try {
     const product = db.saveProduct(req.body);
     res.json({ success: true, data: product });
@@ -437,7 +504,7 @@ app.post('/api/products', (req, res) => {
   }
 });
 
-app.put('/api/products/:id', (req, res) => {
+app.put('/api/products/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     const product = db.updateProduct(id, req.body);
@@ -447,7 +514,7 @@ app.put('/api/products/:id', (req, res) => {
   }
 });
 
-app.delete('/api/products/:id', (req, res) => {
+app.delete('/api/products/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     db.deleteProduct(id);
@@ -457,7 +524,7 @@ app.delete('/api/products/:id', (req, res) => {
   }
 });
 
-app.delete('/api/products', (req, res) => {
+app.delete('/api/products', authenticateToken, (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
@@ -480,7 +547,7 @@ app.get('/api/clients', (req, res) => {
   }
 });
 
-app.post('/api/clients', (req, res) => {
+app.post('/api/clients', authenticateToken, (req, res) => {
   try {
     const client = db.saveClient(req.body);
     res.json({ success: true, data: client });
@@ -489,7 +556,7 @@ app.post('/api/clients', (req, res) => {
   }
 });
 
-app.put('/api/clients/:id', (req, res) => {
+app.put('/api/clients/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     const client = db.updateClient(id, req.body);
@@ -499,7 +566,7 @@ app.put('/api/clients/:id', (req, res) => {
   }
 });
 
-app.delete('/api/clients/:id', (req, res) => {
+app.delete('/api/clients/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     db.deleteClient(id);
@@ -509,7 +576,7 @@ app.delete('/api/clients/:id', (req, res) => {
   }
 });
 
-app.delete('/api/clients', (req, res) => {
+app.delete('/api/clients', authenticateToken, (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
@@ -545,6 +612,8 @@ app.get('/api/test', (req, res) => {
       'DELETE /api/clients - Deletar múltiplos clientes',
       'POST /api/import - Importar arquivos Excel',
       'POST /api/export - Exportar dados para Excel',
+      'POST /api/auth/login - Fazer login',
+      'POST /api/auth/verify - Verificar token',
       'GET /api/test - Testar API'
     ]
   });

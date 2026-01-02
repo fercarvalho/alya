@@ -20,104 +20,17 @@ import {
   ChevronRight,
   Filter,
   Users,
-  X
+  X,
+  LogOut
 } from 'lucide-react'
 import Clients from './components/Clients'
+import Login from './components/Login'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
-// Funções para comunicação com a API
+// API base URL
 const API_BASE_URL = 'http://localhost:8001/api'
-
-// Funções para Transações
-const fetchTransactions = async () => {
-  const response = await fetch(`${API_BASE_URL}/transactions`)
-  const result = await response.json()
-  return result.success ? result.data : []
-}
-
-const saveTransaction = async (transaction: any) => {
-  const response = await fetch(`${API_BASE_URL}/transactions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(transaction)
-  })
-  const result = await response.json()
-  return result.success ? result.data : null
-}
-
-const updateTransaction = async (id: string, transaction: any) => {
-  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(transaction)
-  })
-  const result = await response.json()
-  return result.success ? result.data : null
-}
-
-const deleteTransaction = async (id: string) => {
-  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
-    method: 'DELETE'
-  })
-  const result = await response.json()
-  return result.success
-}
-
-const deleteMultipleTransactions = async (ids: string[]) => {
-  const response = await fetch(`${API_BASE_URL}/transactions`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ids })
-  })
-  const result = await response.json()
-  return result.success
-}
-
-// Funções para Produtos
-const fetchProducts = async () => {
-  const response = await fetch(`${API_BASE_URL}/products`)
-  const result = await response.json()
-  return result.success ? result.data : []
-}
-
-const saveProduct = async (product: any) => {
-  const response = await fetch(`${API_BASE_URL}/products`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(product)
-  })
-  const result = await response.json()
-  return result.success ? result.data : null
-}
-
-const updateProduct = async (id: string, product: any) => {
-  const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(product)
-  })
-  const result = await response.json()
-  return result.success ? result.data : null
-}
-
-const deleteProduct = async (id: string) => {
-  const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-    method: 'DELETE'
-  })
-  const result = await response.json()
-  return result.success
-}
-
-const deleteMultipleProducts = async (ids: string[]) => {
-  const response = await fetch(`${API_BASE_URL}/products`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ids })
-  })
-  const result = await response.json()
-  return result.success
-}
 
 import { 
   PieChart as RechartsPieChart, 
@@ -167,7 +80,199 @@ interface Meta {
 
 type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients'
 
-function App() {
+// Componente principal do conteúdo da aplicação
+const AppContent: React.FC = () => {
+  const { user, token, logout, isLoading } = useAuth();
+
+  // Funções para comunicação com a API (com token)
+  const fetchTransactions = async () => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/transactions`, { headers });
+    const result = await response.json();
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return [];
+    }
+    return result.success ? result.data : [];
+  }
+
+  const saveTransaction = async (transaction: any) => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/transactions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(transaction)
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return null;
+    }
+    const result = await response.json();
+    return result.success ? result.data : null;
+  }
+
+  const updateTransaction = async (id: string, transaction: any) => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(transaction)
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return null;
+    }
+    const result = await response.json();
+    return result.success ? result.data : null;
+  }
+
+  const deleteTransaction = async (id: string) => {
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return false;
+    }
+    const result = await response.json();
+    return result.success;
+  }
+
+  const deleteMultipleTransactions = async (ids: string[]) => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/transactions`, {
+      method: 'DELETE',
+      headers,
+      body: JSON.stringify({ ids })
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return false;
+    }
+    const result = await response.json();
+    return result.success;
+  }
+
+  // Funções para Produtos
+  const fetchProducts = async () => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/products`, { headers });
+    const result = await response.json();
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return [];
+    }
+    return result.success ? result.data : [];
+  }
+
+  const saveProduct = async (product: any) => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/products`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(product)
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return null;
+    }
+    const result = await response.json();
+    return result.success ? result.data : null;
+  }
+
+  const updateProduct = async (id: string, product: any) => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(product)
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return null;
+    }
+    const result = await response.json();
+    return result.success ? result.data : null;
+  }
+
+  const deleteProduct = async (id: string) => {
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return false;
+    }
+    const result = await response.json();
+    return result.success;
+  }
+
+  const deleteMultipleProducts = async (ids: string[]) => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/products`, {
+      method: 'DELETE',
+      headers,
+      body: JSON.stringify({ ids })
+    });
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return false;
+    }
+    const result = await response.json();
+    return result.success;
+  }
+
+  // Verificar autenticação
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  // Todo o conteúdo da aplicação continua aqui
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
@@ -4857,6 +4962,23 @@ function App() {
                 <p className="text-sm text-amber-600/70 font-medium">Sistema de Gestão Financeira</p>
               </div>
             </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-lg border border-amber-200">
+                <Users className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-medium text-amber-800">{user?.username}</span>
+                <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                  {user?.role}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+                title="Sair"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm font-medium">Sair</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -5761,8 +5883,13 @@ function App() {
                       
                       // Tentar fazer requisição para o servidor backend
                       try {
+                        const headers: HeadersInit = {};
+                        if (token) {
+                          headers['Authorization'] = `Bearer ${token}`;
+                        }
                         const response = await fetch('http://localhost:8001/api/import', {
                           method: 'POST',
+                          headers,
                           body: formData
                         })
                         
@@ -6202,6 +6329,15 @@ function App() {
       )}
     </div>
   )
+}
+
+// Componente principal que envolve AppContent com AuthProvider
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }
 
 export default App
