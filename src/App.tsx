@@ -210,6 +210,11 @@ function App() {
   
   // Estado do modal de seleção de período para exportar relatórios
   const [isPeriodoExportModalOpen, setIsPeriodoExportModalOpen] = useState(false)
+  
+  // Estados do modal de exportação de transações
+  const [isExportTransacoesModalOpen, setIsExportTransacoesModalOpen] = useState(false)
+  const [exportarFiltradas, setExportarFiltradas] = useState(true)
+  const [incluirResumo, setIncluirResumo] = useState(true)
   const [transactionForm, setTransactionForm] = useState({
     date: new Date().toISOString().split('T')[0], // Data atual por padrão
     description: '',
@@ -2665,6 +2670,211 @@ function App() {
     )
   }
 
+  // Função para exportar transações em PDF
+  const exportarTransacoesPDF = async () => {
+    try {
+      setIsExportTransacoesModalOpen(false)
+      
+      // Obter transações para exportar
+      const transacoesParaExportar = exportarFiltradas 
+        ? getFilteredAndSortedTransactions() 
+        : transactions
+      
+      // Validar se há transações
+      if (transacoesParaExportar.length === 0) {
+        alert('Não há transações para exportar!')
+        return
+      }
+      
+      // Calcular resumo financeiro (se habilitado)
+      let totalReceitas = 0
+      let totalDespesas = 0
+      let saldo = 0
+      
+      if (incluirResumo) {
+        totalReceitas = transacoesParaExportar
+          .filter(t => t.type === 'Receita')
+          .reduce((sum, t) => sum + t.value, 0)
+        
+        totalDespesas = transacoesParaExportar
+          .filter(t => t.type === 'Despesa')
+          .reduce((sum, t) => sum + t.value, 0)
+        
+        saldo = totalReceitas - totalDespesas
+      }
+      
+      // Criar elemento temporário para capturar o conteúdo
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'absolute'
+      tempElement.style.left = '-9999px'
+      tempElement.style.top = '-9999px'
+      tempElement.style.width = '800px'
+      tempElement.style.backgroundColor = 'white'
+      tempElement.style.padding = '20px'
+      tempElement.style.fontFamily = 'Arial, sans-serif'
+      
+      // Construir informações de filtros aplicados
+      let infoFiltros = 'Todas as transações'
+      if (exportarFiltradas) {
+        const filtrosAtivos = []
+        if (transactionFilters.type) filtrosAtivos.push(`Tipo: ${transactionFilters.type}`)
+        if (transactionFilters.category) filtrosAtivos.push(`Categoria: ${transactionFilters.category}`)
+        if (transactionFilters.dateFrom) filtrosAtivos.push(`De: ${new Date(transactionFilters.dateFrom).toLocaleDateString('pt-BR')}`)
+        if (transactionFilters.dateTo) filtrosAtivos.push(`Até: ${new Date(transactionFilters.dateTo).toLocaleDateString('pt-BR')}`)
+        
+        if (filtrosAtivos.length > 0) {
+          infoFiltros = `Transações filtradas: ${filtrosAtivos.join(', ')}`
+        } else {
+          infoFiltros = 'Todas as transações (sem filtros ativos)'
+        }
+      }
+      
+      // Construir HTML do relatório
+      let htmlContent = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #f59e0b; font-size: 28px; margin: 0; font-weight: bold;">ALYA VELAS</h1>
+          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório de Transações</h2>
+          <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">${infoFiltros}</p>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        </div>
+      `
+      
+      // Resumo Executivo (se habilitado)
+      if (incluirResumo) {
+        htmlContent += `
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📊 Resumo Executivo</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Total de Receitas</div>
+                <div style="font-size: 18px; font-weight: bold; color: #059669;">R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Total de Despesas</div>
+                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div style="background: ${saldo >= 0 ? '#f0fdf4' : '#fef2f2'}; padding: 15px; border-radius: 8px; border-left: 4px solid ${saldo >= 0 ? '#10b981' : '#ef4444'};">
+                <div style="font-weight: bold; color: ${saldo >= 0 ? '#10b981' : '#ef4444'}; margin-bottom: 5px;">Saldo</div>
+                <div style="font-size: 18px; font-weight: bold; color: ${saldo >= 0 ? '#059669' : '#dc2626'};">R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Quantidade de Transações</div>
+                <div style="font-size: 18px; font-weight: bold; color: #d97706;">${transacoesParaExportar.length}</div>
+              </div>
+            </div>
+          </div>
+        `
+      }
+      
+      // Tabela de Transações
+      htmlContent += `
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📋 Lista de Transações</h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; background: white;">
+              <thead>
+                <tr style="background: linear-gradient(to right, #fef3c7, #fed7aa); border-bottom: 2px solid #f59e0b;">
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Data</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Descrição</th>
+                  <th style="padding: 12px; text-align: center; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Tipo</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Categoria</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #92400e;">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+      `
+      
+      // Adicionar linhas da tabela
+      transacoesParaExportar.forEach((transaction, index) => {
+        const dataFormatada = new Date(transaction.date).toLocaleDateString('pt-BR')
+        const valorFormatado = transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+        const tipoCor = transaction.type === 'Receita' ? '#10b981' : '#ef4444'
+        const tipoBg = transaction.type === 'Receita' ? '#f0fdf4' : '#fef2f2'
+        const valorCor = transaction.type === 'Receita' ? '#059669' : '#dc2626'
+        const sinal = transaction.type === 'Receita' ? '+' : '-'
+        const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
+        
+        htmlContent += `
+          <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; color: #374151;">${dataFormatada}</td>
+            <td style="padding: 10px; color: #374151; font-weight: 500;">${transaction.description}</td>
+            <td style="padding: 10px; text-align: center;">
+              <span style="background: ${tipoBg}; color: ${tipoCor}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                ${transaction.type}
+              </span>
+            </td>
+            <td style="padding: 10px; color: #6b7280;">${transaction.category}</td>
+            <td style="padding: 10px; text-align: right; font-weight: bold; color: ${valorCor};">
+              ${sinal}R$ ${valorFormatado}
+            </td>
+          </tr>
+        `
+      })
+      
+      htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `
+      
+      // Rodapé
+      htmlContent += `
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            Relatório gerado automaticamente pelo sistema Alya Velas<br>
+            Dados baseados em transações ${exportarFiltradas ? 'filtradas' : 'completas'}<br>
+            Para mais informações, acesse o painel administrativo
+          </p>
+        </div>
+      `
+      
+      tempElement.innerHTML = htmlContent
+      document.body.appendChild(tempElement)
+      
+      // Capturar o elemento como imagem
+      const canvas = await html2canvas(tempElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+      
+      // Remover elemento temporário
+      document.body.removeChild(tempElement)
+      
+      // Criar PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      
+      let position = 0
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      // Salvar PDF
+      const fileName = `Transacoes_${exportarFiltradas ? 'Filtradas' : 'Completas'}_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+
+      alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Total de transações: ${transacoesParaExportar.length}${incluirResumo ? `\n• Total de Receitas: R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Total de Despesas: R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Saldo: R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}`)
+
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      alert('❌ Erro ao exportar PDF. Tente novamente.')
+    }
+  }
+
   // Render Transactions
   const renderTransactions = () => (
     <div className="space-y-6">
@@ -2674,6 +2884,13 @@ function App() {
           Transações
         </h1>
         <div className="flex gap-3">
+          <button
+            onClick={() => setIsExportTransacoesModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Download className="h-5 w-5" />
+            Exportar PDF
+          </button>
           <button
             onClick={() => {
               setImportExportType('transactions')
@@ -5476,6 +5693,114 @@ function App() {
                   className="w-full py-2 px-4 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
                 >
                   Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuração de Exportação de Transações */}
+      {isExportTransacoesModalOpen && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsExportTransacoesModalOpen(false)
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Download className="w-6 h-6 text-amber-700" />
+                  Exportar Transações em PDF
+                </h2>
+                <button
+                  onClick={() => setIsExportTransacoesModalOpen(false)}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="space-y-6">
+              <p className="text-gray-700 text-sm">
+                Configure as opções de exportação:
+              </p>
+              
+              {/* Opção: Exportar Filtradas */}
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <input
+                  type="checkbox"
+                  id="exportarFiltradas"
+                  checked={exportarFiltradas}
+                  onChange={(e) => setExportarFiltradas(e.target.checked)}
+                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <div className="flex-1">
+                  <label htmlFor="exportarFiltradas" className="font-semibold text-gray-800 cursor-pointer block mb-1">
+                    Exportar apenas transações filtradas
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {exportarFiltradas 
+                      ? 'Serão exportadas apenas as transações que estão visíveis na lista (com filtros aplicados).'
+                      : 'Todas as transações serão exportadas, independente dos filtros ativos.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Opção: Incluir Resumo */}
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <input
+                  type="checkbox"
+                  id="incluirResumo"
+                  checked={incluirResumo}
+                  onChange={(e) => setIncluirResumo(e.target.checked)}
+                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <div className="flex-1">
+                  <label htmlFor="incluirResumo" className="font-semibold text-gray-800 cursor-pointer block mb-1">
+                    Incluir resumo financeiro
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {incluirResumo 
+                      ? 'O PDF incluirá um resumo com totais de receitas, despesas, saldo e quantidade de transações.'
+                      : 'Apenas a tabela de transações será incluída no PDF.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Informações sobre filtros ativos */}
+              {(transactionFilters.type || transactionFilters.category || transactionFilters.dateFrom || transactionFilters.dateTo) && exportarFiltradas && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-800 mb-2">Filtros ativos:</p>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    {transactionFilters.type && <li>• Tipo: {transactionFilters.type}</li>}
+                    {transactionFilters.category && <li>• Categoria: {transactionFilters.category}</li>}
+                    {transactionFilters.dateFrom && <li>• Data início: {new Date(transactionFilters.dateFrom).toLocaleDateString('pt-BR')}</li>}
+                    {transactionFilters.dateTo && <li>• Data fim: {new Date(transactionFilters.dateTo).toLocaleDateString('pt-BR')}</li>}
+                  </ul>
+                </div>
+              )}
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setIsExportTransacoesModalOpen(false)}
+                  className="flex-1 py-2 px-4 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={exportarTransacoesPDF}
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl"
+                >
+                  Exportar PDF
                 </button>
               </div>
             </div>
