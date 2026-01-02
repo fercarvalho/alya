@@ -392,6 +392,11 @@ const AppContent: React.FC = () => {
 
   // Carregar dados do banco de dados
   useEffect(() => {
+    // Só carregar dados se o token estiver disponível
+    if (!token || !user) {
+      return;
+    }
+
     const loadData = async () => {
       try {
         const [transactionsData, productsData] = await Promise.all([
@@ -406,7 +411,8 @@ const AppContent: React.FC = () => {
     }
     
     loadData()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user])
 
   // Função para fechar modais com ESC
   useEffect(() => {
@@ -1342,16 +1348,21 @@ const AppContent: React.FC = () => {
     )
   }
 
-  // Carregar dados do localStorage
+  // Carregar dados do localStorage apenas se não houver dados da API
+  // Isso evita sobrescrever dados da API com dados antigos do localStorage
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('alya-transactions')
-    const savedProducts = localStorage.getItem('alya-products')
-    const savedMetas = localStorage.getItem('alya-metas')
-    
-    if (savedTransactions) setTransactions(JSON.parse(savedTransactions))
-    if (savedProducts) setProducts(JSON.parse(savedProducts))
-    if (savedMetas) setMetas(JSON.parse(savedMetas))
-  }, [])
+    // Só carregar do localStorage se não houver token (modo offline/desenvolvimento)
+    // Em produção, os dados vêm da API
+    if (!token || !user) {
+      const savedTransactions = localStorage.getItem('alya-transactions')
+      const savedProducts = localStorage.getItem('alya-products')
+      const savedMetas = localStorage.getItem('alya-metas')
+      
+      if (savedTransactions) setTransactions(JSON.parse(savedTransactions))
+      if (savedProducts) setProducts(JSON.parse(savedProducts))
+      if (savedMetas) setMetas(JSON.parse(savedMetas))
+    }
+  }, [token, user])
 
   // Salvar dados no localStorage
   useEffect(() => {
