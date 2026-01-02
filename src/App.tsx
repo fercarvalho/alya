@@ -86,17 +86,17 @@ const AppContent: React.FC = () => {
   const { user, token, logout, isLoading } = useAuth();
   const { getVisibleModules } = useModules();
   
-  // Mapeamento de ícones para os módulos
-  const iconMap: Record<string, any> = {
-    'Home': Home,
-    'DollarSign': DollarSign,
-    'Package': Package,
-    'Users': Users,
-    'BarChart3': BarChart3,
-    'Target': Target,
-    'Shield': Shield,
-    'TrendingUp': TrendingUp
-  };
+  // Mapeamento de ícones para os módulos (reservado para uso futuro)
+  // const iconMap: Record<string, any> = {
+  //   'Home': Home,
+  //   'DollarSign': DollarSign,
+  //   'Package': Package,
+  //   'Users': Users,
+  //   'BarChart3': BarChart3,
+  //   'Target': Target,
+  //   'Shield': Shield,
+  //   'TrendingUp': TrendingUp
+  // };
 
   // Funções para comunicação com a API (com token)
   const fetchTransactions = async () => {
@@ -5003,7 +5003,7 @@ const AppContent: React.FC = () => {
           <div className="flex items-center overflow-x-auto scrollbar-hide">
             <div className="flex items-center space-x-2 min-w-max">
               {(() => {
-                const visibleModules = getVisibleModules();
+                // const visibleModules = getVisibleModules(); // Reservado para uso futuro
                 const allTabs = [
                   { id: 'dashboard', name: 'Dashboard', icon: Home, key: 'dashboard' },
                   { id: 'metas', name: 'Metas', icon: TrendingUp, key: 'metas' },

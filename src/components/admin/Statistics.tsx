@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Download, TrendingUp, Users, Activity, Package, BarChart3
+  Download, Users, Activity, Package, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -333,12 +333,12 @@ const Statistics: React.FC = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }: { name: string; percent: number }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {roleData.map((entry, index) => (
+                {roleData.map((_entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -368,7 +368,7 @@ const Statistics: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4">Módulos Mais Usados</h3>
           <div className="space-y-2">
-            {statistics.activity.topModules.map((module, index) => (
+            {statistics.activity.topModules.map((module, _index) => (
               <div key={module.key} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
                 <span className="text-sm font-medium">{module.key}</span>
                 <span className="text-sm text-gray-600">{module.count} ações</span>

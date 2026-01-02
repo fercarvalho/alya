@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  UserPlus, Edit, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save
+  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -22,7 +22,7 @@ const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  // const [editingUser, setEditingUser] = useState<User | null>(null); // Reservado para uso futuro
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');

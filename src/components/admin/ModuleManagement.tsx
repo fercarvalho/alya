@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Edit, Trash2, Save, X, Shield, Package
+  Plus, Edit, Trash2, Save, X, Shield
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { SystemModule, useModules } from '../../hooks/useModules';
@@ -9,7 +9,7 @@ import { API_BASE_URL } from '../../config/api';
 const ModuleManagement: React.FC = () => {
   const { token } = useAuth();
   const { modules, loadModules } = useModules();
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false); // Reservado para uso futuro
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [editingModule, setEditingModule] = useState<SystemModule | null>(null);
   

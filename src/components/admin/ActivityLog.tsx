@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Download, Filter, X, Calendar
+  Download, Filter
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
