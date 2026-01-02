@@ -215,6 +215,11 @@ function App() {
   const [isExportTransacoesModalOpen, setIsExportTransacoesModalOpen] = useState(false)
   const [exportarFiltradas, setExportarFiltradas] = useState(true)
   const [incluirResumo, setIncluirResumo] = useState(true)
+  
+  // Estados do modal de exportação de produtos
+  const [isExportProdutosModalOpen, setIsExportProdutosModalOpen] = useState(false)
+  const [exportarFiltrados, setExportarFiltrados] = useState(true)
+  const [incluirResumoProdutos, setIncluirResumoProdutos] = useState(true)
   const [transactionForm, setTransactionForm] = useState({
     date: new Date().toISOString().split('T')[0], // Data atual por padrão
     description: '',
@@ -3190,6 +3195,276 @@ function App() {
     </div>
   )
 
+  // Função para exportar produtos em PDF
+  const exportarProdutosPDF = async () => {
+    try {
+      setIsExportProdutosModalOpen(false)
+      
+      // Obter produtos para exportar
+      const produtosParaExportar = exportarFiltrados 
+        ? getFilteredAndSortedProducts() 
+        : products
+      
+      // Validar se há produtos
+      if (produtosParaExportar.length === 0) {
+        alert('Não há produtos para exportar!')
+        return
+      }
+      
+      // Calcular resumo estatístico (se habilitado)
+      let totalProdutos = produtosParaExportar.length
+      let valorTotalEstoque = 0
+      let custoTotalEstoque = 0
+      let lucroPotencial = 0
+      let margemMedia = 0
+      let totalVendidos = 0
+      let produtosEmEstoque = 0
+      let produtosSemEstoque = 0
+      let produtosPorCategoria: { [key: string]: number } = {}
+      
+      if (incluirResumoProdutos) {
+        // Calcular valores totais
+        produtosParaExportar.forEach(p => {
+          valorTotalEstoque += p.price * p.stock
+          custoTotalEstoque += p.cost * p.stock
+          totalVendidos += p.sold
+          
+          if (p.stock > 0) {
+            produtosEmEstoque++
+          } else {
+            produtosSemEstoque++
+          }
+          
+          // Contar por categoria
+          produtosPorCategoria[p.category] = (produtosPorCategoria[p.category] || 0) + 1
+          
+          // Calcular margem de lucro (evitar divisão por zero)
+          if (p.price > 0) {
+            const margem = ((p.price - p.cost) / p.price) * 100
+            margemMedia += margem
+          }
+        })
+        
+        lucroPotencial = valorTotalEstoque - custoTotalEstoque
+        margemMedia = produtosParaExportar.length > 0 ? margemMedia / produtosParaExportar.length : 0
+      }
+      
+      // Criar elemento temporário para capturar o conteúdo
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'absolute'
+      tempElement.style.left = '-9999px'
+      tempElement.style.top = '-9999px'
+      tempElement.style.width = '800px'
+      tempElement.style.backgroundColor = 'white'
+      tempElement.style.padding = '20px'
+      tempElement.style.fontFamily = 'Arial, sans-serif'
+      
+      // Construir informações de filtros aplicados
+      let infoFiltros = 'Todos os produtos'
+      if (exportarFiltrados) {
+        const filtrosAtivos = []
+        if (productFilters.category) filtrosAtivos.push(`Categoria: ${productFilters.category}`)
+        if (productFilters.stockFilter === 'inStock') filtrosAtivos.push('Em estoque')
+        if (productFilters.stockFilter === 'outOfStock') filtrosAtivos.push('Sem estoque')
+        if (productFilters.soldFilter === 'sold') filtrosAtivos.push('Vendidos')
+        if (productFilters.soldFilter === 'notSold') filtrosAtivos.push('Não vendidos')
+        if (productFilters.costFilter === 'withCost') filtrosAtivos.push('Com preço de custo')
+        if (productFilters.costFilter === 'withoutCost') filtrosAtivos.push('Sem preço de custo')
+        
+        if (filtrosAtivos.length > 0) {
+          infoFiltros = `Produtos filtrados: ${filtrosAtivos.join(', ')}`
+        } else {
+          infoFiltros = 'Todos os produtos (sem filtros ativos)'
+        }
+      }
+      
+      // Construir HTML do relatório
+      let htmlContent = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #f59e0b; font-size: 28px; margin: 0; font-weight: bold;">ALYA VELAS</h1>
+          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório de Produtos</h2>
+          <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">${infoFiltros}</p>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        </div>
+      `
+      
+      // Resumo Estatístico (se habilitado)
+      if (incluirResumoProdutos) {
+        htmlContent += `
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📊 Resumo Estatístico</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Total de Produtos</div>
+                <div style="font-size: 18px; font-weight: bold; color: #d97706;">${totalProdutos}</div>
+              </div>
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Valor Total do Estoque</div>
+                <div style="font-size: 18px; font-weight: bold; color: #059669;">R$ ${valorTotalEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Custo Total do Estoque</div>
+                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">R$ ${custoTotalEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div style="background: ${lucroPotencial >= 0 ? '#f0fdf4' : '#fef2f2'}; padding: 15px; border-radius: 8px; border-left: 4px solid ${lucroPotencial >= 0 ? '#10b981' : '#ef4444'};">
+                <div style="font-weight: bold; color: ${lucroPotencial >= 0 ? '#10b981' : '#ef4444'}; margin-bottom: 5px;">Lucro Potencial</div>
+                <div style="font-size: 18px; font-weight: bold; color: ${lucroPotencial >= 0 ? '#059669' : '#dc2626'};">R$ ${lucroPotencial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Margem de Lucro Média</div>
+                <div style="font-size: 18px; font-weight: bold; color: #d97706;">${margemMedia.toFixed(1)}%</div>
+              </div>
+              <div style="background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                <div style="font-weight: bold; color: #3b82f6; margin-bottom: 5px;">Total Vendidos</div>
+                <div style="font-size: 18px; font-weight: bold; color: #2563eb;">${totalVendidos}</div>
+              </div>
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Em Estoque</div>
+                <div style="font-size: 18px; font-weight: bold; color: #059669;">${produtosEmEstoque}</div>
+              </div>
+              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Sem Estoque</div>
+                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">${produtosSemEstoque}</div>
+              </div>
+            </div>
+            
+            ${Object.keys(produtosPorCategoria).length > 0 ? `
+              <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 15px;">
+                <h4 style="color: #374151; font-size: 16px; margin-bottom: 10px; font-weight: bold;">Distribuição por Categoria:</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                  ${Object.entries(produtosPorCategoria).map(([categoria, quantidade]) => `
+                    <div style="text-align: center; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+                      <div style="font-weight: bold; color: #f59e0b; font-size: 18px;">${quantidade}</div>
+                      <div style="font-size: 12px; color: #6b7280;">${categoria}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `
+      }
+      
+      // Tabela de Produtos
+      htmlContent += `
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📦 Lista de Produtos</h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; background: white;">
+              <thead>
+                <tr style="background: linear-gradient(to right, #fef3c7, #fed7aa); border-bottom: 2px solid #f59e0b;">
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Nome</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Categoria</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Preço</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Custo</th>
+                  <th style="padding: 12px; text-align: center; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Estoque</th>
+                  <th style="padding: 12px; text-align: center; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Vendidos</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #92400e;">Margem</th>
+                </tr>
+              </thead>
+              <tbody>
+      `
+      
+      // Adicionar linhas da tabela
+      produtosParaExportar.forEach((product, index) => {
+        const precoFormatado = product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+        const custoFormatado = product.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+        
+        // Calcular margem de lucro (evitar divisão por zero)
+        let margemLucro = 0
+        let margemCor = '#6b7280'
+        if (product.price > 0) {
+          margemLucro = ((product.price - product.cost) / product.price) * 100
+          margemCor = margemLucro >= 0 ? '#10b981' : '#ef4444'
+        }
+        
+        // Cor do estoque
+        let estoqueCor = '#ef4444' // vermelho
+        if (product.stock > 10) {
+          estoqueCor = '#10b981' // verde
+        } else if (product.stock > 0) {
+          estoqueCor = '#f59e0b' // amarelo
+        }
+        
+        const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
+        
+        htmlContent += `
+          <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; color: #374151; font-weight: 500;">${product.name}</td>
+            <td style="padding: 10px; color: #6b7280;">${product.category}</td>
+            <td style="padding: 10px; text-align: right; font-weight: bold; color: #10b981;">R$ ${precoFormatado}</td>
+            <td style="padding: 10px; text-align: right; font-weight: bold; color: #f97316;">R$ ${custoFormatado}</td>
+            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${estoqueCor};">${product.stock}</td>
+            <td style="padding: 10px; text-align: center; font-weight: bold; color: #3b82f6;">${product.sold}</td>
+            <td style="padding: 10px; text-align: right; font-weight: bold; color: ${margemCor};">${margemLucro.toFixed(1)}%</td>
+          </tr>
+        `
+      })
+      
+      htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `
+      
+      // Rodapé
+      htmlContent += `
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            Relatório gerado automaticamente pelo sistema Alya Velas<br>
+            Dados baseados em produtos ${exportarFiltrados ? 'filtrados' : 'completos'}<br>
+            Para mais informações, acesse o painel administrativo
+          </p>
+        </div>
+      `
+      
+      tempElement.innerHTML = htmlContent
+      document.body.appendChild(tempElement)
+      
+      // Capturar o elemento como imagem
+      const canvas = await html2canvas(tempElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+      
+      // Remover elemento temporário
+      document.body.removeChild(tempElement)
+      
+      // Criar PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      
+      let position = 0
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      // Salvar PDF
+      const fileName = `Produtos_${exportarFiltrados ? 'Filtrados' : 'Completos'}_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+
+      alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Total de produtos: ${totalProdutos}${incluirResumoProdutos ? `\n• Valor total do estoque: R$ ${valorTotalEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Custo total do estoque: R$ ${custoTotalEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Lucro potencial: R$ ${lucroPotencial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Margem média: ${margemMedia.toFixed(1)}%` : ''}`)
+
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      alert('❌ Erro ao exportar PDF. Tente novamente.')
+    }
+  }
+
   // Render Products
   const renderProducts = () => (
     <div className="space-y-6">
@@ -3199,6 +3474,13 @@ function App() {
           Produtos
         </h1>
         <div className="flex gap-3">
+          <button
+            onClick={() => setIsExportProdutosModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Download className="h-5 w-5" />
+            Exportar PDF
+          </button>
           <button
             onClick={() => {
               setImportExportType('products')
@@ -5798,6 +6080,117 @@ function App() {
                 </button>
                 <button
                   onClick={exportarTransacoesPDF}
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl"
+                >
+                  Exportar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuração de Exportação de Produtos */}
+      {isExportProdutosModalOpen && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsExportProdutosModalOpen(false)
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Download className="w-6 h-6 text-amber-700" />
+                  Exportar Produtos em PDF
+                </h2>
+                <button
+                  onClick={() => setIsExportProdutosModalOpen(false)}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="space-y-6">
+              <p className="text-gray-700 text-sm">
+                Configure as opções de exportação:
+              </p>
+              
+              {/* Opção: Exportar Filtrados */}
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <input
+                  type="checkbox"
+                  id="exportarFiltrados"
+                  checked={exportarFiltrados}
+                  onChange={(e) => setExportarFiltrados(e.target.checked)}
+                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <div className="flex-1">
+                  <label htmlFor="exportarFiltrados" className="font-semibold text-gray-800 cursor-pointer block mb-1">
+                    Exportar apenas produtos filtrados
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {exportarFiltrados 
+                      ? 'Serão exportados apenas os produtos que estão visíveis na lista (com filtros aplicados).'
+                      : 'Todos os produtos serão exportados, independente dos filtros ativos.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Opção: Incluir Resumo */}
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <input
+                  type="checkbox"
+                  id="incluirResumoProdutos"
+                  checked={incluirResumoProdutos}
+                  onChange={(e) => setIncluirResumoProdutos(e.target.checked)}
+                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <div className="flex-1">
+                  <label htmlFor="incluirResumoProdutos" className="font-semibold text-gray-800 cursor-pointer block mb-1">
+                    Incluir resumo estatístico
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {incluirResumoProdutos 
+                      ? 'O PDF incluirá um resumo com totais de estoque, custos, lucro potencial, margem média e distribuição por categoria.'
+                      : 'Apenas a tabela de produtos será incluída no PDF.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Informações sobre filtros ativos */}
+              {(productFilters.category || productFilters.stockFilter || productFilters.soldFilter || productFilters.costFilter) && exportarFiltrados && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-800 mb-2">Filtros ativos:</p>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    {productFilters.category && <li>• Categoria: {productFilters.category}</li>}
+                    {productFilters.stockFilter === 'inStock' && <li>• Em estoque</li>}
+                    {productFilters.stockFilter === 'outOfStock' && <li>• Sem estoque</li>}
+                    {productFilters.soldFilter === 'sold' && <li>• Vendidos</li>}
+                    {productFilters.soldFilter === 'notSold' && <li>• Não vendidos</li>}
+                    {productFilters.costFilter === 'withCost' && <li>• Com preço de custo</li>}
+                    {productFilters.costFilter === 'withoutCost' && <li>• Sem preço de custo</li>}
+                  </ul>
+                </div>
+              )}
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setIsExportProdutosModalOpen(false)}
+                  className="flex-1 py-2 px-4 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={exportarProdutosPDF}
                   className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl"
                 >
                   Exportar PDF
