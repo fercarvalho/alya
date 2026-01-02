@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'alya-backend',
+    name: 'alya-api',
     script: './server.js',
     cwd: process.env.PWD || '/www/alya/server',
     instances: 1,
