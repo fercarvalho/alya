@@ -381,22 +381,8 @@ const AppContent: React.FC = () => {
   const [expandedCharts, setExpandedCharts] = useState<string[]>([])
   const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>([])
 
-  // Verificar autenticação (depois de todos os hooks)
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
-
+  // ⚠️ TODOS OS useEffect DEVEM ESTAR AQUI, ANTES DOS RETURNS CONDICIONAIS
+  
   // Carregar dados do banco de dados
   useEffect(() => {
     // Só carregar dados se o token estiver disponível
@@ -420,6 +406,40 @@ const AppContent: React.FC = () => {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user])
+
+  // Carregar dados do localStorage apenas se não houver dados da API
+  useEffect(() => {
+    // Só carregar do localStorage se não houver token (modo offline/desenvolvimento)
+    // Em produção, os dados vêm da API
+    if (!token || !user) {
+      const savedTransactions = localStorage.getItem('alya-transactions')
+      const savedProducts = localStorage.getItem('alya-products')
+      const savedMetas = localStorage.getItem('alya-metas')
+      
+      if (savedTransactions) setTransactions(JSON.parse(savedTransactions))
+      if (savedProducts) setProducts(JSON.parse(savedProducts))
+      if (savedMetas) setMetas(JSON.parse(savedMetas))
+    }
+  }, [token, user])
+
+  // Salvar dados no localStorage
+  useEffect(() => {
+    if (transactions.length > 0) {
+      localStorage.setItem('alya-transactions', JSON.stringify(transactions))
+    }
+  }, [transactions])
+
+  useEffect(() => {
+    if (products.length > 0) {
+      localStorage.setItem('alya-products', JSON.stringify(products))
+    }
+  }, [products])
+
+  useEffect(() => {
+    if (metas.length > 0) {
+      localStorage.setItem('alya-metas', JSON.stringify(metas))
+    }
+  }, [metas])
 
   // Função para fechar modais com ESC
   useEffect(() => {
@@ -494,6 +514,22 @@ const AppContent: React.FC = () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isFilterCalendarFromOpen, isFilterCalendarToOpen, isCalendarOpen, isProductModalOpen, isTransactionModalOpen, isImportExportModalOpen])
+
+  // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   // Funções para gerenciar o calendário personalizado
   const formatDateToInput = (date: Date) => {
@@ -1346,35 +1382,6 @@ const AppContent: React.FC = () => {
         : [...prev, chartId]
     )
   }
-
-  // Carregar dados do localStorage apenas se não houver dados da API
-  // Isso evita sobrescrever dados da API com dados antigos do localStorage
-  useEffect(() => {
-    // Só carregar do localStorage se não houver token (modo offline/desenvolvimento)
-    // Em produção, os dados vêm da API
-    if (!token || !user) {
-      const savedTransactions = localStorage.getItem('alya-transactions')
-      const savedProducts = localStorage.getItem('alya-products')
-      const savedMetas = localStorage.getItem('alya-metas')
-      
-      if (savedTransactions) setTransactions(JSON.parse(savedTransactions))
-      if (savedProducts) setProducts(JSON.parse(savedProducts))
-      if (savedMetas) setMetas(JSON.parse(savedMetas))
-    }
-  }, [token, user])
-
-  // Salvar dados no localStorage
-  useEffect(() => {
-    localStorage.setItem('alya-transactions', JSON.stringify(transactions))
-  }, [transactions])
-
-  useEffect(() => {
-    localStorage.setItem('alya-products', JSON.stringify(products))
-  }, [products])
-
-  useEffect(() => {
-    localStorage.setItem('alya-metas', JSON.stringify(metas))
-  }, [metas])
 
   // Calcular resumo financeiro (mantendo para compatibilidade)
   // Removido: totais fictícios (usar calculateTotals())
