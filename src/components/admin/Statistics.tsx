@@ -7,8 +7,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-
-const API_BASE_URL = 'http://localhost:8001/api';
+import { API_BASE_URL } from '../../config/api';
 
 interface Statistics {
   users: {

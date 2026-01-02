@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Users, Plus, Download, Upload, Edit, Trash2, Filter, X } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { API_BASE_URL } from '../config/api'
 
 interface Client {
   id: string
@@ -14,8 +15,6 @@ interface Client {
   createdAt?: string
   updatedAt?: string
 }
-
-const API_BASE_URL = 'http://localhost:8001/api'
 
 const Clients: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([])

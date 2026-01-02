@@ -22,5 +22,25 @@
     "role": "guest",
     "createdAt": "2026-01-02T16:34:37.555Z",
     "updatedAt": "2026-01-02T16:34:37.555Z"
+  },
+  {
+    "id": "mjx4us6r8xzcoiot7bl",
+    "username": "julia",
+    "password": "$2b$10$biSGCSERdTNjgqBiCYoCT.IrAUSnQz6qDGAhbgAbPet47gHeGlrvu",
+    "role": "user",
+    "modules": [],
+    "isActive": true,
+    "createdAt": "2026-01-02T17:13:32.979Z",
+    "updatedAt": "2026-01-02T17:13:32.979Z"
+  },
+  {
+    "id": "mjx4v6xjlrssy4be2e",
+    "username": "andre",
+    "password": "$2b$10$J3g9hse/wOt.sptiPXeY6eP.uzo8DGwxb0uPtHGiV9mStg04w6axW",
+    "role": "user",
+    "modules": [],
+    "isActive": true,
+    "createdAt": "2026-01-02T17:13:52.087Z",
+    "updatedAt": "2026-01-02T17:13:52.087Z"
   }
 ]

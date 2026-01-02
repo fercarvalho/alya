@@ -4,8 +4,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
-
-const API_BASE_URL = 'http://localhost:8001/api';
+import { API_BASE_URL } from '../../config/api';
 
 interface User {
   id: string;

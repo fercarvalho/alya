@@ -9,12 +9,19 @@ const jwt = require('jsonwebtoken');
 const Database = require('./database');
 
 const app = express();
-const port = 8001;
+const port = process.env.PORT || 8001;
 const db = new Database();
 const JWT_SECRET = 'alya_secret_key_2024';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://alya.sistemas.viverdepj.com.br',
+    'http://localhost:8000',
+    'http://localhost:5173'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Middleware de autenticação

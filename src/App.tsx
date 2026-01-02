@@ -31,9 +31,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { useModules } from './hooks/useModules'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
-
-// API base URL
-const API_BASE_URL = 'http://localhost:8001/api'
+import { API_BASE_URL } from './config/api'
 
 import { 
   PieChart as RechartsPieChart, 
@@ -5729,7 +5727,7 @@ const AppContent: React.FC = () => {
                       console.log('Baixando modelo para:', importExportType)
                       
                       // Tentar baixar do servidor
-                      const response = await fetch(`http://localhost:8001/api/modelo/${importExportType}`)
+                      const response = await fetch(`${API_BASE_URL}/modelo/${importExportType}`)
                       
                       if (response.ok) {
                         const blob = await response.blob()
@@ -5860,7 +5858,7 @@ const AppContent: React.FC = () => {
                     }
                     
                     // Chamar API de exportação
-                    const response = await fetch('http://localhost:8001/api/export', {
+                    const response = await fetch(`${API_BASE_URL}/export`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json'
@@ -5924,7 +5922,7 @@ const AppContent: React.FC = () => {
                         if (token) {
                           headers['Authorization'] = `Bearer ${token}`;
                         }
-                        const response = await fetch('http://localhost:8001/api/import', {
+                        const response = await fetch(`${API_BASE_URL}/import`, {
                           method: 'POST',
                           headers,
                           body: formData

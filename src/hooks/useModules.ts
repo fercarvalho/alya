@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-
-const API_BASE_URL = 'http://localhost:8001/api';
+import { API_BASE_URL } from '../config/api';
 
 export interface SystemModule {
   id: string;

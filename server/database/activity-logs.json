@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "id": "mjx4us6tvdubpn5zx4f",
+    "userId": "mjx3gpze75vpx1kwfej",
+    "username": "admin",
+    "action": "create",
+    "module": "admin",
+    "entityType": "user",
+    "entityId": "mjx4us6r8xzcoiot7bl",
+    "details": {
+      "username": "julia",
+      "role": "user"
+    },
+    "timestamp": "2026-01-02T17:13:32.981Z",
+    "ipAddress": null
+  },
+  {
+    "id": "mjx4v6xjhqxrgoeaf",
+    "userId": "mjx3gpze75vpx1kwfej",
+    "username": "admin",
+    "action": "create",
+    "module": "admin",
+    "entityType": "user",
+    "entityId": "mjx4v6xjlrssy4be2e",
+    "details": {
+      "username": "andre",
+      "role": "user"
+    },
+    "timestamp": "2026-01-02T17:13:52.087Z",
+    "ipAddress": null
+  }
+]
