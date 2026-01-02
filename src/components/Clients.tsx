@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Users, Plus, Download, Upload, Edit, Trash2, Filter, X } from 'lucide-react'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 interface Client {
   id: string
@@ -34,6 +36,11 @@ const Clients: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({})
   const [isImportExportOpen, setIsImportExportOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  
+  // Estados do modal de exportação de clientes
+  const [isExportClientesModalOpen, setIsExportClientesModalOpen] = useState(false)
+  const [exportarFiltrados, setExportarFiltrados] = useState(true)
+  const [incluirResumo, setIncluirResumo] = useState(true)
 
   // filtros / ordenação
   const [sortConfig, setSortConfig] = useState<{ field: keyof Client | null, direction: 'asc' | 'desc' }>({ field: null, direction: 'asc' })
@@ -195,6 +202,222 @@ const Clients: React.FC = () => {
     } catch {}
   }
 
+  // Função para exportar clientes em PDF
+  const exportarClientesPDF = async () => {
+    try {
+      setIsExportClientesModalOpen(false)
+      
+      // Obter clientes para exportar
+      const clientesParaExportar = exportarFiltrados 
+        ? filteredAndSorted 
+        : clients
+      
+      // Validar se há clientes
+      if (clientesParaExportar.length === 0) {
+        alert('Não há clientes para exportar!')
+        return
+      }
+      
+      // Calcular resumo estatístico (se habilitado)
+      let totalClientes = clientesParaExportar.length
+      let clientesComCPF = 0
+      let clientesComCNPJ = 0
+      let clientesComEmail = 0
+      let clientesSemEmail = 0
+      let clientesComTelefone = 0
+      let clientesSemTelefone = 0
+      let clientesComEndereco = 0
+      let clientesSemEndereco = 0
+      
+      if (incluirResumo) {
+        clientesParaExportar.forEach(c => {
+          if (c.cpf) clientesComCPF++
+          if (c.cnpj) clientesComCNPJ++
+          if (c.email && c.email.trim()) clientesComEmail++
+          else clientesSemEmail++
+          if (c.phone && c.phone.trim()) clientesComTelefone++
+          else clientesSemTelefone++
+          if (c.address && c.address.trim()) clientesComEndereco++
+          else clientesSemEndereco++
+        })
+      }
+      
+      // Criar elemento temporário para capturar o conteúdo
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'absolute'
+      tempElement.style.left = '-9999px'
+      tempElement.style.top = '-9999px'
+      tempElement.style.width = '800px'
+      tempElement.style.backgroundColor = 'white'
+      tempElement.style.padding = '20px'
+      tempElement.style.fontFamily = 'Arial, sans-serif'
+      
+      // Construir informações de filtros aplicados
+      let infoFiltros = 'Todos os clientes'
+      if (exportarFiltrados) {
+        const filtrosAtivos = []
+        if (filters.name) filtrosAtivos.push(`Nome: ${filters.name}`)
+        if (filters.email) filtrosAtivos.push(`Email: ${filters.email}`)
+        if (filters.phone) filtrosAtivos.push(`Telefone: ${filters.phone}`)
+        
+        if (filtrosAtivos.length > 0) {
+          infoFiltros = `Clientes filtrados: ${filtrosAtivos.join(', ')}`
+        } else {
+          infoFiltros = 'Todos os clientes (sem filtros ativos)'
+        }
+      }
+      
+      // Construir HTML do relatório
+      let htmlContent = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #f59e0b; font-size: 28px; margin: 0; font-weight: bold;">ALYA VELAS</h1>
+          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório de Clientes</h2>
+          <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">${infoFiltros}</p>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        </div>
+      `
+      
+      // Resumo Estatístico (se habilitado)
+      if (incluirResumo) {
+        htmlContent += `
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📊 Resumo Estatístico</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Total de Clientes</div>
+                <div style="font-size: 18px; font-weight: bold; color: #d97706;">${totalClientes}</div>
+              </div>
+              <div style="background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                <div style="font-weight: bold; color: #3b82f6; margin-bottom: 5px;">Clientes com CPF</div>
+                <div style="font-size: 18px; font-weight: bold; color: #2563eb;">${clientesComCPF}</div>
+              </div>
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Clientes com CNPJ</div>
+                <div style="font-size: 18px; font-weight: bold; color: #059669;">${clientesComCNPJ}</div>
+              </div>
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Com Email</div>
+                <div style="font-size: 18px; font-weight: bold; color: #059669;">${clientesComEmail}</div>
+              </div>
+              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Sem Email</div>
+                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">${clientesSemEmail}</div>
+              </div>
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Com Telefone</div>
+                <div style="font-size: 18px; font-weight: bold; color: #059669;">${clientesComTelefone}</div>
+              </div>
+              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Sem Telefone</div>
+                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">${clientesSemTelefone}</div>
+              </div>
+              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Com Endereço</div>
+                <div style="font-size: 18px; font-weight: bold; color: #059669;">${clientesComEndereco}</div>
+              </div>
+            </div>
+          </div>
+        `
+      }
+      
+      // Tabela de Clientes
+      htmlContent += `
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">👥 Lista de Clientes</h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; background: white;">
+              <thead>
+                <tr style="background: linear-gradient(to right, #fef3c7, #fed7aa); border-bottom: 2px solid #f59e0b;">
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Nome</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">CPF/CNPJ</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Email</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Telefone</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e;">Endereço</th>
+                </tr>
+              </thead>
+              <tbody>
+      `
+      
+      // Adicionar linhas da tabela
+      clientesParaExportar.forEach((client, index) => {
+        const documento = client.cpf || client.cnpj || '-'
+        const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
+        
+        htmlContent += `
+          <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; color: #374151; font-weight: 500;">${client.name}</td>
+            <td style="padding: 10px; color: #6b7280;">${documento}</td>
+            <td style="padding: 10px; color: #374151;">${client.email}</td>
+            <td style="padding: 10px; color: #374151;">${client.phone}</td>
+            <td style="padding: 10px; color: #6b7280;">${client.address}</td>
+          </tr>
+        `
+      })
+      
+      htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `
+      
+      // Rodapé
+      htmlContent += `
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            Relatório gerado automaticamente pelo sistema Alya Velas<br>
+            Dados baseados em clientes ${exportarFiltrados ? 'filtrados' : 'completos'}<br>
+            Para mais informações, acesse o painel administrativo
+          </p>
+        </div>
+      `
+      
+      tempElement.innerHTML = htmlContent
+      document.body.appendChild(tempElement)
+      
+      // Capturar o elemento como imagem
+      const canvas = await html2canvas(tempElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+      
+      // Remover elemento temporário
+      document.body.removeChild(tempElement)
+      
+      // Criar PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      
+      let position = 0
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      // Salvar PDF
+      const fileName = `Clientes_${exportarFiltrados ? 'Filtrados' : 'Completos'}_${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+
+      alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Total de clientes: ${totalClientes}${incluirResumo ? `\n• Clientes com CPF: ${clientesComCPF}\n• Clientes com CNPJ: ${clientesComCNPJ}\n• Clientes com email: ${clientesComEmail}\n• Clientes com telefone: ${clientesComTelefone}\n• Clientes com endereço: ${clientesComEndereco}` : ''}`)
+
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      alert('❌ Erro ao exportar PDF. Tente novamente.')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -203,6 +426,13 @@ const Clients: React.FC = () => {
           Clientes
         </h1>
         <div className="flex gap-3">
+          <button
+            onClick={() => setIsExportClientesModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Download className="h-5 w-5" />
+            Exportar PDF
+          </button>
           <button
             onClick={() => setIsImportExportOpen(true)}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
@@ -547,6 +777,113 @@ const Clients: React.FC = () => {
               <div className="mt-6">
                 <button onClick={() => setIsImportExportOpen(false)} className="w-full px-6 py-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold">
                   Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuração de Exportação de Clientes */}
+      {isExportClientesModalOpen && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsExportClientesModalOpen(false)
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Download className="w-6 h-6 text-amber-700" />
+                  Exportar Clientes em PDF
+                </h2>
+                <button
+                  onClick={() => setIsExportClientesModalOpen(false)}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="space-y-6">
+              <p className="text-gray-700 text-sm">
+                Configure as opções de exportação:
+              </p>
+              
+              {/* Opção: Exportar Filtrados */}
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <input
+                  type="checkbox"
+                  id="exportarFiltrados"
+                  checked={exportarFiltrados}
+                  onChange={(e) => setExportarFiltrados(e.target.checked)}
+                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <div className="flex-1">
+                  <label htmlFor="exportarFiltrados" className="font-semibold text-gray-800 cursor-pointer block mb-1">
+                    Exportar apenas clientes filtrados
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {exportarFiltrados 
+                      ? 'Serão exportados apenas os clientes que estão visíveis na lista (com filtros aplicados).'
+                      : 'Todos os clientes serão exportados, independente dos filtros ativos.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Opção: Incluir Resumo */}
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <input
+                  type="checkbox"
+                  id="incluirResumo"
+                  checked={incluirResumo}
+                  onChange={(e) => setIncluirResumo(e.target.checked)}
+                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <div className="flex-1">
+                  <label htmlFor="incluirResumo" className="font-semibold text-gray-800 cursor-pointer block mb-1">
+                    Incluir resumo estatístico
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {incluirResumo 
+                      ? 'O PDF incluirá um resumo com totais de clientes, distribuição por tipo de documento (CPF/CNPJ) e estatísticas de dados completos.'
+                      : 'Apenas a tabela de clientes será incluída no PDF.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Informações sobre filtros ativos */}
+              {(filters.name || filters.email || filters.phone) && exportarFiltrados && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-800 mb-2">Filtros ativos:</p>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    {filters.name && <li>• Nome: {filters.name}</li>}
+                    {filters.email && <li>• Email: {filters.email}</li>}
+                    {filters.phone && <li>• Telefone: {filters.phone}</li>}
+                  </ul>
+                </div>
+              )}
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setIsExportClientesModalOpen(false)}
+                  className="flex-1 py-2 px-4 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={exportarClientesPDF}
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl"
+                >
+                  Exportar PDF
                 </button>
               </div>
             </div>
