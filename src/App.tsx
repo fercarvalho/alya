@@ -4977,46 +4977,48 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
-      {/* Header Fixo */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-5">
-            <div className="flex items-center">
-              <img 
-                src="/alya-logo.png" 
-                alt="Alya Velas Logo" 
-                className="w-10 h-10 mr-3 rounded-lg shadow-sm object-contain"
-              />
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                  Alya Velas
-                </h1>
-                <p className="text-sm text-amber-600/70 font-medium">Sistema de Gestão Financeira</p>
+      {/* Container fixo para Header e Navigation */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        {/* Header */}
+        <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-5">
+              <div className="flex items-center">
+                <img 
+                  src="/alya-logo.png" 
+                  alt="Alya Velas Logo" 
+                  className="w-10 h-10 mr-3 rounded-lg shadow-sm object-contain"
+                />
+                <div className="min-w-0 flex-shrink">
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                    Alya Velas
+                  </h1>
+                  <p className="text-sm text-amber-600/70 font-medium break-words">Sistema de Gestão Financeira</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-lg border border-amber-200">
-                <Users className="w-4 h-4 text-amber-600" />
-                <span className="text-sm font-medium text-amber-800">{user?.username}</span>
-                <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-                  {user?.role}
-                </span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-lg border border-amber-200">
+                  <Users className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-800">{user?.username}</span>
+                  <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                    {user?.role}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+                  title="Sair"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="text-sm font-medium">Sair</span>
+                </button>
               </div>
-              <button
-                onClick={logout}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
-                title="Sair"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium">Sair</span>
-              </button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Navigation */}
-      <nav className="fixed top-[76px] left-0 right-0 z-40 bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
+        {/* Navigation - sempre abaixo do header */}
+        <nav className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center overflow-x-auto scrollbar-hide">
             <div className="flex items-center space-x-2 min-w-max">
@@ -5071,9 +5073,10 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </nav>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[150px]">
+      {/* Main Content - padding-top para compensar header + nav (altura dinâmica) */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[180px]">
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'metas' && renderMetas()}
         {activeTab === 'transactions' && renderTransactions()}
