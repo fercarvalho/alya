@@ -44,9 +44,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Detectar se está em modo demo (GitHub Pages ou produção)
+  const isDemoMode = typeof window !== 'undefined' && 
+    (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+
+  // Função auxiliar para usar storage correto
+  const getStorage = () => isDemoMode ? sessionStorage : localStorage;
+
   useEffect(() => {
-    // Verificar se há token salvo no localStorage
-    const savedToken = localStorage.getItem('authToken');
+    // Verificar se há token salvo (usando storage correto baseado no modo)
+    const storage = getStorage();
+    const savedToken = storage.getItem('authToken');
     if (savedToken) {
       verifyToken(savedToken);
     } else {
@@ -69,14 +77,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user);
         setToken(tokenToVerify);
       } else {
-        // Token inválido, remover do localStorage
-        localStorage.removeItem('authToken');
+        // Token inválido, remover do storage
+        const storage = getStorage();
+        storage.removeItem('authToken');
         setUser(null);
         setToken(null);
       }
     } catch (error) {
       console.error('Erro ao verificar token:', error);
-      localStorage.removeItem('authToken');
+      const storage = getStorage();
+      storage.removeItem('authToken');
       setUser(null);
       setToken(null);
     } finally {
@@ -98,10 +108,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const data = await response.json();
         
         // Se for primeiro login, NÃO atualizar o estado ainda - esperar o modal ser fechado
+        const storage = getStorage();
         if (data.firstLogin && data.newPassword) {
           // Guardar token temporariamente mas não atualizar estado do usuário ainda
-          localStorage.setItem('authToken', data.token);
-          localStorage.setItem('pendingFirstLogin', 'true');
+          storage.setItem('authToken', data.token);
+          storage.setItem('pendingFirstLogin', 'true');
           
           return {
             success: true,
@@ -113,8 +124,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Login normal: atualizar estado imediatamente
         setUser(data.user);
         setToken(data.token);
-        localStorage.setItem('authToken', data.token);
-        localStorage.removeItem('pendingFirstLogin');
+        storage.setItem('authToken', data.token);
+        storage.removeItem('pendingFirstLogin');
         
         return {
           success: true,
@@ -137,18 +148,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const completeFirstLogin = async () => {
     // Após o modal ser fechado, verificar o token e atualizar o estado
-    const savedToken = localStorage.getItem('authToken');
+    const storage = getStorage();
+    const savedToken = storage.getItem('authToken');
     if (savedToken) {
       await verifyToken(savedToken);
-      localStorage.removeItem('pendingFirstLogin');
+      storage.removeItem('pendingFirstLogin');
     }
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('pendingFirstLogin');
+    const storage = getStorage();
+    storage.removeItem('authToken');
+    storage.removeItem('pendingFirstLogin');
   };
 
   const value: AuthContextType = {

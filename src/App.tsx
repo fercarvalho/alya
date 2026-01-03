@@ -87,6 +87,13 @@ const AppContent: React.FC = () => {
   const { user, token, logout, isLoading } = useAuth();
   const { getVisibleModules } = useModules();
   
+  // Detectar se está em modo demo (GitHub Pages ou produção)
+  const isDemoMode = typeof window !== 'undefined' && 
+    (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+  
+  // Função auxiliar para usar storage correto
+  const getStorage = () => isDemoMode ? sessionStorage : localStorage;
+  
   // Mapeamento de ícones para os módulos (reservado para uso futuro)
   // const iconMap: Record<string, any> = {
   //   'Home': Home,
@@ -407,14 +414,15 @@ const AppContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user])
 
-  // Carregar dados do localStorage apenas se não houver dados da API
+  // Carregar dados do storage apenas se não houver dados da API
   useEffect(() => {
-    // Só carregar do localStorage se não houver token (modo offline/desenvolvimento)
+    // Só carregar do storage se não houver token (modo offline/desenvolvimento)
     // Em produção, os dados vêm da API
     if (!token || !user) {
-      const savedTransactions = localStorage.getItem('alya-transactions')
-      const savedProducts = localStorage.getItem('alya-products')
-      const savedMetas = localStorage.getItem('alya-metas')
+      const storage = getStorage();
+      const savedTransactions = storage.getItem('alya-transactions')
+      const savedProducts = storage.getItem('alya-products')
+      const savedMetas = storage.getItem('alya-metas')
       
       if (savedTransactions) setTransactions(JSON.parse(savedTransactions))
       if (savedProducts) setProducts(JSON.parse(savedProducts))
@@ -422,22 +430,25 @@ const AppContent: React.FC = () => {
     }
   }, [token, user])
 
-  // Salvar dados no localStorage
+  // Salvar dados no storage (sessionStorage no demo, localStorage em dev)
   useEffect(() => {
+    const storage = getStorage();
     if (transactions.length > 0) {
-      localStorage.setItem('alya-transactions', JSON.stringify(transactions))
+      storage.setItem('alya-transactions', JSON.stringify(transactions))
     }
   }, [transactions])
 
   useEffect(() => {
+    const storage = getStorage();
     if (products.length > 0) {
-      localStorage.setItem('alya-products', JSON.stringify(products))
+      storage.setItem('alya-products', JSON.stringify(products))
     }
   }, [products])
 
   useEffect(() => {
+    const storage = getStorage();
     if (metas.length > 0) {
-      localStorage.setItem('alya-metas', JSON.stringify(metas))
+      storage.setItem('alya-metas', JSON.stringify(metas))
     }
   }, [metas])
 
@@ -1388,6 +1399,25 @@ const AppContent: React.FC = () => {
 
   // Render Dashboard
   const renderDashboard = () => {
+    // Banner de modo demo (apenas se estiver em modo demo)
+    const demoBanner = isDemoMode ? (
+      <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3 flex-1">
+            <h3 className="text-sm font-bold text-amber-900">Modo Demo</h3>
+            <p className="text-sm text-amber-800 mt-1">
+              Os dados são temporários e serão perdidos ao fechar o navegador. Este é um ambiente de demonstração.
+            </p>
+          </div>
+        </div>
+      </div>
+    ) : null;
+
     // Calcular totais das transações reais (movido para dentro da função)
     const { receitas, despesas, resultado } = calculateTotals()
     
@@ -1618,6 +1648,7 @@ const AppContent: React.FC = () => {
 
     return (
       <div className="space-y-8">
+        {demoBanner}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <BarChart3 className="w-8 h-8 text-blue-600" />
@@ -6015,7 +6046,8 @@ const AppContent: React.FC = () => {
                             { id: (Date.now() + 2).toString(), date: new Date().toISOString().split('T')[0], description: 'Transação Importada 2', value: 75, type: 'Despesa' as const, category: 'Compras', createdAt: new Date() }
                           ]
                           setTransactions(prev => [...prev, ...mockTransactions])
-                          localStorage.setItem('transactions', JSON.stringify([...transactions, ...mockTransactions]))
+                          const storage = getStorage();
+                          storage.setItem('transactions', JSON.stringify([...transactions, ...mockTransactions]))
                           alert(`Arquivo "${selectedFile.name}" processado localmente!\n\n${mockTransactions.length} transações adicionadas como exemplo.`)
                         } else if (importExportType === 'products') {
                           const mockProducts = [
@@ -6023,7 +6055,8 @@ const AppContent: React.FC = () => {
                             { id: (Date.now() + 2).toString(), name: 'Produto Importado 2', category: 'Importados', price: 80, cost: 40, stock: 25, sold: 8 }
                           ]
                           setProducts(prev => [...prev, ...mockProducts])
-                          localStorage.setItem('products', JSON.stringify([...products, ...mockProducts]))
+                          const storage = getStorage();
+                          storage.setItem('products', JSON.stringify([...products, ...mockProducts]))
                           alert(`Arquivo "${selectedFile.name}" processado localmente!\n\n${mockProducts.length} produtos adicionados como exemplo.`)
                         }
                       }

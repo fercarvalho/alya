@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ALYA — Demo Estática (Launcher)</title>
+  <meta name="description" content="Launcher que ativa o mock e encaminha para o app estático." />
+  <script>
+    const base = (function () {
+      const path = location.pathname.endsWith('/')
+        ? location.pathname
+        : location.pathname.replace(/[^/]+$/, '');
+      return path; // "/" ou "/Alya/"
+    })();
+
+    async function start() {
+      if ('serviceWorker' in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.register(base + 'sw.js?ts=' + Date.now(), { scope: base });
+          console.info('[ALYA MOCK] Service Worker registrado em', base + 'sw.js');
+
+          await navigator.serviceWorker.ready;
+
+          // Se ainda não estiver controlando, recarrega uma vez para ativar o SW
+          if (!navigator.serviceWorker.controller && !sessionStorage.getItem('sw_boot')) {
+            sessionStorage.setItem('sw_boot', '1');
+            location.reload();
+            return;
+          }
+        } catch (e) {
+          console.warn('[ALYA MOCK] Falha ao registrar SW:', e);
+        }
+      }
+
+      // Redireciona após o SW estar pronto
+      location.href = base + 'app/';
+    }
+
+    document.addEventListener('DOMContentLoaded', start);
+  </script>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #1f2937;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      min-height: 100dvh;
+    }
+    .box {
+      max-width: 760px;
+      padding: 24px;
+      text-align: center;
+    }
+    h1 {
+      color: #92400e;
+      margin-bottom: 16px;
+    }
+    .muted {
+      opacity: 0.75;
+      color: #4b5563;
+    }
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #f59e0b;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>ALYA — Iniciando demo…</h1>
+    <div class="spinner"></div>
+    <p class="muted">Registrando mock e redirecionando para o app estático.</p>
+  </div>
+</body>
+</html>
+
