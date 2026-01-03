@@ -10,10 +10,16 @@ interface User {
   lastLogin?: string;
 }
 
+interface LoginResponse {
+  success: boolean;
+  firstLogin?: boolean;
+  newPassword?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<LoginResponse>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -77,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<LoginResponse> => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -92,15 +98,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user);
         setToken(data.token);
         localStorage.setItem('authToken', data.token);
-        return true;
+        
+        return {
+          success: true,
+          firstLogin: data.firstLogin || false,
+          newPassword: data.newPassword || undefined
+        };
       } else {
         const errorData = await response.json();
         console.error('Erro no login:', errorData.error);
-        return false;
+        return {
+          success: false
+        };
       }
     } catch (error) {
       console.error('Erro ao fazer login:', error);
-      return false;
+      return {
+        success: false
+      };
     }
   };
 

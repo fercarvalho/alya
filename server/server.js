@@ -7,6 +7,7 @@ const XLSX = require('xlsx');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Database = require('./database');
@@ -297,6 +298,14 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+// Função auxiliar para gerar senhas aleatórias seguras
+const generateRandomPassword = () => {
+  return crypto.randomBytes(16).toString('base64').slice(0, 16).replace(/[+/=]/g, (char) => {
+    const replacements = { '+': 'A', '/': 'B', '=': 'C' };
+    return replacements[char] || char;
+  });
+};
+
 // Rotas de Autenticação
 app.post('/api/auth/login', (req, res) => {
   try {
@@ -311,14 +320,40 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    const isValidPassword = bcrypt.compareSync(password, user.password);
+    // Verificar se é o primeiro login (lastLogin é null ou não existe)
+    const isFirstLogin = !user.lastLogin;
+    
+    let isValidPassword = false;
+    let newPassword = null;
+    
+    if (isFirstLogin) {
+      // No primeiro login, aceitar qualquer senha
+      isValidPassword = true;
+      
+      // Gerar nova senha aleatória
+      newPassword = generateRandomPassword();
+      const hashedPassword = bcrypt.hashSync(newPassword, 10);
+      
+      // Atualizar usuário com nova senha e lastLogin
+      const now = new Date().toISOString();
+      db.updateUser(user.id, { 
+        password: hashedPassword,
+        lastLogin: now 
+      });
+    } else {
+      // Login normal: verificar senha
+      isValidPassword = bcrypt.compareSync(password, user.password);
+    }
+
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    // Atualizar lastLogin
-    const now = new Date().toISOString();
-    db.updateUser(user.id, { lastLogin: now });
+    // Se não for primeiro login, atualizar lastLogin
+    if (!isFirstLogin) {
+      const now = new Date().toISOString();
+      db.updateUser(user.id, { lastLogin: now });
+    }
 
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
@@ -333,7 +368,7 @@ app.post('/api/auth/login', (req, res) => {
     const userData = db.getUserById(user.id);
     const { password: _, ...safeUser } = userData;
 
-    res.json({
+    const response = {
       success: true,
       token,
       user: {
@@ -344,7 +379,15 @@ app.post('/api/auth/login', (req, res) => {
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
         lastLogin: safeUser.lastLogin
       }
-    });
+    };
+
+    // Se for primeiro login, incluir a nova senha gerada
+    if (isFirstLogin && newPassword) {
+      response.firstLogin = true;
+      response.newPassword = newPassword;
+    }
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }

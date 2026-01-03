@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 class Database {
   constructor() {
@@ -33,41 +34,56 @@ class Database {
     }
     
     if (!fs.existsSync(this.usersFile)) {
-      // Criar usuários padrão
+      // Criar usuários padrão sem senha definida
+      // A senha será gerada automaticamente no primeiro login
+      // Qualquer senha será aceita no primeiro acesso
       const bcrypt = require('bcryptjs');
+      
+      // Criar hash especial que aceita qualquer senha no primeiro login
+      // Usamos um hash conhecido que será verificado no backend
+      const placeholderPassword = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
+      
       const defaultUsers = [
         {
           id: this.generateId(),
           username: 'admin',
-          password: bcrypt.hashSync('123456', 10),
+          password: placeholderPassword,
           role: 'admin',
           modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'admin'],
           isActive: true,
+          lastLogin: null, // null indica que nunca fez login
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         },
         {
           id: this.generateId(),
           username: 'user',
-          password: bcrypt.hashSync('135246', 10),
+          password: placeholderPassword,
           role: 'user',
           modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas'],
           isActive: true,
+          lastLogin: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         },
         {
           id: this.generateId(),
           username: 'guest',
-          password: bcrypt.hashSync('654321', 10),
+          password: placeholderPassword,
           role: 'guest',
           modules: ['dashboard', 'reports'],
           isActive: true,
+          lastLogin: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
       ];
+      
       fs.writeFileSync(this.usersFile, JSON.stringify(defaultUsers, null, 2));
+      
+      console.log('\n✅ Usuários padrão criados');
+      console.log('⚠️  No primeiro login, qualquer senha será aceita');
+      console.log('⚠️  Uma senha aleatória será gerada e exibida após o primeiro acesso\n');
     }
     
     if (!fs.existsSync(this.activityLogsFile)) {

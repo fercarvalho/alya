@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, Copy, Check } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -8,6 +8,9 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordCopied, setPasswordCopied] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -15,13 +18,30 @@ const Login: React.FC = () => {
     setIsLoading(true);
     setError('');
 
-    const success = await login(username, password);
+    const result = await login(username, password);
     
-    if (!success) {
+    if (!result.success) {
       setError('Usuário ou senha incorretos');
+      setIsLoading(false);
+    } else {
+      // Se for primeiro login, mostrar modal com nova senha
+      if (result.firstLogin && result.newPassword) {
+        setNewPassword(result.newPassword);
+        setShowPasswordModal(true);
+      }
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
+  };
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(newPassword);
+    setPasswordCopied(true);
+    setTimeout(() => setPasswordCopied(false), 2000);
+  };
+
+  const handleCloseModal = () => {
+    setShowPasswordModal(false);
+    setPasswordCopied(false);
   };
 
   return (
@@ -101,6 +121,64 @@ const Login: React.FC = () => {
         </form>
 
       </div>
+
+      {/* Modal de Nova Senha */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-in fade-in zoom-in duration-200">
+            <div className="text-center mb-6">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full flex items-center justify-center mb-4">
+                <Lock className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Primeiro Acesso</h2>
+              <p className="text-gray-600">Uma nova senha foi gerada para você</p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Sua Nova Senha
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={newPassword}
+                  readOnly
+                  className="w-full px-4 py-3 border-2 border-amber-500 rounded-lg bg-amber-50 font-mono text-lg font-bold text-gray-900 pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyPassword}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  title="Copiar senha"
+                >
+                  {passwordCopied ? (
+                    <Check className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <Copy className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
+              </div>
+              {passwordCopied && (
+                <p className="text-green-600 text-sm mt-2">Senha copiada!</p>
+              )}
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+              <p className="text-amber-800 text-sm">
+                <strong>⚠️ Importante:</strong> Anote esta senha em local seguro. 
+                Você precisará dela para fazer login novamente.
+              </p>
+            </div>
+
+            <button
+              onClick={handleCloseModal}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-amber-600 hover:to-amber-700 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-200"
+            >
+              Entendi, continuar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
