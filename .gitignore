@@ -43,6 +43,10 @@ Thumbs.db
 /server/uploads/*
 !/server/uploads/.gitkeep
 
+# Database files (dados locais não devem ser commitados)
+/server/database/users.json
+/server/database/activity-logs.json
+
 # Documentation files (keep only README.md)
 *.md
 !README.md
