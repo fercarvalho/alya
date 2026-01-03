@@ -5,8 +5,8 @@
     "password": "$2b$10$I.yPL9gwqT9MR8.5laYhsOJYtEFZNJKwgY1FwwBUPQ5U1uiAQ6Xdm",
     "role": "admin",
     "createdAt": "2026-01-02T16:34:37.411Z",
-    "updatedAt": "2026-01-02T20:45:26.773Z",
-    "lastLogin": "2026-01-02T20:45:26.772Z"
+    "updatedAt": "2026-01-03T06:05:57.508Z",
+    "lastLogin": "2026-01-03T06:05:45.962Z"
   },
   {
     "id": "mjx3gq1vy2mhc8fewc",
@@ -25,23 +25,21 @@
     "updatedAt": "2026-01-02T16:34:37.555Z"
   },
   {
-    "id": "mjx4us6r8xzcoiot7bl",
+    "id": "mjxwe9g1liorfbguyaa",
     "username": "julia",
-    "password": "$2b$10$biSGCSERdTNjgqBiCYoCT.IrAUSnQz6qDGAhbgAbPet47gHeGlrvu",
+    "password": "$2b$10$xyLrqRU80hNdFauju9a5Q.vBKF6aCmeAYTFIp1ZYG4fH2t/IAVM8W",
     "role": "user",
-    "modules": [],
+    "modules": [
+      "dashboard",
+      "transactions",
+      "products",
+      "clients",
+      "reports",
+      "metas"
+    ],
     "isActive": true,
-    "createdAt": "2026-01-02T17:13:32.979Z",
-    "updatedAt": "2026-01-02T17:13:32.979Z"
-  },
-  {
-    "id": "mjx4v6xjlrssy4be2e",
-    "username": "andre",
-    "password": "$2b$10$J3g9hse/wOt.sptiPXeY6eP.uzo8DGwxb0uPtHGiV9mStg04w6axW",
-    "role": "user",
-    "modules": [],
-    "isActive": true,
-    "createdAt": "2026-01-02T17:13:52.087Z",
-    "updatedAt": "2026-01-02T17:13:52.087Z"
+    "lastLogin": "2026-01-03T06:04:39.581Z",
+    "createdAt": "2026-01-03T06:04:31.441Z",
+    "updatedAt": "2026-01-03T06:04:39.582Z"
   }
 ]
