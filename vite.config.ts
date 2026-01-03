@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Se BASE_PATH estiver definido, usar ele (para build de demo)
+// Caso contrário, usar './' (para desenvolvimento)
+const basePath = process.env.BASE_PATH || './';
+
 export default defineConfig({
-  base: './',
+  base: basePath,
   plugins: [react()],
   server: {
     port: 8000,

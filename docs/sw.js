@@ -422,16 +422,8 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const path = url.pathname;
 
-  // Corrigir caminhos de assets para /app/*
-  if (path.startsWith('/assets/') || path === '/favicon.ico' || 
-      path.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)$/)) {
-    const newPath = '/app' + path;
-    const newUrl = new URL(newPath, url.origin);
-    event.respondWith(fetch(newUrl).catch(() => event.request));
-    return;
-  }
-
-  // Interceptar requisições de API
+  // Interceptar APENAS requisições de API
+  // Todas as outras requisições (assets, HTML, etc) passam direto sem interceptação
   if (path.startsWith('/api/')) {
     event.respondWith((async () => {
       try {

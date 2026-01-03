@@ -19,9 +19,9 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# Fazer build do frontend
-echo -e "\n${YELLOW}🔨 Fazendo build do frontend...${NC}"
-npm run build
+# Fazer build do frontend com base path /app/ para GitHub Pages
+echo -e "\n${YELLOW}🔨 Fazendo build do frontend (base: /app/)...${NC}"
+BASE_PATH=/app/ npm run build
 
 # Verificar se o build foi bem-sucedido
 if [ ! -d "dist" ]; then
