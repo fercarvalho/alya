@@ -29,15 +29,29 @@ const UserManagement: React.FC = () => {
   
   const [newUser, setNewUser] = useState({
     username: '',
-    password: '',
     role: 'user',
     modules: [] as string[],
     isActive: true
   });
 
+  // Função para obter módulos padrão por role
+  const getDefaultModulesForRole = (role: string): string[] => {
+    switch (role) {
+      case 'admin':
+        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'admin'];
+      case 'user':
+        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas'];
+      case 'guest':
+        return ['dashboard', 'metas', 'reports'];
+      default:
+        return [];
+    }
+  };
+
   useEffect(() => {
     loadUsers();
   }, []);
+
 
   const loadUsers = async () => {
     try {
@@ -72,11 +86,11 @@ const UserManagement: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         setShowUserModal(false);
+        const defaultModules = getDefaultModulesForRole('user');
         setNewUser({
           username: '',
-          password: '',
           role: 'user',
-          modules: [],
+          modules: defaultModules,
           isActive: true
         });
         loadUsers();
@@ -165,7 +179,16 @@ const UserManagement: React.FC = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-amber-900">Gerenciar Usuários</h2>
         <button
-          onClick={() => setShowUserModal(true)}
+          onClick={() => {
+            const defaultModules = getDefaultModulesForRole('user');
+            setNewUser({
+              username: '',
+              role: 'user',
+              modules: defaultModules,
+              isActive: true
+            });
+            setShowUserModal(true);
+          }}
           className="flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
         >
           <UserPlus className="h-5 w-5 mr-2" />
@@ -327,26 +350,45 @@ const UserManagement: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-                <input
-                  type="password"
-                  placeholder="Senha (mínimo 6 caracteres)"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Função</label>
                 <select
                   value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  onChange={(e) => {
+                    const newRole = e.target.value;
+                    const defaultModules = getDefaultModulesForRole(newRole);
+                    setNewUser({ 
+                      ...newUser, 
+                      role: newRole,
+                      modules: defaultModules
+                    });
+                  }}
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="admin">Admin</option>
                   <option value="user">Usuário</option>
                   <option value="guest">Convidado</option>
                 </select>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800 mb-2">
+                  <strong>ℹ️ Informação:</strong> A senha será gerada automaticamente no primeiro acesso do usuário e exibida no modal de login.
+                </p>
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-amber-900 mb-1">Módulos pré-selecionados para {newUser.role === 'admin' ? 'Admin' : newUser.role === 'user' ? 'Usuário' : 'Convidado'}:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {newUser.modules.map((moduleKey) => {
+                      const module = modules.find(m => m.key === moduleKey);
+                      return module ? (
+                        <span
+                          key={moduleKey}
+                          className="px-2 py-1 text-xs bg-amber-200 text-amber-900 rounded"
+                        >
+                          {module.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
               </div>
               <div className="flex justify-end space-x-2 pt-4">
                 <button

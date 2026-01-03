@@ -306,6 +306,20 @@ const generateRandomPassword = () => {
   });
 };
 
+// Função auxiliar para obter módulos padrão por role
+const getDefaultModulesForRole = (role) => {
+  switch (role) {
+    case 'admin':
+      return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'admin'];
+    case 'user':
+      return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas'];
+    case 'guest':
+      return ['dashboard', 'metas', 'reports'];
+    default:
+      return [];
+  }
+};
+
 // Rotas de Autenticação
 app.post('/api/auth/login', (req, res) => {
   try {
@@ -780,10 +794,10 @@ app.get('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
 
 app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const { username, password, role, modules, isActive } = req.body;
+    const { username, role, modules, isActive } = req.body;
     
-    if (!username || !password) {
-      return res.status(400).json({ success: false, error: 'Username e senha são obrigatórios' });
+    if (!username) {
+      return res.status(400).json({ success: false, error: 'Username é obrigatório' });
     }
     
     // Verificar se usuário já existe
@@ -791,18 +805,22 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
       return res.status(400).json({ success: false, error: 'Usuário já existe' });
     }
     
-    // Validar senha forte (mínimo 6 caracteres)
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, error: 'Senha deve ter no mínimo 6 caracteres' });
-    }
+    // Criar hash placeholder que aceita qualquer senha no primeiro login
+    // (igual aos usuários padrão)
+    const placeholderPassword = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
     
-    const hashedPassword = bcrypt.hashSync(password, 10);
+    // Se módulos não foram fornecidos, usar módulos padrão da role
+    const userRole = role || 'user';
+    const defaultModules = getDefaultModulesForRole(userRole);
+    const userModules = modules && modules.length > 0 ? modules : defaultModules;
+    
     const newUser = {
       username,
-      password: hashedPassword,
-      role: role || 'user',
-      modules: modules || [],
-      isActive: isActive !== undefined ? isActive : true
+      password: placeholderPassword,
+      role: userRole,
+      modules: userModules,
+      isActive: isActive !== undefined ? isActive : true,
+      lastLogin: null // null indica que nunca fez login
     };
     
     const user = db.saveUser(newUser);

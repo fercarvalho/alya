@@ -71,7 +71,7 @@ class Database {
           username: 'guest',
           password: placeholderPassword,
           role: 'guest',
-          modules: ['dashboard', 'reports'],
+          modules: ['dashboard', 'metas', 'reports'],
           isActive: true,
           lastLogin: null,
           createdAt: new Date().toISOString(),
