@@ -22,6 +22,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<LoginResponse>;
   logout: () => void;
   isLoading: boolean;
+  completeFirstLogin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -95,14 +96,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Se for primeiro login, NÃO atualizar o estado ainda - esperar o modal ser fechado
+        if (data.firstLogin && data.newPassword) {
+          // Guardar token temporariamente mas não atualizar estado do usuário ainda
+          localStorage.setItem('authToken', data.token);
+          localStorage.setItem('pendingFirstLogin', 'true');
+          
+          return {
+            success: true,
+            firstLogin: true,
+            newPassword: data.newPassword
+          };
+        }
+        
+        // Login normal: atualizar estado imediatamente
         setUser(data.user);
         setToken(data.token);
         localStorage.setItem('authToken', data.token);
+        localStorage.removeItem('pendingFirstLogin');
         
         return {
           success: true,
-          firstLogin: data.firstLogin || false,
-          newPassword: data.newPassword || undefined
+          firstLogin: false
         };
       } else {
         const errorData = await response.json();
@@ -119,10 +135,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const completeFirstLogin = async () => {
+    // Após o modal ser fechado, verificar o token e atualizar o estado
+    const savedToken = localStorage.getItem('authToken');
+    if (savedToken) {
+      await verifyToken(savedToken);
+      localStorage.removeItem('pendingFirstLogin');
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('authToken');
+    localStorage.removeItem('pendingFirstLogin');
   };
 
   const value: AuthContextType = {
@@ -130,7 +156,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     logout,
-    isLoading
+    isLoading,
+    completeFirstLogin
   };
 
   return (

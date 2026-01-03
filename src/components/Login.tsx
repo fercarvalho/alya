@@ -11,7 +11,7 @@ const Login: React.FC = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordCopied, setPasswordCopied] = useState(false);
-  const { login } = useAuth();
+  const { login, completeFirstLogin } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,11 +24,15 @@ const Login: React.FC = () => {
       setError('Usuário ou senha incorretos');
       setIsLoading(false);
     } else {
-      // Se for primeiro login, mostrar modal com nova senha
+      // Se for primeiro login, mostrar modal com nova senha ANTES de redirecionar
       if (result.firstLogin && result.newPassword) {
         setNewPassword(result.newPassword);
         setShowPasswordModal(true);
+        setIsLoading(false);
+        // Não redirecionar ainda - o modal será fechado pelo usuário
+        return;
       }
+      // Se não for primeiro login, o redirecionamento acontece automaticamente
       setIsLoading(false);
     }
   };
@@ -39,9 +43,11 @@ const Login: React.FC = () => {
     setTimeout(() => setPasswordCopied(false), 2000);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = async () => {
     setShowPasswordModal(false);
     setPasswordCopied(false);
+    // Após fechar o modal, completar o primeiro login e atualizar o estado
+    await completeFirstLogin();
   };
 
   return (

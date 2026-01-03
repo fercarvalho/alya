@@ -393,6 +393,33 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
+// Endpoint de emergência para resetar primeiro login (apenas para admin)
+// ⚠️ ATENÇÃO: Este endpoint deve ser removido ou protegido em produção
+app.post('/api/auth/reset-first-login', (req, res) => {
+  try {
+    const { username } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ error: 'Username é obrigatório' });
+    }
+
+    const user = db.getUserByUsername(username);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Resetar lastLogin para null (permitir primeiro login novamente)
+    db.updateUser(user.id, { lastLogin: null });
+
+    res.json({
+      success: true,
+      message: `Primeiro login resetado para o usuário ${username}. Agora você pode fazer login com qualquer senha novamente.`
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 app.post('/api/auth/verify', authenticateToken, (req, res) => {
   try {
     // Buscar dados completos do usuário
