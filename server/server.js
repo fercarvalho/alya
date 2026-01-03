@@ -1,3 +1,6 @@
+// Carregar variáveis de ambiente
+require('dotenv').config();
+
 const express = require('express');
 const multer = require('multer');
 const XLSX = require('xlsx');
@@ -11,7 +14,15 @@ const Database = require('./database');
 const app = express();
 const port = process.env.PORT || 8001;
 const db = new Database();
-const JWT_SECRET = 'alya_secret_key_2024';
+
+// Validar JWT_SECRET
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('❌ ERRO CRÍTICO: JWT_SECRET não está definido nas variáveis de ambiente!');
+  console.error('   Configure JWT_SECRET no arquivo .env ou nas variáveis de ambiente do sistema.');
+  console.error('   Para gerar uma chave segura, execute: openssl rand -base64 32');
+  process.exit(1);
+}
 
 // Middleware
 app.use(cors({

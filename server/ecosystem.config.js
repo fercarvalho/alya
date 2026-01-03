@@ -7,7 +7,8 @@ module.exports = {
     exec_mode: 'fork',
     env: {
       NODE_ENV: 'production',
-      PORT: 8001
+      PORT: 8001,
+      JWT_SECRET: process.env.JWT_SECRET
     },
     error_file: './logs/pm2-error.log',
     out_file: './logs/pm2-out.log',
