@@ -407,9 +407,8 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
-// Endpoint de emergência para resetar primeiro login (apenas para admin)
-// ⚠️ ATENÇÃO: Este endpoint deve ser removido ou protegido em produção
-app.post('/api/auth/reset-first-login', (req, res) => {
+// Endpoint para resetar primeiro login de um usuário específico (apenas para admin)
+app.post('/api/auth/reset-first-login', authenticateToken, requireAdmin, (req, res) => {
   try {
     const { username } = req.body;
     
@@ -425,9 +424,37 @@ app.post('/api/auth/reset-first-login', (req, res) => {
     // Resetar lastLogin para null (permitir primeiro login novamente)
     db.updateUser(user.id, { lastLogin: null });
 
+    // Logar ação
+    logActivity(req.user.id, req.user.username, 'reset_password', 'admin', 'user', user.id);
+
     res.json({
       success: true,
       message: `Primeiro login resetado para o usuário ${username}. Agora você pode fazer login com qualquer senha novamente.`
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Endpoint para resetar senhas de TODOS os usuários (apenas admin)
+app.post('/api/auth/reset-all-passwords', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const allUsers = db.getAllUsers();
+    let resetCount = 0;
+
+    // Resetar lastLogin para null em todos os usuários
+    allUsers.forEach(user => {
+      db.updateUser(user.id, { lastLogin: null });
+      resetCount++;
+    });
+
+    // Logar ação
+    logActivity(req.user.id, req.user.username, 'reset_all_passwords', 'admin', 'system', null);
+
+    res.json({
+      success: true,
+      message: `Senhas resetadas para ${resetCount} usuário(s). Todos os usuários precisarão fazer primeiro login novamente.`,
+      resetCount
     });
   } catch (error) {
     res.status(500).json({ error: 'Erro interno do servidor' });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save
+  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -22,6 +22,10 @@ const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showResetAllModal, setShowResetAllModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
+  const [isResettingIndividual, setIsResettingIndividual] = useState(false);
   // const [editingUser, setEditingUser] = useState<User | null>(null); // Reservado para uso futuro
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
@@ -160,6 +164,61 @@ const UserManagement: React.FC = () => {
     handleUpdateUser(userId, { modules: newModules });
   };
 
+  const handleResetAllPasswords = async () => {
+    setIsResetting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-all-passwords`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert(`✅ ${result.message}\n\n${result.resetCount} usuário(s) precisarão fazer primeiro login novamente.`);
+        setShowResetAllModal(false);
+        loadUsers(); // Recarregar lista de usuários
+      } else {
+        alert(result.error || 'Erro ao resetar senhas');
+      }
+    } catch (error) {
+      console.error('Erro ao resetar senhas:', error);
+      alert('Erro ao resetar senhas');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleResetIndividualPassword = async () => {
+    if (!userToReset) return;
+    
+    setIsResettingIndividual(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-first-login`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username: userToReset.username })
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert(`✅ ${result.message}`);
+        setUserToReset(null);
+        loadUsers(); // Recarregar lista de usuários
+      } else {
+        alert(result.error || 'Erro ao resetar senha');
+      }
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      alert('Erro ao resetar senha');
+    } finally {
+      setIsResettingIndividual(false);
+    }
+  };
+
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'all' || u.role === filterRole;
@@ -178,22 +237,32 @@ const UserManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-amber-900">Gerenciar Usuários</h2>
-        <button
-          onClick={() => {
-            const defaultModules = getDefaultModulesForRole('user');
-            setNewUser({
-              username: '',
-              role: 'user',
-              modules: defaultModules,
-              isActive: true
-            });
-            setShowUserModal(true);
-          }}
-          className="flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-        >
-          <UserPlus className="h-5 w-5 mr-2" />
-          Novo Usuário
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowResetAllModal(true)}
+            className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            title="Resetar senhas de todos os usuários"
+          >
+            <RefreshCw className="h-5 w-5 mr-2" />
+            Resetar Todas as Senhas
+          </button>
+          <button
+            onClick={() => {
+              const defaultModules = getDefaultModulesForRole('user');
+              setNewUser({
+                username: '',
+                role: 'user',
+                modules: defaultModules,
+                isActive: true
+              });
+              setShowUserModal(true);
+            }}
+            className="flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+          >
+            <UserPlus className="h-5 w-5 mr-2" />
+            Novo Usuário
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -297,6 +366,13 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => setUserToReset(u)}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Resetar Senha"
+                      >
+                        <RefreshCw className="h-5 w-5" />
+                      </button>
                       <button
                         onClick={() => handleUpdateUser(u.id, { isActive: !(u.isActive !== false) })}
                         className="text-amber-600 hover:text-amber-800"
@@ -405,6 +481,92 @@ const UserManagement: React.FC = () => {
                   Criar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Resetar Todas as Senhas */}
+      {showResetAllModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
+              <h3 className="text-xl font-bold text-gray-900">Confirmar Reset de Senhas</h3>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Tem certeza que deseja resetar as senhas de <strong>todos os usuários</strong>?
+              <br /><br />
+              Todos os usuários precisarão fazer primeiro login novamente e receberão uma nova senha gerada automaticamente.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowResetAllModal(false)}
+                disabled={isResetting}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleResetAllPasswords}
+                disabled={isResetting}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 flex items-center"
+              >
+                {isResetting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Resetando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Confirmar Reset
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Resetar Senha Individual */}
+      {userToReset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-blue-500 mr-3" />
+              <h3 className="text-xl font-bold text-gray-900">Confirmar Reset de Senha</h3>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Tem certeza que deseja resetar a senha do usuário <strong>{userToReset.username}</strong>?
+              <br /><br />
+              O usuário precisará fazer primeiro login novamente e receberá uma nova senha gerada automaticamente.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setUserToReset(null)}
+                disabled={isResettingIndividual}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleResetIndividualPassword}
+                disabled={isResettingIndividual}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center"
+              >
+                {isResettingIndividual ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Resetando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Confirmar Reset
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
