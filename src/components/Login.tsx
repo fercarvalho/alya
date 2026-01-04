@@ -13,6 +13,10 @@ const Login: React.FC = () => {
   const [passwordCopied, setPasswordCopied] = useState(false);
   const { login, completeFirstLogin } = useAuth();
 
+  // Detectar se está em modo demo (GitHub Pages ou produção)
+  const isDemoMode = typeof window !== 'undefined' && 
+    (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,23 +66,25 @@ const Login: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Banner de Credenciais Demo */}
-          <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 mb-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">!</span>
+          {/* Banner de Credenciais Demo - Apenas no modo demo */}
+          {isDemoMode && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">!</span>
+                  </div>
                 </div>
-              </div>
-              <div className="ml-3 flex-1">
-                <h3 className="text-sm font-bold text-amber-900 mb-2">Modo Demo</h3>
-                <div className="text-xs text-amber-800 space-y-1">
-                  <p><strong>Login:</strong> <code className="bg-amber-100 px-2 py-1 rounded">demo</code></p>
-                  <p><strong>Senha:</strong> <code className="bg-amber-100 px-2 py-1 rounded">demo123</code></p>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-sm font-bold text-amber-900 mb-2">Modo Demo</h3>
+                  <div className="text-xs text-amber-800 space-y-1">
+                    <p><strong>Login:</strong> <code className="bg-amber-100 px-2 py-1 rounded">demo</code></p>
+                    <p><strong>Senha:</strong> <code className="bg-amber-100 px-2 py-1 rounded">demo123</code></p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">

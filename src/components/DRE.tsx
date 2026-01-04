@@ -406,19 +406,19 @@ const DRE: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">DRE - Demonstrativo de Resultado do Exercício</h1>
           <p className="text-gray-600">Análise de receitas e despesas do período</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             onClick={exportarPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-5 w-5" />
             Exportar PDF
           </button>
           <button
             onClick={exportarExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-5 w-5" />
             Exportar Excel
           </button>
         </div>
