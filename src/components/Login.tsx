@@ -13,9 +13,11 @@ const Login: React.FC = () => {
   const [passwordCopied, setPasswordCopied] = useState(false);
   const { login, completeFirstLogin } = useAuth();
 
-  // Detectar se está em modo demo (GitHub Pages ou produção)
+  // Detectar se está em modo demo (apenas no domínio específico do demo)
+  // Verifica se o hostname é o domínio do demo ou contém github.io
   const isDemoMode = typeof window !== 'undefined' && 
-    (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    (window.location.hostname === 'alya.fercarvalho.com' || 
+     window.location.hostname.includes('github.io'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
