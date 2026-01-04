@@ -22,7 +22,10 @@ import {
   Users,
   X,
   LogOut,
-  Shield
+  Shield,
+  Phone,
+  Mail,
+  Map
 } from 'lucide-react'
 import Clients from './components/Clients'
 import DRE from './components/DRE'
@@ -6423,6 +6426,71 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <footer className="bg-gradient-to-r from-amber-600 to-orange-600 text-white py-8 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center mb-3">
+                <img 
+                  src="/logo_rodape.png" 
+                  alt="Viver de PJ Logo" 
+                  className="h-12 w-12 mr-2 object-contain"
+                />
+                <div>
+                  <span className="text-base font-bold">Viver de PJ</span>
+                  <p className="text-amber-100 text-sm">Ecosistema de Empreendedorismo</p>
+                </div>
+              </div>
+              <p className="text-amber-100 text-sm">
+                Sistema de Gestão Financeira por Viver de PJ. A Viver de PJ é um ecosistema completo de gestão e educação para Empreeendedores.
+                <br /><br />
+                Autor: Fernando Carvalho Gomes dos Santos 39063242816.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Contato</h3>
+              <div className="space-y-2 text-amber-100">
+                <div className="flex items-center">
+                  <Phone className="h-4 w-4 mr-2" />
+                  <span>(11) 91611-1900</span>
+                </div>
+                <div className="flex items-center">
+                  <Mail className="h-4 w-4 mr-2" />
+                  <span>vem@viverdepj.com.br</span>
+                </div>
+                <div className="flex items-center">
+                  <Map className="h-4 w-4 mr-2" />
+                  <span>São Paulo, SP</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Serviços</h3>
+              <div className="space-y-2 text-amber-100">
+                <p>Consultoria Estratégica de Negócios</p>
+                <p>Consultoria em Negócios</p>
+                <p>Sistema de Gestão</p>
+                <p>Sistema Financeiro</p>
+                <p>CRM</p>
+                <p>IA Financeira</p>
+                <p>IA de Atendimento</p>
+                <p>IA para Negócios</p>
+                <p>Benefícios Corporativos</p>
+                <p>Contabilidade para Empresas</p>
+                <p>BPO Financeiro</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-amber-500 mt-8 pt-8 text-center text-amber-100">
+            <p>&copy; 2026 Viver de PJ. TODOS OS DIREITOS RESERVADOS</p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
