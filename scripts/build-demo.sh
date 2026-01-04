@@ -52,6 +52,17 @@ if [ ! -f "docs/index.html" ]; then
     echo -e "${YELLOW}⚠️  Arquivo docs/index.html não encontrado${NC}"
 fi
 
+# Verificar se há dados de exemplo no Service Worker (transações, produtos, etc)
+# Ignorar 'demo-1' que é o ID do usuário demo (correto)
+echo -e "\n${YELLOW}🔍 Verificando dados de demonstração...${NC}"
+if grep -q "demo_tx_\|description: 'Venda\|description: 'Serviço\|description: 'Aluguel\|description: 'Compra\|description: 'Salários" docs/sw.js 2>/dev/null; then
+    echo -e "${RED}❌ ATENÇÃO: Dados de exemplo encontrados no Service Worker!${NC}"
+    echo -e "${RED}   O modo demo deve começar limpo (sem dados pré-carregados)${NC}"
+    echo -e "${YELLOW}   Verifique docs/sw.js e remova qualquer dado de exemplo${NC}"
+else
+    echo -e "${GREEN}✓ Service Worker está limpo (sem dados de exemplo)${NC}"
+fi
+
 echo -e "\n${GREEN}✅ Build do modo demo concluído com sucesso!${NC}"
 echo -e "\n${YELLOW}Estrutura criada:${NC}"
 echo "  docs/"

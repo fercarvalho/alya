@@ -1,8 +1,8 @@
 // Service Worker para modo demo do Alya
 // Intercepta requisições /api/* e retorna dados mock
-// Versão: 1.0.0 - Atualize este número quando fizer mudanças significativas
+// Versão: 1.0.2 - Modo demo agora começa limpo (sem dados pré-carregados)
 
-const SW_VERSION = '1.0.1';
+const SW_VERSION = '1.0.2';
 const DEMO_TOKEN = 'demo-token-alya-2024';
 const DEMO_USER = {
   id: 'demo-1',
@@ -13,130 +13,12 @@ const DEMO_USER = {
 };
 
 // Banco de dados mock em memória
+// IMPORTANTE: Todos os arrays começam vazios - o usuário cria seus próprios dados
 const MOCK_DB = {
-  transactions: [
-    // Transações do mês atual (para demonstração)
-    {
-      id: 'demo_tx_1',
-      date: new Date().toISOString().split('T')[0], // Data de hoje
-      description: 'Venda de Produto A',
-      value: 1500.00,
-      type: 'Receita',
-      category: 'Varejo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_2',
-      date: new Date().toISOString().split('T')[0],
-      description: 'Venda de Produto B',
-      value: 800.00,
-      type: 'Receita',
-      category: 'Varejo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_3',
-      date: new Date().toISOString().split('T')[0],
-      description: 'Serviço de Consultoria',
-      value: 2500.00,
-      type: 'Receita',
-      category: 'Serviços',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_4',
-      date: new Date().toISOString().split('T')[0],
-      description: 'Aluguel do Escritório',
-      value: 2000.00,
-      type: 'Despesa',
-      category: 'Fixo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_5',
-      date: new Date().toISOString().split('T')[0],
-      description: 'Compra de Material',
-      value: 450.00,
-      type: 'Despesa',
-      category: 'Variavel',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_6',
-      date: new Date().toISOString().split('T')[0],
-      description: 'Salários',
-      value: 5000.00,
-      type: 'Despesa',
-      category: 'Fixo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    // Transações do mês anterior (para comparação)
-    {
-      id: 'demo_tx_7',
-      date: (() => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
-      })(),
-      description: 'Venda de Produto A',
-      value: 1200.00,
-      type: 'Receita',
-      category: 'Varejo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_8',
-      date: (() => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
-      })(),
-      description: 'Serviço de Consultoria',
-      value: 2000.00,
-      type: 'Receita',
-      category: 'Serviços',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_9',
-      date: (() => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
-      })(),
-      description: 'Aluguel do Escritório',
-      value: 2000.00,
-      type: 'Despesa',
-      category: 'Fixo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'demo_tx_10',
-      date: (() => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
-      })(),
-      description: 'Salários',
-      value: 5000.00,
-      type: 'Despesa',
-      category: 'Fixo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ],
-  products: [],
-  clients: [],
-  metas: [],
+  transactions: [], // Vazio - usuário cria suas próprias transações
+  products: [],     // Vazio - usuário cria seus próprios produtos
+  clients: [],      // Vazio - usuário cria seus próprios clientes
+  metas: [],        // Vazio - usuário cria suas próprias metas
   modules: [
     {
       id: 'mjx45q91lkhoelmuru',
