@@ -42,11 +42,11 @@ const UserManagement: React.FC = () => {
   const getDefaultModulesForRole = (role: string): string[] => {
     switch (role) {
       case 'admin':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'admin'];
+        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
       case 'user':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas'];
+        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
       case 'guest':
-        return ['dashboard', 'metas', 'reports'];
+        return ['dashboard', 'metas', 'reports', 'dre'];
       default:
         return [];
     }
