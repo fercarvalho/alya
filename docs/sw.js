@@ -273,7 +273,12 @@ function unauthorized(message = 'Unauthorized') {
 // Handler para autenticação
 async function handleAuth(req) {
   const url = new URL(req.url);
-  const path = url.pathname;
+  let path = url.pathname;
+  
+  // Normalizar path removendo /app/ se presente
+  if (path.startsWith('/app/api/')) {
+    path = path.replace('/app', '');
+  }
 
   if (path === '/api/auth/login' && req.method === 'POST') {
     try {
@@ -556,50 +561,53 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  const path = url.pathname;
+  let path = url.pathname;
 
-  // Interceptar APENAS requisições de API
+  // Interceptar APENAS requisições de API (incluindo /app/api/)
   // Todas as outras requisições (assets, HTML, etc) passam direto sem interceptação
-  if (path.startsWith('/api/')) {
-    console.log('[SW] Interceptando requisição API:', path, event.request.method);
+  if (path.startsWith('/api/') || path.startsWith('/app/api/')) {
+    // Normalizar path para /api/ removendo /app/ se presente
+    const normalizedPath = path.startsWith('/app/api/') ? path.replace('/app', '') : path;
+    console.log('[SW] Interceptando requisição API:', normalizedPath, event.request.method, 'URL original:', url.pathname);
+    
     event.respondWith((async () => {
       try {
-        // Autenticação
-        if (path.startsWith('/api/auth/')) {
+        // Autenticação - usar requisição original (o body já está disponível)
+        if (normalizedPath.startsWith('/api/auth/')) {
           console.log('[SW] Roteando para handleAuth');
           return await handleAuth(event.request);
         }
 
         // Módulos
-        if (path.startsWith('/api/modules')) {
+        if (normalizedPath.startsWith('/api/modules')) {
           return await handleModules(event.request);
         }
 
         // Admin
-        if (path.startsWith('/api/admin/')) {
+        if (normalizedPath.startsWith('/api/admin/')) {
           return await handleAdmin(event.request);
         }
 
         // Import/Export
-        if (path === '/api/import' || path === '/api/export') {
+        if (normalizedPath === '/api/import' || normalizedPath === '/api/export') {
           return await handleImportExport(event.request);
         }
 
         // Modelos
-        if (path.startsWith('/api/modelo/')) {
+        if (normalizedPath.startsWith('/api/modelo/')) {
           return await handleModelo(event.request);
         }
 
         // Recursos CRUD
-        if (path.startsWith('/api/transactions')) {
+        if (normalizedPath.startsWith('/api/transactions')) {
           return await handleResource(event.request, 'transactions');
         }
 
-        if (path.startsWith('/api/products')) {
+        if (normalizedPath.startsWith('/api/products')) {
           return await handleResource(event.request, 'products');
         }
 
-        if (path.startsWith('/api/clients')) {
+        if (normalizedPath.startsWith('/api/clients')) {
           return await handleResource(event.request, 'clients');
         }
 

@@ -104,6 +104,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (username: string, password: string): Promise<LoginResponse> => {
     try {
+      // Garantir que o Service Worker está pronto (se estiver em modo demo)
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        const isDemoMode = window.location.hostname.includes('github.io') || 
+                          window.location.hostname === 'alya.fercarvalho.com' ||
+                          window.location.hostname.includes('demo');
+        if (isDemoMode) {
+          try {
+            await navigator.serviceWorker.ready;
+            console.log('[AuthContext] Service Worker está pronto');
+          } catch (e) {
+            console.warn('[AuthContext] Service Worker não está pronto:', e);
+          }
+        }
+      }
+
       console.log('[AuthContext] Tentando login:', { username, apiUrl: `${API_BASE_URL}/auth/login` });
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
