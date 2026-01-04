@@ -94,13 +94,14 @@ const AppContent: React.FC = () => {
   // Detectar se está em modo demo
   // Modo demo é ativado APENAS quando:
   // 1. A variável de ambiente VITE_DEMO_MODE está definida como 'true'
-  // 2. OU quando o hostname contém 'demo' ou 'github.io' (ambientes de demonstração)
+  // 2. OU quando o hostname contém 'demo', 'github.io' ou é 'alya.fercarvalho.com'
   // Em produção normal (alya.sistemas.viverdepj.com.br), NÃO é modo demo
   const isDemoMode = typeof window !== 'undefined' && (
     import.meta.env.VITE_DEMO_MODE === 'true' ||
-    (window.location.hostname.includes('github.io') || 
-     window.location.hostname.includes('demo') ||
-     window.location.hostname.includes('demo.'))
+    window.location.hostname === 'alya.fercarvalho.com' ||
+    window.location.hostname.includes('github.io') || 
+    window.location.hostname.includes('demo') ||
+    window.location.hostname.includes('demo.')
   );
   
   // Função auxiliar para usar storage correto
