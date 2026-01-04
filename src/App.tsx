@@ -5030,7 +5030,7 @@ const AppContent: React.FC = () => {
             <div className="flex justify-between items-center py-5">
               <div className="flex items-center">
                 <img 
-                  src="/alya-logo.png" 
+                  src={isDemoMode ? "/app/alya-logo.png" : "/alya-logo.png"} 
                   alt="Alya Velas Logo" 
                   className="w-10 h-10 mr-3 rounded-lg shadow-sm object-contain"
                 />
@@ -6444,7 +6444,7 @@ const AppContent: React.FC = () => {
             <div>
               <div className="flex items-center mb-3">
                 <img 
-                  src="/logo_rodape.png" 
+                  src={isDemoMode ? "/app/logo_rodape.png" : "/logo_rodape.png"} 
                   alt="Viver de PJ Logo" 
                   className="h-12 w-12 mr-2 object-contain"
                 />

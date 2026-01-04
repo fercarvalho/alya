@@ -563,6 +563,27 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   let path = url.pathname;
 
+  // Interceptar imagens/logos na raiz e redirecionar para /app/
+  const imageAliases = [
+    '/alya-logo.png',
+    '/logo_rodape.png',
+    '/logo_rodape.PNG',
+    '/alya-favicon.ico',
+    '/favicon.ico'
+  ];
+  
+  if (imageAliases.includes(path) || 
+      (path.match(/\.(png|jpg|jpeg|gif|svg|ico)$/i) && !path.startsWith('/app/') && !path.startsWith('/assets/'))) {
+    const newPath = '/app' + path;
+    const newUrl = new URL(newPath, url.origin);
+    console.log('[SW] Redirecionando imagem:', path, '→', newPath);
+    event.respondWith(fetch(newUrl).catch(() => {
+      console.warn('[SW] Falha ao carregar imagem:', newPath);
+      return new Response('Image not found', { status: 404 });
+    }));
+    return;
+  }
+
   // Interceptar APENAS requisições de API (incluindo /app/api/)
   // Todas as outras requisições (assets, HTML, etc) passam direto sem interceptação
   if (path.startsWith('/api/') || path.startsWith('/app/api/')) {
