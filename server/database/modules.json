@@ -72,6 +72,18 @@
     "updatedAt": "2026-01-02T16:54:04.072Z"
   },
   {
+    "id": "mjx45q94dre2024alya",
+    "name": "DRE",
+    "key": "dre",
+    "icon": "BarChart3",
+    "description": "Demonstrativo de Resultado do Exercício",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-01-02T16:54:04.072Z",
+    "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
     "id": "mjx45q94onj5v4u5vx",
     "name": "Administração",
     "key": "admin",

@@ -167,6 +167,18 @@ class Database {
         },
         {
           id: this.generateId(),
+          name: 'DRE',
+          key: 'dre',
+          icon: 'BarChart3',
+          description: 'Demonstrativo de Resultado do Exercício',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
           name: 'Administração',
           key: 'admin',
           icon: 'Shield',

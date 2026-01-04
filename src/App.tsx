@@ -25,6 +25,7 @@ import {
   Shield
 } from 'lucide-react'
 import Clients from './components/Clients'
+import DRE from './components/DRE'
 import Login from './components/Login'
 // Lazy load AdminPanel (só carrega quando necessário)
 const AdminPanel = lazy(() => import('./components/AdminPanel'))
@@ -80,7 +81,7 @@ interface Meta {
   status: 'ativa' | 'pausada' | 'concluida'
 }
 
-type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients' | 'admin'
+type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients' | 'admin' | 'dre'
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -5061,7 +5062,8 @@ const AppContent: React.FC = () => {
                   { id: 'reports', name: 'Relatórios', icon: BarChart3, key: 'reports' },
                   { id: 'transactions', name: 'Transações', icon: DollarSign, key: 'transactions' },
                   { id: 'products', name: 'Produtos', icon: Package, key: 'products' },
-                  { id: 'clients', name: 'Clientes', icon: Users, key: 'clients' }
+                  { id: 'clients', name: 'Clientes', icon: Users, key: 'clients' },
+                  { id: 'dre', name: 'DRE', icon: BarChart3, key: 'dre' }
                 ];
                 
                 // Filtrar abas baseado nos módulos visíveis
@@ -5114,6 +5116,7 @@ const AppContent: React.FC = () => {
         {activeTab === 'products' && renderProducts()}
         {activeTab === 'reports' && renderReports()}
         {activeTab === 'clients' && <Clients />}
+        {activeTab === 'dre' && <DRE />}
         {activeTab === 'admin' && (
           <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-gray-500">Carregando painel administrativo...</div></div>}>
             <AdminPanel />

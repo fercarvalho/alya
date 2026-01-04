@@ -6,13 +6,132 @@ const DEMO_USER = {
   id: 'demo-1',
   username: 'demo',
   role: 'user',
-  modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas'],
+  modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'],
   isActive: true
 };
 
 // Banco de dados mock em memória
 const MOCK_DB = {
-  transactions: [],
+  transactions: [
+    // Transações do mês atual (para demonstração)
+    {
+      id: 'demo_tx_1',
+      date: new Date().toISOString().split('T')[0], // Data de hoje
+      description: 'Venda de Produto A',
+      value: 1500.00,
+      type: 'Receita',
+      category: 'Varejo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_2',
+      date: new Date().toISOString().split('T')[0],
+      description: 'Venda de Produto B',
+      value: 800.00,
+      type: 'Receita',
+      category: 'Varejo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_3',
+      date: new Date().toISOString().split('T')[0],
+      description: 'Serviço de Consultoria',
+      value: 2500.00,
+      type: 'Receita',
+      category: 'Serviços',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_4',
+      date: new Date().toISOString().split('T')[0],
+      description: 'Aluguel do Escritório',
+      value: 2000.00,
+      type: 'Despesa',
+      category: 'Fixo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_5',
+      date: new Date().toISOString().split('T')[0],
+      description: 'Compra de Material',
+      value: 450.00,
+      type: 'Despesa',
+      category: 'Variavel',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_6',
+      date: new Date().toISOString().split('T')[0],
+      description: 'Salários',
+      value: 5000.00,
+      type: 'Despesa',
+      category: 'Fixo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    // Transações do mês anterior (para comparação)
+    {
+      id: 'demo_tx_7',
+      date: (() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+      })(),
+      description: 'Venda de Produto A',
+      value: 1200.00,
+      type: 'Receita',
+      category: 'Varejo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_8',
+      date: (() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+      })(),
+      description: 'Serviço de Consultoria',
+      value: 2000.00,
+      type: 'Receita',
+      category: 'Serviços',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_9',
+      date: (() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+      })(),
+      description: 'Aluguel do Escritório',
+      value: 2000.00,
+      type: 'Despesa',
+      category: 'Fixo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'demo_tx_10',
+      date: (() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return d.toISOString().split('T')[0];
+      })(),
+      description: 'Salários',
+      value: 5000.00,
+      type: 'Despesa',
+      category: 'Fixo',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ],
   products: [],
   clients: [],
   metas: [],
@@ -83,6 +202,18 @@ const MOCK_DB = {
       key: 'metas',
       icon: 'Target',
       description: 'Gerenciamento de metas',
+      route: null,
+      isActive: true,
+      isSystem: true,
+      createdAt: '2026-01-02T16:54:04.072Z',
+      updatedAt: '2026-01-02T16:54:04.072Z'
+    },
+    {
+      id: 'mjx45q94dre2024alya',
+      name: 'DRE',
+      key: 'dre',
+      icon: 'BarChart3',
+      description: 'Demonstrativo de Resultado do Exercício',
       route: null,
       isActive: true,
       isSystem: true,
