@@ -1,6 +1,8 @@
 // Service Worker para modo demo do Alya
 // Intercepta requisições /api/* e retorna dados mock
+// Versão: 1.0.0 - Atualize este número quando fizer mudanças significativas
 
+const SW_VERSION = '1.0.1';
 const DEMO_TOKEN = 'demo-token-alya-2024';
 const DEMO_USER = {
   id: 'demo-1',
@@ -552,11 +554,31 @@ async function handleModelo(req) {
 
 // Event listeners do Service Worker
 self.addEventListener('install', (event) => {
+  console.log('[SW] Instalando Service Worker versão', SW_VERSION);
+  // Forçar ativação imediata, mesmo se houver outras instâncias ativas
+  // Isso garante que a nova versão seja ativada imediatamente
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  console.log('[SW] Ativando Service Worker');
+  event.waitUntil(
+    Promise.all([
+      // Assumir controle de todas as páginas imediatamente
+      self.clients.claim(),
+      // Limpar caches antigos se necessário
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            // Não limpar caches aqui, apenas logar
+            console.log('[SW] Cache encontrado:', cacheName);
+            return Promise.resolve();
+          })
+        );
+      })
+    ])
+  );
+  console.log('[SW] Service Worker ativado e controlando todas as páginas');
 });
 
 self.addEventListener('fetch', (event) => {

@@ -13,6 +13,30 @@ if (typeof window !== 'undefined' &&
     navigator.serviceWorker.register(base + 'sw.js', { scope: base })
       .then(reg => {
         console.log('[Main] Service Worker registrado:', reg.scope);
+        
+        // Verificar atualizações periodicamente
+        setInterval(() => {
+          reg.update().then(() => {
+            console.log('[Main] Verificação de atualização do Service Worker');
+          });
+        }, 60000); // Verificar a cada minuto
+        
+        // Escutar atualizações
+        reg.addEventListener('updatefound', () => {
+          console.log('[Main] Nova versão do Service Worker encontrada');
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Nova versão instalada, recarregar para ativar
+                console.log('[Main] Nova versão instalada, recarregando em 2 segundos...');
+                setTimeout(() => {
+                  window.location.reload();
+                }, 2000);
+              }
+            });
+          }
+        });
       })
       .catch(err => {
         console.warn('[Main] Falha ao registrar Service Worker:', err);

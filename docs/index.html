@@ -16,17 +16,40 @@
     async function start() {
       if ('serviceWorker' in navigator) {
         try {
-          const reg = await navigator.serviceWorker.register(base + 'sw.js?ts=' + Date.now(), { scope: base });
+          // Registrar Service Worker SEM cache busting para permitir atualizações
+          const reg = await navigator.serviceWorker.register(base + 'sw.js', { scope: base });
           console.info('[ALYA MOCK] Service Worker registrado em', base + 'sw.js');
 
+          // Verificar se há uma nova versão disponível
+          reg.addEventListener('updatefound', () => {
+            console.log('[ALYA MOCK] Nova versão do Service Worker encontrada');
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // Nova versão instalada, recarregar para ativar
+                  console.log('[ALYA MOCK] Nova versão instalada, recarregando...');
+                  location.reload();
+                }
+              });
+            }
+          });
+
           await navigator.serviceWorker.ready;
+          console.info('[ALYA MOCK] Service Worker pronto');
 
           // Se ainda não estiver controlando, recarrega uma vez para ativar o SW
           if (!navigator.serviceWorker.controller && !sessionStorage.getItem('sw_boot')) {
             sessionStorage.setItem('sw_boot', '1');
+            console.log('[ALYA MOCK] Primeira instalação, recarregando...');
             location.reload();
             return;
           }
+
+          // Verificar atualizações periodicamente
+          setInterval(() => {
+            reg.update();
+          }, 60000); // Verificar a cada minuto
         } catch (e) {
           console.warn('[ALYA MOCK] Falha ao registrar SW:', e);
         }
