@@ -280,7 +280,10 @@ async function handleAuth(req) {
       const body = await req.json();
       const { username, password } = body;
 
+      console.log('[SW] Login attempt:', { username, password: '***' });
+
       if (username === 'demo' && password === 'demo123') {
+        console.log('[SW] Login demo válido, retornando token');
         return jsonResponse({
           success: true,
           token: DEMO_TOKEN,
@@ -289,8 +292,10 @@ async function handleAuth(req) {
         });
       }
 
+      console.log('[SW] Credenciais inválidas');
       return jsonResponse({ success: false, error: 'Credenciais inválidas' }, 401);
     } catch (error) {
+      console.error('[SW] Erro ao processar login:', error);
       return jsonResponse({ success: false, error: 'Erro ao processar login' }, 400);
     }
   }
@@ -556,10 +561,12 @@ self.addEventListener('fetch', (event) => {
   // Interceptar APENAS requisições de API
   // Todas as outras requisições (assets, HTML, etc) passam direto sem interceptação
   if (path.startsWith('/api/')) {
+    console.log('[SW] Interceptando requisição API:', path, event.request.method);
     event.respondWith((async () => {
       try {
         // Autenticação
         if (path.startsWith('/api/auth/')) {
+          console.log('[SW] Roteando para handleAuth');
           return await handleAuth(event.request);
         }
 

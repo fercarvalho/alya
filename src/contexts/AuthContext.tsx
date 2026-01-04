@@ -104,6 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (username: string, password: string): Promise<LoginResponse> => {
     try {
+      console.log('[AuthContext] Tentando login:', { username, apiUrl: `${API_BASE_URL}/auth/login` });
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -112,8 +113,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ username, password })
       });
 
+      console.log('[AuthContext] Resposta recebida:', { ok: response.ok, status: response.status });
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[AuthContext] Dados recebidos:', { success: data.success, hasUser: !!data.user, hasToken: !!data.token });
         
         // Se for primeiro login, NÃO atualizar o estado ainda - esperar o modal ser fechado
         const storage = getStorage();
@@ -130,24 +134,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         
         // Login normal: atualizar estado imediatamente
-        setUser(data.user);
-        setToken(data.token);
-        storage.setItem('authToken', data.token);
-        storage.removeItem('pendingFirstLogin');
-        
-        return {
-          success: true,
-          firstLogin: false
-        };
+        if (data.success && data.user && data.token) {
+          setUser(data.user);
+          setToken(data.token);
+          storage.setItem('authToken', data.token);
+          storage.removeItem('pendingFirstLogin');
+          
+          return {
+            success: true,
+            firstLogin: false
+          };
+        } else {
+          console.error('[AuthContext] Resposta inválida:', data);
+          return {
+            success: false
+          };
+        }
       } else {
-        const errorData = await response.json();
-        console.error('Erro no login:', errorData.error);
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { error: `Erro HTTP ${response.status}` };
+        }
+        console.error('[AuthContext] Erro no login:', errorData);
         return {
           success: false
         };
       }
     } catch (error) {
-      console.error('Erro ao fazer login:', error);
+      console.error('[AuthContext] Erro ao fazer login:', error);
       return {
         success: false
       };
