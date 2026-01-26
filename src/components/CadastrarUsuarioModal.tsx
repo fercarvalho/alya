@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, UserPlus } from 'lucide-react';
+import { X, UserPlus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 import PhotoUpload from './PhotoUpload';
 import { validateEmail } from '../utils/validation';
 import { applyPhoneMask, removePhoneMask, validatePhoneFormat } from '../utils/phoneMask';
+import { applyCpfMask, removeCpfMask, validateCpfFormat } from '../utils/cpfMask';
+import { applyCepMask, removeCepMask, validateCepFormat, fetchAddressByCep, AddressData } from '../utils/cepMask';
 
 interface CadastrarUsuarioModalProps {
   isOpen: boolean;
@@ -25,6 +27,19 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
     username: '',
     email: '',
     phone: '',
+    cpf: '',
+    birthDate: '',
+    gender: '',
+    position: '',
+    address: {
+      cep: '',
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: ''
+    },
     role: 'user',
     modules: [] as string[],
     isActive: true
@@ -34,6 +49,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
 
   const getDefaultModulesForRole = (role: string): string[] => {
     switch (role) {
@@ -52,6 +68,21 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
     if (field === 'phone') {
       const masked = applyPhoneMask(value);
       setFormData(prev => ({ ...prev, [field]: masked }));
+    } else if (field === 'cpf') {
+      const masked = applyCpfMask(value);
+      setFormData(prev => ({ ...prev, [field]: masked }));
+    } else if (field === 'address.cep') {
+      const masked = applyCepMask(value);
+      setFormData(prev => ({
+        ...prev,
+        address: { ...prev.address, cep: masked }
+      }));
+    } else if (field.startsWith('address.')) {
+      const addressField = field.replace('address.', '');
+      setFormData(prev => ({
+        ...prev,
+        address: { ...prev.address, [addressField]: value }
+      }));
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
@@ -63,6 +94,45 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
         delete newErrors[field];
         return newErrors;
       });
+    }
+  };
+
+  const handleCepBlur = async () => {
+    const cep = formData.address.cep;
+    if (cep && removeCepMask(cep).length === 8) {
+      setIsSearchingCep(true);
+      try {
+        const addressData = await fetchAddressByCep(cep);
+        if (addressData) {
+          setFormData(prev => ({
+            ...prev,
+            address: {
+              ...prev.address,
+              street: addressData.logradouro || '',
+              neighborhood: addressData.bairro || '',
+              city: addressData.localidade || '',
+              state: addressData.uf || '',
+              complement: addressData.complemento || prev.address.complement
+            }
+          }));
+        } else {
+          setErrors(prev => ({ ...prev, 'address.cep': 'CEP não encontrado' }));
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+        setErrors(prev => ({ ...prev, 'address.cep': 'Erro ao buscar endereço' }));
+      } finally {
+        setIsSearchingCep(false);
+      }
+    }
+  };
+
+  const handleCpfBlur = () => {
+    if (formData.cpf) {
+      const validation = validateCpfFormat(formData.cpf);
+      if (!validation.isValid) {
+        setErrors(prev => ({ ...prev, cpf: validation.error || 'CPF inválido' }));
+      }
     }
   };
 
@@ -144,18 +214,72 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
       newErrors.username = 'Username não pode conter espaços ou acentos';
     }
     
-    if (formData.email) {
+    if (!formData.email || !formData.email.trim()) {
+      newErrors.email = 'Email é obrigatório';
+    } else {
       const emailValidation = validateEmail(formData.email);
       if (!emailValidation.isValid) {
         newErrors.email = emailValidation.error || 'Email inválido';
       }
     }
     
-    if (formData.phone) {
+    if (!formData.phone || !formData.phone.trim()) {
+      newErrors.phone = 'Telefone é obrigatório';
+    } else {
       const phoneValidation = validatePhoneFormat(formData.phone);
       if (!phoneValidation.isValid) {
         newErrors.phone = phoneValidation.error || 'Telefone inválido';
       }
+    }
+    
+    if (!formData.cpf || !formData.cpf.trim()) {
+      newErrors.cpf = 'CPF é obrigatório';
+    } else {
+      const cpfValidation = validateCpfFormat(formData.cpf);
+      if (!cpfValidation.isValid) {
+        newErrors.cpf = cpfValidation.error || 'CPF inválido';
+      }
+    }
+    
+    if (!formData.birthDate) {
+      newErrors.birthDate = 'Data de nascimento é obrigatória';
+    }
+    
+    if (!formData.gender) {
+      newErrors.gender = 'Gênero é obrigatório';
+    }
+    
+    if (!formData.position || !formData.position.trim()) {
+      newErrors.position = 'Cargo é obrigatório';
+    }
+    
+    if (!formData.address.cep || !formData.address.cep.trim()) {
+      newErrors['address.cep'] = 'CEP é obrigatório';
+    } else {
+      const cepValidation = validateCepFormat(formData.address.cep);
+      if (!cepValidation.isValid) {
+        newErrors['address.cep'] = cepValidation.error || 'CEP inválido';
+      }
+    }
+    
+    if (!formData.address.street || !formData.address.street.trim()) {
+      newErrors['address.street'] = 'Rua/Logradouro é obrigatório';
+    }
+    
+    if (!formData.address.number || !formData.address.number.trim()) {
+      newErrors['address.number'] = 'Número é obrigatório';
+    }
+    
+    if (!formData.address.neighborhood || !formData.address.neighborhood.trim()) {
+      newErrors['address.neighborhood'] = 'Bairro é obrigatório';
+    }
+    
+    if (!formData.address.city || !formData.address.city.trim()) {
+      newErrors['address.city'] = 'Cidade é obrigatória';
+    }
+    
+    if (!formData.address.state || !formData.address.state.trim() || formData.address.state.length !== 2) {
+      newErrors['address.state'] = 'Estado (UF) é obrigatório e deve ter 2 caracteres';
     }
     
     if (Object.keys(newErrors).length > 0) {
@@ -178,8 +302,21 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         username: formData.username.trim(),
-        email: formData.email.trim() || undefined,
-        phone: formData.phone ? removePhoneMask(formData.phone) : undefined,
+        email: formData.email.trim(),
+        phone: removePhoneMask(formData.phone),
+        cpf: removeCpfMask(formData.cpf),
+        birthDate: formData.birthDate,
+        gender: formData.gender,
+        position: formData.position.trim(),
+        address: {
+          cep: removeCepMask(formData.address.cep),
+          street: formData.address.street.trim(),
+          number: formData.address.number.trim(),
+          complement: formData.address.complement.trim() || '',
+          neighborhood: formData.address.neighborhood.trim(),
+          city: formData.address.city.trim(),
+          state: formData.address.state.trim().toUpperCase()
+        },
         photoUrl: finalPhotoUrl || undefined,
         role: formData.role,
         modules: formData.modules.length > 0 ? formData.modules : getDefaultModulesForRole(formData.role),
@@ -205,6 +342,19 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
           username: '',
           email: '',
           phone: '',
+          cpf: '',
+          birthDate: '',
+          gender: '',
+          position: '',
+          address: {
+            cep: '',
+            street: '',
+            number: '',
+            complement: '',
+            neighborhood: '',
+            city: '',
+            state: ''
+          },
           role: 'user',
           modules: [],
           isActive: true
@@ -317,7 +467,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email
+                Email <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -337,7 +487,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Telefone
+                Telefone <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -353,6 +503,199 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
               )}
+            </div>
+          </div>
+
+          {/* CPF e Data de Nascimento */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                CPF
+              </label>
+              <input
+                type="text"
+                value={formData.cpf}
+                onChange={(e) => handleInputChange('cpf', e.target.value)}
+                onBlur={handleCpfBlur}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
+                  errors.cpf ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                }`}
+                placeholder="000.000.000-00"
+                maxLength={14}
+                disabled={isSubmitting}
+              />
+              {errors.cpf && (
+                <p className="mt-1 text-sm text-red-600">{errors.cpf}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Data de Nascimento <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.birthDate}
+                onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Gênero e Cargo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Gênero <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.gender}
+                onChange={(e) => handleInputChange('gender', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                disabled={isSubmitting}
+              >
+                <option value="">Selecione...</option>
+                <option value="masculino">Masculino</option>
+                <option value="feminino">Feminino</option>
+                <option value="nao-binario">Não-binário</option>
+                <option value="outros">Outros</option>
+                <option value="prefiro-nao-informar">Prefiro não informar</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Cargo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.position}
+                onChange={(e) => handleInputChange('position', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                placeholder="Ex: Desenvolvedor, Analista..."
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Endereço - CEP */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              CEP <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={formData.address.cep}
+                onChange={(e) => handleInputChange('address.cep', e.target.value)}
+                onBlur={handleCepBlur}
+                className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
+                  errors['address.cep'] ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                }`}
+                placeholder="00000-000"
+                maxLength={9}
+                disabled={isSubmitting || isSearchingCep}
+              />
+              {isSearchingCep && (
+                <div className="flex items-center px-4 text-amber-600">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
+                </div>
+              )}
+            </div>
+            {errors['address.cep'] && (
+              <p className="mt-1 text-sm text-red-600">{errors['address.cep']}</p>
+            )}
+          </div>
+
+          {/* Endereço - Rua e Número */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Rua/Logradouro <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.address.street}
+                onChange={(e) => handleInputChange('address.street', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                placeholder="Rua, Avenida, etc."
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Número <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.address.number}
+                onChange={(e) => handleInputChange('address.number', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                placeholder="123"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Endereço - Complemento e Bairro */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Complemento
+              </label>
+              <input
+                type="text"
+                value={formData.address.complement}
+                onChange={(e) => handleInputChange('address.complement', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                placeholder="Apto, Bloco, etc."
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Bairro <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.address.neighborhood}
+                onChange={(e) => handleInputChange('address.neighborhood', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                placeholder="Bairro"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Endereço - Cidade e Estado */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Cidade <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.address.city}
+                onChange={(e) => handleInputChange('address.city', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                placeholder="Cidade"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Estado <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.address.state}
+                onChange={(e) => handleInputChange('address.state', e.target.value.toUpperCase())}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
+                placeholder="UF"
+                maxLength={2}
+                disabled={isSubmitting}
+              />
             </div>
           </div>
 

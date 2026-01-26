@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Shield, CheckCircle, XCircle, Calendar, Clock, Edit, Mail, Phone } from 'lucide-react';
+import { X, User, Shield, CheckCircle, XCircle, Calendar, Clock, Edit, Mail, Phone, MapPin, Briefcase, CreditCard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
 import LazyAvatar from './LazyAvatar';
 import EditarPerfilModal from './EditarPerfilModal';
 import { applyPhoneMask } from '../utils/phoneMask';
+import { applyCpfMask } from '../utils/cpfMask';
+import { applyCepMask } from '../utils/cepMask';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -20,6 +22,19 @@ interface UserProfileData {
   email?: string;
   phone?: string;
   photoUrl?: string;
+  cpf?: string;
+  birthDate?: string;
+  gender?: string;
+  position?: string;
+  address?: {
+    cep?: string;
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+  };
   role: string;
   modules?: string[];
   isActive?: boolean;
@@ -191,6 +206,78 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
                       Telefone
                     </label>
                     <p className="text-lg text-gray-800 mt-1">{applyPhoneMask(profileData.phone)}</p>
+                  </div>
+                )}
+
+                {profileData.cpf && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      CPF
+                    </label>
+                    <p className="text-lg text-gray-800 mt-1">{applyCpfMask(profileData.cpf)}</p>
+                  </div>
+                )}
+
+                {profileData.birthDate && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Data de Nascimento
+                    </label>
+                    <p className="text-lg text-gray-800 mt-1">
+                      {new Date(profileData.birthDate).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+
+                {profileData.gender && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Gênero</label>
+                    <p className="text-lg text-gray-800 mt-1 capitalize">
+                      {profileData.gender.replace('-', ' ')}
+                    </p>
+                  </div>
+                )}
+
+                {profileData.position && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                      <Briefcase className="w-4 h-4" />
+                      Cargo
+                    </label>
+                    <p className="text-lg text-gray-800 mt-1">{profileData.position}</p>
+                  </div>
+                )}
+
+                {profileData.address && (profileData.address.cep || profileData.address.street) && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2 mb-2">
+                      <MapPin className="w-4 h-4" />
+                      Endereço
+                    </label>
+                    <div className="text-lg text-gray-800 mt-1 space-y-1">
+                      {profileData.address.street && (
+                        <p>
+                          {profileData.address.street}
+                          {profileData.address.number && `, ${profileData.address.number}`}
+                          {profileData.address.complement && ` - ${profileData.address.complement}`}
+                        </p>
+                      )}
+                      {profileData.address.neighborhood && (
+                        <p>{profileData.address.neighborhood}</p>
+                      )}
+                      {(profileData.address.city || profileData.address.state) && (
+                        <p>
+                          {profileData.address.city && `${profileData.address.city}`}
+                          {profileData.address.city && profileData.address.state && ' - '}
+                          {profileData.address.state && profileData.address.state}
+                        </p>
+                      )}
+                      {profileData.address.cep && (
+                        <p className="text-sm text-gray-500">CEP: {applyCepMask(profileData.address.cep)}</p>
+                      )}
+                    </div>
                   </div>
                 )}
 

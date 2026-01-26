@@ -504,6 +504,11 @@ app.post('/api/auth/login', (req, res) => {
         email: safeUser.email,
         phone: safeUser.phone,
         photoUrl: safeUser.photoUrl,
+        cpf: safeUser.cpf,
+        birthDate: safeUser.birthDate,
+        gender: safeUser.gender,
+        position: safeUser.position,
+        address: safeUser.address,
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
@@ -596,6 +601,11 @@ app.post('/api/auth/verify', authenticateToken, (req, res) => {
         email: safeUser.email,
         phone: safeUser.phone,
         photoUrl: safeUser.photoUrl,
+        cpf: safeUser.cpf,
+        birthDate: safeUser.birthDate,
+        gender: safeUser.gender,
+        position: safeUser.position,
+        address: safeUser.address,
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
@@ -626,6 +636,11 @@ app.get('/api/user/profile', authenticateToken, (req, res) => {
         email: safeUser.email,
         phone: safeUser.phone,
         photoUrl: safeUser.photoUrl,
+        cpf: safeUser.cpf,
+        birthDate: safeUser.birthDate,
+        gender: safeUser.gender,
+        position: safeUser.position,
+        address: safeUser.address,
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
@@ -680,7 +695,7 @@ app.post('/api/user/upload-photo', authenticateToken, uploadAvatar.single('photo
 // Endpoint para atualizar perfil do próprio usuário
 app.put('/api/user/profile', authenticateToken, (req, res) => {
   try {
-    const { firstName, lastName, email, phone, photoUrl, password } = req.body;
+    const { firstName, lastName, email, phone, photoUrl, password, cpf, birthDate, gender, position, address } = req.body;
     
     // Buscar usuário atual
     const currentUser = db.getUserById(req.user.id);
@@ -698,45 +713,146 @@ app.put('/api/user/profile', authenticateToken, (req, res) => {
       return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
     }
     
-    // Validar email se fornecido
+    if (!firstName || firstName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
+    }
+    
+    if (!lastName || lastName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
+    }
+    
     if (email !== undefined && email !== null && email !== '') {
+      if (!email || !email.trim()) {
+        return res.status(400).json({ success: false, error: 'Email é obrigatório' });
+      }
       if (!validateEmailFormat(email)) {
         return res.status(400).json({ success: false, error: 'Formato de email inválido' });
       }
+    } else {
+      return res.status(400).json({ success: false, error: 'Email é obrigatório' });
     }
     
-    // Validar telefone se fornecido
     if (phone !== undefined && phone !== null && phone !== '') {
+      if (!phone) {
+        return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
+      }
       const phoneDigits = phone.replace(/\D/g, '');
       if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
         return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
       }
+    } else {
+      return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
     }
     
-    // Preparar dados para atualização
+    if (cpf !== undefined && cpf !== null && cpf !== '') {
+      if (!cpf) {
+        return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
+      }
+      const cpfDigits = cpf.replace(/\D/g, '');
+      if (cpfDigits.length !== 11) {
+        return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
+      }
+    } else {
+      return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
+    }
+    
+    if (!birthDate) {
+      return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
+    }
+    
+    if (!gender) {
+      return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
+    }
+    
+    if (!position || !position.trim()) {
+      return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
+    }
+    
+    // Preparar dados para atualização - todos os campos são obrigatórios
     const updateData = {};
     
-    if (firstName !== undefined) {
-      if (!firstName || firstName.trim().length < 2) {
-        return res.status(400).json({ success: false, error: 'Nome deve ter pelo menos 2 caracteres' });
-      }
-      updateData.firstName = firstName.trim();
+    if (firstName === undefined || !firstName || firstName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
+    updateData.firstName = firstName.trim();
     
-    if (lastName !== undefined) {
-      if (!lastName || lastName.trim().length < 2) {
-        return res.status(400).json({ success: false, error: 'Sobrenome deve ter pelo menos 2 caracteres' });
-      }
-      updateData.lastName = lastName.trim();
+    if (lastName === undefined || !lastName || lastName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
+    updateData.lastName = lastName.trim();
     
-    if (email !== undefined) {
-      updateData.email = email ? email.trim() : null;
+    if (email === undefined || !email || !email.trim()) {
+      return res.status(400).json({ success: false, error: 'Email é obrigatório' });
     }
+    if (!validateEmailFormat(email)) {
+      return res.status(400).json({ success: false, error: 'Formato de email inválido' });
+    }
+    updateData.email = email.trim();
     
-    if (phone !== undefined) {
-      updateData.phone = phone ? phone.replace(/\D/g, '') : null; // Remover máscara
+    if (phone === undefined || !phone) {
+      return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
     }
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+      return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
+    }
+    updateData.phone = phoneDigits;
+    
+    if (cpf === undefined || !cpf) {
+      return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
+    }
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (cpfDigits.length !== 11) {
+      return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
+    }
+    updateData.cpf = cpfDigits;
+    
+    if (!birthDate) {
+      return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
+    }
+    updateData.birthDate = birthDate;
+    
+    if (!gender) {
+      return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
+    }
+    updateData.gender = gender;
+    
+    if (!position || !position.trim()) {
+      return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
+    }
+    updateData.position = position.trim();
+    
+    if (!address || !address.cep) {
+      return res.status(400).json({ success: false, error: 'CEP é obrigatório' });
+    }
+    const cepDigits = address.cep.replace(/\D/g, '');
+    if (cepDigits.length !== 8) {
+      return res.status(400).json({ success: false, error: 'CEP deve ter 8 dígitos' });
+    }
+    if (!address.street || !address.street.trim()) {
+      return res.status(400).json({ success: false, error: 'Rua/Logradouro é obrigatório' });
+    }
+    if (!address.number || !address.number.trim()) {
+      return res.status(400).json({ success: false, error: 'Número do endereço é obrigatório' });
+    }
+    if (!address.neighborhood || !address.neighborhood.trim()) {
+      return res.status(400).json({ success: false, error: 'Bairro é obrigatório' });
+    }
+    if (!address.city || !address.city.trim()) {
+      return res.status(400).json({ success: false, error: 'Cidade é obrigatória' });
+    }
+    if (!address.state || !address.state.trim() || address.state.length !== 2) {
+      return res.status(400).json({ success: false, error: 'Estado (UF) é obrigatório e deve ter 2 caracteres' });
+    }
+    updateData.address = {
+      cep: cepDigits,
+      street: address.street.trim(),
+      number: address.number.trim(),
+      complement: address.complement ? address.complement.trim() : '',
+      neighborhood: address.neighborhood.trim(),
+      city: address.city.trim(),
+      state: address.state.trim().toUpperCase()
+    };
     
     // Se foto está sendo atualizada, deletar foto antiga
     if (photoUrl !== undefined) {
@@ -1156,23 +1272,100 @@ app.get('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
 
 app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const { username, firstName, lastName, email, phone, photoUrl, role, modules, isActive } = req.body;
+    const { 
+      username, 
+      firstName, 
+      lastName, 
+      email, 
+      phone, 
+      photoUrl, 
+      cpf,
+      birthDate,
+      gender,
+      position,
+      address,
+      role, 
+      modules, 
+      isActive 
+    } = req.body;
     
     if (!username) {
       return res.status(400).json({ success: false, error: 'Username é obrigatório' });
     }
     
-    // Validar email se fornecido
-    if (email && !validateEmailFormat(email)) {
+    if (!firstName || firstName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
+    }
+    
+    if (!lastName || lastName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
+    }
+    
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, error: 'Email é obrigatório' });
+    }
+    
+    if (!validateEmailFormat(email)) {
       return res.status(400).json({ success: false, error: 'Formato de email inválido' });
     }
     
-    // Validar telefone se fornecido (apenas números, 10 ou 11 dígitos)
-    if (phone) {
-      const phoneDigits = phone.replace(/\D/g, '');
-      if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
-        return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
-      }
+    if (!phone) {
+      return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
+    }
+    
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+      return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
+    }
+    
+    if (!cpf) {
+      return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
+    }
+    
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (cpfDigits.length !== 11) {
+      return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
+    }
+    
+    if (!birthDate) {
+      return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
+    }
+    
+    if (!gender) {
+      return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
+    }
+    
+    if (!position || !position.trim()) {
+      return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
+    }
+    
+    if (!address || !address.cep) {
+      return res.status(400).json({ success: false, error: 'CEP é obrigatório' });
+    }
+    
+    const cepDigits = address.cep.replace(/\D/g, '');
+    if (cepDigits.length !== 8) {
+      return res.status(400).json({ success: false, error: 'CEP deve ter 8 dígitos' });
+    }
+    
+    if (!address.street || !address.street.trim()) {
+      return res.status(400).json({ success: false, error: 'Rua/Logradouro é obrigatório' });
+    }
+    
+    if (!address.number || !address.number.trim()) {
+      return res.status(400).json({ success: false, error: 'Número do endereço é obrigatório' });
+    }
+    
+    if (!address.neighborhood || !address.neighborhood.trim()) {
+      return res.status(400).json({ success: false, error: 'Bairro é obrigatório' });
+    }
+    
+    if (!address.city || !address.city.trim()) {
+      return res.status(400).json({ success: false, error: 'Cidade é obrigatória' });
+    }
+    
+    if (!address.state || !address.state.trim() || address.state.length !== 2) {
+      return res.status(400).json({ success: false, error: 'Estado (UF) é obrigatório e deve ter 2 caracteres' });
     }
     
     // Verificar se usuário já existe
@@ -1196,6 +1389,11 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
       email: email || undefined,
       phone: phone ? phone.replace(/\D/g, '') : undefined, // Remover máscara
       photoUrl: photoUrl || undefined,
+      cpf: cpf ? cpf.replace(/\D/g, '') : undefined, // Remover máscara
+      birthDate: birthDate || undefined,
+      gender: gender || undefined,
+      position: position || undefined,
+      address: address || undefined,
       password: placeholderPassword,
       role: userRole,
       modules: userModules,

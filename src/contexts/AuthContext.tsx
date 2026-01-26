@@ -9,6 +9,19 @@ interface User {
   email?: string;
   phone?: string;
   photoUrl?: string;
+  cpf?: string;
+  birthDate?: string;
+  gender?: string;
+  position?: string;
+  address?: {
+    cep?: string;
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+  };
   role: string;
   modules?: string[];
   isActive?: boolean;
