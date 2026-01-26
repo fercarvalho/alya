@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle
+  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle, Edit
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
 import { API_BASE_URL } from '../../config/api';
 import CadastrarUsuarioModal from '../CadastrarUsuarioModal';
+import EditarUsuarioModal from '../EditarUsuarioModal';
 import LazyAvatar from '../LazyAvatar';
 import { applyPhoneMask } from '../../utils/phoneMask';
 
@@ -30,11 +31,12 @@ const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showResetAllModal, setShowResetAllModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [userToReset, setUserToReset] = useState<User | null>(null);
   const [isResettingIndividual, setIsResettingIndividual] = useState(false);
-  // const [editingUser, setEditingUser] = useState<User | null>(null); // Reservado para uso futuro
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -362,6 +364,16 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex gap-2">
                       <button
+                        onClick={() => {
+                          setEditingUser(u);
+                          setShowEditModal(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Editar Usuário"
+                      >
+                        <Edit className="h-5 w-5" />
+                      </button>
+                      <button
                         onClick={() => setUserToReset(u)}
                         className="text-blue-600 hover:text-blue-800"
                         title="Resetar Senha"
@@ -401,6 +413,17 @@ const UserManagement: React.FC = () => {
         isOpen={showUserModal}
         onClose={() => setShowUserModal(false)}
         onSuccess={loadUsers}
+      />
+
+      {/* Modal de Editar Usuário */}
+      <EditarUsuarioModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingUser(null);
+        }}
+        onSuccess={loadUsers}
+        user={editingUser}
       />
 
       {/* Modal de Confirmação para Resetar Todas as Senhas */}
