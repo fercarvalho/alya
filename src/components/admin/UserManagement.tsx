@@ -5,10 +5,18 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
 import { API_BASE_URL } from '../../config/api';
+import CadastrarUsuarioModal from '../CadastrarUsuarioModal';
+import LazyAvatar from '../LazyAvatar';
+import { applyPhoneMask } from '../../utils/phoneMask';
 
 interface User {
   id: string;
   username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  photoUrl?: string;
   role: string;
   modules?: string[];
   isActive?: boolean;
@@ -77,34 +85,11 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const handleCreateUser = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin/users`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newUser)
-      });
-      const result = await response.json();
-      if (result.success) {
-        setShowUserModal(false);
-        const defaultModules = getDefaultModulesForRole('user');
-        setNewUser({
-          username: '',
-          role: 'user',
-          modules: defaultModules,
-          isActive: true
-        });
-        loadUsers();
-      } else {
-        alert(result.error || 'Erro ao criar usuário');
-      }
-    } catch (error) {
-      console.error('Erro ao criar usuário:', error);
-      alert('Erro ao criar usuário');
+  const getUserDisplayName = (user: User) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
     }
+    return user.username;
   };
 
   const handleUpdateUser = async (userId: string, updates: any) => {
@@ -220,7 +205,12 @@ const UserManagement: React.FC = () => {
   };
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      u.username.toLowerCase().includes(searchLower) ||
+      (u.firstName && u.firstName.toLowerCase().includes(searchLower)) ||
+      (u.lastName && u.lastName.toLowerCase().includes(searchLower)) ||
+      (u.email && u.email.toLowerCase().includes(searchLower));
     const matchesRole = filterRole === 'all' || u.role === filterRole;
     const matchesStatus = filterStatus === 'all' || 
       (filterStatus === 'active' && u.isActive !== false) ||
@@ -247,16 +237,7 @@ const UserManagement: React.FC = () => {
             Resetar Todas as Senhas
           </button>
           <button
-            onClick={() => {
-              const defaultModules = getDefaultModulesForRole('user');
-              setNewUser({
-                username: '',
-                role: 'user',
-                modules: defaultModules,
-                isActive: true
-              });
-              setShowUserModal(true);
-            }}
+            onClick={() => setShowUserModal(true)}
             className="flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
           >
             <UserPlus className="h-5 w-5 mr-2" />
@@ -271,7 +252,7 @@ const UserManagement: React.FC = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
             type="text"
-            placeholder="Buscar por username..."
+            placeholder="Buscar por nome, username ou email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -316,9 +297,23 @@ const UserManagement: React.FC = () => {
               {filteredUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{u.username}</div>
-                      <div className="text-sm text-gray-500">Criado em {new Date(u.createdAt).toLocaleDateString()}</div>
+                    <div className="flex items-center gap-3">
+                      <LazyAvatar
+                        photoUrl={u.photoUrl}
+                        firstName={u.firstName}
+                        lastName={u.lastName}
+                        username={u.username}
+                        size="sm"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {getUserDisplayName(u)}
+                        </div>
+                        <div className="text-sm text-gray-500">@{u.username}</div>
+                        {u.email && (
+                          <div className="text-xs text-gray-400">{u.email}</div>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -402,89 +397,11 @@ const UserManagement: React.FC = () => {
       </div>
 
       {/* Modal de Novo Usuário */}
-      {showUserModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Novo Usuário</h3>
-              <button
-                onClick={() => setShowUserModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={newUser.username}
-                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Função</label>
-                <select
-                  value={newUser.role}
-                  onChange={(e) => {
-                    const newRole = e.target.value;
-                    const defaultModules = getDefaultModulesForRole(newRole);
-                    setNewUser({ 
-                      ...newUser, 
-                      role: newRole,
-                      modules: defaultModules
-                    });
-                  }}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="user">Usuário</option>
-                  <option value="guest">Convidado</option>
-                </select>
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-sm text-amber-800 mb-2">
-                  <strong>ℹ️ Informação:</strong> A senha será gerada automaticamente no primeiro acesso do usuário e exibida no modal de login.
-                </p>
-                <div className="mt-2">
-                  <p className="text-xs font-medium text-amber-900 mb-1">Módulos pré-selecionados para {newUser.role === 'admin' ? 'Admin' : newUser.role === 'user' ? 'Usuário' : 'Convidado'}:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {newUser.modules.map((moduleKey) => {
-                      const module = modules.find(m => m.key === moduleKey);
-                      return module ? (
-                        <span
-                          key={moduleKey}
-                          className="px-2 py-1 text-xs bg-amber-200 text-amber-900 rounded"
-                        >
-                          {module.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2 pt-4">
-                <button
-                  onClick={() => setShowUserModal(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleCreateUser}
-                  className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-                >
-                  <Save className="inline h-4 w-4 mr-1" />
-                  Criar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CadastrarUsuarioModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        onSuccess={loadUsers}
+      />
 
       {/* Modal de Confirmação para Resetar Todas as Senhas */}
       {showResetAllModal && (

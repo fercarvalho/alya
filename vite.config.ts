@@ -11,7 +11,14 @@ export default defineConfig({
   server: {
     port: 8000,
     open: true,
-    host: 'localhost'
+    host: 'localhost',
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   build: {
     rollupOptions: {

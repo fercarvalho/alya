@@ -30,11 +30,86 @@ app.use(cors({
   origin: [
     'https://alya.sistemas.viverdepj.com.br',
     'http://localhost:8000',
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'http://127.0.0.1:8000',
+    'http://127.0.0.1:5173'
   ],
   credentials: true
 }));
 app.use(express.json());
+
+
+// Criar pasta de avatares se não existir
+const avatarsDir = path.join(__dirname, 'public', 'avatars');
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+
+// Rota estática para servir avatares com cache
+app.use('/api/avatars', express.static(path.join(__dirname, 'public', 'avatars'), {
+  maxAge: '1y', // Cache por 1 ano
+  etag: true, // Usar ETag para validação condicional
+  lastModified: true // Usar Last-Modified header
+}));
+
+// Função para validar formato de email
+function validateEmailFormat(email) {
+  if (!email || typeof email !== 'string') return false;
+  
+  // Regex RFC 5322 simplificado
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  // Validações adicionais
+  if (email.length < 5 || email.length > 254) return false;
+  if (email.startsWith('.') || email.startsWith('-') || email.endsWith('.') || email.endsWith('-')) return false;
+  
+  const parts = email.split('@');
+  if (parts.length !== 2) return false;
+  if (!parts[1].includes('.')) return false;
+  
+  return emailRegex.test(email);
+}
+
+// Função para deletar arquivo de avatar de forma segura
+function deleteAvatarFile(photoUrl) {
+  try {
+    if (!photoUrl) return;
+    
+    // Extrair nome do arquivo do photoUrl
+    // Ex: /api/avatars/user123-1234567890.webp -> user123-1234567890.webp
+    let filename = photoUrl;
+    if (photoUrl.includes('/')) {
+      filename = photoUrl.split('/').pop();
+    }
+    
+    // Validar que não contém path traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      console.log('Tentativa de path traversal detectada:', filename);
+      return;
+    }
+    
+    // Construir caminho completo
+    const filePath = path.join(avatarsDir, filename);
+    
+    // Verificar que o caminho resolvido está dentro do diretório de avatares
+    const resolvedPath = path.resolve(filePath);
+    const resolvedAvatarsDir = path.resolve(avatarsDir);
+    
+    if (!resolvedPath.startsWith(resolvedAvatarsDir)) {
+      console.log('Tentativa de acessar arquivo fora do diretório de avatares:', resolvedPath);
+      return;
+    }
+    
+    // Verificar se arquivo existe e deletar
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log('Avatar deletado:', filename);
+    }
+  } catch (error) {
+    // Logar erro mas não falhar a operação principal
+    console.log('Erro ao deletar foto antiga:', error.message);
+  }
+}
 
 // Middleware de autenticação
 const authenticateToken = (req, res, next) => {
@@ -82,6 +157,42 @@ const upload = multer({
   },
   limits: {
     fileSize: 5 * 1024 * 1024 // Limite de 5MB
+  }
+});
+
+// Configuração do Multer para upload de avatares (WebP)
+const avatarStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    if (!fs.existsSync(avatarsDir)) {
+      fs.mkdirSync(avatarsDir, { recursive: true });
+    }
+    cb(null, avatarsDir);
+  },
+  filename: function (req, file, cb) {
+    // Gerar nome único: {userId ou uuid}-{timestamp}.webp
+    // Se for admin criando usuário novo, usar UUID temporário
+    // Se for usuário atualizando própria foto, usar userId
+    const userId = req.user?.id || crypto.randomUUID();
+    const timestamp = Date.now();
+    cb(null, `${userId}-${timestamp}.webp`);
+  }
+});
+
+const uploadAvatar = multer({ 
+  storage: avatarStorage,
+  fileFilter: (req, file, cb) => {
+    // Aceitar apenas arquivos WebP (já processados no frontend)
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mimeType = file.mimetype;
+    
+    if (ext === '.webp' && mimeType === 'image/webp') {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos WebP são permitidos!'), false);
+    }
+  },
+  limits: {
+    fileSize: 2 * 1024 * 1024 // Limite de 2MB após processamento
   }
 });
 
@@ -388,6 +499,11 @@ app.post('/api/auth/login', (req, res) => {
       user: {
         id: safeUser.id,
         username: safeUser.username,
+        firstName: safeUser.firstName,
+        lastName: safeUser.lastName,
+        email: safeUser.email,
+        phone: safeUser.phone,
+        photoUrl: safeUser.photoUrl,
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
@@ -475,6 +591,11 @@ app.post('/api/auth/verify', authenticateToken, (req, res) => {
       user: {
         id: safeUser.id,
         username: safeUser.username,
+        firstName: safeUser.firstName,
+        lastName: safeUser.lastName,
+        email: safeUser.email,
+        phone: safeUser.phone,
+        photoUrl: safeUser.photoUrl,
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
@@ -500,6 +621,11 @@ app.get('/api/user/profile', authenticateToken, (req, res) => {
       data: {
         id: safeUser.id,
         username: safeUser.username,
+        firstName: safeUser.firstName,
+        lastName: safeUser.lastName,
+        email: safeUser.email,
+        phone: safeUser.phone,
+        photoUrl: safeUser.photoUrl,
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
@@ -513,24 +639,48 @@ app.get('/api/user/profile', authenticateToken, (req, res) => {
   }
 });
 
-// Endpoint para atualizar username do próprio usuário
+// Endpoint para upload de foto de perfil
+app.post('/api/user/upload-photo', authenticateToken, uploadAvatar.single('photo'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado' });
+    }
+
+    // Validar que é WebP
+    if (req.file.mimetype !== 'image/webp' || !req.file.filename.endsWith('.webp')) {
+      // Deletar arquivo inválido
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(400).json({ success: false, error: 'Apenas arquivos WebP são permitidos' });
+    }
+
+    // Retornar caminho relativo da foto
+    const photoUrl = `/api/avatars/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      data: {
+        photoUrl
+      }
+    });
+  } catch (error) {
+    // Se houver erro, tentar deletar arquivo se foi criado
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        console.log('Erro ao deletar arquivo após erro:', e.message);
+      }
+    }
+    res.status(500).json({ success: false, error: error.message || 'Erro ao fazer upload da foto' });
+  }
+});
+
+// Endpoint para atualizar perfil do próprio usuário
 app.put('/api/user/profile', authenticateToken, (req, res) => {
   try {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ success: false, error: 'Username e senha são obrigatórios' });
-    }
-    
-    // Validar formato do username
-    if (username.trim().length < 3) {
-      return res.status(400).json({ success: false, error: 'O username deve ter pelo menos 3 caracteres' });
-    }
-    
-    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
-    if (!usernameRegex.test(username.trim())) {
-      return res.status(400).json({ success: false, error: 'O username não pode conter espaços ou acentos. Use apenas letras, números, underscore (_) ou hífen (-)' });
-    }
+    const { firstName, lastName, email, phone, photoUrl, password } = req.body;
     
     // Buscar usuário atual
     const currentUser = db.getUserById(req.user.id);
@@ -538,50 +688,84 @@ app.put('/api/user/profile', authenticateToken, (req, res) => {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
     
-    // Validar senha atual
+    // Validar senha atual se fornecida (obrigatória para segurança)
+    if (!password) {
+      return res.status(400).json({ success: false, error: 'Senha atual é obrigatória para atualizar o perfil' });
+    }
+    
     const isValidPassword = bcrypt.compareSync(password, currentUser.password);
     if (!isValidPassword) {
       return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
     }
     
-    // Verificar se o novo username é diferente do atual
-    if (username.trim() === currentUser.username) {
-      return res.status(400).json({ success: false, error: 'O novo username deve ser diferente do atual' });
+    // Validar email se fornecido
+    if (email !== undefined && email !== null && email !== '') {
+      if (!validateEmailFormat(email)) {
+        return res.status(400).json({ success: false, error: 'Formato de email inválido' });
+      }
     }
     
-    // Verificar se username já está em uso
-    const existingUser = db.getUserByUsername(username.trim());
-    if (existingUser && existingUser.id !== req.user.id) {
-      return res.status(400).json({ success: false, error: 'Username já está em uso' });
+    // Validar telefone se fornecido
+    if (phone !== undefined && phone !== null && phone !== '') {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+        return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
+      }
     }
     
-    // Atualizar username
-    const updatedUser = db.updateUser(req.user.id, { username: username.trim() });
+    // Preparar dados para atualização
+    const updateData = {};
     
-    // Gerar novo token com username atualizado
+    if (firstName !== undefined) {
+      if (!firstName || firstName.trim().length < 2) {
+        return res.status(400).json({ success: false, error: 'Nome deve ter pelo menos 2 caracteres' });
+      }
+      updateData.firstName = firstName.trim();
+    }
+    
+    if (lastName !== undefined) {
+      if (!lastName || lastName.trim().length < 2) {
+        return res.status(400).json({ success: false, error: 'Sobrenome deve ter pelo menos 2 caracteres' });
+      }
+      updateData.lastName = lastName.trim();
+    }
+    
+    if (email !== undefined) {
+      updateData.email = email ? email.trim() : null;
+    }
+    
+    if (phone !== undefined) {
+      updateData.phone = phone ? phone.replace(/\D/g, '') : null; // Remover máscara
+    }
+    
+    // Se foto está sendo atualizada, deletar foto antiga
+    if (photoUrl !== undefined) {
+      if (currentUser.photoUrl && currentUser.photoUrl !== photoUrl) {
+        deleteAvatarFile(currentUser.photoUrl);
+      }
+      updateData.photoUrl = photoUrl || null;
+    }
+    
+    // Atualizar usuário
+    const updatedUser = db.updateUser(req.user.id, updateData);
+    
+    // Gerar novo token
     const token = jwt.sign(
       { id: updatedUser.id, username: updatedUser.username, role: updatedUser.role },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '7d' }
     );
     
-    // Logar ação
-    logActivity(req.user.id, currentUser.username, 'update_username', 'user', 'user', req.user.id, { oldUsername: currentUser.username, newUsername: username.trim() });
-    
     const { password: _, ...safeUser } = updatedUser;
+    
+    logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', req.user.id, { 
+      fields: Object.keys(updateData) 
+    });
+    
     res.json({
       success: true,
-      token,
-      data: {
-        id: safeUser.id,
-        username: safeUser.username,
-        role: safeUser.role,
-        modules: safeUser.modules || [],
-        isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
-        lastLogin: safeUser.lastLogin,
-        createdAt: safeUser.createdAt,
-        updatedAt: safeUser.updatedAt
-      }
+      data: safeUser,
+      token
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message || 'Erro interno do servidor' });
@@ -972,10 +1156,23 @@ app.get('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
 
 app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const { username, role, modules, isActive } = req.body;
+    const { username, firstName, lastName, email, phone, photoUrl, role, modules, isActive } = req.body;
     
     if (!username) {
       return res.status(400).json({ success: false, error: 'Username é obrigatório' });
+    }
+    
+    // Validar email se fornecido
+    if (email && !validateEmailFormat(email)) {
+      return res.status(400).json({ success: false, error: 'Formato de email inválido' });
+    }
+    
+    // Validar telefone se fornecido (apenas números, 10 ou 11 dígitos)
+    if (phone) {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+        return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
+      }
     }
     
     // Verificar se usuário já existe
@@ -994,6 +1191,11 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
     
     const newUser = {
       username,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
+      email: email || undefined,
+      phone: phone ? phone.replace(/\D/g, '') : undefined, // Remover máscara
+      photoUrl: photoUrl || undefined,
       password: placeholderPassword,
       role: userRole,
       modules: userModules,
@@ -1049,6 +1251,11 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) =
     const user = db.getUserById(id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    }
+    
+    // Deletar foto do usuário se existir
+    if (user.photoUrl) {
+      deleteAvatarFile(user.photoUrl);
     }
     
     db.deleteUser(id);
@@ -1251,8 +1458,10 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+
 // Middleware de tratamento de erros
 app.use((error, req, res, next) => {
+  console.error('[ERROR] Erro capturado:', error);
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: 'Arquivo muito grande! Máximo 5MB.' });

@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import UserProfileModal from './UserProfileModal';
 import AlterarUsernameModal from './AlterarUsernameModal';
 import AlterarSenhaModal from './AlterarSenhaModal';
+import EditarPerfilModal from './EditarPerfilModal';
+import LazyAvatar from './LazyAvatar';
 
 interface MenuUsuarioProps {
   onLogout?: () => void;
@@ -16,6 +18,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
@@ -66,6 +69,18 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
     setShowMenu(false);
   };
 
+  const handleEditProfileClick = () => {
+    setShowEditProfileModal(true);
+    setShowMenu(false);
+  };
+
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.username || 'Usuário';
+  };
+
   const dropdownContent = showMenu ? (
     <div
       ref={menuRef}
@@ -94,10 +109,18 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
 
         <button
           onClick={handlePasswordClick}
-          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 transition-colors text-gray-700"
+          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 transition-colors text-gray-700 min-h-[44px]"
         >
           <Key className="w-4 h-4 text-amber-600" />
           <span className="text-sm font-medium">Alterar Senha</span>
+        </button>
+
+        <button
+          onClick={handleEditProfileClick}
+          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 transition-colors text-gray-700 min-h-[44px]"
+        >
+          <Edit className="w-4 h-4 text-amber-600" />
+          <span className="text-sm font-medium">Editar Perfil</span>
         </button>
       </div>
     </div>
@@ -109,10 +132,17 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
         <button
           ref={buttonRef}
           onClick={handleMenuClick}
-          className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-600 transition-colors shadow-sm"
-          title="Menu do usuário"
+          className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-600 transition-colors shadow-sm overflow-hidden"
+          title={getUserDisplayName()}
         >
-          <User className="w-5 h-5" />
+          <LazyAvatar
+            photoUrl={user.photoUrl}
+            firstName={user.firstName}
+            lastName={user.lastName}
+            username={user.username}
+            size="sm"
+            className="w-full h-full"
+          />
         </button>
       </div>
 
@@ -132,6 +162,11 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
       <AlterarSenhaModal
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
+      />
+
+      <EditarPerfilModal
+        isOpen={showEditProfileModal}
+        onClose={() => setShowEditProfileModal(false)}
       />
     </>
   );

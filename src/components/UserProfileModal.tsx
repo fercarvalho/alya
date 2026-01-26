@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Shield, CheckCircle, XCircle, Calendar, Clock } from 'lucide-react';
+import { X, User, Shield, CheckCircle, XCircle, Calendar, Clock, Edit, Mail, Phone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import LazyAvatar from './LazyAvatar';
+import EditarPerfilModal from './EditarPerfilModal';
+import { applyPhoneMask } from '../utils/phoneMask';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -12,6 +15,11 @@ interface UserProfileModalProps {
 interface UserProfileData {
   id: string;
   username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  photoUrl?: string;
   role: string;
   modules?: string[];
   isActive?: boolean;
@@ -24,12 +32,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
   const { user, token } = useAuth();
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       loadProfileData();
     }
-  }, [isOpen]);
+  }, [isOpen, showEditProfileModal]); // Recarregar quando modal de edição fechar
 
   const loadProfileData = async () => {
     setLoading(true);
@@ -130,6 +139,34 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
           </div>
         ) : profileData ? (
           <div className="space-y-6">
+            {/* Avatar e Nome */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm text-center">
+              <div className="flex flex-col items-center gap-4">
+                <LazyAvatar
+                  photoUrl={profileData.photoUrl}
+                  firstName={profileData.firstName}
+                  lastName={profileData.lastName}
+                  username={profileData.username}
+                  size="lg"
+                />
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">
+                    {profileData.firstName && profileData.lastName
+                      ? `${profileData.firstName} ${profileData.lastName}`
+                      : profileData.username}
+                  </h3>
+                  <p className="text-gray-500 mt-1">@{profileData.username}</p>
+                </div>
+                <button
+                  onClick={() => setShowEditProfileModal(true)}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Editar Perfil
+                </button>
+              </div>
+            </div>
+
             {/* Informações Básicas */}
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -137,10 +174,25 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
                 Informações Básicas
               </h3>
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Username</label>
-                  <p className="text-lg font-semibold text-gray-800 mt-1">{profileData.username}</p>
-                </div>
+                {profileData.email && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      Email
+                    </label>
+                    <p className="text-lg text-gray-800 mt-1">{profileData.email}</p>
+                  </div>
+                )}
+
+                {profileData.phone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      Telefone
+                    </label>
+                    <p className="text-lg text-gray-800 mt-1">{applyPhoneMask(profileData.phone)}</p>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-sm font-medium text-gray-500">Função</label>
@@ -223,7 +275,18 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
     </div>
   );
 
-  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
+  return (
+    <>
+      {typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null}
+      <EditarPerfilModal
+        isOpen={showEditProfileModal}
+        onClose={() => {
+          setShowEditProfileModal(false);
+          loadProfileData(); // Recarregar dados após fechar
+        }}
+      />
+    </>
+  );
 };
 
 export default UserProfileModal;

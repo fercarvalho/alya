@@ -4,6 +4,11 @@ import { API_BASE_URL } from '../config/api';
 interface User {
   id: string;
   username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  photoUrl?: string;
   role: string;
   modules?: string[];
   isActive?: boolean;
@@ -124,13 +129,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('[AuthContext] Tentando login:', { username, apiUrl: `${API_BASE_URL}/auth/login` });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+      
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       console.log('[AuthContext] Resposta recebida:', { ok: response.ok, status: response.status });
 
@@ -181,8 +192,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           success: false
         };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[AuthContext] Erro ao fazer login:', error);
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Timeout: O servidor não respondeu a tempo. Verifique se o servidor está rodando.'
+        };
+      }
       return {
         success: false
       };
