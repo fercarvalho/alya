@@ -33,7 +33,9 @@ export default defineConfig({
           // Separar bibliotecas de ícones
           'icons-vendor': ['lucide-react'],
           // Separar bibliotecas de datas
-          'date-vendor': ['date-fns']
+          'date-vendor': ['date-fns'],
+          // Separar bibliotecas de imagem
+          'image-vendor': ['browser-image-compression', 'react-easy-crop']
         }
       }
     },
