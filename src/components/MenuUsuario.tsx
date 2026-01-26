@@ -147,7 +147,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
         <button
           ref={buttonRef}
           onClick={handleMenuClick}
-          className="flex items-center gap-3 px-4 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 text-amber-800 transition-colors shadow-sm min-h-[44px]"
+          className="flex items-center gap-3 px-4 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 text-amber-800 transition-colors shadow-sm min-h-[44px] flex-shrink-0 whitespace-nowrap"
           title={getUserDisplayName()}
         >
           {/* Avatar */}

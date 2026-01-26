@@ -5029,25 +5029,25 @@ const AppContent: React.FC = () => {
         {/* Header */}
         <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-5">
-              <div className="flex items-center">
+            <div className="flex justify-between items-center py-5 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center min-w-max flex-shrink-0">
                 <img 
                   src={isDemoMode ? "/app/alya-logo.png" : "/alya-logo.png"} 
                   alt="Alya Velas Logo" 
                   className="w-10 h-10 mr-3 rounded-lg shadow-sm object-contain"
                 />
                 <div className="min-w-0 flex-shrink">
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent whitespace-nowrap">
                     Alya Velas
                   </h1>
                   <p className="text-sm text-amber-600/70 font-medium break-words">Sistema de Gestão Financeira</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 min-w-max flex-shrink-0 ml-4">
                 <MenuUsuario />
                 <button
                   onClick={logout}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm whitespace-nowrap"
                   title="Sair"
                 >
                   <LogOut className="w-4 h-4" />
