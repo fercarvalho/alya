@@ -34,6 +34,7 @@ interface LoginResponse {
   success: boolean;
   firstLogin?: boolean;
   newPassword?: string;
+  error?: string;
 }
 
 interface AuthContextType {
