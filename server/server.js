@@ -486,6 +486,157 @@ app.post('/api/auth/verify', authenticateToken, (req, res) => {
   }
 });
 
+// Endpoint para buscar dados do próprio perfil
+app.get('/api/user/profile', authenticateToken, (req, res) => {
+  try {
+    const user = db.getUserById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    }
+    
+    const { password: _, ...safeUser } = user;
+    res.json({
+      success: true,
+      data: {
+        id: safeUser.id,
+        username: safeUser.username,
+        role: safeUser.role,
+        modules: safeUser.modules || [],
+        isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
+        lastLogin: safeUser.lastLogin,
+        createdAt: safeUser.createdAt,
+        updatedAt: safeUser.updatedAt
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// Endpoint para atualizar username do próprio usuário
+app.put('/api/user/profile', authenticateToken, (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Username e senha são obrigatórios' });
+    }
+    
+    // Validar formato do username
+    if (username.trim().length < 3) {
+      return res.status(400).json({ success: false, error: 'O username deve ter pelo menos 3 caracteres' });
+    }
+    
+    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!usernameRegex.test(username.trim())) {
+      return res.status(400).json({ success: false, error: 'O username não pode conter espaços ou acentos. Use apenas letras, números, underscore (_) ou hífen (-)' });
+    }
+    
+    // Buscar usuário atual
+    const currentUser = db.getUserById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    }
+    
+    // Validar senha atual
+    const isValidPassword = bcrypt.compareSync(password, currentUser.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
+    }
+    
+    // Verificar se o novo username é diferente do atual
+    if (username.trim() === currentUser.username) {
+      return res.status(400).json({ success: false, error: 'O novo username deve ser diferente do atual' });
+    }
+    
+    // Verificar se username já está em uso
+    const existingUser = db.getUserByUsername(username.trim());
+    if (existingUser && existingUser.id !== req.user.id) {
+      return res.status(400).json({ success: false, error: 'Username já está em uso' });
+    }
+    
+    // Atualizar username
+    const updatedUser = db.updateUser(req.user.id, { username: username.trim() });
+    
+    // Gerar novo token com username atualizado
+    const token = jwt.sign(
+      { id: updatedUser.id, username: updatedUser.username, role: updatedUser.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    // Logar ação
+    logActivity(req.user.id, currentUser.username, 'update_username', 'user', 'user', req.user.id, { oldUsername: currentUser.username, newUsername: username.trim() });
+    
+    const { password: _, ...safeUser } = updatedUser;
+    res.json({
+      success: true,
+      token,
+      data: {
+        id: safeUser.id,
+        username: safeUser.username,
+        role: safeUser.role,
+        modules: safeUser.modules || [],
+        isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
+        lastLogin: safeUser.lastLogin,
+        createdAt: safeUser.createdAt,
+        updatedAt: safeUser.updatedAt
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message || 'Erro interno do servidor' });
+  }
+});
+
+// Endpoint para alterar senha do próprio usuário
+app.put('/api/user/password', authenticateToken, (req, res) => {
+  try {
+    const { senhaAtual, novaSenha } = req.body;
+    
+    if (!senhaAtual || !novaSenha) {
+      return res.status(400).json({ success: false, error: 'Senha atual e nova senha são obrigatórias' });
+    }
+    
+    if (novaSenha.length < 6) {
+      return res.status(400).json({ success: false, error: 'A nova senha deve ter no mínimo 6 caracteres' });
+    }
+    
+    // Buscar usuário atual
+    const user = db.getUserById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    }
+    
+    // Validar senha atual
+    const isValidPassword = bcrypt.compareSync(senhaAtual, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
+    }
+    
+    // Verificar se nova senha é diferente da atual
+    const isSamePassword = bcrypt.compareSync(novaSenha, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({ success: false, error: 'A nova senha deve ser diferente da senha atual' });
+    }
+    
+    // Hash da nova senha
+    const hashedPassword = bcrypt.hashSync(novaSenha, 10);
+    
+    // Atualizar senha
+    db.updateUser(req.user.id, { password: hashedPassword });
+    
+    // Logar ação
+    logActivity(req.user.id, user.username, 'update_password', 'user', 'user', req.user.id);
+    
+    res.json({
+      success: true,
+      message: 'Senha alterada com sucesso'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message || 'Erro interno do servidor' });
+  }
+});
+
 // Rota para importar arquivos
 app.post('/api/import', authenticateToken, upload.single('file'), (req, res) => {
   try {

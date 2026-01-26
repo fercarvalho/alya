@@ -8,6 +8,8 @@ interface User {
   modules?: string[];
   isActive?: boolean;
   lastLogin?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface LoginResponse {
@@ -23,6 +25,8 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   completeFirstLogin: () => void;
+  updateUser: (userData: Partial<User>, newToken?: string) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -203,13 +207,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     storage.removeItem('pendingFirstLogin');
   };
 
+  const updateUser = (userData: Partial<User>, newToken?: string) => {
+    if (user) {
+      setUser({ ...user, ...userData });
+    }
+    if (newToken) {
+      setToken(newToken);
+      const storage = getStorage();
+      storage.setItem('authToken', newToken);
+    }
+  };
+
+  const refreshUser = async () => {
+    const storage = getStorage();
+    const savedToken = storage.getItem('authToken');
+    if (savedToken) {
+      await verifyToken(savedToken);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
     login,
     logout,
     isLoading,
-    completeFirstLogin
+    completeFirstLogin,
+    updateUser,
+    refreshUser
   };
 
   return (

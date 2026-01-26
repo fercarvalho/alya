@@ -30,6 +30,7 @@ import {
 import Clients from './components/Clients'
 import DRE from './components/DRE'
 import Login from './components/Login'
+import MenuUsuario from './components/MenuUsuario'
 // Lazy load AdminPanel (só carrega quando necessário)
 const AdminPanel = lazy(() => import('./components/AdminPanel'))
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -5024,7 +5025,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       {/* Container fixo para Header e Navigation */}
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed top-0 left-0 right-0 z-[60]">
         {/* Header */}
         <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -5050,6 +5051,7 @@ const AppContent: React.FC = () => {
                     {user?.role}
                   </span>
                 </div>
+                <MenuUsuario />
                 <button
                   onClick={logout}
                   className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
