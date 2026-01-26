@@ -5044,13 +5044,6 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-lg border border-amber-200">
-                  <Users className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm font-medium text-amber-800">{user?.username}</span>
-                  <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-                    {user?.role}
-                  </span>
-                </div>
                 <MenuUsuario />
                 <button
                   onClick={logout}

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { User, Edit, Key, X } from 'lucide-react';
+import { User, Edit, Key, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import UserProfileModal from './UserProfileModal';
 import AlterarUsernameModal from './AlterarUsernameModal';
@@ -33,14 +33,6 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
 
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside);
-      // Calcular posição do dropdown baseado na posição do botão
-      if (buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + 8,
-          right: window.innerWidth - rect.right
-        });
-      }
     }
 
     return () => {
@@ -51,6 +43,14 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
   if (!user) return null;
 
   const handleMenuClick = () => {
+    if (!showMenu && buttonRef.current) {
+      // Calcular posição ANTES de mostrar o menu
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      });
+    }
     setShowMenu(!showMenu);
   };
 
@@ -81,13 +81,28 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
     return user?.username || 'Usuário';
   };
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'user':
+        return 'Usuário';
+      case 'guest':
+        return 'Visitante';
+      default:
+        return role;
+    }
+  };
+
   const dropdownContent = showMenu ? (
     <div
       ref={menuRef}
-      className="fixed w-56 bg-white rounded-xl shadow-lg border border-amber-200/50 overflow-hidden z-[9999] transition-all duration-200"
+      className="fixed w-56 bg-white rounded-xl shadow-lg border border-amber-200/50 overflow-hidden z-[9999]"
       style={{
         top: `${dropdownPosition.top}px`,
-        right: `${dropdownPosition.right}px`
+        right: `${dropdownPosition.right}px`,
+        animation: 'slideDown 0.2s ease-out',
+        transformOrigin: 'top right'
       }}
     >
       <div className="py-2">
@@ -132,17 +147,34 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
         <button
           ref={buttonRef}
           onClick={handleMenuClick}
-          className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-600 transition-colors shadow-sm overflow-hidden"
+          className="flex items-center gap-3 px-4 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 text-amber-800 transition-colors shadow-sm min-h-[44px]"
           title={getUserDisplayName()}
         >
+          {/* Avatar */}
           <LazyAvatar
             photoUrl={user.photoUrl}
             firstName={user.firstName}
             lastName={user.lastName}
             username={user.username}
             size="sm"
-            className="w-full h-full"
+            className="flex-shrink-0"
           />
+          
+          {/* Nome e Role */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <User className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="text-sm font-medium text-amber-800 truncate">
+                {getUserDisplayName()}
+              </span>
+            </div>
+            <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full flex-shrink-0">
+              {getRoleLabel(user.role)}
+            </span>
+          </div>
+          
+          {/* Ícone de dropdown */}
+          <ChevronDown className={`w-4 h-4 text-amber-600 flex-shrink-0 transition-transform ${showMenu ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
