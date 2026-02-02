@@ -787,7 +787,7 @@ export default function ProjectionImpgeo() {
             </div>
 
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Linha</th>
@@ -802,7 +802,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-amber-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -842,15 +842,15 @@ export default function ProjectionImpgeo() {
                   })}
 
                   {/* Despesas totais (não editável): Fixas + Variáveis */}
-                  <tr className="bg-gray-50">
-                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-gray-50">DESPESAS TOTAIS (Fixas + Variáveis)</td>
+                  <tr className="bg-amber-100/60">
+                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60">DESPESAS TOTAIS (Fixas + Variáveis)</td>
                     {MONTHS_WITH_QUARTERS.map(col =>
                       col.kind === 'month' ? (
                         <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                           <CalculatedCell value={prevYearDespesasTotais[col.monthIndex]} />
                         </td>
                       ) : (
-                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2">
                           <CalculatedCell value={sumQuarter(prevYearDespesasTotais, col.startMonthIndex)} />
                         </td>
                       )
@@ -930,15 +930,15 @@ export default function ProjectionImpgeo() {
                     )
                   })}
 
-                  <tr className="bg-amber-50/30">
-                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-50/30">TOTAL Faturamento (base)</td>
+                  <tr className="bg-amber-100/60">
+                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60">TOTAL Faturamento (base)</td>
                     {MONTHS_WITH_QUARTERS.map(col =>
                       col.kind === 'month' ? (
                         <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                           <CalculatedCell value={baseRevenueTotals[col.monthIndex]} />
                         </td>
                       ) : (
-                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2">
                           <CalculatedCell value={sumQuarter(baseRevenueTotals, col.startMonthIndex)} />
                         </td>
                       )
@@ -947,15 +947,15 @@ export default function ProjectionImpgeo() {
                       <CalculatedCell value={baseRevenueTotals.reduce((s, v) => s + v, 0)} />
                     </td>
                   </tr>
-                  <tr className="bg-amber-50/30">
-                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-50/30">TOTAL MKT (base)</td>
+                  <tr className="bg-amber-100/60">
+                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60">TOTAL MKT (base)</td>
                     {MONTHS_WITH_QUARTERS.map(col =>
                       col.kind === 'month' ? (
                         <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                           <CalculatedCell value={baseMktTotals[col.monthIndex]} />
                         </td>
                       ) : (
-                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2">
                           <CalculatedCell value={sumQuarter(baseMktTotals, col.startMonthIndex)} />
                         </td>
                       )
@@ -974,7 +974,7 @@ export default function ProjectionImpgeo() {
                           <CalculatedCell value={prevYearTotal[col.monthIndex]} />
                         </td>
                       ) : (
-                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                        <td key={`q-${col.startMonthIndex}`} className="px-3 py-2">
                           <CalculatedCell value={sumQuarter(prevYearTotal, col.startMonthIndex)} />
                         </td>
                       )
@@ -1028,7 +1028,7 @@ export default function ProjectionImpgeo() {
               <p className="text-sm text-gray-600 mt-1">Somatório dos streams ativos (com overrides).</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1043,7 +1043,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-amber-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1097,7 +1097,7 @@ export default function ProjectionImpgeo() {
                 </div>
 
                 <div className="p-4 overflow-x-auto">
-                  <table className="min-w-[1100px] w-full">
+                  <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                     <thead className="bg-gray-800 text-white">
                       <tr>
                         <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1112,7 +1112,7 @@ export default function ProjectionImpgeo() {
                             </th>
                           )
                         )}
-                        <th className="px-3 py-3 text-right">Total</th>
+                        <th className="px-3 py-3 text-right bg-gray-700">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -1208,7 +1208,7 @@ export default function ProjectionImpgeo() {
               <p className="text-sm text-gray-600 mt-1">Previsto = base (sem crescimento). Médio/Máximo aplicam crescimento. Você pode fazer override manual por cenário/mês.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1223,7 +1223,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-gray-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1306,7 +1306,7 @@ export default function ProjectionImpgeo() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1321,7 +1321,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-amber-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1395,7 +1395,7 @@ export default function ProjectionImpgeo() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1410,7 +1410,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-amber-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1484,7 +1484,7 @@ export default function ProjectionImpgeo() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1499,7 +1499,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-amber-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1568,7 +1568,7 @@ export default function ProjectionImpgeo() {
               <p className="text-sm text-gray-600 mt-1">Somatório (Fixas + Variáveis + Investimentos + MKT), por cenário.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1583,7 +1583,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-gray-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1622,7 +1622,7 @@ export default function ProjectionImpgeo() {
               <p className="text-sm text-gray-600 mt-1">Faturamento Total − Orçamento, por cenário.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1637,7 +1637,7 @@ export default function ProjectionImpgeo() {
                         </th>
                       )
                     )}
-                    <th className="px-3 py-3 text-right">Total</th>
+                    <th className="px-3 py-3 text-right bg-gray-700">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
