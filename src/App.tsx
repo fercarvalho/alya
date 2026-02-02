@@ -3280,6 +3280,19 @@ const AppContent: React.FC = () => {
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            {/* Ações (acima da lista) */}
+            {selectedTransactions.size > 0 && (
+              <div className="flex justify-end p-3 sm:p-4 bg-red-50 border-b border-red-200">
+                <button
+                  onClick={handleDeleteSelectedTransactions}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Deletar Selecionada{selectedTransactions.size > 1 ? 's' : ''} ({selectedTransactions.size})
+                </button>
+              </div>
+            )}
+
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
                <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
@@ -3419,19 +3432,6 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
             ))}
-            
-            {/* Botão de Deletar Selecionados */}
-            {selectedTransactions.size > 0 && (
-              <div className="flex justify-end p-4 bg-red-50 border-t border-red-200">
-                <button
-                  onClick={handleDeleteSelectedTransactions}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Deletar Selecionada{selectedTransactions.size > 1 ? 's' : ''} ({selectedTransactions.size})
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
