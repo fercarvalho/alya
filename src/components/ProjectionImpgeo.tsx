@@ -242,7 +242,23 @@ const OverrideCell: React.FC<{
   )
 }
 
-export default function ProjectionImpgeo() {
+const LegendBox: React.FC<{
+  title: string
+  left: React.ReactNode
+  right?: React.ReactNode
+}> = ({ title, left, right }) => {
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <h3 className="font-semibold text-amber-900 mb-2">{title}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-amber-900/90">
+        <div>{left}</div>
+        <div>{right}</div>
+      </div>
+    </div>
+  )
+}
+
+export default function Projection() {
   const { token, user, logout } = useAuth()
 
   const [isLoading, setIsLoading] = useState(true)
@@ -565,7 +581,7 @@ export default function ProjectionImpgeo() {
         </div>
 
         <p className="text-sm text-amber-700/80">
-          Modelo impgeo: você preenche o <b>Resultado do Ano Anterior</b> e o ano corrente é calculado automaticamente (com overrides manuais por cenário).
+          Você preenche o <b>Resultado do Ano Anterior</b> e o ano corrente é calculado automaticamente (com overrides manuais por cenário).
         </p>
 
         {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3">{error}</div>}
@@ -649,6 +665,30 @@ export default function ProjectionImpgeo() {
         </div>
       ) : (
         <div className="space-y-8">
+          <LegendBox
+            title="Legenda (overrides manuais no ano corrente):"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Valor calculado:</span> quando não há override, o sistema usa o cálculo automático a partir do Resultado do Ano Anterior.
+                </p>
+                <p>
+                  <span className="font-semibold">Override manual:</span> quando você digita um valor, ele passa a ter prioridade sobre o cálculo automático naquele mês/cenário.
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Indicador visual:</span> campo com leve destaque indica override ativo.
+                </p>
+                <p>
+                  <span className="font-semibold">↺:</span> limpa o override e volta ao valor automático.
+                </p>
+              </>
+            }
+          />
+
           {/* Config (admin) */}
           {isAdmin && (
             <div className="bg-white rounded-xl border border-amber-200 shadow-sm">
@@ -988,6 +1028,34 @@ export default function ProjectionImpgeo() {
             </div>
           </div>
 
+          <LegendBox
+            title="Legenda (Resultado do Ano Anterior):"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Campos editáveis:</span> valores mensais das linhas base (Fixas, Variáveis, Investimentos, Faturamento por stream e MKT por componente).
+                </p>
+                <p>
+                  <span className="font-semibold">Campos calculados:</span> T1–T4, coluna Total e as linhas de totalização.
+                </p>
+                <p>
+                  <span className="font-semibold">Salvamento:</span> clique em <span className="font-semibold">Salvar base</span>.
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p className="font-semibold">Fórmulas:</p>
+                <ul className="list-disc pl-5">
+                  <li>Despesas Totais = Despesas Fixas + Despesas Variáveis</li>
+                  <li>Total Faturamento (base) = soma dos streams ativos</li>
+                  <li>Total MKT (base) = soma dos componentes ativos</li>
+                  <li>TOTAL = Faturamento − Despesas Totais − Investimentos − Total MKT</li>
+                </ul>
+              </>
+            }
+          />
+
           {/* Growth */}
           <div id="projection-section-growth" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200">
@@ -1020,6 +1088,30 @@ export default function ProjectionImpgeo() {
               </button>
             </div>
           </div>
+
+          <LegendBox
+            title="Legenda Percentual de Crescimento (cenários):"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Campos editáveis:</span> Previsto, Médio e Máximo.
+                </p>
+                <p>
+                  <span className="font-semibold">Função:</span> define percentuais usados nos cálculos automáticos do ano corrente.
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Uso:</span> aplicado em Variáveis, Investimentos e Faturamento (streams).
+                </p>
+                <p>
+                  <span className="font-semibold">Cálculo:</span> Base + (Base × Percentual ÷ 100).
+                </p>
+              </>
+            }
+          />
 
           {/* Revenue total (read-only) */}
           <div id="projection-section-revenueTotal" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1074,6 +1166,30 @@ export default function ProjectionImpgeo() {
               </table>
             </div>
           </div>
+
+          <LegendBox
+            title="Legenda Faturamento Total:"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Campos calculados:</span> não editável, soma automática.
+                </p>
+                <p>
+                  <span className="font-semibold">Componentes:</span> soma dos streams de faturamento ativos.
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Função:</span> total de receitas previstas por cenário.
+                </p>
+                <p>
+                  <span className="font-semibold">Uso:</span> comparação com Orçamento para compor o Resultado.
+                </p>
+              </>
+            }
+          />
 
           {/* Revenue streams (derived + overrides) */}
           {sortedStreams.map(stream => {
@@ -1197,6 +1313,32 @@ export default function ProjectionImpgeo() {
                     Salvar overrides de faturamento
                   </button>
                 </div>
+
+                <div className="px-4 pb-4">
+                  <LegendBox
+                    title={`Legenda Faturamento — ${stream.name}:`}
+                    left={
+                      <>
+                        <p>
+                          <span className="font-semibold">Campos editáveis:</span> Previsto, Médio e Máximo (por mês) via override.
+                        </p>
+                        <p>
+                          <span className="font-semibold">Cálculo base:</span> valor do ano anterior + percentual do cenário.
+                        </p>
+                      </>
+                    }
+                    right={
+                      <>
+                        <p>
+                          <span className="font-semibold">Persistência:</span> clique em <span className="font-semibold">Salvar overrides de faturamento</span>.
+                        </p>
+                        <p>
+                          <span className="font-semibold">Uso:</span> componente do Faturamento Total.
+                        </p>
+                      </>
+                    }
+                  />
+                </div>
               </div>
             )
           })}
@@ -1294,12 +1436,36 @@ export default function ProjectionImpgeo() {
             </div>
           </div>
 
+          <LegendBox
+            title="Legenda MKT:"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Fonte (base):</span> soma dos componentes de MKT preenchidos no Resultado do Ano Anterior.
+                </p>
+                <p>
+                  <span className="font-semibold">Componentes:</span> são configuráveis (ex.: Tráfego Pago, Social Media, Produção de Conteúdo).
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Cálculo:</span> Previsto = base; Médio/Máximo aplicam percentuais (e podem ter override manual).
+                </p>
+                <p>
+                  <span className="font-semibold">Uso:</span> componente do cálculo do Orçamento.
+                </p>
+              </>
+            }
+          />
+
           {/* Fixed expenses (derived + overrides) */}
           <div id="projection-section-fixedExpenses" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Despesas Fixas (ano corrente)</h2>
-                <p className="text-sm text-gray-600 mt-1">Previsto segue a regra impgeo baseada no Dezembro do ano anterior. Overrides por cenário/mês.</p>
+                <p className="text-sm text-gray-600 mt-1">Previsto segue a regra padrão baseada no Dezembro do ano anterior. Overrides por cenário/mês.</p>
               </div>
               <button onClick={() => saveBase(base)} disabled={isSaving} className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:bg-gray-300 transition-colors">
                 Salvar overrides
@@ -1382,6 +1548,27 @@ export default function ProjectionImpgeo() {
               </table>
             </div>
           </div>
+
+          <LegendBox
+            title="Legenda Despesas Fixas:"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Base (Previsto):</span> regra padrão a partir do Dezembro do ano anterior.
+                </p>
+                <p>
+                  <span className="font-semibold">Passos:</span> Médio = Previsto × 1,10; Máximo = Médio × 1,10 (quando não há override).
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Lógica:</span> Jan = Dez anterior +10%; Fev/Mar copiam Jan; Abr = Jan +10%; Mai/Jun copiam Abr; Jul = Abr +10%; Ago/Set copiam Jul; Out = Jul +10%; Nov/Dez copiam Out.
+                </p>
+              </>
+            }
+          />
 
           {/* Variable expenses (derived + overrides) */}
           <div id="projection-section-variableExpenses" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1472,6 +1659,30 @@ export default function ProjectionImpgeo() {
             </div>
           </div>
 
+          <LegendBox
+            title="Legenda Despesas Variáveis:"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Campos editáveis:</span> Previsto, Médio e Máximo (por mês) via override.
+                </p>
+                <p>
+                  <span className="font-semibold">Cálculo base:</span> valor do ano anterior + percentual do cenário.
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Persistência:</span> clique em <span className="font-semibold">Salvar overrides</span>.
+                </p>
+                <p>
+                  <span className="font-semibold">Percentuais:</span> Previsto (crescimento Previsto), Médio, Máximo.
+                </p>
+              </>
+            }
+          />
+
           {/* Investments (derived + overrides) */}
           <div id="projection-section-investments" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -1561,6 +1772,30 @@ export default function ProjectionImpgeo() {
             </div>
           </div>
 
+          <LegendBox
+            title="Legenda Investimentos:"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Campos editáveis:</span> Previsto, Médio e Máximo (por mês) via override.
+                </p>
+                <p>
+                  <span className="font-semibold">Cálculo base:</span> valor do ano anterior + percentual do cenário.
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Persistência:</span> clique em <span className="font-semibold">Salvar overrides</span>.
+                </p>
+                <p>
+                  <span className="font-semibold">Uso:</span> componente do cálculo do Orçamento.
+                </p>
+              </>
+            }
+          />
+
           {/* Budget */}
           <div id="projection-section-budget" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200">
@@ -1615,6 +1850,30 @@ export default function ProjectionImpgeo() {
             </div>
           </div>
 
+          <LegendBox
+            title="Legenda Orçamento:"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Campos calculados:</span> não editável, soma automática.
+                </p>
+                <p>
+                  <span className="font-semibold">Componentes:</span> Fixas + Variáveis + Investimentos + MKT (por cenário).
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Função:</span> total de gastos previstos.
+                </p>
+                <p>
+                  <span className="font-semibold">Uso:</span> comparação com Faturamento Total para compor o Resultado.
+                </p>
+              </>
+            }
+          />
+
           {/* Resultado */}
           <div id="projection-section-resultado" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200">
@@ -1668,6 +1927,30 @@ export default function ProjectionImpgeo() {
               </table>
             </div>
           </div>
+
+          <LegendBox
+            title="Legenda Resultado Financeiro:"
+            left={
+              <>
+                <p>
+                  <span className="font-semibold">Campos calculados:</span> não editável, cálculo automático.
+                </p>
+                <p>
+                  <span className="font-semibold">Fórmula:</span> Faturamento Total − Orçamento.
+                </p>
+              </>
+            }
+            right={
+              <>
+                <p>
+                  <span className="font-semibold">Função:</span> resultado líquido (lucro/prejuízo).
+                </p>
+                <p>
+                  <span className="font-semibold">Cores:</span> vermelho para negativo (positivo usa a cor padrão).
+                </p>
+              </>
+            }
+          />
         </div>
       )}
 

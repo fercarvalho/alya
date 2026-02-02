@@ -3,8 +3,7 @@ import { formatCurrencyBRL } from './formatters'
 
 export type MonthlyMktPoint = {
   month: string
-  // Observação: no Alya os componentes são dinâmicos; este chart aceita keys genéricas,
-  // mas mantém compatibilidade com o modelo do impgeo se necessário.
+  // Observação: no Alya os componentes são dinâmicos; este chart aceita keys genéricas.
   [key: string]: any
 }
 

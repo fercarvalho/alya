@@ -1,6 +1,6 @@
 // Service Worker para modo demo do Alya
 // Intercepta requisições /api/* e retorna dados mock
-// Versão: 1.0.4 - Projeção impgeo-style (base + overrides) no demo
+// Versão: 1.0.4 - Projeção (base + overrides) no demo
 
 const SW_VERSION = '1.0.4';
 const DEMO_TOKEN = 'demo-token-alya-2024';
@@ -167,7 +167,7 @@ const MOCK_DB = {
     growth: { minimo: 0, medio: 0, maximo: 0 },
     updatedAt: new Date(0).toISOString()
   },
-  // Base impgeo-style (Resultado do Ano Anterior + overrides)
+  // Base (Resultado do Ano Anterior + overrides)
   projectionBase: {
     growth: { minimo: 0, medio: 0, maximo: 0 },
     prevYear: {
@@ -288,7 +288,7 @@ function syncProjectionDataDemo() {
     return a.map((v, i) => (o[i] === null ? v : Number(o[i])));
   };
 
-  // Fixas (impgeo): previsto por blocos baseado em Dez anterior + overrides
+  // Fixas: previsto por blocos baseado em Dez anterior + overrides
   const dezAnterior = Number(base?.prevYear?.fixedExpenses?.[11]) || 0;
   const fixedAuto = (() => {
     const out = new Array(12).fill(0);
@@ -482,7 +482,7 @@ async function handleProjection(req) {
     return unauthorized('Token de acesso requerido');
   }
 
-  // GET/PUT /api/projection/base (base impgeo-style)
+  // GET/PUT /api/projection/base (base + overrides)
   if (path === '/api/projection/base' && req.method === 'GET') {
     // garantir snapshot atualizado para UI consistente
     if (!MOCK_DB.projectionSnapshot?.config) syncProjectionDataDemo();
