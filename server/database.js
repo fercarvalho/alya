@@ -11,6 +11,28 @@ class Database {
     this.usersFile = path.join(this.dbPath, 'users.json');
     this.activityLogsFile = path.join(this.dbPath, 'activity-logs.json');
     this.modulesFile = path.join(this.dbPath, 'modules.json');
+
+    // Projeção (impgeo-style, adaptado ao Alya)
+    this.projectionConfigFile = path.join(this.dbPath, 'projection-config.json');
+    this.projectionConfigBackupFile = path.join(this.dbPath, 'projection-config-backup.json');
+    this.projectionBaseFile = path.join(this.dbPath, 'projection-base.json');
+    this.projectionBaseBackupFile = path.join(this.dbPath, 'projection-base-backup.json');
+    this.projectionFile = path.join(this.dbPath, 'projection.json');
+    this.projectionBackupFile = path.join(this.dbPath, 'projection-backup.json');
+    this.revenueFile = path.join(this.dbPath, 'revenue.json');
+    this.revenueBackupFile = path.join(this.dbPath, 'revenue-backup.json');
+    this.mktComponentsFile = path.join(this.dbPath, 'mkt-components.json');
+    this.mktComponentsBackupFile = path.join(this.dbPath, 'mkt-components-backup.json');
+    this.fixedExpensesFile = path.join(this.dbPath, 'fixedExpenses.json');
+    this.fixedExpensesBackupFile = path.join(this.dbPath, 'fixedExpenses-backup.json');
+    this.variableExpensesFile = path.join(this.dbPath, 'variableExpenses.json');
+    this.variableExpensesBackupFile = path.join(this.dbPath, 'variableExpenses-backup.json');
+    this.investmentsFile = path.join(this.dbPath, 'investments.json');
+    this.investmentsBackupFile = path.join(this.dbPath, 'investments-backup.json');
+    this.budgetFile = path.join(this.dbPath, 'budget.json');
+    this.budgetBackupFile = path.join(this.dbPath, 'budget-backup.json');
+    this.resultadoFile = path.join(this.dbPath, 'resultado.json');
+    this.resultadoBackupFile = path.join(this.dbPath, 'resultado-backup.json');
     
     // Garantir que os arquivos existam
     this.ensureFilesExist();
@@ -49,7 +71,7 @@ class Database {
           username: 'admin',
           password: placeholderPassword,
           role: 'admin',
-          modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'],
+          modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin'],
           isActive: true,
           lastLogin: null, // null indica que nunca fez login
           createdAt: new Date().toISOString(),
@@ -179,6 +201,18 @@ class Database {
         },
         {
           id: this.generateId(),
+          name: 'Projeção',
+          key: 'projecao',
+          icon: 'Calculator',
+          description: 'Planejamento anual (tabelas e gráficos)',
+          route: null,
+          isActive: true,
+          isSystem: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: this.generateId(),
           name: 'Administração',
           key: 'admin',
           icon: 'Shield',
@@ -192,6 +226,257 @@ class Database {
       ];
       fs.writeFileSync(this.modulesFile, JSON.stringify(defaultModules, null, 2));
     }
+
+    // Garantir que o módulo "projecao" exista (upsert em ambientes já inicializados)
+    try {
+      const existing = this.getSystemModuleByKey('projecao');
+      if (!existing) {
+        this.saveSystemModule({
+          name: 'Projeção',
+          key: 'projecao',
+          icon: 'Calculator',
+          description: 'Planejamento anual (tabelas e gráficos)',
+          route: null,
+          isActive: true,
+          isSystem: true
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao garantir módulo projecao:', error);
+    }
+
+    // Arquivos de Projeção (dados + config + backups)
+    const ensureFile = (filePath, defaultContent) => {
+      if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, JSON.stringify(defaultContent, null, 2));
+      }
+    };
+    const months12 = new Array(12).fill(0);
+    const defaultProjectionConfig = {
+      revenueStreams: [
+        { id: 'rev_1', name: 'Faturamento A', order: 1, isActive: true },
+        { id: 'rev_2', name: 'Faturamento B', order: 2, isActive: true }
+      ],
+      mktComponents: [
+        { id: 'mkt_1', name: 'Tráfego', order: 1, isActive: true },
+        { id: 'mkt_2', name: 'Social Media', order: 2, isActive: true },
+        { id: 'mkt_3', name: 'Conteúdo', order: 3, isActive: true }
+      ],
+      updatedAt: new Date(0).toISOString()
+    };
+    ensureFile(this.projectionConfigFile, defaultProjectionConfig);
+    ensureFile(this.projectionConfigBackupFile, {});
+
+    const defaultProjectionBase = {
+      growth: { minimo: 0, medio: 0, maximo: 0 },
+      prevYear: {
+        fixedExpenses: [...months12],
+        variableExpenses: [...months12],
+        investments: [...months12],
+        revenueStreams: {
+          rev_1: [...months12],
+          rev_2: [...months12]
+        },
+        mktComponents: {
+          mkt_1: [...months12],
+          mkt_2: [...months12],
+          mkt_3: [...months12]
+        }
+      },
+      manualOverrides: {
+        fixedPrevistoManual: new Array(12).fill(null),
+        fixedMediaManual: new Array(12).fill(null),
+        fixedMaximoManual: new Array(12).fill(null),
+        variablePrevistoManual: new Array(12).fill(null),
+        variableMedioManual: new Array(12).fill(null),
+        variableMaximoManual: new Array(12).fill(null),
+        investimentosPrevistoManual: new Array(12).fill(null),
+        investimentosMedioManual: new Array(12).fill(null),
+        investimentosMaximoManual: new Array(12).fill(null),
+        mktPrevistoManual: new Array(12).fill(null),
+        mktMedioManual: new Array(12).fill(null),
+        mktMaximoManual: new Array(12).fill(null),
+        revenueManual: {
+          rev_1: { previsto: new Array(12).fill(null), medio: new Array(12).fill(null), maximo: new Array(12).fill(null) },
+          rev_2: { previsto: new Array(12).fill(null), medio: new Array(12).fill(null), maximo: new Array(12).fill(null) }
+        }
+      },
+      updatedAt: new Date(0).toISOString()
+    };
+    ensureFile(this.projectionBaseFile, defaultProjectionBase);
+    ensureFile(this.projectionBaseBackupFile, {});
+
+    const defaultRevenue = {
+      streams: {
+        rev_1: { previsto: [...months12] },
+        rev_2: { previsto: [...months12] }
+      },
+      updatedAt: new Date(0).toISOString()
+    };
+    ensureFile(this.revenueFile, defaultRevenue);
+    ensureFile(this.revenueBackupFile, {});
+
+    const defaultMktComponents = {
+      components: {
+        mkt_1: { previsto: [...months12] },
+        mkt_2: { previsto: [...months12] },
+        mkt_3: { previsto: [...months12] }
+      },
+      updatedAt: new Date(0).toISOString()
+    };
+    ensureFile(this.mktComponentsFile, defaultMktComponents);
+    ensureFile(this.mktComponentsBackupFile, {});
+
+    ensureFile(this.fixedExpensesFile, { previsto: [...months12], media: [...months12], maximo: [...months12], updatedAt: new Date(0).toISOString() });
+    ensureFile(this.fixedExpensesBackupFile, {});
+    ensureFile(this.variableExpensesFile, { previsto: [...months12], medio: [...months12], maximo: [...months12], updatedAt: new Date(0).toISOString() });
+    ensureFile(this.variableExpensesBackupFile, {});
+    ensureFile(this.investmentsFile, { previsto: [...months12], medio: [...months12], maximo: [...months12], updatedAt: new Date(0).toISOString() });
+    ensureFile(this.investmentsBackupFile, {});
+    ensureFile(this.budgetFile, { previsto: [...months12], medio: [...months12], maximo: [...months12], updatedAt: new Date(0).toISOString() });
+    ensureFile(this.budgetBackupFile, {});
+    ensureFile(this.resultadoFile, { previsto: [...months12], medio: [...months12], maximo: [...months12], updatedAt: new Date(0).toISOString() });
+    ensureFile(this.resultadoBackupFile, {});
+
+    // Snapshot consolidado
+    ensureFile(this.projectionFile, {
+      growth: { minimo: 0, medio: 0, maximo: 0 },
+      config: {
+        revenueStreams: defaultProjectionConfig.revenueStreams,
+        mktComponents: defaultProjectionConfig.mktComponents
+      },
+      fixedExpenses: { previsto: [...months12], media: [...months12], maximo: [...months12] },
+      variableExpenses: { previsto: [...months12], medio: [...months12], maximo: [...months12] },
+      investments: { previsto: [...months12], medio: [...months12], maximo: [...months12] },
+      mktComponents: defaultMktComponents,
+      mktTotals: { previsto: [...months12], medio: [...months12], maximo: [...months12] },
+      revenue: defaultRevenue,
+      revenueTotals: { previsto: [...months12], medio: [...months12], maximo: [...months12] },
+      budget: { previsto: [...months12], medio: [...months12], maximo: [...months12] },
+      resultado: { previsto: [...months12], medio: [...months12], maximo: [...months12] },
+      updatedAt: new Date(0).toISOString()
+    });
+    ensureFile(this.projectionBackupFile, {});
+  }
+
+  // ---------------------------
+  // Helpers de leitura/escrita
+  // ---------------------------
+  readJsonSafe(filePath, fallback) {
+    try {
+      const raw = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(raw);
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  writeJsonAtomic(filePath, data) {
+    const tmpPath = `${filePath}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
+    fs.renameSync(tmpPath, filePath);
+  }
+
+  createAutoBackup(sourceFilePath, backupFilePath) {
+    try {
+      if (!fs.existsSync(sourceFilePath)) return;
+      fs.copyFileSync(sourceFilePath, backupFilePath);
+    } catch (error) {
+      console.error('Erro ao criar backup automático:', error);
+    }
+  }
+
+  normalizeMonthArray(arr, fallbackValue = 0) {
+    const out = new Array(12).fill(fallbackValue);
+    if (!Array.isArray(arr)) return out;
+    for (let i = 0; i < 12; i++) {
+      const v = Number(arr[i]);
+      out[i] = Number.isFinite(v) ? v : fallbackValue;
+    }
+    return out;
+  }
+
+  normalizeNullableMonthArray(arr) {
+    const out = new Array(12).fill(null);
+    if (!Array.isArray(arr)) return out;
+    for (let i = 0; i < 12; i++) {
+      const raw = arr[i];
+      if (raw === null || raw === undefined || raw === '') {
+        out[i] = null;
+        continue;
+      }
+      const v = Number(raw);
+      out[i] = Number.isFinite(v) ? v : null;
+    }
+    return out;
+  }
+
+  ensureProjectionBaseShape(base, cfg) {
+    const safe = base && typeof base === 'object' ? base : {};
+    const growth = safe.growth || {};
+
+    const revenueStreamsCfg = (cfg?.revenueStreams || []).filter(s => s && s.id);
+    const mktComponentsCfg = (cfg?.mktComponents || []).filter(c => c && c.id);
+
+    const prevYear = safe.prevYear && typeof safe.prevYear === 'object' ? safe.prevYear : {};
+    const prevYearRevenue = prevYear.revenueStreams && typeof prevYear.revenueStreams === 'object' ? prevYear.revenueStreams : {};
+    const prevYearMkt = prevYear.mktComponents && typeof prevYear.mktComponents === 'object' ? prevYear.mktComponents : {};
+
+    const manualOverrides = safe.manualOverrides && typeof safe.manualOverrides === 'object' ? safe.manualOverrides : {};
+    const revenueManual = manualOverrides.revenueManual && typeof manualOverrides.revenueManual === 'object' ? manualOverrides.revenueManual : {};
+
+    const shaped = {
+      growth: {
+        minimo: Number(growth.minimo) || 0,
+        medio: Number(growth.medio) || 0,
+        maximo: Number(growth.maximo) || 0
+      },
+      prevYear: {
+        fixedExpenses: this.normalizeMonthArray(prevYear.fixedExpenses, 0),
+        variableExpenses: this.normalizeMonthArray(prevYear.variableExpenses, 0),
+        investments: this.normalizeMonthArray(prevYear.investments, 0),
+        revenueStreams: {},
+        mktComponents: {}
+      },
+      manualOverrides: {
+        fixedPrevistoManual: this.normalizeNullableMonthArray(manualOverrides.fixedPrevistoManual),
+        fixedMediaManual: this.normalizeNullableMonthArray(manualOverrides.fixedMediaManual),
+        fixedMaximoManual: this.normalizeNullableMonthArray(manualOverrides.fixedMaximoManual),
+        variablePrevistoManual: this.normalizeNullableMonthArray(manualOverrides.variablePrevistoManual),
+        variableMedioManual: this.normalizeNullableMonthArray(manualOverrides.variableMedioManual),
+        variableMaximoManual: this.normalizeNullableMonthArray(manualOverrides.variableMaximoManual),
+        investimentosPrevistoManual: this.normalizeNullableMonthArray(manualOverrides.investimentosPrevistoManual),
+        investimentosMedioManual: this.normalizeNullableMonthArray(manualOverrides.investimentosMedioManual),
+        investimentosMaximoManual: this.normalizeNullableMonthArray(manualOverrides.investimentosMaximoManual),
+        mktPrevistoManual: this.normalizeNullableMonthArray(manualOverrides.mktPrevistoManual),
+        mktMedioManual: this.normalizeNullableMonthArray(manualOverrides.mktMedioManual),
+        mktMaximoManual: this.normalizeNullableMonthArray(manualOverrides.mktMaximoManual),
+        revenueManual: {}
+      },
+      updatedAt: safe.updatedAt || null
+    };
+
+    for (const s of revenueStreamsCfg) {
+      shaped.prevYear.revenueStreams[s.id] = this.normalizeMonthArray(prevYearRevenue[s.id], 0);
+      const rm = revenueManual[s.id] || {};
+      shaped.manualOverrides.revenueManual[s.id] = {
+        previsto: this.normalizeNullableMonthArray(rm.previsto),
+        medio: this.normalizeNullableMonthArray(rm.medio),
+        maximo: this.normalizeNullableMonthArray(rm.maximo)
+      };
+    }
+
+    for (const c of mktComponentsCfg) {
+      shaped.prevYear.mktComponents[c.id] = this.normalizeMonthArray(prevYearMkt[c.id], 0);
+    }
+
+    return shaped;
+  }
+
+  applyGrowth(baseArr, percent) {
+    const p = Number(percent);
+    const factor = Number.isFinite(p) ? (1 + p / 100) : 1;
+    return this.normalizeMonthArray(baseArr, 0).map(v => v * factor);
   }
 
   // Métodos para Transações
@@ -668,6 +953,308 @@ class Database {
     } catch (error) {
       throw new Error('Erro ao deletar módulo: ' + error.message);
     }
+  }
+
+  // ---------------------------
+  // Métodos para Projeção (Alya)
+  // ---------------------------
+  getProjectionBase() {
+    const cfg = this.getProjectionConfig();
+    const raw = this.readJsonSafe(this.projectionBaseFile, null);
+    return this.ensureProjectionBaseShape(raw, cfg);
+  }
+
+  updateProjectionBase(nextBase) {
+    const cfg = this.getProjectionConfig();
+    const shaped = this.ensureProjectionBaseShape(nextBase, cfg);
+    this.createAutoBackup(this.projectionBaseFile, this.projectionBaseBackupFile);
+    const data = { ...shaped, updatedAt: new Date().toISOString() };
+    this.writeJsonAtomic(this.projectionBaseFile, data);
+    return data;
+  }
+
+  getProjectionConfig() {
+    return this.readJsonSafe(this.projectionConfigFile, { revenueStreams: [], mktComponents: [], updatedAt: null });
+  }
+
+  updateProjectionConfig(config) {
+    this.createAutoBackup(this.projectionConfigFile, this.projectionConfigBackupFile);
+    const data = {
+      ...config,
+      updatedAt: new Date().toISOString()
+    };
+    this.writeJsonAtomic(this.projectionConfigFile, data);
+    return data;
+  }
+
+  getRevenueData() {
+    // Mantido por compatibilidade: espelha prevYear.revenueStreams do projection-base.json
+    const base = this.getProjectionBase();
+    const streams = {};
+    for (const [id, arr] of Object.entries(base.prevYear?.revenueStreams || {})) {
+      streams[id] = { previsto: this.normalizeMonthArray(arr, 0) };
+    }
+    return { streams, updatedAt: base.updatedAt || null };
+  }
+
+  updateRevenueData(revenueData) {
+    // Mantido por compatibilidade: escreve em projection-base.json (prevYear) e espelha em revenue.json
+    const cfg = this.getProjectionConfig();
+    const base = this.getProjectionBase();
+    const next = this.ensureProjectionBaseShape(base, cfg);
+    const streams = revenueData && typeof revenueData === 'object' ? (revenueData.streams || {}) : {};
+    for (const s of (cfg.revenueStreams || [])) {
+      if (!s?.id) continue;
+      const arr = streams?.[s.id]?.previsto;
+      next.prevYear.revenueStreams[s.id] = this.normalizeMonthArray(arr, 0);
+    }
+    const updatedBase = this.updateProjectionBase(next);
+
+    const mirror = this.getRevenueData();
+    this.createAutoBackup(this.revenueFile, this.revenueBackupFile);
+    this.writeJsonAtomic(this.revenueFile, { ...mirror, updatedAt: new Date().toISOString() });
+    return { ...mirror, updatedAt: updatedBase.updatedAt };
+  }
+
+  getMktComponentsData() {
+    // Mantido por compatibilidade: espelha prevYear.mktComponents do projection-base.json
+    const base = this.getProjectionBase();
+    const components = {};
+    for (const [id, arr] of Object.entries(base.prevYear?.mktComponents || {})) {
+      components[id] = { previsto: this.normalizeMonthArray(arr, 0) };
+    }
+    return { components, updatedAt: base.updatedAt || null };
+  }
+
+  updateMktComponentsData(mktComponentsData) {
+    // Mantido por compatibilidade: escreve em projection-base.json (prevYear) e espelha em mkt-components.json
+    const cfg = this.getProjectionConfig();
+    const base = this.getProjectionBase();
+    const next = this.ensureProjectionBaseShape(base, cfg);
+    const comps = mktComponentsData && typeof mktComponentsData === 'object' ? (mktComponentsData.components || {}) : {};
+    for (const c of (cfg.mktComponents || [])) {
+      if (!c?.id) continue;
+      const arr = comps?.[c.id]?.previsto;
+      next.prevYear.mktComponents[c.id] = this.normalizeMonthArray(arr, 0);
+    }
+    const updatedBase = this.updateProjectionBase(next);
+
+    const mirror = this.getMktComponentsData();
+    this.createAutoBackup(this.mktComponentsFile, this.mktComponentsBackupFile);
+    this.writeJsonAtomic(this.mktComponentsFile, { ...mirror, updatedAt: new Date().toISOString() });
+    return { ...mirror, updatedAt: updatedBase.updatedAt };
+  }
+
+  getFixedExpensesData() {
+    return this.readJsonSafe(this.fixedExpensesFile, { previsto: new Array(12).fill(0), media: new Array(12).fill(0), maximo: new Array(12).fill(0), updatedAt: null });
+  }
+
+  updateFixedExpensesData(fixedExpensesData) {
+    this.createAutoBackup(this.fixedExpensesFile, this.fixedExpensesBackupFile);
+    const data = { ...fixedExpensesData, updatedAt: new Date().toISOString() };
+    this.writeJsonAtomic(this.fixedExpensesFile, data);
+    return data;
+  }
+
+  getVariableExpensesData() {
+    return this.readJsonSafe(this.variableExpensesFile, { previsto: new Array(12).fill(0), medio: new Array(12).fill(0), maximo: new Array(12).fill(0), updatedAt: null });
+  }
+
+  updateVariableExpensesData(variableExpensesData) {
+    this.createAutoBackup(this.variableExpensesFile, this.variableExpensesBackupFile);
+    const data = { ...variableExpensesData, updatedAt: new Date().toISOString() };
+    this.writeJsonAtomic(this.variableExpensesFile, data);
+    return data;
+  }
+
+  getInvestmentsData() {
+    return this.readJsonSafe(this.investmentsFile, { previsto: new Array(12).fill(0), medio: new Array(12).fill(0), maximo: new Array(12).fill(0), updatedAt: null });
+  }
+
+  updateInvestmentsData(investmentsData) {
+    this.createAutoBackup(this.investmentsFile, this.investmentsBackupFile);
+    const data = { ...investmentsData, updatedAt: new Date().toISOString() };
+    this.writeJsonAtomic(this.investmentsFile, data);
+    return data;
+  }
+
+  getBudgetData() {
+    return this.readJsonSafe(this.budgetFile, { previsto: new Array(12).fill(0), medio: new Array(12).fill(0), maximo: new Array(12).fill(0), updatedAt: null });
+  }
+
+  updateBudgetData(budgetData) {
+    this.createAutoBackup(this.budgetFile, this.budgetBackupFile);
+    const data = { ...budgetData, updatedAt: new Date().toISOString() };
+    this.writeJsonAtomic(this.budgetFile, data);
+    return data;
+  }
+
+  getResultadoData() {
+    return this.readJsonSafe(this.resultadoFile, { previsto: new Array(12).fill(0), medio: new Array(12).fill(0), maximo: new Array(12).fill(0), updatedAt: null });
+  }
+
+  updateResultadoData(resultadoData) {
+    this.createAutoBackup(this.resultadoFile, this.resultadoBackupFile);
+    const data = { ...resultadoData, updatedAt: new Date().toISOString() };
+    this.writeJsonAtomic(this.resultadoFile, data);
+    return data;
+  }
+
+  getProjectionSnapshot() {
+    return this.readJsonSafe(this.projectionFile, null);
+  }
+
+  updateProjectionSnapshot(snapshot) {
+    this.createAutoBackup(this.projectionFile, this.projectionBackupFile);
+    const data = { ...snapshot, updatedAt: new Date().toISOString() };
+    this.writeJsonAtomic(this.projectionFile, data);
+    return data;
+  }
+
+  // Gera o snapshot consolidado e também preenche campos derivados.
+  // Regras (impgeo-style):
+  // - Tudo é derivado do "Resultado do Ano Anterior" (projection-base.json)
+  // - Overrides manuais por cenário/mês têm precedência sobre cálculos automáticos
+  // - Fixas (Previsto) seguem regra especial baseada em Dezembro do ano anterior
+  syncProjectionData() {
+    const cfg = this.getProjectionConfig();
+    const base = this.getProjectionBase();
+    const growth = base.growth || { minimo: 0, medio: 0, maximo: 0 };
+
+    const percentFactor = (pct) => {
+      const p = Number(pct);
+      return Number.isFinite(p) ? (1 + p / 100) : 1;
+    };
+    const applyOverride = (autoArr, overrideArr) => {
+      const a = this.normalizeMonthArray(autoArr, 0);
+      const o = this.normalizeNullableMonthArray(overrideArr);
+      return a.map((v, i) => (o[i] !== null && o[i] !== undefined ? Number(o[i]) : v));
+    };
+
+    // ===== Fixas (impgeo): Previsto por regra especial + overrides =====
+    const dezAnterior = Number(base.prevYear?.fixedExpenses?.[11]) || 0;
+    const fixedAuto = (() => {
+      const out = new Array(12).fill(0);
+      const jan = dezAnterior * 1.10;
+      out[0] = jan;
+      out[1] = jan;
+      out[2] = jan;
+      const abr = jan * 1.10;
+      out[3] = abr;
+      out[4] = abr;
+      out[5] = abr;
+      const jul = abr * 1.10;
+      out[6] = jul;
+      out[7] = jul;
+      out[8] = jul;
+      const outVal = jul * 1.10;
+      out[9] = outVal;
+      out[10] = outVal;
+      out[11] = outVal;
+      return out;
+    })();
+
+    const fixedPrevisto = applyOverride(fixedAuto, base.manualOverrides?.fixedPrevistoManual);
+    const fixedMedioAuto = fixedPrevisto.map(v => Number(v) * 1.10);
+    const fixedMedio = applyOverride(fixedMedioAuto, base.manualOverrides?.fixedMediaManual);
+    const fixedMaximoAuto = fixedMedio.map(v => Number(v) * 1.10);
+    const fixedMaximo = applyOverride(fixedMaximoAuto, base.manualOverrides?.fixedMaximoManual);
+
+    // ===== Variáveis / Investimentos: base ano anterior + growth por cenário + overrides =====
+    const prevVariable = this.normalizeMonthArray(base.prevYear?.variableExpenses, 0);
+    const prevInvest = this.normalizeMonthArray(base.prevYear?.investments, 0);
+
+    const variablePrevAuto = prevVariable.map(v => v * percentFactor(growth.minimo));
+    const variableMedioAuto = prevVariable.map(v => v * percentFactor(growth.medio));
+    const variableMaxAuto = prevVariable.map(v => v * percentFactor(growth.maximo));
+
+    const variablePrevisto = applyOverride(variablePrevAuto, base.manualOverrides?.variablePrevistoManual);
+    const variableMedio = applyOverride(variableMedioAuto, base.manualOverrides?.variableMedioManual);
+    const variableMaximo = applyOverride(variableMaxAuto, base.manualOverrides?.variableMaximoManual);
+
+    const investPrevAuto = prevInvest.map(v => v * percentFactor(growth.minimo));
+    const investMedioAuto = prevInvest.map(v => v * percentFactor(growth.medio));
+    const investMaxAuto = prevInvest.map(v => v * percentFactor(growth.maximo));
+
+    const investmentsPrevisto = applyOverride(investPrevAuto, base.manualOverrides?.investimentosPrevistoManual);
+    const investmentsMedio = applyOverride(investMedioAuto, base.manualOverrides?.investimentosMedioManual);
+    const investmentsMaximo = applyOverride(investMaxAuto, base.manualOverrides?.investimentosMaximoManual);
+
+    // ===== Revenue por stream (para totais): base ano anterior + growth por cenário + overrides =====
+    const activeStreams = (cfg.revenueStreams || []).filter(s => s && s.isActive !== false && s.id);
+    const revenueTotalsPrevisto = new Array(12).fill(0);
+    const revenueTotalsMedio = new Array(12).fill(0);
+    const revenueTotalsMaximo = new Array(12).fill(0);
+
+    for (const s of activeStreams) {
+      const prevStream = this.normalizeMonthArray(base.prevYear?.revenueStreams?.[s.id], 0);
+      const rm = base.manualOverrides?.revenueManual?.[s.id] || {};
+      const prevAuto = prevStream.map(v => v * percentFactor(growth.minimo));
+      const medAuto = prevStream.map(v => v * percentFactor(growth.medio));
+      const maxAuto = prevStream.map(v => v * percentFactor(growth.maximo));
+      const prevEff = applyOverride(prevAuto, rm.previsto);
+      const medEff = applyOverride(medAuto, rm.medio);
+      const maxEff = applyOverride(maxAuto, rm.maximo);
+      for (let i = 0; i < 12; i++) {
+        revenueTotalsPrevisto[i] += prevEff[i];
+        revenueTotalsMedio[i] += medEff[i];
+        revenueTotalsMaximo[i] += maxEff[i];
+      }
+    }
+
+    // ===== MKT totals: soma componentes (Previsto sem growth.minimo; Médio/Maximo com growth) =====
+    const activeMkt = (cfg.mktComponents || []).filter(c => c && c.isActive !== false && c.id);
+    const mktTotalsBase = new Array(12).fill(0);
+    for (const c of activeMkt) {
+      const arr = this.normalizeMonthArray(base.prevYear?.mktComponents?.[c.id], 0);
+      for (let i = 0; i < 12; i++) mktTotalsBase[i] += arr[i];
+    }
+    const mktPrevAuto = this.normalizeMonthArray(mktTotalsBase, 0);
+    const mktMedAuto = mktTotalsBase.map(v => v * percentFactor(growth.medio));
+    const mktMaxAuto = mktTotalsBase.map(v => v * percentFactor(growth.maximo));
+
+    const mktTotalsPrevisto = applyOverride(mktPrevAuto, base.manualOverrides?.mktPrevistoManual);
+    const mktTotalsMedio = applyOverride(mktMedAuto, base.manualOverrides?.mktMedioManual);
+    const mktTotalsMaximo = applyOverride(mktMaxAuto, base.manualOverrides?.mktMaximoManual);
+
+    // ===== Budget / Resultado =====
+    const budgetPrev = new Array(12).fill(0).map((_, i) => fixedPrevisto[i] + variablePrevisto[i] + investmentsPrevisto[i] + mktTotalsPrevisto[i]);
+    const budgetMedio = new Array(12).fill(0).map((_, i) => fixedMedio[i] + variableMedio[i] + investmentsMedio[i] + mktTotalsMedio[i]);
+    const budgetMax = new Array(12).fill(0).map((_, i) => fixedMaximo[i] + variableMaximo[i] + investmentsMaximo[i] + mktTotalsMaximo[i]);
+    this.updateBudgetData({ previsto: budgetPrev, medio: budgetMedio, maximo: budgetMax });
+
+    const resultadoPrev = new Array(12).fill(0).map((_, i) => revenueTotalsPrevisto[i] - budgetPrev[i]);
+    const resultadoMedio = new Array(12).fill(0).map((_, i) => revenueTotalsMedio[i] - budgetMedio[i]);
+    const resultadoMax = new Array(12).fill(0).map((_, i) => revenueTotalsMaximo[i] - budgetMax[i]);
+    this.updateResultadoData({ previsto: resultadoPrev, medio: resultadoMedio, maximo: resultadoMax });
+
+    // Persistir derivados principais (para leitura externa/debug)
+    this.updateFixedExpensesData({ previsto: fixedPrevisto, media: fixedMedio, maximo: fixedMaximo });
+    this.updateVariableExpensesData({ previsto: variablePrevisto, medio: variableMedio, maximo: variableMaximo });
+    this.updateInvestmentsData({ previsto: investmentsPrevisto, medio: investmentsMedio, maximo: investmentsMaximo });
+
+    const newSnapshot = {
+      growth: {
+        minimo: Number(growth.minimo) || 0,
+        medio: Number(growth.medio) || 0,
+        maximo: Number(growth.maximo) || 0
+      },
+      config: {
+        revenueStreams: cfg.revenueStreams || [],
+        mktComponents: cfg.mktComponents || []
+      },
+      fixedExpenses: { previsto: fixedPrevisto, media: fixedMedio, maximo: fixedMaximo },
+      variableExpenses: { previsto: variablePrevisto, medio: variableMedio, maximo: variableMaximo },
+      investments: { previsto: investmentsPrevisto, medio: investmentsMedio, maximo: investmentsMaximo },
+      mktComponents: this.getMktComponentsData(),
+      mktTotals: { previsto: mktTotalsPrevisto, medio: mktTotalsMedio, maximo: mktTotalsMaximo },
+      revenue: this.getRevenueData(),
+      revenueTotals: { previsto: revenueTotalsPrevisto, medio: revenueTotalsMedio, maximo: revenueTotalsMaximo },
+      budget: { previsto: budgetPrev, medio: budgetMedio, maximo: budgetMax },
+      resultado: { previsto: resultadoPrev, medio: resultadoMedio, maximo: resultadoMax }
+    };
+
+    return this.updateProjectionSnapshot(newSnapshot);
   }
 
   // Métodos para Estatísticas

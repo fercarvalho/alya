@@ -94,5 +94,17 @@
     "isSystem": true,
     "createdAt": "2026-01-02T16:54:04.072Z",
     "updatedAt": "2026-01-02T16:54:04.072Z"
+  },
+  {
+    "id": "ml4kcadoqjb4apxyxf",
+    "name": "Projeção",
+    "key": "projecao",
+    "icon": "Calculator",
+    "description": "Planejamento anual (tabelas e gráficos)",
+    "route": null,
+    "isActive": true,
+    "isSystem": true,
+    "createdAt": "2026-02-02T02:41:09.516Z",
+    "updatedAt": "2026-02-02T02:41:09.518Z"
   }
 ]

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react'
+import React, { useState, useEffect, Suspense, lazy, useMemo } from 'react'
 import { 
   Home, 
   DollarSign, 
   Package, 
   BarChart3, 
+  Calculator,
   TrendingUp, 
   Plus, 
   Edit, 
@@ -33,6 +34,8 @@ import Login from './components/Login'
 import MenuUsuario from './components/MenuUsuario'
 // Lazy load AdminPanel (só carrega quando necessário)
 const AdminPanel = lazy(() => import('./components/AdminPanel'))
+// Lazy load Projeção (componente grande)
+const Projection = lazy(() => import('./components/Projection'))
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { useModules } from './hooks/useModules'
 import jsPDF from 'jspdf'
@@ -85,7 +88,25 @@ interface Meta {
   status: 'ativa' | 'pausada' | 'concluida'
 }
 
-type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients' | 'admin' | 'dre'
+type MesMeta = { nome: string; indice: number; meta: number }
+
+// Metas padrão (fallback). As metas efetivas podem ser derivadas da Projeção.
+const MESES_METAS_BASE: MesMeta[] = [
+  { nome: 'JANEIRO', indice: 0, meta: 18500.0 },
+  { nome: 'FEVEREIRO', indice: 1, meta: 19200.0 },
+  { nome: 'MARÇO', indice: 2, meta: 20100.0 },
+  { nome: 'ABRIL', indice: 3, meta: 19800.0 },
+  { nome: 'MAIO', indice: 4, meta: 20500.0 },
+  { nome: 'JUNHO', indice: 5, meta: 21000.0 },
+  { nome: 'JULHO', indice: 6, meta: 21500.0 },
+  { nome: 'AGOSTO', indice: 7, meta: 22000.0 },
+  { nome: 'SETEMBRO', indice: 8, meta: 21889.17 },
+  { nome: 'OUTUBRO', indice: 9, meta: 23000.0 },
+  { nome: 'NOVEMBRO', indice: 10, meta: 25000.0 },
+  { nome: 'DEZEMBRO', indice: 11, meta: 28000.0 }
+]
+
+type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' | 'clients' | 'projecao' | 'admin' | 'dre'
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -223,6 +244,25 @@ const AppContent: React.FC = () => {
     return result.success ? result.data : [];
   }
 
+  // Funções para Projeção (snapshot consolidado)
+  const fetchProjectionSnapshot = async () => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/projection`, { headers });
+    const result = await response.json();
+    if (response.status === 401 || response.status === 403) {
+      // 401: token inválido/expirado -> logout
+      // 403: pode ser permissão (ex.: módulo não liberado) -> não deslogar; apenas tratar como indisponível
+      if (response.status === 401) {
+        logout();
+      }
+      return null;
+    }
+    return result.success ? result.data : null;
+  }
+
   const saveProduct = async (product: any) => {
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
     if (token) {
@@ -299,8 +339,19 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
   const [products, setProducts] = useState<Product[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
+  const [projectionSnapshot, setProjectionSnapshot] = useState<any>(null)
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set())
+
+  // Metas derivadas diretamente da Projeção (cenário "Previsto" do faturamento total).
+  // Fallback: MESES_METAS_BASE (quando projeção ainda não existe ou não carregou).
+  const mesesMetas = useMemo<MesMeta[]>(() => {
+    const arr = projectionSnapshot?.revenueTotals?.previsto
+    if (Array.isArray(arr) && arr.length >= 12) {
+      return MESES_METAS_BASE.map(m => ({ ...m, meta: Number(arr[m.indice] ?? 0) }))
+    }
+    return MESES_METAS_BASE
+  }, [projectionSnapshot])
 
   // Estados dos modais
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
@@ -415,12 +466,14 @@ const AppContent: React.FC = () => {
 
     const loadData = async () => {
       try {
-        const [transactionsData, productsData] = await Promise.all([
+        const [transactionsData, productsData, projectionData] = await Promise.all([
           fetchTransactions(),
-          fetchProducts()
+          fetchProducts(),
+          fetchProjectionSnapshot()
         ])
         setTransactions(transactionsData)
         setProducts(productsData)
+        setProjectionSnapshot(projectionData)
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
       }
@@ -429,6 +482,26 @@ const AppContent: React.FC = () => {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user])
+
+  // Atualizar snapshot da Projeção ao entrar em abas que dependem das metas.
+  // (Metas é derivado diretamente do Faturamento Total da Projeção.)
+  useEffect(() => {
+    if (!token || !user) return;
+    if (activeTab !== 'metas' && activeTab !== 'dashboard') return;
+
+    const refreshProjection = async () => {
+      try {
+        const projectionData = await fetchProjectionSnapshot();
+        setProjectionSnapshot(projectionData);
+      } catch (error) {
+        // silenciar (Metas tem fallback)
+        console.error('Erro ao atualizar projeção:', error);
+      }
+    }
+
+    refreshProjection()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, token, user])
 
   // Carregar dados do storage apenas se não houver dados da API
   useEffect(() => {
@@ -1376,21 +1449,7 @@ const AppContent: React.FC = () => {
     }
   }
 
-  // Definição das metas mensais (centralizada)
-  const mesesMetas = [
-    { nome: 'JANEIRO', indice: 0, meta: 18500.00 },
-    { nome: 'FEVEREIRO', indice: 1, meta: 19200.00 },
-    { nome: 'MARÇO', indice: 2, meta: 20100.00 },
-    { nome: 'ABRIL', indice: 3, meta: 19800.00 },
-    { nome: 'MAIO', indice: 4, meta: 20500.00 },
-    { nome: 'JUNHO', indice: 5, meta: 21000.00 },
-    { nome: 'JULHO', indice: 6, meta: 21500.00 },
-    { nome: 'AGOSTO', indice: 7, meta: 22000.00 },
-    { nome: 'SETEMBRO', indice: 8, meta: 21889.17 },
-    { nome: 'OUTUBRO', indice: 9, meta: 23000.00 },
-    { nome: 'NOVEMBRO', indice: 10, meta: 25000.00 },
-    { nome: 'DEZEMBRO', indice: 11, meta: 28000.00 }
-  ]
+  // (metas) definido no bloco de hooks no topo do componente
 
   // Função para alternar gráficos
   const toggleChart = (chartId: string) => {
@@ -4978,6 +5037,37 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
+        {/* Metas derivadas da Projeção */}
+        {Array.isArray(projectionSnapshot?.revenueTotals?.previsto) && projectionSnapshot.revenueTotals.previsto.length >= 12 ? (
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-bold text-amber-900">Metas integradas à Projeção</h3>
+                <p className="text-sm text-amber-800 mt-1">
+                  As metas de faturamento deste módulo são derivadas do <b>Faturamento Total</b> da Projeção (cenário <b>Previsto</b>).
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-r-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-gray-500" />
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-bold text-gray-800">Projeção indisponível</h3>
+                <p className="text-sm text-gray-700 mt-1">
+                  Ainda não foi possível carregar a Projeção. Usando metas padrão (fallback).
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Renderizar Mês Selecionado com Dropdown Integrado */}
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
@@ -5068,6 +5158,7 @@ const AppContent: React.FC = () => {
                 const allTabs = [
                   { id: 'dashboard', name: 'Dashboard', icon: Home, key: 'dashboard' },
                   { id: 'metas', name: 'Metas', icon: TrendingUp, key: 'metas' },
+                  { id: 'projecao', name: 'Projeção', icon: Calculator, key: 'projecao' },
                   { id: 'reports', name: 'Relatórios', icon: BarChart3, key: 'reports' },
                   { id: 'transactions', name: 'Transações', icon: DollarSign, key: 'transactions' },
                   { id: 'products', name: 'Produtos', icon: Package, key: 'products' },
@@ -5121,6 +5212,11 @@ const AppContent: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[180px]">
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'metas' && renderMetas()}
+        {activeTab === 'projecao' && (
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-gray-500">Carregando projeção...</div></div>}>
+            <Projection />
+          </Suspense>
+        )}
         {activeTab === 'transactions' && renderTransactions()}
         {activeTab === 'products' && renderProducts()}
         {activeTab === 'reports' && renderReports()}

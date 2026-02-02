@@ -1242,6 +1242,435 @@ app.delete('/api/clients', authenticateToken, (req, res) => {
   }
 });
 
+// ===== PROJEÇÃO (impgeo-style, adaptada ao Alya) =====
+// Regras:
+// - auth-all: todas as rotas exigem token
+// - admin-only: config/sync/clear-all exigem admin
+// - base do ano anterior + overrides: impgeo-style (projection-base.json)
+
+app.get('/api/projection', authenticateToken, (req, res) => {
+  try {
+    const snapshot = db.getProjectionSnapshot();
+    if (!snapshot) {
+      const synced = db.syncProjectionData();
+      return res.json({ success: true, data: synced });
+    }
+    res.json({ success: true, data: snapshot });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Base (Resultado do Ano Anterior + overrides manuais)
+app.get('/api/projection/base', authenticateToken, (req, res) => {
+  try {
+    const base = db.getProjectionBase();
+    res.json({ success: true, data: base });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/projection/base', authenticateToken, (req, res) => {
+  try {
+    const current = db.getProjectionBase();
+    const body = req.body || {};
+
+    const merged = {
+      ...current,
+      ...body,
+      growth: { ...(current.growth || {}), ...(body.growth || {}) },
+      prevYear: {
+        ...(current.prevYear || {}),
+        ...(body.prevYear || {}),
+        revenueStreams: { ...(current.prevYear?.revenueStreams || {}), ...(body.prevYear?.revenueStreams || {}) },
+        mktComponents: { ...(current.prevYear?.mktComponents || {}), ...(body.prevYear?.mktComponents || {}) }
+      },
+      manualOverrides: {
+        ...(current.manualOverrides || {}),
+        ...(body.manualOverrides || {}),
+        revenueManual: { ...(current.manualOverrides?.revenueManual || {}), ...(body.manualOverrides?.revenueManual || {}) }
+      }
+    };
+
+    // merge profundo por stream (para não perder campos quando vierem parciais)
+    if (body?.manualOverrides?.revenueManual && typeof body.manualOverrides.revenueManual === 'object') {
+      for (const [streamId, v] of Object.entries(body.manualOverrides.revenueManual)) {
+        const prev = current.manualOverrides?.revenueManual?.[streamId] || {};
+        merged.manualOverrides.revenueManual[streamId] = { ...prev, ...(v || {}) };
+      }
+    }
+
+    const updatedBase = db.updateProjectionBase(merged);
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_base', null);
+    res.json({ success: true, data: updatedBase, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/projection/sync', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection', null);
+    res.json({ success: true, data: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/projection/config', authenticateToken, (req, res) => {
+  try {
+    const cfg = db.getProjectionConfig();
+    res.json({ success: true, data: cfg });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/projection/config', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const updated = db.updateProjectionConfig(req.body || {});
+    // Persistir chaves novas no projection-base (streams/componentes recém-criados)
+    try {
+      db.updateProjectionBase(db.getProjectionBase());
+    } catch (e) {
+      // não falhar a rota por isso
+    }
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_config', null);
+    res.json({ success: true, data: updated, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Growth (percentuais de cenários)
+app.put('/api/projection/growth', authenticateToken, (req, res) => {
+  try {
+    const { minimo, medio, maximo } = req.body || {};
+    const current = db.getProjectionBase();
+    const updated = db.updateProjectionBase({
+      ...current,
+      growth: {
+        minimo: Number(minimo) || 0,
+        medio: Number(medio) || 0,
+        maximo: Number(maximo) || 0
+      }
+    });
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'growth', null);
+    res.json({ success: true, data: updated.growth, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Revenue (por stream)
+app.get('/api/projection/revenue', authenticateToken, (req, res) => {
+  try {
+    const data = db.getRevenueData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/projection/revenue', authenticateToken, (req, res) => {
+  try {
+    const updated = db.updateRevenueData(req.body || {});
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'revenue', null);
+    res.json({ success: true, data: updated, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/projection/revenue', authenticateToken, (req, res) => {
+  try {
+    const cfg = db.getProjectionConfig();
+    const months12 = new Array(12).fill(0);
+    const base = db.getProjectionBase();
+    const next = { ...base };
+    for (const s of (cfg.revenueStreams || [])) {
+      if (!s?.id) continue;
+      next.prevYear.revenueStreams[s.id] = [...months12];
+      if (next.manualOverrides?.revenueManual?.[s.id]) {
+        next.manualOverrides.revenueManual[s.id] = {
+          previsto: new Array(12).fill(null),
+          medio: new Array(12).fill(null),
+          maximo: new Array(12).fill(null)
+        };
+      }
+    }
+    const cleared = db.updateProjectionBase(next);
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'revenue', null);
+    res.json({ success: true, data: cleared, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// MKT components (por componente)
+app.get('/api/projection/mkt-components', authenticateToken, (req, res) => {
+  try {
+    const data = db.getMktComponentsData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/projection/mkt-components', authenticateToken, (req, res) => {
+  try {
+    const updated = db.updateMktComponentsData(req.body || {});
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'mkt_components', null);
+    res.json({ success: true, data: updated, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/projection/mkt-components', authenticateToken, (req, res) => {
+  try {
+    const cfg = db.getProjectionConfig();
+    const months12 = new Array(12).fill(0);
+    const base = db.getProjectionBase();
+    const next = { ...base };
+    for (const c of (cfg.mktComponents || [])) {
+      if (!c?.id) continue;
+      next.prevYear.mktComponents[c.id] = [...months12];
+    }
+    // também limpar overrides do MKT do ano corrente
+    next.manualOverrides.mktPrevistoManual = new Array(12).fill(null);
+    next.manualOverrides.mktMedioManual = new Array(12).fill(null);
+    next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
+    const cleared = db.updateProjectionBase(next);
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'mkt_components', null);
+    res.json({ success: true, data: cleared, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Fixed expenses
+app.get('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
+  try {
+    const data = db.getFixedExpensesData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
+  try {
+    const body = req.body || {};
+    const months = Array.isArray(body?.previsto) ? body.previsto : [];
+    const base = db.getProjectionBase();
+    const updated = db.updateProjectionBase({
+      ...base,
+      prevYear: { ...(base.prevYear || {}), fixedExpenses: months }
+    });
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'fixed_expenses', null);
+    res.json({ success: true, data: db.getFixedExpensesData(), projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
+  try {
+    const months12 = new Array(12).fill(0);
+    const base = db.getProjectionBase();
+    const cleared = db.updateProjectionBase({
+      ...base,
+      prevYear: { ...(base.prevYear || {}), fixedExpenses: [...months12] },
+      manualOverrides: {
+        ...(base.manualOverrides || {}),
+        fixedPrevistoManual: new Array(12).fill(null),
+        fixedMediaManual: new Array(12).fill(null),
+        fixedMaximoManual: new Array(12).fill(null)
+      }
+    });
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'fixed_expenses', null);
+    res.json({ success: true, data: cleared, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Variable expenses
+app.get('/api/projection/variable-expenses', authenticateToken, (req, res) => {
+  try {
+    const data = db.getVariableExpensesData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/projection/variable-expenses', authenticateToken, (req, res) => {
+  try {
+    const body = req.body || {};
+    const months = Array.isArray(body?.previsto) ? body.previsto : [];
+    const base = db.getProjectionBase();
+    const updated = db.updateProjectionBase({
+      ...base,
+      prevYear: { ...(base.prevYear || {}), variableExpenses: months }
+    });
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'variable_expenses', null);
+    res.json({ success: true, data: db.getVariableExpensesData(), projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/projection/variable-expenses', authenticateToken, (req, res) => {
+  try {
+    const months12 = new Array(12).fill(0);
+    const base = db.getProjectionBase();
+    const cleared = db.updateProjectionBase({
+      ...base,
+      prevYear: { ...(base.prevYear || {}), variableExpenses: [...months12] },
+      manualOverrides: {
+        ...(base.manualOverrides || {}),
+        variablePrevistoManual: new Array(12).fill(null),
+        variableMedioManual: new Array(12).fill(null),
+        variableMaximoManual: new Array(12).fill(null)
+      }
+    });
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'variable_expenses', null);
+    res.json({ success: true, data: cleared, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Investments
+app.get('/api/projection/investments', authenticateToken, (req, res) => {
+  try {
+    const data = db.getInvestmentsData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/projection/investments', authenticateToken, (req, res) => {
+  try {
+    const body = req.body || {};
+    const months = Array.isArray(body?.previsto) ? body.previsto : [];
+    const base = db.getProjectionBase();
+    const updated = db.updateProjectionBase({
+      ...base,
+      prevYear: { ...(base.prevYear || {}), investments: months }
+    });
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'investments', null);
+    res.json({ success: true, data: db.getInvestmentsData(), projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/projection/investments', authenticateToken, (req, res) => {
+  try {
+    const months12 = new Array(12).fill(0);
+    const base = db.getProjectionBase();
+    const cleared = db.updateProjectionBase({
+      ...base,
+      prevYear: { ...(base.prevYear || {}), investments: [...months12] },
+      manualOverrides: {
+        ...(base.manualOverrides || {}),
+        investimentosPrevistoManual: new Array(12).fill(null),
+        investimentosMedioManual: new Array(12).fill(null),
+        investimentosMaximoManual: new Array(12).fill(null)
+      }
+    });
+    const synced = db.syncProjectionData();
+    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'investments', null);
+    res.json({ success: true, data: cleared, projection: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Derived read-only endpoints (budget/resultado)
+app.get('/api/projection/budget', authenticateToken, (req, res) => {
+  try {
+    const data = db.getBudgetData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/projection/resultado', authenticateToken, (req, res) => {
+  try {
+    const data = db.getResultadoData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Clear all projection data (admin)
+app.delete('/api/clear-all-projection-data', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const months12 = new Array(12).fill(0);
+    const cfg = db.getProjectionConfig();
+    const base = db.getProjectionBase();
+    const next = { ...base };
+    next.growth = { minimo: 0, medio: 0, maximo: 0 };
+    next.prevYear.fixedExpenses = [...months12];
+    next.prevYear.variableExpenses = [...months12];
+    next.prevYear.investments = [...months12];
+    for (const s of (cfg.revenueStreams || [])) {
+      if (!s?.id) continue;
+      next.prevYear.revenueStreams[s.id] = [...months12];
+      next.manualOverrides.revenueManual[s.id] = {
+        previsto: new Array(12).fill(null),
+        medio: new Array(12).fill(null),
+        maximo: new Array(12).fill(null)
+      };
+    }
+    for (const c of (cfg.mktComponents || [])) {
+      if (!c?.id) continue;
+      next.prevYear.mktComponents[c.id] = [...months12];
+    }
+    next.manualOverrides.fixedPrevistoManual = new Array(12).fill(null);
+    next.manualOverrides.fixedMediaManual = new Array(12).fill(null);
+    next.manualOverrides.fixedMaximoManual = new Array(12).fill(null);
+    next.manualOverrides.variablePrevistoManual = new Array(12).fill(null);
+    next.manualOverrides.variableMedioManual = new Array(12).fill(null);
+    next.manualOverrides.variableMaximoManual = new Array(12).fill(null);
+    next.manualOverrides.investimentosPrevistoManual = new Array(12).fill(null);
+    next.manualOverrides.investimentosMedioManual = new Array(12).fill(null);
+    next.manualOverrides.investimentosMaximoManual = new Array(12).fill(null);
+    next.manualOverrides.mktPrevistoManual = new Array(12).fill(null);
+    next.manualOverrides.mktMedioManual = new Array(12).fill(null);
+    next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
+
+    db.updateProjectionBase(next);
+    const synced = db.syncProjectionData();
+
+    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'clear_all', null);
+    res.json({ success: true, message: 'Dados de Projeção limpos com sucesso', data: synced });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ===== ROTAS ADMINISTRATIVAS =====
 
 // Rotas de Usuários
