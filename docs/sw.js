@@ -1104,6 +1104,9 @@ self.addEventListener('fetch', (event) => {
               investimentosPrevistoManual: new Array(12).fill(null),
               investimentosMedioManual: new Array(12).fill(null),
               investimentosMaximoManual: new Array(12).fill(null),
+              mktPrevistoManual: new Array(12).fill(null),
+              mktMedioManual: new Array(12).fill(null),
+              mktMaximoManual: new Array(12).fill(null),
               revenueManual
             },
             updatedAt: new Date().toISOString()
