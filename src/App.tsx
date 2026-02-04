@@ -1336,11 +1336,15 @@ const AppContent: React.FC = () => {
     )
   }
 
-  // Função para obter as categorias baseadas no tipo
+  // Helpers case-insensitive para tipo de transação (Receita, RECEITA, receita, DESpesAS, etc.)
+  const isReceita = (type: string) => /receita/i.test(type || '')
+  const isDespesa = (type: string) => /despesa/i.test(type || '')
+
+  // Função para obter as categorias baseadas no tipo (case-insensitive)
   const getCategoriesByType = (type: string) => {
-    if (type === 'Receita') {
+    if (isReceita(type)) {
       return ['Atacado', 'Varejo', 'Investimentos', 'Outros']
-    } else if (type === 'Despesa') {
+    } else if (isDespesa(type)) {
       return ['Fixo', 'Variável', 'Investimento', 'Mkt', 'Outros']
     }
     return []
@@ -1412,60 +1416,68 @@ const AppContent: React.FC = () => {
     setIsProductModalOpen(true)
   }
 
-  // Função auxiliar para extrair mês e ano de uma data no formato YYYY-MM-DD (evita problemas de timezone)
+  // Função auxiliar para extrair mês e ano de uma data (suporta YYYY-MM-DD, DD/MM/YYYY e MM/DD/YYYY)
   const getMonthYearFromDate = (dateString: string) => {
     if (!dateString) return { month: -1, year: -1 }
-    // Se a data está no formato YYYY-MM-DD, extrair diretamente
-    const parts = dateString.split('-')
-    if (parts.length === 3) {
-      return { month: parseInt(parts[1], 10) - 1, year: parseInt(parts[0], 10) } // month é 0-indexed
+    const s = String(dateString).trim()
+    // YYYY-MM-DD (ISO)
+    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+    if (isoMatch) {
+      return { month: parseInt(isoMatch[2], 10) - 1, year: parseInt(isoMatch[1], 10) }
     }
-    // Fallback para Date object
-    const date = new Date(dateString)
-    return { month: date.getMonth(), year: date.getFullYear() }
+    // A/B/YYYY (detecta DD/MM vs MM/DD automaticamente)
+    // Formato dos dados existentes: MM/DD/YYYY
+    const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+    if (slashMatch) {
+      const a = parseInt(slashMatch[1], 10)
+      const b = parseInt(slashMatch[2], 10)
+      const year = parseInt(slashMatch[3], 10)
+      let month: number
+      if (b > 12) {
+        month = a - 1 // MM/DD (ex: 01/13/2026 = 13 de janeiro) - segundo valor > 12, então primeiro é mês
+      } else if (a > 12) {
+        month = b - 1 // DD/MM (ex: 15/01/2026 = 15 de janeiro) - primeiro valor > 12, então segundo é mês
+      } else {
+        // Quando ambíguo, assumir MM/DD (formato dos dados existentes)
+        // ex: 01/02/2026 = 2 de janeiro (mês 1, dia 2)
+        month = a - 1 // Primeiro valor é o mês no formato MM/DD
+      }
+      return { month, year }
+    }
+    const date = new Date(s)
+    return Number.isFinite(date.getTime()) ? { month: date.getMonth(), year: date.getFullYear() } : { month: -1, year: -1 }
   }
 
   // Função auxiliar para extrair apenas o ano de uma data
   const getYearFromDate = (dateString: string) => {
-    if (!dateString) return -1
-    const parts = dateString.split('-')
-    if (parts.length === 3) {
-      return parseInt(parts[0], 10)
-    }
-    return new Date(dateString).getFullYear()
+    const { year } = getMonthYearFromDate(dateString)
+    return year >= 0 ? year : (dateString ? new Date(dateString).getFullYear() : -1)
   }
 
   // Funções para calcular totais das transações
   const calculateTotals = () => {
-    // Verificar se transactions existe e não está vazio
+    const now = new Date()
+    return calculateTotalsForMonth(now.getMonth(), now.getFullYear())
+  }
+
+  // Calcula totais para um mês/ano específico (usado nas metas para comparar com a projeção)
+  const calculateTotalsForMonth = (month: number, year: number) => {
     if (!transactions || transactions.length === 0) {
       return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0 }
     }
-
-    const currentDate = new Date()
-    const currentMonth = currentDate.getMonth()
-    const currentYear = currentDate.getFullYear()
-    
     try {
-      // Filtrar transações do mês atual usando função auxiliar
-      const currentMonthTransactions = transactions.filter(transaction => {
+      const monthTransactions = transactions.filter(transaction => {
         if (!transaction.date) return false
-        const { month, year } = getMonthYearFromDate(transaction.date)
-        return month === currentMonth && year === currentYear
+        const { month: m, year: y } = getMonthYearFromDate(transaction.date)
+        return m === month && y === year
       })
-      
-      const receitas = currentMonthTransactions
-        .filter(t => t.type === 'Receita')
-        .reduce((sum, t) => sum + (t.value || 0), 0)
-      
-      const despesas = currentMonthTransactions
-        .filter(t => t.type === 'Despesa')
-        .reduce((sum, t) => sum + (t.value || 0), 0)
-      
-      const faturamento = receitas
-      const resultado = receitas - despesas
-      
-      return { receitas, despesas, faturamento, resultado }
+      const receitas = monthTransactions
+        .filter(t => isReceita(t.type))
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+      const despesas = monthTransactions
+        .filter(t => isDespesa(t.type))
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+      return { receitas, despesas, faturamento: receitas, resultado: receitas - despesas }
     } catch (error) {
       console.error('Erro ao calcular totais:', error)
       return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0 }
@@ -1516,15 +1528,14 @@ const AppContent: React.FC = () => {
       </div>
     ) : null;
 
-    // Calcular totais das transações reais (movido para dentro da função)
-    const { receitas, despesas, resultado } = calculateTotals()
+    // Calcular totais das transações reais para o mês selecionado (para comparar com metas)
+    const currentYear = new Date().getFullYear()
+    const { receitas, despesas, resultado } = calculateTotalsForMonth(selectedMonth, currentYear)
     
     // Obter o mês selecionado nas metas
     const mesSelecionadoMetas = mesesMetas.find(mes => mes.indice === selectedMonth) || mesesMetas[new Date().getMonth()]
     
-    // (removido) Lista de transações do mês selecionado — não utilizada diretamente
-    
-    // Usar dados reais das transações para o mês atual
+    // Dados reais das transações do mês selecionado
     const totalReceitasMes = receitas
     const totalDespesasMes = despesas
     const lucroLiquidoMes = resultado
@@ -1546,7 +1557,6 @@ const AppContent: React.FC = () => {
     ]
     
     // Filtrar transações do trimestre atual usando função auxiliar
-    const currentYear = new Date().getFullYear()
     const transacoesTrimestre = transactions.filter(t => {
       if (!t.date) return false
       const { month, year } = getMonthYearFromDate(t.date)
@@ -1555,10 +1565,10 @@ const AppContent: React.FC = () => {
     
     // Dados trimestrais (usando dados reais das transações)
     const totalReceitasTrimestre = transacoesTrimestre
-      .filter(t => t.type === 'Receita')
+      .filter(t => isReceita(t.type))
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const totalDespesasTrimestre = transacoesTrimestre
-      .filter(t => t.type === 'Despesa')
+      .filter(t => isDespesa(t.type))
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const lucroLiquidoTrimestre = totalReceitasTrimestre - totalDespesasTrimestre
     
@@ -1575,10 +1585,10 @@ const AppContent: React.FC = () => {
     
     // Dados anuais (usando dados reais das transações)
     const totalReceitasAno = transacoesAno
-      .filter(t => t.type === 'Receita')
+      .filter(t => isReceita(t.type))
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const totalDespesasAno = transacoesAno
-      .filter(t => t.type === 'Despesa')
+      .filter(t => isDespesa(t.type))
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const lucroLiquidoAno = totalReceitasAno - totalDespesasAno
 
@@ -1604,23 +1614,41 @@ const AppContent: React.FC = () => {
       { name: 'Despesas Anuais', value: totalDespesasAno, color: '#dc2626' }
     ]
 
-    // Dados para comparação com metas (mês selecionado vs meta)
+    // Dados para comparação com metas: Meta (faturamento da projeção) vs Real (receitas das transações)
+    const metaFaturamentoMes = mesSelecionadoMetas.meta
     const barChartData = [
-      { name: 'Meta', value: mesSelecionadoMetas.meta, color: '#f59e0b' },
-      { name: 'Real', value: lucroLiquidoMes, color: lucroLiquidoMes >= mesSelecionadoMetas.meta ? '#22c55e' : '#ef4444' }
+      { name: 'Meta (Faturamento)', value: metaFaturamentoMes, color: '#f59e0b' },
+      { name: 'Real (Receitas)', value: totalReceitasMes, color: totalReceitasMes >= metaFaturamentoMes ? '#22c55e' : '#ef4444' }
     ]
 
-    // Dados para comparação trimestral
+    // Dados para comparação trimestral (meta de faturamento vs receitas reais)
     const barChartDataTrimestre = [
-      { name: 'Meta', value: metaTrimestre, color: '#f59e0b' },
-      { name: 'Real', value: lucroLiquidoTrimestre, color: lucroLiquidoTrimestre >= metaTrimestre ? '#22c55e' : '#ef4444' }
+      { name: 'Meta (Faturamento)', value: metaTrimestre, color: '#f59e0b' },
+      { name: 'Real (Receitas)', value: totalReceitasTrimestre, color: totalReceitasTrimestre >= metaTrimestre ? '#22c55e' : '#ef4444' }
     ]
 
-    // Meta anual (soma de todas as metas mensais)
+    // Meta anual (soma de todas as metas mensais de faturamento)
     const metaAnual = mesesMetas.reduce((total, mes) => total + mes.meta, 0)
     const barChartDataAnual = [
-      { name: 'Meta Anual', value: metaAnual, color: '#f59e0b' },
-      { name: 'Real Anual', value: lucroLiquidoAno, color: lucroLiquidoAno >= metaAnual ? '#22c55e' : '#ef4444' }
+      { name: 'Meta Anual (Faturamento)', value: metaAnual, color: '#f59e0b' },
+      { name: 'Real Anual (Receitas)', value: totalReceitasAno, color: totalReceitasAno >= metaAnual ? '#22c55e' : '#ef4444' }
+    ]
+
+    // Metas de despesas (projeção) para comparação Meta vs Real
+    const metaDespesasMes = getProjectionMetasForMonth(selectedMonth).despesasTotal
+    const barChartDataDespesas = [
+      { name: 'Meta (Despesas)', value: metaDespesasMes, color: '#f59e0b' },
+      { name: 'Real (Despesas)', value: totalDespesasMes, color: totalDespesasMes <= metaDespesasMes ? '#22c55e' : '#ef4444' }
+    ]
+    const metaDespesasTrimestre = mesesDoTrimestre.reduce((s, i) => s + getProjectionMetasForMonth(i).despesasTotal, 0)
+    const barChartDataDespesasTrimestre = [
+      { name: 'Meta (Despesas)', value: metaDespesasTrimestre, color: '#f59e0b' },
+      { name: 'Real (Despesas)', value: totalDespesasTrimestre, color: totalDespesasTrimestre <= metaDespesasTrimestre ? '#22c55e' : '#ef4444' }
+    ]
+    const projAnualDesp = getProjectionMetasAnual()
+    const barChartDataDespesasAnual = [
+      { name: 'Meta Anual (Despesas)', value: projAnualDesp.despesasTotal, color: '#f59e0b' },
+      { name: 'Real Anual (Despesas)', value: totalDespesasAno, color: totalDespesasAno <= projAnualDesp.despesasTotal ? '#22c55e' : '#ef4444' }
     ]
 
     // Componente de gráfico de rosca (donut chart)
@@ -1763,15 +1791,25 @@ const AppContent: React.FC = () => {
           </button>
         </div>
 
-        {/* Seção Mês Atual */}
+        {/* Seção do Mês (com seletor para comparar metas vs real) */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <PieChart className="w-6 h-6 text-gray-600" />
-            Mês Atual
-            <span className="text-lg font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
-              {mesSelecionadoMetas.nome}
-            </span>
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+              <PieChart className="w-6 h-6 text-gray-600" />
+              Dados do mês
+            </h2>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className="text-lg font-semibold text-amber-800 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+            >
+              {mesesMetas.map((mes) => (
+                <option key={mes.indice} value={mes.indice}>
+                  {mes.nome} {new Date().getFullYear()}
+                </option>
+              ))}
+            </select>
+          </div>
           
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1793,7 +1831,7 @@ const AppContent: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('receitas-mensal') && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
+                {expandedCharts.includes('receitas-mensal') && renderBarChart(barChartData, `Faturamento: Meta vs Real (${mesSelecionadoMetas.nome})`)}
               </div>
 
               {/* Card Despesas */}
@@ -1814,7 +1852,7 @@ const AppContent: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('despesas-mensal') && renderPieChart(pieChartData, 'Distribuição Mensal: Receitas vs Despesas')}
+                {expandedCharts.includes('despesas-mensal') && renderBarChart(barChartDataDespesas, `Despesas: Meta vs Real (${mesSelecionadoMetas.nome})`)}
               </div>
 
               {/* Card Saldo */}
@@ -1875,7 +1913,7 @@ const AppContent: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('receitas-trimestre') && renderPieChart(pieChartDataTrimestre, 'Distribuição Trimestral: Receitas vs Despesas')}
+                {expandedCharts.includes('receitas-trimestre') && renderBarChart(barChartDataTrimestre, `Faturamento: Meta vs Real (${nomesTrimestres[trimestreAtual]})`)}
               </div>
 
               {/* Card Despesas Trimestrais */}
@@ -1896,7 +1934,7 @@ const AppContent: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('despesas-trimestre') && renderPieChart(pieChartDataTrimestre, 'Distribuição Trimestral: Receitas vs Despesas')}
+                {expandedCharts.includes('despesas-trimestre') && renderBarChart(barChartDataDespesasTrimestre, `Despesas: Meta vs Real (${nomesTrimestres[trimestreAtual]})`)}
               </div>
 
               {/* Card Saldo Trimestral */}
@@ -1952,7 +1990,7 @@ const AppContent: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('receitas-anual') && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
+                {expandedCharts.includes('receitas-anual') && renderBarChart(barChartDataAnual, 'Faturamento Anual: Meta vs Real')}
               </div>
 
               {/* Card Despesas Anuais */}
@@ -1973,7 +2011,7 @@ const AppContent: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {expandedCharts.includes('despesas-anual') && renderPieChart(pieChartDataAnual, 'Distribuição Anual: Receitas vs Despesas')}
+                {expandedCharts.includes('despesas-anual') && renderBarChart(barChartDataDespesasAnual, 'Despesas Anuais: Meta vs Real')}
               </div>
 
               {/* Card Saldo Anual */}
@@ -2021,23 +2059,23 @@ const AppContent: React.FC = () => {
               <div className="divide-y divide-gray-100">
                 {transacoesRecentes.map((transacao, index) => (
                   <div key={index} className="p-4 hover:bg-gray-50 transition-colors duration-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${
-                          transacao.type === 'Receita' ? 'bg-emerald-500' : 'bg-red-500'
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                          isReceita(transacao.type) ? 'bg-emerald-500' : 'bg-red-500'
                         }`}></div>
-                        <div>
-                          <p className="font-medium text-gray-900">{transacao.description}</p>
-                          <p className="text-sm text-gray-500">{transacao.category}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-gray-900 truncate">{transacao.description}</p>
+                          <p className="text-sm text-gray-500 truncate">{transacao.category}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`font-bold ${
-                          transacao.type === 'Receita' ? 'text-emerald-600' : 'text-red-600'
+                      <div className="text-right flex-shrink-0">
+                        <p className={`font-bold whitespace-nowrap ${
+                          isReceita(transacao.type) ? 'text-emerald-600' : 'text-red-600'
                         }`}>
-                          {transacao.type === 'Receita' ? '+' : '-'}R$ {transacao.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {isReceita(transacao.type) ? '+' : '-'}R$ {transacao.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 whitespace-nowrap">
                           {new Date(transacao.date).toLocaleDateString('pt-BR')}
                         </p>
                       </div>
@@ -2063,24 +2101,127 @@ const AppContent: React.FC = () => {
     )
   }
 
-  // Função para renderizar apenas o conteúdo do mês (sem título)
-  const renderMonthContent = (_monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
-    // Cálculos para o mês específico
-    const currentYear = 2025
-    
-    // Usar função auxiliar do escopo do componente para evitar problemas de timezone
-    const transacoesDoMes = transactions.filter(t => {
+  // Metas da projeção por mês (com fallback quando projeção não carregada)
+  const getProjectionMetasForMonth = (monthIndex: number) => {
+    const snap = projectionSnapshot
+    const fallback = {
+      faturamentoTotal: mesesMetas[monthIndex]?.meta ?? 30000,
+      faturamentoVarejo: 18000,
+      faturamentoAtacado: 12000,
+      despesasTotal: 15000,
+      despesasFixo: 4500,
+      despesasVariável: 10500,
+      investimentosGerais: 2000,
+      investimentosMkt: 3000
+    }
+    if (!snap) return fallback
+
+    const rev = snap.revenueTotals?.previsto?.[monthIndex] ?? fallback.faturamentoTotal
+    const fix = snap.fixedExpenses?.previsto?.[monthIndex] ?? fallback.despesasFixo
+    const varExp = snap.variableExpenses?.previsto?.[monthIndex] ?? fallback.despesasVariável
+    const inv = snap.investments?.previsto?.[monthIndex] ?? fallback.investimentosGerais
+    const mkt = snap.mktTotals?.previsto?.[monthIndex] ?? fallback.investimentosMkt
+
+    // Faturamento por stream (Varejo/Atacado) - ordem: primeiro stream, segundo stream
+    const streams = snap.config?.revenueStreams?.filter((s: any) => s?.isActive !== false) || []
+    const revStreams = snap.revenue?.streams || {}
+    let varejo = fallback.faturamentoVarejo
+    let atacado = fallback.faturamentoAtacado
+    if (streams.length >= 1 && revStreams[streams[0].id]?.previsto) {
+      atacado = Number(revStreams[streams[0].id].previsto[monthIndex]) || 0
+    }
+    if (streams.length >= 2 && revStreams[streams[1].id]?.previsto) {
+      varejo = Number(revStreams[streams[1].id].previsto[monthIndex]) || 0
+    }
+    // Se só tem um stream ou nomes diferentes, usar proporções do total
+    if (streams.length < 2 || (atacado === 0 && varejo === 0)) {
+      varejo = rev * 0.6
+      atacado = rev * 0.4
+    }
+
+    return {
+      faturamentoTotal: rev,
+      faturamentoVarejo: varejo,
+      faturamentoAtacado: atacado,
+      despesasTotal: fix + varExp,
+      despesasFixo: fix,
+      despesasVariável: varExp,
+      investimentosGerais: inv,
+      investimentosMkt: mkt
+    }
+  }
+
+  // Metas anuais da projeção (soma dos 12 meses)
+  const getProjectionMetasAnual = () => {
+    let fatTotal = 0, fatVarejo = 0, fatAtacado = 0, desTotal = 0, desFixo = 0, desVar = 0, inv = 0, mkt = 0
+    for (let i = 0; i < 12; i++) {
+      const p = getProjectionMetasForMonth(i)
+      fatTotal += p.faturamentoTotal
+      fatVarejo += p.faturamentoVarejo
+      fatAtacado += p.faturamentoAtacado
+      desTotal += p.despesasTotal
+      desFixo += p.despesasFixo
+      desVar += p.despesasVariável
+      inv += p.investimentosGerais
+      mkt += p.investimentosMkt
+    }
+    return { faturamentoTotal: fatTotal, faturamentoVarejo: fatVarejo, faturamentoAtacado: fatAtacado, despesasTotal: desTotal, despesasFixo: desFixo, despesasVariável: desVar, investimentosGerais: inv, investimentosMkt: mkt }
+  }
+
+  // Valores reais por categoria das transações do mês
+  const getReaisByCategoryForMonth = (monthIndex: number) => {
+    const currentYear = new Date().getFullYear()
+    const monthTransactions = transactions.filter(t => {
       if (!t.date) return false
       const { month, year } = getMonthYearFromDate(t.date)
       return month === monthIndex && year === currentYear
     })
+    const receitas = monthTransactions.filter(t => isReceita(t.type))
+    const despesas = monthTransactions.filter(t => isDespesa(t.type))
 
-    const totalReceitas = transacoesDoMes
-      .filter(t => t.type === 'Receita')
-      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
-    const totalDespesas = transacoesDoMes
-      .filter(t => t.type === 'Despesa')
-      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+    const sum = (arr: any[], pred?: (t: any) => boolean) =>
+      (pred ? arr.filter(pred) : arr).reduce((s, t) => s + (Number(t.value) || 0), 0)
+
+    const catMatch = (c: string) => (t: any) => (t.category || '').toLowerCase().includes(c.toLowerCase())
+
+    return {
+      totalReceitas: sum(receitas),
+      receitasVarejo: sum(receitas, catMatch('Varejo')),
+      receitasAtacado: sum(receitas, catMatch('Atacado')),
+      totalDespesas: sum(despesas),
+      despesasFixo: sum(despesas, catMatch('Fixo')),
+      despesasVariável: sum(despesas, catMatch('Variável')),
+      investimentos: sum(despesas, t => catMatch('Investimento')(t) || catMatch('Investimentos')(t)),
+      mkt: sum(despesas, catMatch('Mkt'))
+    }
+  }
+
+  // Valores reais anuais por categoria
+  const getReaisByCategoryAnual = () => {
+    let tr = 0, rv = 0, ra = 0, td = 0, df = 0, dv = 0, inv = 0, mkt = 0
+    for (let i = 0; i < 12; i++) {
+      const r = getReaisByCategoryForMonth(i)
+      tr += r.totalReceitas
+      rv += r.receitasVarejo
+      ra += r.receitasAtacado
+      td += r.totalDespesas
+      df += r.despesasFixo
+      dv += r.despesasVariável
+      inv += r.investimentos
+      mkt += r.mkt
+    }
+    return { totalReceitas: tr, receitasVarejo: rv, receitasAtacado: ra, totalDespesas: td, despesasFixo: df, despesasVariável: dv, investimentos: inv, mkt }
+  }
+
+  // Função para renderizar apenas o conteúdo do mês (sem título)
+  const renderMonthContent = (_monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 0) => {
+    const currentYear = new Date().getFullYear()
+    const { receitas, despesas, resultado } = calculateTotalsForMonth(monthIndex, currentYear)
+    const totalReceitas = receitas
+    const totalDespesas = despesas
+
+    const proj = getProjectionMetasForMonth(monthIndex)
+    const reais = getReaisByCategoryForMonth(monthIndex)
 
     return (
       <div className="space-y-6">
@@ -2201,102 +2342,91 @@ const AppContent: React.FC = () => {
             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200 shadow-lg">
               <h3 className="text-lg font-bold text-emerald-800 mb-4">Faturamento TOTAL</h3>
               <div className="text-2xl font-bold text-emerald-900 mb-4">
-                R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
               {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-emerald-700 mb-1">
                   <span>Progresso</span>
-                  <span>{((totalReceitas / 30000) * 100).toFixed(0)}%</span>
+                  <span>{proj.faturamentoTotal > 0 ? ((reais.totalReceitas / proj.faturamentoTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-emerald-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, ((totalReceitas / 30000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.faturamentoTotal > 0 ? (reais.totalReceitas / proj.faturamentoTotal) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {((totalReceitas / 30000) * 100) > 100 && (
+                  {proj.faturamentoTotal > 0 && (reais.totalReceitas / proj.faturamentoTotal) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-emerald-700 to-emerald-800 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (((totalReceitas / 30000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.totalReceitas / proj.faturamentoTotal) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Alcançado/Restante */}
               <div className="text-sm text-emerald-700 font-medium">
-                R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 30000 - totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.faturamentoTotal - reais.totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-lg">
               <h3 className="text-lg font-bold text-green-800 mb-4">Faturamento Varejo</h3>
               <div className="text-2xl font-bold text-green-900 mb-4">
-                R$ {(totalReceitas * 0.6).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
-              {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-green-700 mb-1">
                   <span>Progresso</span>
-                  <span>{(((totalReceitas * 0.6) / 18000) * 100).toFixed(0)}%</span>
+                  <span>{proj.faturamentoVarejo > 0 ? ((reais.receitasVarejo / proj.faturamentoVarejo) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-green-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalReceitas * 0.6) / 18000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.faturamentoVarejo > 0 ? (reais.receitasVarejo / proj.faturamentoVarejo) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {(((totalReceitas * 0.6) / 18000) * 100) > 100 && (
+                  {proj.faturamentoVarejo > 0 && (reais.receitasVarejo / proj.faturamentoVarejo) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-green-700 to-green-800 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalReceitas * 0.6) / 18000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.receitasVarejo / proj.faturamentoVarejo) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Alcançado/Restante */}
               <div className="text-sm text-green-700 font-medium">
-                R$ {(totalReceitas * 0.6).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 18000 - (totalReceitas * 0.6)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.faturamentoVarejo - reais.receitasVarejo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-2xl border border-teal-200 shadow-lg">
               <h3 className="text-lg font-bold text-teal-800 mb-4">Faturamento Atacado</h3>
               <div className="text-2xl font-bold text-teal-900 mb-4">
-                R$ {(totalReceitas * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
-              {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-teal-700 mb-1">
                   <span>Progresso</span>
-                  <span>{(((totalReceitas * 0.3) / 12000) * 100).toFixed(0)}%</span>
+                  <span>{proj.faturamentoAtacado > 0 ? ((reais.receitasAtacado / proj.faturamentoAtacado) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-teal-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalReceitas * 0.3) / 12000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.faturamentoAtacado > 0 ? (reais.receitasAtacado / proj.faturamentoAtacado) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {(((totalReceitas * 0.3) / 12000) * 100) > 100 && (
+                  {proj.faturamentoAtacado > 0 && (reais.receitasAtacado / proj.faturamentoAtacado) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-teal-700 to-teal-800 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalReceitas * 0.3) / 12000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.receitasAtacado / proj.faturamentoAtacado) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Alcançado/Restante */}
               <div className="text-sm text-teal-700 font-medium">
-                R$ {(totalReceitas * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 12000 - (totalReceitas * 0.3)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.faturamentoAtacado - reais.receitasAtacado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -2313,102 +2443,90 @@ const AppContent: React.FC = () => {
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
               <h3 className="text-lg font-bold text-red-800 mb-4">Despesas TOTAL</h3>
               <div className="text-2xl font-bold text-red-900 mb-4">
-                R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
-              {/* Barra de Progresso (Para despesas, menos é melhor) */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-red-700 mb-1">
                   <span>Limite</span>
-                  <span>{((totalDespesas / 15000) * 100).toFixed(0)}%</span>
+                  <span>{proj.despesasTotal > 0 ? ((reais.totalDespesas / proj.despesasTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-red-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, ((totalDespesas / 15000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.despesasTotal > 0 ? (reais.totalDespesas / proj.despesasTotal) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {((totalDespesas / 15000) * 100) > 100 && (
+                  {proj.despesasTotal > 0 && (reais.totalDespesas / proj.despesasTotal) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-red-700 to-red-900 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (((totalDespesas / 15000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.totalDespesas / proj.despesasTotal) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Usado/Restante */}
               <div className="text-sm text-red-700 font-medium">
-                R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 15000 - totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.despesasTotal - reais.totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-lg">
               <h3 className="text-lg font-bold text-orange-800 mb-4">Despesas Variáveis</h3>
               <div className="text-2xl font-bold text-orange-900 mb-4">
-                R$ {(totalDespesas * 0.7).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
-              {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-orange-700 mb-1">
                   <span>Limite</span>
-                  <span>{(((totalDespesas * 0.7) / 10500) * 100).toFixed(0)}%</span>
+                  <span>{proj.despesasVariável > 0 ? ((reais.despesasVariável / proj.despesasVariável) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-orange-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalDespesas * 0.7) / 10500) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.despesasVariável > 0 ? (reais.despesasVariável / proj.despesasVariável) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {(((totalDespesas * 0.7) / 10500) * 100) > 100 && (
+                  {proj.despesasVariável > 0 && (reais.despesasVariável / proj.despesasVariável) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-orange-700 to-orange-900 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalDespesas * 0.7) / 10500) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.despesasVariável / proj.despesasVariável) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Usado/Restante */}
               <div className="text-sm text-orange-700 font-medium">
-                R$ {(totalDespesas * 0.7).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 10500 - (totalDespesas * 0.7)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.despesasVariável - reais.despesasVariável).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border border-amber-200 shadow-lg">
               <h3 className="text-lg font-bold text-amber-800 mb-4">Despesas Fixas</h3>
               <div className="text-2xl font-bold text-amber-900 mb-4">
-                R$ {(totalDespesas * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
-              {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-amber-700 mb-1">
                   <span>Limite</span>
-                  <span>{(((totalDespesas * 0.25) / 4500) * 100).toFixed(0)}%</span>
+                  <span>{proj.despesasFixo > 0 ? ((reais.despesasFixo / proj.despesasFixo) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-amber-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalDespesas * 0.25) / 4500) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.despesasFixo > 0 ? (reais.despesasFixo / proj.despesasFixo) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {(((totalDespesas * 0.25) / 4500) * 100) > 100 && (
+                  {proj.despesasFixo > 0 && (reais.despesasFixo / proj.despesasFixo) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-amber-700 to-amber-900 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalDespesas * 0.25) / 4500) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.despesasFixo / proj.despesasFixo) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Usado/Restante */}
               <div className="text-sm text-amber-700 font-medium">
-                R$ {(totalDespesas * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 4500 - (totalDespesas * 0.25)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.despesasFixo - reais.despesasFixo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -2425,68 +2543,60 @@ const AppContent: React.FC = () => {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-lg">
               <h3 className="text-lg font-bold text-blue-800 mb-4">Investimentos Gerais</h3>
               <div className="text-2xl font-bold text-blue-900 mb-4">
-                R$ {(totalDespesas * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
-              {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-blue-700 mb-1">
                   <span>Meta</span>
-                  <span>{(((totalDespesas * 0.05) / 2000) * 100).toFixed(0)}%</span>
+                  <span>{proj.investimentosGerais > 0 ? ((reais.investimentos / proj.investimentosGerais) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-blue-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalDespesas * 0.05) / 2000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.investimentosGerais > 0 ? (reais.investimentos / proj.investimentosGerais) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {(((totalDespesas * 0.05) / 2000) * 100) > 100 && (
+                  {proj.investimentosGerais > 0 && (reais.investimentos / proj.investimentosGerais) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-blue-700 to-blue-900 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalDespesas * 0.05) / 2000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.investimentos / proj.investimentosGerais) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Alcançado/Restante */}
               <div className="text-sm text-blue-700 font-medium">
-                R$ {(totalDespesas * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 2000 - (totalDespesas * 0.05)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.investimentosGerais - reais.investimentos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200 shadow-lg">
               <h3 className="text-lg font-bold text-purple-800 mb-4">Investimentos em MKT</h3>
               <div className="text-2xl font-bold text-purple-900 mb-4">
-                R$ {(totalReceitas * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
-              {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-purple-700 mb-1">
                   <span>Meta</span>
-                  <span>{(((totalReceitas * 0.1) / 3000) * 100).toFixed(0)}%</span>
+                  <span>{proj.investimentosMkt > 0 ? ((reais.mkt / proj.investimentosMkt) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-purple-200 rounded-full h-2 relative">
-                  {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalReceitas * 0.1) / 3000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, proj.investimentosMkt > 0 ? (reais.mkt / proj.investimentosMkt) * 100 : 0)}%` }}
                   ></div>
-                  {/* Barra de excesso (>100%) */}
-                  {(((totalReceitas * 0.1) / 3000) * 100) > 100 && (
+                  {proj.investimentosMkt > 0 && (reais.mkt / proj.investimentosMkt) * 100 > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-purple-700 to-purple-900 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalReceitas * 0.1) / 3000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, ((reais.mkt / proj.investimentosMkt) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
               
-              {/* Valores Alcançado/Restante */}
               <div className="text-sm text-purple-700 font-medium">
-                R$ {(totalReceitas * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 3000 - (totalReceitas * 0.1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reais.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.investimentosMkt - reais.mkt).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -2496,13 +2606,14 @@ const AppContent: React.FC = () => {
   }
 
   // Função para renderizar um mês específico com título
-  const renderMonth = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
+  const renderMonth = (monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 0) => {
+    const currentYear = new Date().getFullYear()
     return (
       <div key={monthName} className="space-y-6 mb-12">
         {/* Título Principal do Mês */}
         <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
           <h2 className="text-3xl font-bold text-white text-center uppercase tracking-wider">
-            {monthName} - 2025
+            {monthName} - {currentYear}
           </h2>
         </div>
         
@@ -2514,7 +2625,7 @@ const AppContent: React.FC = () => {
 
   // Função para renderizar o total do ano
   const renderTotalAno = () => {
-    const currentYear = 2025
+    const currentYear = new Date().getFullYear()
     
     // Usar função auxiliar do escopo do componente para evitar problemas de timezone
     const transacoesDoAno = transactions.filter(t => {
@@ -2523,23 +2634,26 @@ const AppContent: React.FC = () => {
     })
 
     const totalReceitasAno = transacoesDoAno
-      .filter(t => t.type === 'Receita')
+      .filter(t => isReceita(t.type))
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const totalDespesasAno = transacoesDoAno
-      .filter(t => t.type === 'Despesa')
+      .filter(t => isDespesa(t.type))
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
 
-    // Metas totais do ano
-    const metasDoAno = [18500, 19200, 20100, 19800, 20500, 21000, 21500, 22000, 21889.17, 23000, 25000, 28000]
-    const metaTotalAno = metasDoAno.reduce((sum, meta) => sum + meta, 0)
-    const saldoInicialAno = 31970.50
+    // Metas totais do ano (valores da projeção)
+    const metaTotalAno = mesesMetas.reduce((sum, m) => sum + m.meta, 0)
+    const saldoInicialAno = 0
+
+    // Metas anuais da projeção e valores reais por categoria
+    const projAnual = getProjectionMetasAnual()
+    const reaisAnual = getReaisByCategoryAnual()
 
     return (
       <div className="space-y-6 mb-12">
         {/* Título Principal do Ano */}
         <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-8 rounded-2xl shadow-xl">
           <h2 className="text-4xl font-bold text-white text-center uppercase tracking-wider">
-            TOTAL DO ANO - 2025
+            TOTAL DO ANO - {currentYear}
           </h2>
         </div>
 
@@ -2667,19 +2781,19 @@ const AppContent: React.FC = () => {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-emerald-800 mb-1">
                   <span>Progresso Anual</span>
-                  <span>{((totalReceitasAno / 360000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.faturamentoTotal > 0 ? ((totalReceitasAno / projAnual.faturamentoTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-emerald-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-emerald-600 to-emerald-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, ((totalReceitasAno / 360000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.faturamentoTotal > 0 ? (totalReceitasAno / projAnual.faturamentoTotal) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {((totalReceitasAno / 360000) * 100) > 100 && (
+                  {projAnual.faturamentoTotal > 0 && ((totalReceitasAno / projAnual.faturamentoTotal) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-emerald-800 to-emerald-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (((totalReceitasAno / 360000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((totalReceitasAno / projAnual.faturamentoTotal) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2687,33 +2801,33 @@ const AppContent: React.FC = () => {
               
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-emerald-800 font-medium">
-                R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 360000 - totalReceitasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.faturamentoTotal - totalReceitasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-green-100 to-green-200 p-8 rounded-2xl border-2 border-green-300 shadow-xl">
               <h3 className="text-xl font-bold text-green-900 mb-6">Faturamento Varejo Anual</h3>
               <div className="text-3xl font-bold text-green-900 mb-4">
-                R$ {(totalReceitasAno * 0.6).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-green-800 mb-1">
                   <span>Progresso Anual</span>
-                  <span>{(((totalReceitasAno * 0.6) / 216000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.faturamentoVarejo > 0 ? ((reaisAnual.receitasVarejo / projAnual.faturamentoVarejo) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-green-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-green-600 to-green-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalReceitasAno * 0.6) / 216000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.faturamentoVarejo > 0 ? (reaisAnual.receitasVarejo / projAnual.faturamentoVarejo) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {(((totalReceitasAno * 0.6) / 216000) * 100) > 100 && (
+                  {projAnual.faturamentoVarejo > 0 && ((reaisAnual.receitasVarejo / projAnual.faturamentoVarejo) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-green-800 to-green-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalReceitasAno * 0.6) / 216000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((reaisAnual.receitasVarejo / projAnual.faturamentoVarejo) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2721,33 +2835,33 @@ const AppContent: React.FC = () => {
               
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-green-800 font-medium">
-                R$ {(totalReceitasAno * 0.6).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 216000 - (totalReceitasAno * 0.6)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.faturamentoVarejo - reaisAnual.receitasVarejo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-teal-100 to-teal-200 p-8 rounded-2xl border-2 border-teal-300 shadow-xl">
               <h3 className="text-xl font-bold text-teal-900 mb-6">Faturamento Atacado Anual</h3>
               <div className="text-3xl font-bold text-teal-900 mb-4">
-                R$ {(totalReceitasAno * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-teal-800 mb-1">
                   <span>Progresso Anual</span>
-                  <span>{(((totalReceitasAno * 0.3) / 144000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.faturamentoAtacado > 0 ? ((reaisAnual.receitasAtacado / projAnual.faturamentoAtacado) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-teal-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-teal-600 to-teal-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalReceitasAno * 0.3) / 144000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.faturamentoAtacado > 0 ? (reaisAnual.receitasAtacado / projAnual.faturamentoAtacado) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {(((totalReceitasAno * 0.3) / 144000) * 100) > 100 && (
+                  {projAnual.faturamentoAtacado > 0 && ((reaisAnual.receitasAtacado / projAnual.faturamentoAtacado) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-teal-800 to-teal-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalReceitasAno * 0.3) / 144000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((reaisAnual.receitasAtacado / projAnual.faturamentoAtacado) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2755,7 +2869,7 @@ const AppContent: React.FC = () => {
               
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-teal-800 font-medium">
-                R$ {(totalReceitasAno * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 144000 - (totalReceitasAno * 0.3)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.faturamentoAtacado - reaisAnual.receitasAtacado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -2779,19 +2893,19 @@ const AppContent: React.FC = () => {
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-red-800 mb-1">
                   <span>Limite Anual</span>
-                  <span>{((totalDespesasAno / 180000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.despesasTotal > 0 ? ((totalDespesasAno / projAnual.despesasTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-red-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-red-600 to-red-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, ((totalDespesasAno / 180000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.despesasTotal > 0 ? (totalDespesasAno / projAnual.despesasTotal) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {((totalDespesasAno / 180000) * 100) > 100 && (
+                  {projAnual.despesasTotal > 0 && ((totalDespesasAno / projAnual.despesasTotal) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-red-800 to-red-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (((totalDespesasAno / 180000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((totalDespesasAno / projAnual.despesasTotal) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2799,33 +2913,33 @@ const AppContent: React.FC = () => {
               
               {/* Valores Usado/Restante */}
               <div className="text-sm text-red-800 font-medium">
-                R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 180000 - totalDespesasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.despesasTotal - totalDespesasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-orange-100 to-orange-200 p-8 rounded-2xl border-2 border-orange-300 shadow-xl">
               <h3 className="text-xl font-bold text-orange-900 mb-6">Despesas Variáveis Anuais</h3>
               <div className="text-3xl font-bold text-orange-900 mb-4">
-                R$ {(totalDespesasAno * 0.7).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-orange-800 mb-1">
                   <span>Limite Anual</span>
-                  <span>{(((totalDespesasAno * 0.7) / 126000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.despesasVariável > 0 ? ((reaisAnual.despesasVariável / projAnual.despesasVariável) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-orange-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-orange-600 to-orange-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalDespesasAno * 0.7) / 126000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.despesasVariável > 0 ? (reaisAnual.despesasVariável / projAnual.despesasVariável) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {(((totalDespesasAno * 0.7) / 126000) * 100) > 100 && (
+                  {projAnual.despesasVariável > 0 && ((reaisAnual.despesasVariável / projAnual.despesasVariável) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-orange-800 to-orange-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalDespesasAno * 0.7) / 126000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((reaisAnual.despesasVariável / projAnual.despesasVariável) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2833,33 +2947,33 @@ const AppContent: React.FC = () => {
               
               {/* Valores Usado/Restante */}
               <div className="text-sm text-orange-800 font-medium">
-                R$ {(totalDespesasAno * 0.7).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 126000 - (totalDespesasAno * 0.7)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.despesasVariável - reaisAnual.despesasVariável).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-amber-100 to-amber-200 p-8 rounded-2xl border-2 border-amber-300 shadow-xl">
               <h3 className="text-xl font-bold text-amber-900 mb-6">Despesas Fixas Anuais</h3>
               <div className="text-3xl font-bold text-amber-900 mb-4">
-                R$ {(totalDespesasAno * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-amber-800 mb-1">
                   <span>Limite Anual</span>
-                  <span>{(((totalDespesasAno * 0.25) / 54000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.despesasFixo > 0 ? ((reaisAnual.despesasFixo / projAnual.despesasFixo) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-amber-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-amber-600 to-amber-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalDespesasAno * 0.25) / 54000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.despesasFixo > 0 ? (reaisAnual.despesasFixo / projAnual.despesasFixo) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {(((totalDespesasAno * 0.25) / 54000) * 100) > 100 && (
+                  {projAnual.despesasFixo > 0 && ((reaisAnual.despesasFixo / projAnual.despesasFixo) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-amber-800 to-amber-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalDespesasAno * 0.25) / 54000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((reaisAnual.despesasFixo / projAnual.despesasFixo) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2867,7 +2981,7 @@ const AppContent: React.FC = () => {
               
               {/* Valores Usado/Restante */}
               <div className="text-sm text-amber-800 font-medium">
-                R$ {(totalDespesasAno * 0.25).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 54000 - (totalDespesasAno * 0.25)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.despesasFixo - reaisAnual.despesasFixo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -2884,26 +2998,26 @@ const AppContent: React.FC = () => {
             <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-8 rounded-2xl border-2 border-blue-300 shadow-xl">
               <h3 className="text-xl font-bold text-blue-900 mb-6">Investimentos Gerais Anuais</h3>
               <div className="text-3xl font-bold text-blue-900 mb-4">
-                R$ {(totalDespesasAno * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-blue-800 mb-1">
                   <span>Meta Anual</span>
-                  <span>{(((totalDespesasAno * 0.05) / 24000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.investimentosGerais > 0 ? ((reaisAnual.investimentos / projAnual.investimentosGerais) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-blue-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-blue-600 to-blue-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalDespesasAno * 0.05) / 24000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.investimentosGerais > 0 ? (reaisAnual.investimentos / projAnual.investimentosGerais) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {(((totalDespesasAno * 0.05) / 24000) * 100) > 100 && (
+                  {projAnual.investimentosGerais > 0 && ((reaisAnual.investimentos / projAnual.investimentosGerais) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-blue-800 to-blue-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalDespesasAno * 0.05) / 24000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((reaisAnual.investimentos / projAnual.investimentosGerais) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2911,33 +3025,33 @@ const AppContent: React.FC = () => {
               
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-blue-800 font-medium">
-                R$ {(totalDespesasAno * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 24000 - (totalDespesasAno * 0.05)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.investimentosGerais - reaisAnual.investimentos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-8 rounded-2xl border-2 border-purple-300 shadow-xl">
               <h3 className="text-xl font-bold text-purple-900 mb-6">Investimentos MKT Anuais</h3>
               <div className="text-3xl font-bold text-purple-900 mb-4">
-                R$ {(totalReceitasAno * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-purple-800 mb-1">
                   <span>Meta Anual</span>
-                  <span>{(((totalReceitasAno * 0.1) / 36000) * 100).toFixed(0)}%</span>
+                  <span>{projAnual.investimentosMkt > 0 ? ((reaisAnual.mkt / projAnual.investimentosMkt) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-purple-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div 
                     className="bg-gradient-to-r from-purple-600 to-purple-700 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (((totalReceitasAno * 0.1) / 36000) * 100))}%` }}
+                    style={{ width: `${Math.min(100, projAnual.investimentosMkt > 0 ? (reaisAnual.mkt / projAnual.investimentosMkt) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
-                  {(((totalReceitasAno * 0.1) / 36000) * 100) > 100 && (
+                  {projAnual.investimentosMkt > 0 && ((reaisAnual.mkt / projAnual.investimentosMkt) * 100) > 100 && (
                     <div 
                       className="absolute top-0 left-0 bg-gradient-to-r from-purple-800 to-purple-900 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, ((((totalReceitasAno * 0.1) / 36000) * 100) - 100))}%` }}
+                      style={{ width: `${Math.min(100, (((reaisAnual.mkt / projAnual.investimentosMkt) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
@@ -2945,7 +3059,7 @@ const AppContent: React.FC = () => {
               
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-purple-800 font-medium">
-                R$ {(totalReceitasAno * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, 36000 - (totalReceitasAno * 0.1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {reaisAnual.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.investimentosMkt - reaisAnual.mkt).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -2977,12 +3091,12 @@ const AppContent: React.FC = () => {
       
       if (incluirResumo) {
         totalReceitas = transacoesParaExportar
-          .filter(t => t.type === 'Receita')
-          .reduce((sum, t) => sum + t.value, 0)
+          .filter(t => isReceita(t.type))
+          .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
         
         totalDespesas = transacoesParaExportar
-          .filter(t => t.type === 'Despesa')
-          .reduce((sum, t) => sum + t.value, 0)
+          .filter(t => isDespesa(t.type))
+          .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
         
         saldo = totalReceitas - totalDespesas
       }
@@ -3072,10 +3186,10 @@ const AppContent: React.FC = () => {
       transacoesParaExportar.forEach((transaction, index) => {
         const dataFormatada = new Date(transaction.date).toLocaleDateString('pt-BR')
         const valorFormatado = transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-        const tipoCor = transaction.type === 'Receita' ? '#10b981' : '#ef4444'
-        const tipoBg = transaction.type === 'Receita' ? '#f0fdf4' : '#fef2f2'
-        const valorCor = transaction.type === 'Receita' ? '#059669' : '#dc2626'
-        const sinal = transaction.type === 'Receita' ? '+' : '-'
+        const tipoCor = isReceita(transaction.type) ? '#10b981' : '#ef4444'
+        const tipoBg = isReceita(transaction.type) ? '#f0fdf4' : '#fef2f2'
+        const valorCor = isReceita(transaction.type) ? '#059669' : '#dc2626'
+        const sinal = isReceita(transaction.type) ? '+' : '-'
         const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
         
         htmlContent += `
@@ -3331,7 +3445,7 @@ const AppContent: React.FC = () => {
 
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
-               <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
+               <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -3370,9 +3484,9 @@ const AppContent: React.FC = () => {
                 </button>
                 <button 
                   onClick={() => handleSort('value')}
-                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
+                  className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-28 sm:w-32"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Valor</p>
+                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide whitespace-nowrap">Valor</p>
                   {getSortIcon('value')}
                 </button>
                 <div className="flex-shrink-0 w-16 sm:w-20 flex justify-center">
@@ -3385,7 +3499,7 @@ const AppContent: React.FC = () => {
               <div key={transaction.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
                 index === transactions.length - 1 ? 'border-b-0' : ''
               }`}>
-                <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
+                <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
                   {/* Checkbox */}
                   <div className="flex-shrink-0 text-left">
                     <input
@@ -3413,7 +3527,7 @@ const AppContent: React.FC = () => {
                   {/* Tipo */}
                   <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <span className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium ${
-                      transaction.type === 'Receita' 
+                      isReceita(transaction.type) 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
@@ -3429,11 +3543,11 @@ const AppContent: React.FC = () => {
                     </div>
                   
                   {/* Valor */}
-                  <div className="flex-shrink-0 w-20 sm:w-24 text-center">
-                    <p className={`text-xs sm:text-sm md:text-lg font-bold ${
-                      transaction.type === 'Receita' ? 'text-green-600' : 'text-red-600'
-                    } truncate`}>
-                      {transaction.type === 'Receita' ? '+' : '-'}R$ {transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="flex-shrink-0 w-28 sm:w-32 text-center">
+                    <p className={`text-xs sm:text-sm md:text-lg font-bold whitespace-nowrap ${
+                      isReceita(transaction.type) ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {isReceita(transaction.type) ? '+' : '-'}R$ {transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   
@@ -4081,7 +4195,7 @@ const AppContent: React.FC = () => {
         const vendasPorCategoria: { [key: string]: number } = {}
         
         transacoes.forEach(t => {
-          if (t.type === 'Receita') {
+          if (isReceita(t.type)) {
             vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + t.value
           }
         })
@@ -4098,7 +4212,7 @@ const AppContent: React.FC = () => {
         const despesasPorCategoria: { [key: string]: number } = {}
         
         transacoes.forEach(t => {
-          if (t.type === 'Despesa') {
+          if (isDespesa(t.type)) {
             despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + t.value
           }
         })
@@ -4115,7 +4229,7 @@ const AppContent: React.FC = () => {
         const vendasPorProduto: { [key: string]: number } = {}
         
         transacoes.forEach(t => {
-          if (t.type === 'Receita') {
+          if (isReceita(t.type)) {
             const nomeProduto = t.description || 'Produto sem nome'
             vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + t.value
           }
@@ -4368,7 +4482,7 @@ const AppContent: React.FC = () => {
       const vendasPorCategoria: { [key: string]: number } = {}
       
       transacoes.forEach(t => {
-        if (t.type === 'Receita') {
+        if (isReceita(t.type)) {
           vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + t.value
         }
       })
@@ -4386,7 +4500,7 @@ const AppContent: React.FC = () => {
       const despesasPorCategoria: { [key: string]: number } = {}
       
       transacoes.forEach(t => {
-        if (t.type === 'Despesa') {
+        if (isDespesa(t.type)) {
           despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + t.value
         }
       })
@@ -4404,7 +4518,7 @@ const AppContent: React.FC = () => {
       const vendasPorProduto: { [key: string]: number } = {}
       
       transacoes.forEach(t => {
-        if (t.type === 'Receita') {
+        if (isReceita(t.type)) {
           // Usar a descrição como nome do produto
           const nomeProduto = t.description || 'Produto sem nome'
           vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + t.value
@@ -4427,7 +4541,7 @@ const AppContent: React.FC = () => {
       const produtosPorPeriodo: { [key: string]: { [key: string]: number } } = {}
       
       transacoes.forEach(t => {
-        if (t.type === 'Receita') {
+        if (isReceita(t.type)) {
           const dataTransacao = new Date(t.date)
           let chavePeriodo: string
           
@@ -4527,20 +4641,30 @@ const AppContent: React.FC = () => {
                           </span>
                         </div>
                         
-                        {/* Gráfico expandido */}
-                        {expandedReportCharts.includes(chartId) && (
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <ResponsiveContainer width="100%" height={250}>
-                              <BarChart data={[{name: item.nome, valor: item.valor}]}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
-                                <Bar dataKey="valor" fill={item.cor} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        )}
+                        {/* Gráfico expandido: categoria vs Total Vendas */}
+                        {expandedReportCharts.includes(chartId) && (() => {
+                          const chartData = [
+                            {nome: item.nome, valor: item.valor, cor: item.cor},
+                            {nome: 'Total Vendas', valor: totalVendasCategoria, cor: '#22c55e'}
+                          ]
+                          return (
+                            <div className="bg-gray-50 p-4 rounded-lg" style={{ minHeight: 280 }}>
+                              <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 10 }} barCategoryGap="25%">
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="nome" />
+                                  <YAxis tickFormatter={(v: number) => `R$ ${Number(v).toLocaleString('pt-BR')}`} />
+                                  <Tooltip formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                                  <Bar dataKey="valor" radius={[8, 8, 0, 0]} minPointSize={8} barSize={60}>
+                                    {chartData.map((entry, i) => (
+                                      <Cell key={i} fill={entry.cor} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          )
+                        })()}
                       </div>
                     );
                   })}
@@ -4607,20 +4731,30 @@ const AppContent: React.FC = () => {
                           </span>
                         </div>
                         
-                        {/* Gráfico expandido */}
-                        {expandedReportCharts.includes(chartId) && (
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <ResponsiveContainer width="100%" height={250}>
-                              <BarChart data={[{name: item.nome, valor: item.valor}]}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
-                                <Bar dataKey="valor" fill={item.cor} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        )}
+                        {/* Gráfico expandido: produto vs Total por Produto */}
+                        {expandedReportCharts.includes(chartId) && (() => {
+                          const chartData = [
+                            {nome: item.nome, valor: item.valor, cor: item.cor},
+                            {nome: 'Total por Produto', valor: totalVendasProduto, cor: '#3b82f6'}
+                          ]
+                          return (
+                            <div className="bg-gray-50 p-4 rounded-lg" style={{ minHeight: 280 }}>
+                              <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 10 }} barCategoryGap="25%">
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="nome" />
+                                  <YAxis tickFormatter={(v: number) => `R$ ${Number(v).toLocaleString('pt-BR')}`} />
+                                  <Tooltip formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                                  <Bar dataKey="valor" radius={[8, 8, 0, 0]} minPointSize={8} barSize={60}>
+                                    {chartData.map((entry, i) => (
+                                      <Cell key={i} fill={entry.cor} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          )
+                        })()}
                       </div>
                     );
                   })}
@@ -4685,20 +4819,30 @@ const AppContent: React.FC = () => {
                         </span>
                       </div>
                       
-                      {/* Gráfico expandido */}
-                      {expandedReportCharts.includes(chartId) && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={[{name: item.nome, valor: item.valor}]}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
-                              <Bar dataKey="valor" fill={item.cor} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      )}
+                      {/* Gráfico expandido: categoria vs Total Despesas */}
+                      {expandedReportCharts.includes(chartId) && (() => {
+                        const chartData = [
+                          {nome: item.nome, valor: item.valor, cor: item.cor},
+                          {nome: 'Total Despesas', valor: totalDespesas, cor: '#f97316'}
+                        ]
+                        return (
+                          <div className="bg-gray-50 p-4 rounded-lg" style={{ minHeight: 280 }}>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 10 }} barCategoryGap="25%">
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="nome" />
+                                <YAxis tickFormatter={(v: number) => `R$ ${Number(v).toLocaleString('pt-BR')}`} />
+                                <Tooltip formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']} />
+                                <Bar dataKey="valor" radius={[8, 8, 0, 0]} minPointSize={8} barSize={60}>
+                                  {chartData.map((entry, i) => (
+                                    <Cell key={i} fill={entry.cor} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )
+                      })()}
                     </div>
                   );
                 })}
@@ -4884,35 +5028,26 @@ const AppContent: React.FC = () => {
       tempElement.style.padding = '20px'
       tempElement.style.fontFamily = 'Arial, sans-serif'
       
-      // Obter dados REAIS do mês selecionado usando a mesma lógica de renderMonthContent
+      // Obter dados REAIS do mês selecionado usando a mesma função do dashboard
       const monthIndex = selectedMonth
-      const currentYear = 2025
+      const currentYear = new Date().getFullYear()
       
-      // Usar função auxiliar do escopo do componente para evitar problemas de timezone
-      const transacoesDoMes = transactions.filter(t => {
-        if (!t.date) return false
-        const { month, year } = getMonthYearFromDate(t.date)
-        return month === monthIndex && year === currentYear
-      })
-      
-      const totalReceitas = transacoesDoMes
-        .filter(t => t.type === 'Receita')
-        .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
-      const totalDespesas = transacoesDoMes
-        .filter(t => t.type === 'Despesa')
-        .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+      // Usar a mesma função de cálculo do dashboard para garantir consistência
+      const { receitas, despesas, resultado } = calculateTotalsForMonth(monthIndex, currentYear)
+      const totalReceitas = receitas
+      const totalDespesas = despesas
       
       // Meta de faturamento = meta do mês selecionado
       const metaFaturamento = mesSelecionado.meta
       
       // Resultado financeiro
-      const resultadoFinanceiro = totalReceitas - totalDespesas
+      const resultadoFinanceiro = resultado
       
       // Criar HTML do relatório com dados REAIS
       tempElement.innerHTML = `
         <div style="text-align: center; margin-bottom: 30px;">
           <h1 style="color: #f59e0b; font-size: 28px; margin: 0; font-weight: bold;">ALYA VELAS</h1>
-          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório de Metas - ${mesSelecionado.nome} 2025</h2>
+          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório de Metas - ${mesSelecionado.nome} ${new Date().getFullYear()}</h2>
           <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
         </div>
         
@@ -5037,7 +5172,7 @@ const AppContent: React.FC = () => {
       }
       
       // Salvar PDF
-      const fileName = `Metas_${mesSelecionado.nome}_2025_${new Date().toISOString().split('T')[0]}.pdf`
+      const fileName = `Metas_${mesSelecionado.nome}_${new Date().getFullYear()}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(fileName)
       
       alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Meta de Faturamento: R$ ${metaFaturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Faturamento Realizado: R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Total de Despesas: R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Resultado Financeiro: R$ ${resultadoFinanceiro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
@@ -5131,14 +5266,14 @@ const AppContent: React.FC = () => {
               >
                 {mesesMetas.map((mes) => (
                   <option key={mes.indice} value={mes.indice} className="text-gray-800 bg-white normal-case text-lg font-normal">
-                    {mes.nome} - 2025
+                    {mes.nome} - {new Date().getFullYear()}
                   </option>
                 ))}
               </select>
             </div>
             
             {/* Conteúdo do Mês */}
-            {renderMonthContent(mesSelecionado.nome, mesSelecionado.indice, mesSelecionado.meta, 31970.50)}
+            {renderMonthContent(mesSelecionado.nome, mesSelecionado.indice, mesSelecionado.meta, 0)}
           </div>
         )}
 
@@ -5147,7 +5282,7 @@ const AppContent: React.FC = () => {
 
         {/* Renderizar todos os 12 meses em ordem normal */}
         {mesesMetas.map((mes) => 
-          renderMonth(mes.nome, mes.indice, mes.meta, 31970.50)
+          renderMonth(mes.nome, mes.indice, mes.meta, 0)
         )}
       </div>
     )

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BarChart3, Calculator, RefreshCw, Settings, Table, Trash2 } from 'lucide-react'
+import { BarChart3, Calculator, Database, RefreshCw, Settings, Table, Trash2 } from 'lucide-react'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
 import { ChartCard } from './projection/charts/ChartCard'
@@ -344,6 +344,21 @@ export default function Projection() {
     }
   }
 
+  const syncFromTransactions = async () => {
+    const year = new Date().getFullYear() - 1
+    if (!confirm(`Importar dados do ano anterior (${year}) das transações reais para a base da Projeção? Os valores atuais serão substituídos.`)) return
+    setIsSaving(true)
+    setError(null)
+    try {
+      await apiFetch('/projection/sync-from-transactions', { method: 'POST', body: JSON.stringify({ year }) })
+      await refreshAll()
+    } catch (e: any) {
+      setError(e?.message || 'Erro ao importar transações')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const clearAll = async () => {
     if (!confirm('Tem certeza que deseja limpar TODOS os dados da Projeção?')) return
     setIsSaving(true)
@@ -530,6 +545,15 @@ export default function Projection() {
           <div className="flex items-center gap-3">
             {isAdmin && (
               <>
+                <button
+                  onClick={syncFromTransactions}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 transition-colors"
+                  title="Importar base do ano anterior a partir das transações reais"
+                >
+                  <Database className="w-4 h-4" />
+                  Importar de transações
+                </button>
                 <button
                   onClick={syncNow}
                   disabled={isSaving}
@@ -827,7 +851,7 @@ export default function Projection() {
             </div>
 
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Linha</th>
@@ -1120,7 +1144,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Somatório dos streams ativos (com overrides).</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1213,7 +1237,7 @@ export default function Projection() {
                 </div>
 
                 <div className="p-4 overflow-x-auto">
-                  <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+                  <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                     <thead className="bg-gray-800 text-white">
                       <tr>
                         <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1350,7 +1374,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Previsto = base (sem crescimento). Médio/Máximo aplicam crescimento. Você pode fazer override manual por cenário/mês.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1472,7 +1496,7 @@ export default function Projection() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1582,7 +1606,7 @@ export default function Projection() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1695,7 +1719,7 @@ export default function Projection() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1803,7 +1827,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Somatório (Fixas + Variáveis + Investimentos + MKT), por cenário.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1881,7 +1905,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Faturamento Total − Orçamento, por cenário.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left sticky left-0 z-10 bg-gray-800">Cenário</th>

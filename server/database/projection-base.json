@@ -1,8 +1,8 @@
 {
   "growth": {
-    "minimo": 0,
-    "medio": 0,
-    "maximo": 0
+    "minimo": 20,
+    "medio": 30,
+    "maximo": 40
   },
   "prevYear": {
     "fixedExpenses": [
@@ -249,6 +249,48 @@
       null,
       null
     ],
+    "mktPrevistoManual": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "mktMedioManual": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "mktMaximoManual": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
     "revenueManual": {
       "rev_1": {
         "previsto": [
@@ -340,5 +382,5 @@
       }
     }
   },
-  "updatedAt": "1970-01-01T00:00:00.000Z"
+  "updatedAt": "2026-02-04T17:23:37.310Z"
 }

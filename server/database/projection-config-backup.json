@@ -1,1 +1,12 @@
-{}
+{
+  "revenueStreams": [
+    { "id": "rev_1", "name": "Faturamento A", "order": 1, "isActive": true },
+    { "id": "rev_2", "name": "Faturamento B", "order": 2, "isActive": true }
+  ],
+  "mktComponents": [
+    { "id": "mkt_1", "name": "Tráfego", "order": 1, "isActive": true },
+    { "id": "mkt_2", "name": "Social Media", "order": 2, "isActive": true },
+    { "id": "mkt_3", "name": "Conteúdo", "order": 3, "isActive": true }
+  ],
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -1257,6 +1257,121 @@ class Database {
     return this.updateProjectionSnapshot(newSnapshot);
   }
 
+  /**
+   * Extrai mês (0-11) e ano de uma data de transação.
+   * Suporta: YYYY-MM-DD, DD/MM/YYYY, ISO string.
+   */
+  parseTransactionDate(dateStr) {
+    if (!dateStr) return { month: -1, year: -1 };
+    const s = String(dateStr).trim();
+    // YYYY-MM-DD
+    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return { month: parseInt(isoMatch[2], 10) - 1, year: parseInt(isoMatch[1], 10) };
+    }
+    // DD/MM/YYYY
+    const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (brMatch) {
+      return { month: parseInt(brMatch[2], 10) - 1, year: parseInt(brMatch[3], 10) };
+    }
+    const d = new Date(s);
+    if (Number.isFinite(d.getTime())) {
+      return { month: d.getMonth(), year: d.getFullYear() };
+    }
+    return { month: -1, year: -1 };
+  }
+
+  /**
+   * Sincroniza a base da projeção (prevYear) a partir das transações reais.
+   * Agrega transações por mês e categoria para o ano especificado.
+   * @param {number} year - Ano das transações a agregar (padrão: ano anterior)
+   * @returns {object} Base atualizada e snapshot recalculado
+   */
+  syncProjectionBaseFromTransactions(year) {
+    const targetYear = Number(year) || new Date().getFullYear() - 1;
+    const cfg = this.getProjectionConfig();
+    const base = this.getProjectionBase();
+    const transactions = this.getAllTransactions();
+
+    const fixedExpenses = new Array(12).fill(0);
+    const variableExpenses = new Array(12).fill(0);
+    const investments = new Array(12).fill(0);
+    const revenueStreams = {};
+    const mktComponents = {};
+
+    for (const s of (cfg.revenueStreams || [])) {
+      if (s?.id) revenueStreams[s.id] = new Array(12).fill(0);
+    }
+    for (const c of (cfg.mktComponents || [])) {
+      if (c?.id) mktComponents[c.id] = new Array(12).fill(0);
+    }
+
+    const catLower = (c) => (c || '').toLowerCase().trim();
+
+    for (const t of transactions) {
+      const { month, year } = this.parseTransactionDate(t.date);
+      if (month < 0 || month > 11 || year !== targetYear) continue;
+
+      const value = Number(t.value) || 0;
+      const type = (t.type || '').toLowerCase();
+      const category = catLower(t.category);
+
+      if (type.includes('receita')) {
+        const streamId = this.mapTransactionCategoryToRevenueStream(category, cfg);
+        if (streamId && revenueStreams[streamId]) {
+          revenueStreams[streamId][month] += value;
+        } else if (Object.keys(revenueStreams).length > 0) {
+          const firstId = Object.keys(revenueStreams)[0];
+          revenueStreams[firstId][month] += value;
+        }
+      } else if (type.includes('despesa')) {
+        if (category.includes('fixo') || category.includes('fixa')) {
+          fixedExpenses[month] += value;
+        } else if (category.includes('variável') || category.includes('variavel')) {
+          variableExpenses[month] += value;
+        } else if (category.includes('investimento')) {
+          investments[month] += value;
+        } else if (category.includes('mkt') || category.includes('marketing')) {
+          const mktId = Object.keys(mktComponents)[0];
+          if (mktId) mktComponents[mktId][month] += value;
+        } else {
+          variableExpenses[month] += value;
+        }
+      }
+    }
+
+    const nextBase = {
+      ...base,
+      prevYear: {
+        ...base.prevYear,
+        fixedExpenses,
+        variableExpenses,
+        investments,
+        revenueStreams: { ...(base.prevYear?.revenueStreams || {}), ...revenueStreams },
+        mktComponents: { ...(base.prevYear?.mktComponents || {}), ...mktComponents }
+      }
+    };
+
+    this.updateProjectionBase(nextBase);
+    return this.syncProjectionData();
+  }
+
+  /**
+   * Mapeia categoria de transação para stream de faturamento.
+   * Ex: "Varejo" -> stream com name "Faturamento Varejo"
+   */
+  mapTransactionCategoryToRevenueStream(category, cfg) {
+    const streams = (cfg?.revenueStreams || []).filter(s => s?.id);
+    if (streams.length === 0) return null;
+    const cat = (category || '').toLowerCase();
+    for (const s of streams) {
+      const name = (s.name || '').toLowerCase();
+      if (name.includes('varejo') && (cat.includes('varejo') || cat === 'varejo')) return s.id;
+      if (name.includes('atacado') && (cat.includes('atacado') || cat === 'atacado')) return s.id;
+    }
+    return null;
+  }
+
   // Métodos para Estatísticas
   getSystemStatistics() {
     try {

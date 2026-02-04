@@ -1320,6 +1320,18 @@ app.post('/api/projection/sync', authenticateToken, requireAdmin, (req, res) => 
   }
 });
 
+// Importar base da projeção a partir das transações reais (ano anterior)
+app.post('/api/projection/sync-from-transactions', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const year = req.body?.year || new Date().getFullYear() - 1;
+    const synced = db.syncProjectionBaseFromTransactions(year);
+    logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection_from_transactions', { year });
+    res.json({ success: true, data: synced, message: `Base importada das transações de ${year}` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/projection/config', authenticateToken, (req, res) => {
   try {
     const cfg = db.getProjectionConfig();

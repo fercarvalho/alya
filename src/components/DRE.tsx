@@ -115,10 +115,14 @@ const DRE: React.FC = () => {
     return filterTransactionsByPeriod(previousPeriod.month, previousPeriod.year, selectedPeriod)
   }, [transactions, selectedPeriod, previousPeriod.month, previousPeriod.year])
 
+  // Helpers case-insensitive para tipo de transação (Receita, RECEITA, receita, DESpesAS, etc.)
+  const isReceita = (type: string) => /receita/i.test(type || '')
+  const isDespesa = (type: string) => /despesa/i.test(type || '')
+
   // Gerar DRE para um conjunto de transações
   const generateDRE = (transactions: Transaction[]): DRERow[] => {
-    const receitas = transactions.filter(t => t.type === 'Receita')
-    const despesas = transactions.filter(t => t.type === 'Despesa')
+    const receitas = transactions.filter(t => isReceita(t.type))
+    const despesas = transactions.filter(t => isDespesa(t.type))
 
     const totalReceitas = receitas.reduce((sum, t) => sum + t.value, 0)
     const totalDespesas = despesas.reduce((sum, t) => sum + t.value, 0)
