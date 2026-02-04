@@ -1412,6 +1412,29 @@ const AppContent: React.FC = () => {
     setIsProductModalOpen(true)
   }
 
+  // Função auxiliar para extrair mês e ano de uma data no formato YYYY-MM-DD (evita problemas de timezone)
+  const getMonthYearFromDate = (dateString: string) => {
+    if (!dateString) return { month: -1, year: -1 }
+    // Se a data está no formato YYYY-MM-DD, extrair diretamente
+    const parts = dateString.split('-')
+    if (parts.length === 3) {
+      return { month: parseInt(parts[1], 10) - 1, year: parseInt(parts[0], 10) } // month é 0-indexed
+    }
+    // Fallback para Date object
+    const date = new Date(dateString)
+    return { month: date.getMonth(), year: date.getFullYear() }
+  }
+
+  // Função auxiliar para extrair apenas o ano de uma data
+  const getYearFromDate = (dateString: string) => {
+    if (!dateString) return -1
+    const parts = dateString.split('-')
+    if (parts.length === 3) {
+      return parseInt(parts[0], 10)
+    }
+    return new Date(dateString).getFullYear()
+  }
+
   // Funções para calcular totais das transações
   const calculateTotals = () => {
     // Verificar se transactions existe e não está vazio
@@ -1424,11 +1447,11 @@ const AppContent: React.FC = () => {
     const currentYear = currentDate.getFullYear()
     
     try {
-      // Filtrar transações do mês atual
+      // Filtrar transações do mês atual usando função auxiliar
       const currentMonthTransactions = transactions.filter(transaction => {
         if (!transaction.date) return false
-        const transactionDate = new Date(transaction.date)
-        return transactionDate.getMonth() === currentMonth && transactionDate.getFullYear() === currentYear
+        const { month, year } = getMonthYearFromDate(transaction.date)
+        return month === currentMonth && year === currentYear
       })
       
       const receitas = currentMonthTransactions
@@ -1522,19 +1545,21 @@ const AppContent: React.FC = () => {
       'Q1 (Jan-Mar)', 'Q2 (Abr-Jun)', 'Q3 (Jul-Set)', 'Q4 (Out-Dez)'
     ]
     
-    // Filtrar transações do trimestre atual
+    // Filtrar transações do trimestre atual usando função auxiliar
+    const currentYear = new Date().getFullYear()
     const transacoesTrimestre = transactions.filter(t => {
-      const transactionMonth = new Date(t.date).getMonth()
-      return mesesDoTrimestre.includes(transactionMonth)
+      if (!t.date) return false
+      const { month, year } = getMonthYearFromDate(t.date)
+      return mesesDoTrimestre.includes(month) && year === currentYear
     })
     
     // Dados trimestrais (usando dados reais das transações)
     const totalReceitasTrimestre = transacoesTrimestre
       .filter(t => t.type === 'Receita')
-      .reduce((sum, t) => sum + t.value, 0)
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const totalDespesasTrimestre = transacoesTrimestre
       .filter(t => t.type === 'Despesa')
-      .reduce((sum, t) => sum + t.value, 0)
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const lucroLiquidoTrimestre = totalReceitasTrimestre - totalDespesasTrimestre
     
     // Meta do trimestre (soma das metas dos 3 meses)
@@ -1542,19 +1567,19 @@ const AppContent: React.FC = () => {
       total + (mesesMetas[mesIndex]?.meta || 0), 0
     )
     
-    // Filtrar transações do ano atual
+    // Filtrar transações do ano atual usando função auxiliar
     const transacoesAno = transactions.filter(t => {
-      const transactionYear = new Date(t.date).getFullYear()
-      return transactionYear === new Date().getFullYear()
+      if (!t.date) return false
+      return getYearFromDate(t.date) === currentYear
     })
     
     // Dados anuais (usando dados reais das transações)
     const totalReceitasAno = transacoesAno
       .filter(t => t.type === 'Receita')
-      .reduce((sum, t) => sum + t.value, 0)
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const totalDespesasAno = transacoesAno
       .filter(t => t.type === 'Despesa')
-      .reduce((sum, t) => sum + t.value, 0)
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const lucroLiquidoAno = totalReceitasAno - totalDespesasAno
 
     // Transações recentes (últimas 5)
@@ -2042,13 +2067,20 @@ const AppContent: React.FC = () => {
   const renderMonthContent = (_monthName: string, monthIndex: number, metaValue: number, saldoInicial: number = 31970.50) => {
     // Cálculos para o mês específico
     const currentYear = 2025
+    
+    // Usar função auxiliar do escopo do componente para evitar problemas de timezone
     const transacoesDoMes = transactions.filter(t => {
-      const transactionDate = new Date(t.date)
-      return transactionDate.getMonth() === monthIndex && transactionDate.getFullYear() === currentYear
+      if (!t.date) return false
+      const { month, year } = getMonthYearFromDate(t.date)
+      return month === monthIndex && year === currentYear
     })
 
-    const totalReceitas = transacoesDoMes.filter(t => t.type === 'Receita').reduce((sum, t) => sum + t.value, 0)
-    const totalDespesas = transacoesDoMes.filter(t => t.type === 'Despesa').reduce((sum, t) => sum + t.value, 0)
+    const totalReceitas = transacoesDoMes
+      .filter(t => t.type === 'Receita')
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+    const totalDespesas = transacoesDoMes
+      .filter(t => t.type === 'Despesa')
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
 
     return (
       <div className="space-y-6">
@@ -2484,14 +2516,18 @@ const AppContent: React.FC = () => {
   const renderTotalAno = () => {
     const currentYear = 2025
     
-    // Cálculos totais do ano
+    // Usar função auxiliar do escopo do componente para evitar problemas de timezone
     const transacoesDoAno = transactions.filter(t => {
-      const transactionDate = new Date(t.date)
-      return transactionDate.getFullYear() === currentYear
+      if (!t.date) return false
+      return getYearFromDate(t.date) === currentYear
     })
 
-    const totalReceitasAno = transacoesDoAno.filter(t => t.type === 'Receita').reduce((sum, t) => sum + t.value, 0)
-    const totalDespesasAno = transacoesDoAno.filter(t => t.type === 'Despesa').reduce((sum, t) => sum + t.value, 0)
+    const totalReceitasAno = transacoesDoAno
+      .filter(t => t.type === 'Receita')
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+    const totalDespesasAno = transacoesDoAno
+      .filter(t => t.type === 'Despesa')
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
 
     // Metas totais do ano
     const metasDoAno = [18500, 19200, 20100, 19800, 20500, 21000, 21500, 22000, 21889.17, 23000, 25000, 28000]
@@ -4852,14 +4888,19 @@ const AppContent: React.FC = () => {
       const monthIndex = selectedMonth
       const currentYear = 2025
       
-      // Filtrar transações do mês selecionado
+      // Usar função auxiliar do escopo do componente para evitar problemas de timezone
       const transacoesDoMes = transactions.filter(t => {
-        const transactionDate = new Date(t.date)
-        return transactionDate.getMonth() === monthIndex && transactionDate.getFullYear() === currentYear
+        if (!t.date) return false
+        const { month, year } = getMonthYearFromDate(t.date)
+        return month === monthIndex && year === currentYear
       })
       
-      const totalReceitas = transacoesDoMes.filter(t => t.type === 'Receita').reduce((sum, t) => sum + t.value, 0)
-      const totalDespesas = transacoesDoMes.filter(t => t.type === 'Despesa').reduce((sum, t) => sum + t.value, 0)
+      const totalReceitas = transacoesDoMes
+        .filter(t => t.type === 'Receita')
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+      const totalDespesas = transacoesDoMes
+        .filter(t => t.type === 'Despesa')
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
       
       // Meta de faturamento = meta do mês selecionado
       const metaFaturamento = mesSelecionado.meta
