@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { TrendingUp, TrendingDown, DollarSign, Download, FileText } from 'lucide-react'
+import { parseLocalDate } from '../utils/dateUtils'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
 import jsPDF from 'jspdf'
@@ -98,7 +99,7 @@ const DRE: React.FC = () => {
     }
 
     return transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date)
+      const transactionDate = parseLocalDate(transaction.date)
       return transactionDate >= startDate && transactionDate <= endDate
     })
   }

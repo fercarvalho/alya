@@ -41,6 +41,7 @@ import { useModules } from './hooks/useModules'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { API_BASE_URL } from './config/api'
+import { parseLocalDate, formatDatePtBR } from './utils/dateUtils'
 
 import { 
   PieChart as RechartsPieChart, 
@@ -636,10 +637,7 @@ const AppContent: React.FC = () => {
     return date.toISOString().split('T')[0]
   }
 
-  const formatDateToDisplay = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR')
-  }
+  const formatDateToDisplay = (dateString: string) => formatDatePtBR(dateString)
 
   const handleDateSelect = (date: Date) => {
     setTransactionForm(prev => ({
@@ -910,10 +908,10 @@ const AppContent: React.FC = () => {
 
     // Filtro por data
     if (transactionFilters.dateFrom) {
-      filtered = filtered.filter(t => new Date(t.date) >= new Date(transactionFilters.dateFrom))
+      filtered = filtered.filter(t => parseLocalDate(t.date).getTime() >= parseLocalDate(transactionFilters.dateFrom).getTime())
     }
     if (transactionFilters.dateTo) {
-      filtered = filtered.filter(t => new Date(t.date) <= new Date(transactionFilters.dateTo))
+      filtered = filtered.filter(t => parseLocalDate(t.date).getTime() <= parseLocalDate(transactionFilters.dateTo).getTime())
     }
 
     // Aplicar ordenação
@@ -924,8 +922,8 @@ const AppContent: React.FC = () => {
       let bValue: any = b[sortConfig.field as keyof NewTransaction]
 
       if (sortConfig.field === 'date') {
-        aValue = new Date(aValue).getTime()
-        bValue = new Date(bValue).getTime()
+        aValue = parseLocalDate(aValue).getTime()
+        bValue = parseLocalDate(bValue).getTime()
       } else if (sortConfig.field === 'value') {
         aValue = Number(aValue)
         bValue = Number(bValue)
@@ -1594,7 +1592,7 @@ const AppContent: React.FC = () => {
 
     // Transações recentes (últimas 5)
     const transacoesRecentes = transactions
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
       .slice(0, 5)
 
     // Dados para gráficos mensais (baseados no mês selecionado nas metas)
@@ -2076,7 +2074,7 @@ const AppContent: React.FC = () => {
                           {isReceita(transacao.type) ? '+' : '-'}R$ {transacao.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         <p className="text-sm text-gray-500 whitespace-nowrap">
-                          {new Date(transacao.date).toLocaleDateString('pt-BR')}
+                          {formatDateToDisplay(transacao.date)}
                         </p>
                       </div>
                     </div>
@@ -3184,7 +3182,7 @@ const AppContent: React.FC = () => {
       
       // Adicionar linhas da tabela
       transacoesParaExportar.forEach((transaction, index) => {
-        const dataFormatada = new Date(transaction.date).toLocaleDateString('pt-BR')
+        const dataFormatada = formatDateToDisplay(transaction.date)
         const valorFormatado = transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
         const tipoCor = isReceita(transaction.type) ? '#10b981' : '#ef4444'
         const tipoBg = isReceita(transaction.type) ? '#f0fdf4' : '#fef2f2'
@@ -3513,7 +3511,7 @@ const AppContent: React.FC = () => {
                   {/* Data */}
                    <div className="flex-shrink-0 w-20 sm:w-24 text-left">
                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                      {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                      {formatDateToDisplay(transaction.date)}
                     </p>
                   </div>
                   
@@ -4171,22 +4169,22 @@ const AppContent: React.FC = () => {
 
       // Filtrar transações por período
       const transacoesSemana = transactions.filter(t => {
-        const dataTransacao = new Date(t.date)
+        const dataTransacao = parseLocalDate(t.date)
         return dataTransacao >= inicioSemana
       })
 
       const transacoesMes = transactions.filter(t => {
-        const dataTransacao = new Date(t.date)
+        const dataTransacao = parseLocalDate(t.date)
         return dataTransacao >= inicioMes
       })
 
       const transacoesTrimestre = transactions.filter(t => {
-        const dataTransacao = new Date(t.date)
+        const dataTransacao = parseLocalDate(t.date)
         return dataTransacao >= inicioTrimestre
       })
 
       const transacoesAno = transactions.filter(t => {
-        const dataTransacao = new Date(t.date)
+        const dataTransacao = parseLocalDate(t.date)
         return dataTransacao >= inicioAno
       })
 
@@ -4458,22 +4456,22 @@ const AppContent: React.FC = () => {
 
     // Filtrar transações por período
     const transacoesSemana = transactions.filter(t => {
-      const dataTransacao = new Date(t.date)
+      const dataTransacao = parseLocalDate(t.date)
       return dataTransacao >= inicioSemana
     })
 
     const transacoesMes = transactions.filter(t => {
-      const dataTransacao = new Date(t.date)
+      const dataTransacao = parseLocalDate(t.date)
       return dataTransacao >= inicioMes
     })
 
     const transacoesTrimestre = transactions.filter(t => {
-      const dataTransacao = new Date(t.date)
+      const dataTransacao = parseLocalDate(t.date)
       return dataTransacao >= inicioTrimestre
     })
 
     const transacoesAno = transactions.filter(t => {
-      const dataTransacao = new Date(t.date)
+      const dataTransacao = parseLocalDate(t.date)
       return dataTransacao >= inicioAno
     })
 
@@ -4542,7 +4540,7 @@ const AppContent: React.FC = () => {
       
       transacoes.forEach(t => {
         if (isReceita(t.type)) {
-          const dataTransacao = new Date(t.date)
+          const dataTransacao = parseLocalDate(t.date)
           let chavePeriodo: string
           
           if (tipo === 'dia') {

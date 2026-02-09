@@ -47,6 +47,23 @@ Thumbs.db
 /server/database/users.json
 /server/database/activity-logs.json
 
+# Database backups e schemas
+/server/database/*-backup.json
+/server/database/backup-*/
+server/backup-json-data.js
+
+# Scripts de testes
+**/*.test.*
+**/*.spec.*
+**/__tests__/
+**/*-test.*
+**/*-spec.*
+
+# Scripts de migração, cleanup e validação
+**/migrate*.js
+**/cleanup*.js
+**/validate*.js
+
 # Documentation files (keep only README.md)
 *.md
 !README.md

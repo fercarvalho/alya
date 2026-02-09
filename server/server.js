@@ -10,7 +10,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Database = require('./database');
+const Database = require('./database-pg');
 
 const app = express();
 const port = process.env.PORT || 8001;
@@ -196,6 +196,39 @@ const uploadAvatar = multer({
   }
 });
 
+// Helper genérico para ler coluna do Excel de forma case-insensitive,
+// ignorando acentos e espaços extras no cabeçalho.
+function getCellValue(row, possibleHeaders, defaultValue = undefined) {
+  if (!row || typeof row !== 'object') return defaultValue;
+
+  // 1) Tentativa direta (case-sensitive), para não quebrar nada existente
+  for (const header of possibleHeaders) {
+    if (row[header] !== undefined && row[header] !== null && row[header] !== '') {
+      return row[header];
+    }
+  }
+
+  // 2) Tentativa case-insensitive e accent-insensitive
+  const normalize = (str) =>
+    String(str)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+  const normalizedTargets = possibleHeaders.map(normalize);
+
+  for (const [key, value] of Object.entries(row)) {
+    if (value === undefined || value === null || value === '') continue;
+    const nk = normalize(key);
+    if (normalizedTargets.includes(nk)) {
+      return value;
+    }
+  }
+
+  return defaultValue;
+}
+
 // Função para processar dados de transações
 function processTransactions(worksheet) {
   const data = XLSX.utils.sheet_to_json(worksheet);
@@ -203,14 +236,19 @@ function processTransactions(worksheet) {
 
   data.forEach((row, index) => {
     try {
-      // Mapear colunas do Excel para o formato esperado
+      const rawDate = getCellValue(row, ['Data', 'date', 'data']);
+      const rawDescription = getCellValue(row, ['Descrição', 'Descricao', 'description', 'Description']);
+      const rawValue = getCellValue(row, ['Valor', 'value', 'Value', 'Valor (R$)']);
+      const rawType = getCellValue(row, ['Tipo', 'tipo', 'type', 'Type']);
+      const rawCategory = getCellValue(row, ['Categoria', 'categoria', 'category', 'Category']);
+
       const transaction = {
         id: Date.now() + index,
-        date: row['Data'] || row['date'] || new Date().toISOString().split('T')[0],
-        description: row['Descrição'] || row['Descricao'] || row['description'] || row['Description'] || '',
-        value: parseFloat(row['Valor'] || row['value'] || row['Value'] || 0),
-        type: row['Tipo'] || row['type'] || row['Type'] || 'Entrada',
-        category: row['Categoria'] || row['category'] || row['Category'] || 'Outros'
+        date: rawDate || new Date().toISOString().split('T')[0],
+        description: (rawDescription || '').toString().trim(),
+        value: parseFloat(rawValue || 0),
+        type: (rawType || 'Receita').toString().trim(),
+        category: (rawCategory || 'Outros').toString().trim(),
       };
 
       // Validar se tem dados essenciais
@@ -232,15 +270,21 @@ function processProducts(worksheet) {
 
   data.forEach((row, index) => {
     try {
-      // Mapear colunas do Excel para o formato esperado
+      const name = getCellValue(row, ['Nome', 'name', 'Name']);
+      const category = getCellValue(row, ['Categoria', 'categoria', 'category', 'Category']);
+      const price = getCellValue(row, ['Preço', 'Preco', 'preco', 'price', 'Price', 'Preço (R$)']);
+      const cost = getCellValue(row, ['Custo', 'custo', 'cost', 'Cost']);
+      const stock = getCellValue(row, ['Estoque', 'estoque', 'stock', 'Stock']);
+      const sold = getCellValue(row, ['Vendido', 'vendido', 'sold', 'Sold']);
+
       const product = {
         id: Date.now() + index,
-        name: row['Nome'] || row['name'] || row['Name'] || '',
-        category: row['Categoria'] || row['category'] || row['Category'] || 'Outros',
-        price: parseFloat(row['Preço'] || row['Preco'] || row['price'] || row['Price'] || 0),
-        cost: parseFloat(row['Custo'] || row['cost'] || row['Cost'] || 0),
-        stock: parseInt(row['Estoque'] || row['stock'] || row['Stock'] || 0),
-        sold: parseInt(row['Vendido'] || row['sold'] || row['Sold'] || 0)
+        name: (name || '').toString().trim(),
+        category: (category || 'Outros').toString().trim(),
+        price: parseFloat(price || 0),
+        cost: parseFloat(cost || 0),
+        stock: parseInt(stock || 0),
+        sold: parseInt(sold || 0),
       };
 
       // Validar se tem dados essenciais
@@ -263,7 +307,8 @@ function processClients(worksheet) {
   data.forEach((row, index) => {
     try {
       // Mapear colunas do Excel para o formato esperado
-      const documentType = row['Tipo de Documento'] || row['tipo de documento'] || row['Tipo de documento'] || 'cpf';
+      const documentType =
+        getCellValue(row, ['Tipo de Documento', 'tipo de documento', 'Tipo de documento']) || 'cpf';
       const client = {
         id: Date.now() + index,
         name: row['Nome'] || row['name'] || row['Name'] || '',
@@ -381,7 +426,7 @@ app.get('/api/modelo/:type', (req, res) => {
 });
 
 // Função auxiliar para log de atividades
-function logActivity(userId, username, action, module, entityType = null, entityId = null, details = {}) {
+async function logActivity(userId, username, action, module, entityType = null, entityId = null, details = {}) {
   try {
     const log = {
       id: db.generateId(),
@@ -395,7 +440,7 @@ function logActivity(userId, username, action, module, entityType = null, entity
       timestamp: new Date().toISOString(),
       ipAddress: null // Será preenchido nas rotas quando disponível
     };
-    db.saveActivityLog(log);
+    await db.saveActivityLog(log);
   } catch (error) {
     console.error('Erro ao salvar log de atividade:', error);
   }
@@ -432,7 +477,7 @@ const getDefaultModulesForRole = (role) => {
 };
 
 // Rotas de Autenticação
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     
@@ -440,7 +485,7 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
-    const user = db.getUserByUsername(username);
+    const user = await db.getUserByUsername(username);
     if (!user) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
@@ -461,7 +506,7 @@ app.post('/api/auth/login', (req, res) => {
       
       // Atualizar usuário com nova senha e lastLogin
       const now = new Date().toISOString();
-      db.updateUser(user.id, { 
+      await db.updateUser(user.id, { 
         password: hashedPassword,
         lastLogin: now 
       });
@@ -477,7 +522,7 @@ app.post('/api/auth/login', (req, res) => {
     // Se não for primeiro login, atualizar lastLogin
     if (!isFirstLogin) {
       const now = new Date().toISOString();
-      db.updateUser(user.id, { lastLogin: now });
+      await db.updateUser(user.id, { lastLogin: now });
     }
 
     const token = jwt.sign(
@@ -487,10 +532,10 @@ app.post('/api/auth/login', (req, res) => {
     );
 
     // Logar ação de login
-    logActivity(user.id, user.username, 'login', 'auth', 'user', user.id);
+    await logActivity(user.id, user.username, 'login', 'auth', 'user', user.id);
 
     // Retornar dados completos do usuário
-    const userData = db.getUserById(user.id);
+    const userData = await db.getUserById(user.id);
     const { password: _, ...safeUser } = userData;
 
     const response = {
@@ -529,7 +574,7 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // Endpoint para resetar primeiro login de um usuário específico (apenas para admin)
-app.post('/api/auth/reset-first-login', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/auth/reset-first-login', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { username } = req.body;
     
@@ -537,16 +582,16 @@ app.post('/api/auth/reset-first-login', authenticateToken, requireAdmin, (req, r
       return res.status(400).json({ error: 'Username é obrigatório' });
     }
 
-    const user = db.getUserByUsername(username);
+    const user = await db.getUserByUsername(username);
     if (!user) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
     // Resetar lastLogin para null (permitir primeiro login novamente)
-    db.updateUser(user.id, { lastLogin: null });
+    await db.updateUser(user.id, { lastLogin: null });
 
     // Logar ação
-    logActivity(req.user.id, req.user.username, 'reset_password', 'admin', 'user', user.id);
+    await logActivity(req.user.id, req.user.username, 'reset_password', 'admin', 'user', user.id);
 
     res.json({
       success: true,
@@ -558,19 +603,19 @@ app.post('/api/auth/reset-first-login', authenticateToken, requireAdmin, (req, r
 });
 
 // Endpoint para resetar senhas de TODOS os usuários (apenas admin)
-app.post('/api/auth/reset-all-passwords', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/auth/reset-all-passwords', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const allUsers = db.getAllUsers();
+    const allUsers = await db.getAllUsers();
     let resetCount = 0;
 
     // Resetar lastLogin para null em todos os usuários
-    allUsers.forEach(user => {
-      db.updateUser(user.id, { lastLogin: null });
+    for (const user of allUsers) {
+      await db.updateUser(user.id, { lastLogin: null });
       resetCount++;
-    });
+    }
 
     // Logar ação
-    logActivity(req.user.id, req.user.username, 'reset_all_passwords', 'admin', 'system', null);
+    await logActivity(req.user.id, req.user.username, 'reset_all_passwords', 'admin', 'system', null);
 
     res.json({
       success: true,
@@ -582,10 +627,10 @@ app.post('/api/auth/reset-all-passwords', authenticateToken, requireAdmin, (req,
   }
 });
 
-app.post('/api/auth/verify', authenticateToken, (req, res) => {
+app.post('/api/auth/verify', authenticateToken, async (req, res) => {
   try {
     // Buscar dados completos do usuário
-    const user = db.getUserById(req.user.id);
+    const user = await db.getUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
@@ -618,9 +663,9 @@ app.post('/api/auth/verify', authenticateToken, (req, res) => {
 });
 
 // Endpoint para buscar dados do próprio perfil
-app.get('/api/user/profile', authenticateToken, (req, res) => {
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
   try {
-    const user = db.getUserById(req.user.id);
+    const user = await db.getUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
@@ -693,12 +738,12 @@ app.post('/api/user/upload-photo', authenticateToken, uploadAvatar.single('photo
 });
 
 // Endpoint para atualizar perfil do próprio usuário
-app.put('/api/user/profile', authenticateToken, (req, res) => {
+app.put('/api/user/profile', authenticateToken, async (req, res) => {
   try {
     const { firstName, lastName, email, phone, photoUrl, password, cpf, birthDate, gender, position, address } = req.body;
     
     // Buscar usuário atual
-    const currentUser = db.getUserById(req.user.id);
+    const currentUser = await db.getUserById(req.user.id);
     if (!currentUser) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
@@ -863,7 +908,7 @@ app.put('/api/user/profile', authenticateToken, (req, res) => {
     }
     
     // Atualizar usuário
-    const updatedUser = db.updateUser(req.user.id, updateData);
+    const updatedUser = await db.updateUser(req.user.id, updateData);
     
     // Gerar novo token
     const token = jwt.sign(
@@ -874,7 +919,7 @@ app.put('/api/user/profile', authenticateToken, (req, res) => {
     
     const { password: _, ...safeUser } = updatedUser;
     
-    logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', req.user.id, { 
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', req.user.id, { 
       fields: Object.keys(updateData) 
     });
     
@@ -889,7 +934,7 @@ app.put('/api/user/profile', authenticateToken, (req, res) => {
 });
 
 // Endpoint para alterar senha do próprio usuário
-app.put('/api/user/password', authenticateToken, (req, res) => {
+app.put('/api/user/password', authenticateToken, async (req, res) => {
   try {
     const { senhaAtual, novaSenha } = req.body;
     
@@ -902,7 +947,7 @@ app.put('/api/user/password', authenticateToken, (req, res) => {
     }
     
     // Buscar usuário atual
-    const user = db.getUserById(req.user.id);
+    const user = await db.getUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
@@ -923,10 +968,10 @@ app.put('/api/user/password', authenticateToken, (req, res) => {
     const hashedPassword = bcrypt.hashSync(novaSenha, 10);
     
     // Atualizar senha
-    db.updateUser(req.user.id, { password: hashedPassword });
+    await db.updateUser(req.user.id, { password: hashedPassword });
     
     // Logar ação
-    logActivity(req.user.id, user.username, 'update_password', 'user', 'user', req.user.id);
+    await logActivity(req.user.id, user.username, 'update_password', 'user', 'user', req.user.id);
     
     res.json({
       success: true,
@@ -938,7 +983,7 @@ app.put('/api/user/password', authenticateToken, (req, res) => {
 });
 
 // Rota para importar arquivos
-app.post('/api/import', authenticateToken, upload.single('file'), (req, res) => {
+app.post('/api/import', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Nenhum arquivo foi enviado!' });
@@ -971,13 +1016,13 @@ app.post('/api/import', authenticateToken, upload.single('file'), (req, res) => 
       message = `${processedData.length} clientes importados com sucesso!`;
       
       // Salvar clientes processados no banco de dados
-      processedData.forEach(client => {
+      for (const client of processedData) {
         try {
-          db.saveClient(client);
+          await db.saveClient(client);
         } catch (error) {
           console.error('Erro ao salvar cliente:', error);
         }
-      });
+      }
     }
 
     // Limpar o arquivo temporário
@@ -1075,55 +1120,55 @@ app.post('/api/export', (req, res) => {
 });
 
 // APIs para Transações
-app.get('/api/transactions', (req, res) => {
+app.get('/api/transactions', async (req, res) => {
   try {
-    const transactions = db.getAllTransactions();
+    const transactions = await db.getAllTransactions();
     res.json({ success: true, data: transactions });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/transactions', authenticateToken, (req, res) => {
+app.post('/api/transactions', authenticateToken, async (req, res) => {
   try {
-    const transaction = db.saveTransaction(req.body);
-    logActivity(req.user.id, req.user.username, 'create', 'transactions', 'transaction', transaction.id);
+    const transaction = await db.saveTransaction(req.body);
+    await logActivity(req.user.id, req.user.username, 'create', 'transactions', 'transaction', transaction.id);
     res.json({ success: true, data: transaction });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/transactions/:id', authenticateToken, (req, res) => {
+app.put('/api/transactions/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const transaction = db.updateTransaction(id, req.body);
-    logActivity(req.user.id, req.user.username, 'edit', 'transactions', 'transaction', id);
+    const transaction = await db.updateTransaction(id, req.body);
+    await logActivity(req.user.id, req.user.username, 'edit', 'transactions', 'transaction', id);
     res.json({ success: true, data: transaction });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/transactions/:id', authenticateToken, (req, res) => {
+app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    db.deleteTransaction(id);
-    logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', id);
+    await db.deleteTransaction(id);
+    await logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', id);
     res.json({ success: true, message: 'Transação deletada com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/transactions', authenticateToken, (req, res) => {
+app.delete('/api/transactions', authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
       return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
     }
-    db.deleteMultipleTransactions(ids);
-    logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', null, { count: ids.length });
+    await db.deleteMultipleTransactions(ids);
+    await logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', null, { count: ids.length });
     res.json({ success: true, message: `${ids.length} transações deletadas com sucesso` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1131,55 +1176,55 @@ app.delete('/api/transactions', authenticateToken, (req, res) => {
 });
 
 // APIs para Produtos
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
   try {
-    const products = db.getAllProducts();
+    const products = await db.getAllProducts();
     res.json({ success: true, data: products });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/products', authenticateToken, (req, res) => {
+app.post('/api/products', authenticateToken, async (req, res) => {
   try {
-    const product = db.saveProduct(req.body);
-    logActivity(req.user.id, req.user.username, 'create', 'products', 'product', product.id);
+    const product = await db.saveProduct(req.body);
+    await logActivity(req.user.id, req.user.username, 'create', 'products', 'product', product.id);
     res.json({ success: true, data: product });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/products/:id', authenticateToken, (req, res) => {
+app.put('/api/products/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const product = db.updateProduct(id, req.body);
-    logActivity(req.user.id, req.user.username, 'edit', 'products', 'product', id);
+    const product = await db.updateProduct(id, req.body);
+    await logActivity(req.user.id, req.user.username, 'edit', 'products', 'product', id);
     res.json({ success: true, data: product });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/products/:id', authenticateToken, (req, res) => {
+app.delete('/api/products/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    db.deleteProduct(id);
-    logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', id);
+    await db.deleteProduct(id);
+    await logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', id);
     res.json({ success: true, message: 'Produto deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/products', authenticateToken, (req, res) => {
+app.delete('/api/products', authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
       return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
     }
-    db.deleteMultipleProducts(ids);
-    logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', null, { count: ids.length });
+    await db.deleteMultipleProducts(ids);
+    await logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', null, { count: ids.length });
     res.json({ success: true, message: `${ids.length} produtos deletados com sucesso` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1187,55 +1232,55 @@ app.delete('/api/products', authenticateToken, (req, res) => {
 });
 
 // APIs para Clientes
-app.get('/api/clients', (req, res) => {
+app.get('/api/clients', async (req, res) => {
   try {
-    const clients = db.getAllClients();
+    const clients = await db.getAllClients();
     res.json({ success: true, data: clients });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/clients', authenticateToken, (req, res) => {
+app.post('/api/clients', authenticateToken, async (req, res) => {
   try {
-    const client = db.saveClient(req.body);
-    logActivity(req.user.id, req.user.username, 'create', 'clients', 'client', client.id);
+    const client = await db.saveClient(req.body);
+    await logActivity(req.user.id, req.user.username, 'create', 'clients', 'client', client.id);
     res.json({ success: true, data: client });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/clients/:id', authenticateToken, (req, res) => {
+app.put('/api/clients/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const client = db.updateClient(id, req.body);
-    logActivity(req.user.id, req.user.username, 'edit', 'clients', 'client', id);
+    const client = await db.updateClient(id, req.body);
+    await logActivity(req.user.id, req.user.username, 'edit', 'clients', 'client', id);
     res.json({ success: true, data: client });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/clients/:id', authenticateToken, (req, res) => {
+app.delete('/api/clients/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    db.deleteClient(id);
-    logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', id);
+    await db.deleteClient(id);
+    await logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', id);
     res.json({ success: true, message: 'Cliente deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/clients', authenticateToken, (req, res) => {
+app.delete('/api/clients', authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
       return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
     }
-    db.deleteMultipleClients(ids);
-    logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', null, { count: ids.length });
+    await db.deleteMultipleClients(ids);
+    await logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', null, { count: ids.length });
     res.json({ success: true, message: `${ids.length} clientes deletados com sucesso` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1248,11 +1293,11 @@ app.delete('/api/clients', authenticateToken, (req, res) => {
 // - admin-only: config/sync/clear-all exigem admin
 // - base do ano anterior + overrides: impgeo-style (projection-base.json)
 
-app.get('/api/projection', authenticateToken, (req, res) => {
+app.get('/api/projection', authenticateToken, async (req, res) => {
   try {
-    const snapshot = db.getProjectionSnapshot();
+    const snapshot = await db.getProjectionSnapshot();
     if (!snapshot) {
-      const synced = db.syncProjectionData();
+      const synced = await db.syncProjectionData();
       return res.json({ success: true, data: synced });
     }
     res.json({ success: true, data: snapshot });
@@ -1262,18 +1307,18 @@ app.get('/api/projection', authenticateToken, (req, res) => {
 });
 
 // Base (Resultado do Ano Anterior + overrides manuais)
-app.get('/api/projection/base', authenticateToken, (req, res) => {
+app.get('/api/projection/base', authenticateToken, async (req, res) => {
   try {
-    const base = db.getProjectionBase();
+    const base = await db.getProjectionBase();
     res.json({ success: true, data: base });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/projection/base', authenticateToken, (req, res) => {
+app.put('/api/projection/base', authenticateToken, async (req, res) => {
   try {
-    const current = db.getProjectionBase();
+    const current = await db.getProjectionBase();
     const body = req.body || {};
 
     const merged = {
@@ -1301,19 +1346,19 @@ app.put('/api/projection/base', authenticateToken, (req, res) => {
       }
     }
 
-    const updatedBase = db.updateProjectionBase(merged);
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_base', null);
+    const updatedBase = await db.updateProjectionBase(merged);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_base', null);
     res.json({ success: true, data: updatedBase, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/projection/sync', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/projection/sync', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection', null);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection', null);
     res.json({ success: true, data: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1321,37 +1366,38 @@ app.post('/api/projection/sync', authenticateToken, requireAdmin, (req, res) => 
 });
 
 // Importar base da projeção a partir das transações reais (ano anterior)
-app.post('/api/projection/sync-from-transactions', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/projection/sync-from-transactions', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const year = req.body?.year || new Date().getFullYear() - 1;
-    const synced = db.syncProjectionBaseFromTransactions(year);
-    logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection_from_transactions', { year });
+    const synced = await db.syncProjectionBaseFromTransactions(year);
+    await logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection_from_transactions', { year });
     res.json({ success: true, data: synced, message: `Base importada das transações de ${year}` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.get('/api/projection/config', authenticateToken, (req, res) => {
+app.get('/api/projection/config', authenticateToken, async (req, res) => {
   try {
-    const cfg = db.getProjectionConfig();
+    const cfg = await db.getProjectionConfig();
     res.json({ success: true, data: cfg });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/projection/config', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/projection/config', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const updated = db.updateProjectionConfig(req.body || {});
+    const updated = await db.updateProjectionConfig(req.body || {});
     // Persistir chaves novas no projection-base (streams/componentes recém-criados)
     try {
-      db.updateProjectionBase(db.getProjectionBase());
+      const base = await db.getProjectionBase();
+      await db.updateProjectionBase(base);
     } catch (e) {
       // não falhar a rota por isso
     }
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_config', null);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_config', null);
     res.json({ success: true, data: updated, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1359,11 +1405,11 @@ app.put('/api/projection/config', authenticateToken, requireAdmin, (req, res) =>
 });
 
 // Growth (percentuais de cenários)
-app.put('/api/projection/growth', authenticateToken, (req, res) => {
+app.put('/api/projection/growth', authenticateToken, async (req, res) => {
   try {
     const { minimo, medio, maximo } = req.body || {};
-    const current = db.getProjectionBase();
-    const updated = db.updateProjectionBase({
+    const current = await db.getProjectionBase();
+    const updated = await db.updateProjectionBase({
       ...current,
       growth: {
         minimo: Number(minimo) || 0,
@@ -1371,8 +1417,8 @@ app.put('/api/projection/growth', authenticateToken, (req, res) => {
         maximo: Number(maximo) || 0
       }
     });
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'growth', null);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'growth', null);
     res.json({ success: true, data: updated.growth, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1380,31 +1426,31 @@ app.put('/api/projection/growth', authenticateToken, (req, res) => {
 });
 
 // Revenue (por stream)
-app.get('/api/projection/revenue', authenticateToken, (req, res) => {
+app.get('/api/projection/revenue', authenticateToken, async (req, res) => {
   try {
-    const data = db.getRevenueData();
+    const data = await db.getRevenueData();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/projection/revenue', authenticateToken, (req, res) => {
+app.put('/api/projection/revenue', authenticateToken, async (req, res) => {
   try {
-    const updated = db.updateRevenueData(req.body || {});
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'revenue', null);
+    const updated = await db.updateRevenueData(req.body || {});
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'revenue', null);
     res.json({ success: true, data: updated, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/projection/revenue', authenticateToken, (req, res) => {
+app.delete('/api/projection/revenue', authenticateToken, async (req, res) => {
   try {
-    const cfg = db.getProjectionConfig();
+    const cfg = await db.getProjectionConfig();
     const months12 = new Array(12).fill(0);
-    const base = db.getProjectionBase();
+    const base = await db.getProjectionBase();
     const next = { ...base };
     for (const s of (cfg.revenueStreams || [])) {
       if (!s?.id) continue;
@@ -1417,9 +1463,9 @@ app.delete('/api/projection/revenue', authenticateToken, (req, res) => {
         };
       }
     }
-    const cleared = db.updateProjectionBase(next);
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'revenue', null);
+    const cleared = await db.updateProjectionBase(next);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'revenue', null);
     res.json({ success: true, data: cleared, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1427,31 +1473,31 @@ app.delete('/api/projection/revenue', authenticateToken, (req, res) => {
 });
 
 // MKT components (por componente)
-app.get('/api/projection/mkt-components', authenticateToken, (req, res) => {
+app.get('/api/projection/mkt-components', authenticateToken, async (req, res) => {
   try {
-    const data = db.getMktComponentsData();
+    const data = await db.getMktComponentsData();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/projection/mkt-components', authenticateToken, (req, res) => {
+app.put('/api/projection/mkt-components', authenticateToken, async (req, res) => {
   try {
-    const updated = db.updateMktComponentsData(req.body || {});
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'mkt_components', null);
+    const updated = await db.updateMktComponentsData(req.body || {});
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'mkt_components', null);
     res.json({ success: true, data: updated, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/projection/mkt-components', authenticateToken, (req, res) => {
+app.delete('/api/projection/mkt-components', authenticateToken, async (req, res) => {
   try {
-    const cfg = db.getProjectionConfig();
+    const cfg = await db.getProjectionConfig();
     const months12 = new Array(12).fill(0);
-    const base = db.getProjectionBase();
+    const base = await db.getProjectionBase();
     const next = { ...base };
     for (const c of (cfg.mktComponents || [])) {
       if (!c?.id) continue;
@@ -1461,9 +1507,9 @@ app.delete('/api/projection/mkt-components', authenticateToken, (req, res) => {
     next.manualOverrides.mktPrevistoManual = new Array(12).fill(null);
     next.manualOverrides.mktMedioManual = new Array(12).fill(null);
     next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
-    const cleared = db.updateProjectionBase(next);
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'mkt_components', null);
+    const cleared = await db.updateProjectionBase(next);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'mkt_components', null);
     res.json({ success: true, data: cleared, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1471,37 +1517,38 @@ app.delete('/api/projection/mkt-components', authenticateToken, (req, res) => {
 });
 
 // Fixed expenses
-app.get('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
+app.get('/api/projection/fixed-expenses', authenticateToken, async (req, res) => {
   try {
-    const data = db.getFixedExpensesData();
+    const data = await db.getFixedExpensesData();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
+app.put('/api/projection/fixed-expenses', authenticateToken, async (req, res) => {
   try {
     const body = req.body || {};
     const months = Array.isArray(body?.previsto) ? body.previsto : [];
-    const base = db.getProjectionBase();
-    const updated = db.updateProjectionBase({
+    const base = await db.getProjectionBase();
+    const updated = await db.updateProjectionBase({
       ...base,
       prevYear: { ...(base.prevYear || {}), fixedExpenses: months }
     });
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'fixed_expenses', null);
-    res.json({ success: true, data: db.getFixedExpensesData(), projection: synced });
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'fixed_expenses', null);
+    const fixedData = await db.getFixedExpensesData();
+    res.json({ success: true, data: fixedData, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
+app.delete('/api/projection/fixed-expenses', authenticateToken, async (req, res) => {
   try {
     const months12 = new Array(12).fill(0);
-    const base = db.getProjectionBase();
-    const cleared = db.updateProjectionBase({
+    const base = await db.getProjectionBase();
+    const cleared = await db.updateProjectionBase({
       ...base,
       prevYear: { ...(base.prevYear || {}), fixedExpenses: [...months12] },
       manualOverrides: {
@@ -1511,8 +1558,8 @@ app.delete('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
         fixedMaximoManual: new Array(12).fill(null)
       }
     });
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'fixed_expenses', null);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'fixed_expenses', null);
     res.json({ success: true, data: cleared, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1520,37 +1567,38 @@ app.delete('/api/projection/fixed-expenses', authenticateToken, (req, res) => {
 });
 
 // Variable expenses
-app.get('/api/projection/variable-expenses', authenticateToken, (req, res) => {
+app.get('/api/projection/variable-expenses', authenticateToken, async (req, res) => {
   try {
-    const data = db.getVariableExpensesData();
+    const data = await db.getVariableExpensesData();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/projection/variable-expenses', authenticateToken, (req, res) => {
+app.put('/api/projection/variable-expenses', authenticateToken, async (req, res) => {
   try {
     const body = req.body || {};
     const months = Array.isArray(body?.previsto) ? body.previsto : [];
-    const base = db.getProjectionBase();
-    const updated = db.updateProjectionBase({
+    const base = await db.getProjectionBase();
+    const updated = await db.updateProjectionBase({
       ...base,
       prevYear: { ...(base.prevYear || {}), variableExpenses: months }
     });
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'variable_expenses', null);
-    res.json({ success: true, data: db.getVariableExpensesData(), projection: synced });
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'variable_expenses', null);
+    const varData = await db.getVariableExpensesData();
+    res.json({ success: true, data: varData, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/projection/variable-expenses', authenticateToken, (req, res) => {
+app.delete('/api/projection/variable-expenses', authenticateToken, async (req, res) => {
   try {
     const months12 = new Array(12).fill(0);
-    const base = db.getProjectionBase();
-    const cleared = db.updateProjectionBase({
+    const base = await db.getProjectionBase();
+    const cleared = await db.updateProjectionBase({
       ...base,
       prevYear: { ...(base.prevYear || {}), variableExpenses: [...months12] },
       manualOverrides: {
@@ -1560,8 +1608,8 @@ app.delete('/api/projection/variable-expenses', authenticateToken, (req, res) =>
         variableMaximoManual: new Array(12).fill(null)
       }
     });
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'variable_expenses', null);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'variable_expenses', null);
     res.json({ success: true, data: cleared, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1569,37 +1617,38 @@ app.delete('/api/projection/variable-expenses', authenticateToken, (req, res) =>
 });
 
 // Investments
-app.get('/api/projection/investments', authenticateToken, (req, res) => {
+app.get('/api/projection/investments', authenticateToken, async (req, res) => {
   try {
-    const data = db.getInvestmentsData();
+    const data = await db.getInvestmentsData();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/projection/investments', authenticateToken, (req, res) => {
+app.put('/api/projection/investments', authenticateToken, async (req, res) => {
   try {
     const body = req.body || {};
     const months = Array.isArray(body?.previsto) ? body.previsto : [];
-    const base = db.getProjectionBase();
-    const updated = db.updateProjectionBase({
+    const base = await db.getProjectionBase();
+    const updated = await db.updateProjectionBase({
       ...base,
       prevYear: { ...(base.prevYear || {}), investments: months }
     });
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'investments', null);
-    res.json({ success: true, data: db.getInvestmentsData(), projection: synced });
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'investments', null);
+    const invData = await db.getInvestmentsData();
+    res.json({ success: true, data: invData, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/projection/investments', authenticateToken, (req, res) => {
+app.delete('/api/projection/investments', authenticateToken, async (req, res) => {
   try {
     const months12 = new Array(12).fill(0);
-    const base = db.getProjectionBase();
-    const cleared = db.updateProjectionBase({
+    const base = await db.getProjectionBase();
+    const cleared = await db.updateProjectionBase({
       ...base,
       prevYear: { ...(base.prevYear || {}), investments: [...months12] },
       manualOverrides: {
@@ -1609,8 +1658,8 @@ app.delete('/api/projection/investments', authenticateToken, (req, res) => {
         investimentosMaximoManual: new Array(12).fill(null)
       }
     });
-    const synced = db.syncProjectionData();
-    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'investments', null);
+    const synced = await db.syncProjectionData();
+    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'investments', null);
     res.json({ success: true, data: cleared, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1618,18 +1667,18 @@ app.delete('/api/projection/investments', authenticateToken, (req, res) => {
 });
 
 // Derived read-only endpoints (budget/resultado)
-app.get('/api/projection/budget', authenticateToken, (req, res) => {
+app.get('/api/projection/budget', authenticateToken, async (req, res) => {
   try {
-    const data = db.getBudgetData();
+    const data = await db.getBudgetData();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.get('/api/projection/resultado', authenticateToken, (req, res) => {
+app.get('/api/projection/resultado', authenticateToken, async (req, res) => {
   try {
-    const data = db.getResultadoData();
+    const data = await db.getResultadoData();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1637,11 +1686,11 @@ app.get('/api/projection/resultado', authenticateToken, (req, res) => {
 });
 
 // Clear all projection data (admin)
-app.delete('/api/clear-all-projection-data', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/clear-all-projection-data', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const months12 = new Array(12).fill(0);
-    const cfg = db.getProjectionConfig();
-    const base = db.getProjectionBase();
+    const cfg = await db.getProjectionConfig();
+    const base = await db.getProjectionBase();
     const next = { ...base };
     next.growth = { minimo: 0, medio: 0, maximo: 0 };
     next.prevYear.fixedExpenses = [...months12];
@@ -1673,10 +1722,10 @@ app.delete('/api/clear-all-projection-data', authenticateToken, requireAdmin, (r
     next.manualOverrides.mktMedioManual = new Array(12).fill(null);
     next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
 
-    db.updateProjectionBase(next);
-    const synced = db.syncProjectionData();
+    await db.updateProjectionBase(next);
+    const synced = await db.syncProjectionData();
 
-    logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'clear_all', null);
+    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'clear_all', null);
     res.json({ success: true, message: 'Dados de Projeção limpos com sucesso', data: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1686,9 +1735,9 @@ app.delete('/api/clear-all-projection-data', authenticateToken, requireAdmin, (r
 // ===== ROTAS ADMINISTRATIVAS =====
 
 // Rotas de Usuários
-app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const users = db.getAllUsers();
+    const users = await db.getAllUsers();
     // Remover senhas antes de enviar
     const safeUsers = users.map(({ password, ...user }) => user);
     res.json({ success: true, data: safeUsers });
@@ -1697,10 +1746,10 @@ app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-app.get('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const user = db.getUserById(id);
+    const user = await db.getUserById(id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
@@ -1711,7 +1760,7 @@ app.get('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { 
       username, 
@@ -1810,7 +1859,7 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
     }
     
     // Verificar se usuário já existe
-    if (db.getUserByUsername(username)) {
+    if (await db.getUserByUsername(username)) {
       return res.status(400).json({ success: false, error: 'Usuário já existe' });
     }
     
@@ -1842,8 +1891,8 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
       lastLogin: null // null indica que nunca fez login
     };
     
-    const user = db.saveUser(newUser);
-    logActivity(req.user.id, req.user.username, 'create', 'admin', 'user', user.id, { username: user.username, role: user.role });
+    const user = await db.saveUser(newUser);
+    await logActivity(req.user.id, req.user.username, 'create', 'admin', 'user', user.id, { username: user.username, role: user.role });
     
     const { password: _, ...safeUser } = user;
     res.json({ success: true, data: safeUser });
@@ -1852,7 +1901,7 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-app.put('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = { ...req.body };
@@ -1868,8 +1917,8 @@ app.put('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
     // Não permitir mudar role para admin de outro usuário (apenas o próprio admin pode ser admin)
     // Isso pode ser ajustado conforme necessário
     
-    const updatedUser = db.updateUser(id, updates);
-    logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', id, { changes: Object.keys(updates) });
+    const updatedUser = await db.updateUser(id, updates);
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', id, { changes: Object.keys(updates) });
     
     const { password: _, ...safeUser } = updatedUser;
     res.json({ success: true, data: safeUser });
@@ -1878,7 +1927,7 @@ app.put('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1887,7 +1936,7 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) =
       return res.status(400).json({ success: false, error: 'Não é possível deletar seu próprio usuário' });
     }
     
-    const user = db.getUserById(id);
+    const user = await db.getUserById(id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
@@ -1897,8 +1946,8 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) =
       deleteAvatarFile(user.photoUrl);
     }
     
-    db.deleteUser(id);
-    logActivity(req.user.id, req.user.username, 'delete', 'admin', 'user', id, { username: user.username });
+    await db.deleteUser(id);
+    await logActivity(req.user.id, req.user.username, 'delete', 'admin', 'user', id, { username: user.username });
     
     res.json({ success: true, message: 'Usuário deletado com sucesso' });
   } catch (error) {
@@ -1907,9 +1956,9 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) =
 });
 
 // Rota pública para listar módulos (todos os usuários precisam ver módulos disponíveis)
-app.get('/api/modules', authenticateToken, (req, res) => {
+app.get('/api/modules', authenticateToken, async (req, res) => {
   try {
-    const modules = db.getAllSystemModules();
+    const modules = await db.getAllSystemModules();
     // Retornar apenas módulos ativos para usuários não-admin
     if (req.user.role !== 'admin') {
       const activeModules = modules.filter(m => m.isActive);
@@ -1922,19 +1971,19 @@ app.get('/api/modules', authenticateToken, (req, res) => {
 });
 
 // Rotas de Módulos (Admin)
-app.get('/api/admin/modules', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/modules', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const modules = db.getAllSystemModules();
+    const modules = await db.getAllSystemModules();
     res.json({ success: true, data: modules });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.get('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const module = db.getSystemModuleById(id);
+    const module = await db.getSystemModuleById(id);
     if (!module) {
       return res.status(404).json({ success: false, error: 'Módulo não encontrado' });
     }
@@ -1944,7 +1993,7 @@ app.get('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) =>
   }
 });
 
-app.post('/api/admin/modules', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/admin/modules', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { name, key, icon, description, route, isActive } = req.body;
     
@@ -1962,8 +2011,8 @@ app.post('/api/admin/modules', authenticateToken, requireAdmin, (req, res) => {
       isSystem: false
     };
     
-    const module = db.saveSystemModule(moduleData);
-    logActivity(req.user.id, req.user.username, 'create', 'admin', 'module', module.id, { name: module.name, key: module.key });
+    const module = await db.saveSystemModule(moduleData);
+    await logActivity(req.user.id, req.user.username, 'create', 'admin', 'module', module.id, { name: module.name, key: module.key });
     
     res.json({ success: true, data: module });
   } catch (error) {
@@ -1971,7 +2020,7 @@ app.post('/api/admin/modules', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -1979,8 +2028,8 @@ app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) =>
     // Não permitir mudar isSystem
     delete updates.isSystem;
     
-    const module = db.updateSystemModule(id, updates);
-    logActivity(req.user.id, req.user.username, 'edit', 'admin', 'module', id, { changes: Object.keys(updates) });
+    const module = await db.updateSystemModule(id, updates);
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'module', id, { changes: Object.keys(updates) });
     
     res.json({ success: true, data: module });
   } catch (error) {
@@ -1988,17 +2037,17 @@ app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) =>
   }
 });
 
-app.delete('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const module = db.getSystemModuleById(id);
+    const module = await db.getSystemModuleById(id);
     if (!module) {
       return res.status(404).json({ success: false, error: 'Módulo não encontrado' });
     }
     
-    db.deleteSystemModule(id);
-    logActivity(req.user.id, req.user.username, 'delete', 'admin', 'module', id, { name: module.name, key: module.key });
+    await db.deleteSystemModule(id);
+    await logActivity(req.user.id, req.user.username, 'delete', 'admin', 'module', id, { name: module.name, key: module.key });
     
     res.json({ success: true, message: 'Módulo deletado com sucesso' });
   } catch (error) {
@@ -2007,7 +2056,7 @@ app.delete('/api/admin/modules/:id', authenticateToken, requireAdmin, (req, res)
 });
 
 // Rotas de Activity Log
-app.get('/api/admin/activity-log', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/activity-log', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { userId, module, action, startDate, endDate, limit, page } = req.query;
     
@@ -2020,7 +2069,7 @@ app.get('/api/admin/activity-log', authenticateToken, requireAdmin, (req, res) =
     if (limit) filters.limit = limit;
     if (page) filters.page = page;
     
-    const logs = db.getActivityLogs(filters);
+    const logs = await db.getActivityLogs(filters);
     res.json({ success: true, data: logs, count: logs.length });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -2028,39 +2077,39 @@ app.get('/api/admin/activity-log', authenticateToken, requireAdmin, (req, res) =
 });
 
 // Rotas de Estatísticas
-app.get('/api/admin/statistics', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/statistics', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const stats = db.getSystemStatistics();
+    const stats = await db.getSystemStatistics();
     res.json({ success: true, data: stats });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.get('/api/admin/statistics/users/:userId', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/statistics/users/:userId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
-    const stats = db.getUserStatistics(userId);
+    const stats = await db.getUserStatistics(userId);
     res.json({ success: true, data: stats });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.get('/api/admin/statistics/modules/:moduleKey', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/statistics/modules/:moduleKey', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { moduleKey } = req.params;
-    const stats = db.getModuleStatistics(moduleKey);
+    const stats = await db.getModuleStatistics(moduleKey);
     res.json({ success: true, data: stats });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.get('/api/admin/statistics/usage-timeline', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/statistics/usage-timeline', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { startDate, endDate, groupBy } = req.query;
-    const timeline = db.getUsageTimeline(startDate, endDate, groupBy || 'day');
+    const timeline = await db.getUsageTimeline(startDate, endDate, groupBy || 'day');
     res.json({ success: true, data: timeline });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
