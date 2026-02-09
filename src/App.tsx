@@ -5035,6 +5035,13 @@ const AppContent: React.FC = () => {
       const totalReceitas = receitas
       const totalDespesas = despesas
       
+      // Transações do mês (para exibir quantidade no PDF)
+      const transacoesDoMes = transactions.filter(t => {
+        if (!t.date) return false
+        const { month: m, year: y } = getMonthYearFromDate(t.date)
+        return m === monthIndex && y === currentYear
+      })
+      
       // Meta de faturamento = meta do mês selecionado
       const metaFaturamento = mesSelecionado.meta
       
