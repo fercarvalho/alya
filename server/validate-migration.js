@@ -13,8 +13,8 @@ const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'alya',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  user: process.env.DB_USER || 'fernandocarvalho',
+  password: process.env.DB_PASSWORD || 'Korjup-qahwev-9tydbe',
 });
 
 const dbPath = path.join(__dirname, 'database');
