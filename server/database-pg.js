@@ -91,6 +91,9 @@ class Database extends FileDatabase {
     this._ensurePgDefaults();
   }
 
+  /** Não criar arquivos JSON; o backend usa apenas PostgreSQL. */
+  ensureFilesExist() {}
+
   async _ensurePgDefaults() {
     try {
       const userRes = await this.pool.query('SELECT COUNT(*) FROM users');
