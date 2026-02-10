@@ -59,10 +59,10 @@ server/backup-json-data.js
 **/*-test.*
 **/*-spec.*
 
-# Scripts de migração, cleanup e validação
-**/migrate*.js
-**/cleanup*.js
-**/validate*.js
+# Scripts de migração, cleanup e validação (versionados para uso na VPS)
+# **/migrate*.js
+# **/cleanup*.js
+# **/validate*.js
 
 # Documentation files (keep only README.md)
 *.md
