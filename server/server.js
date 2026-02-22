@@ -239,15 +239,23 @@ function processTransactions(worksheet) {
       const rawDate = getCellValue(row, ['Data', 'date', 'data']);
       const rawDescription = getCellValue(row, ['Descrição', 'Descricao', 'description', 'Description']);
       const rawValue = getCellValue(row, ['Valor', 'value', 'Value', 'Valor (R$)']);
-      const rawType = getCellValue(row, ['Tipo', 'tipo', 'type', 'Type']);
+      const rawType = getCellValue(row, ['Tipo', 'tipo', 'type', 'Type', 'Tipo de Categoria', 'tipo de categoria']);
       const rawCategory = getCellValue(row, ['Categoria', 'categoria', 'category', 'Category']);
+
+      let typeFormatted = (rawType || 'Receita').toString().trim();
+      const typeLower = typeFormatted.toLowerCase();
+      if (typeLower === 'despesa' || typeLower === 'saida' || typeLower === 'saída') {
+        typeFormatted = 'Despesa';
+      } else {
+        typeFormatted = 'Receita';
+      }
 
       const transaction = {
         id: Date.now() + index,
         date: rawDate || new Date().toISOString().split('T')[0],
         description: (rawDescription || '').toString().trim(),
         value: parseFloat(rawValue || 0),
-        type: (rawType || 'Receita').toString().trim(),
+        type: typeFormatted,
         category: (rawCategory || 'Outros').toString().trim(),
       };
 
