@@ -6,10 +6,10 @@
 export function applyCepMask(value: string): string {
   // Remover todos os caracteres não numéricos
   const numbers = value.replace(/\D/g, '');
-  
+
   // Limitar a 8 dígitos
   const limitedNumbers = numbers.slice(0, 8);
-  
+
   // Aplicar máscara
   if (limitedNumbers.length <= 5) {
     return limitedNumbers;
@@ -38,7 +38,7 @@ export function validateCepFormat(cep: string): { isValid: boolean; error?: stri
   }
 
   const cepDigits = removeCepMask(cep);
-  
+
   // CEP deve ter 8 dígitos
   if (cepDigits.length !== 8) {
     return { isValid: false, error: 'CEP deve ter 8 dígitos' };
@@ -72,22 +72,42 @@ export interface AddressData {
  */
 export async function fetchAddressByCep(cep: string): Promise<AddressData | null> {
   const cepDigits = removeCepMask(cep);
-  
+
   if (cepDigits.length !== 8) {
     return null;
   }
 
   try {
+    // Tenta primeiro a BrasilAPI, que é agnóstica e mais estável (agrega Correios, ViaCEP, etc)
+    const response = await fetch(`https://brasilapi.com.br/api/cep/v1/${cepDigits}`);
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        cep: data.cep,
+        logradouro: data.street || '',
+        complemento: '',
+        bairro: data.neighborhood || '',
+        localidade: data.city || '',
+        uf: data.state || '',
+      };
+    }
+  } catch (error) {
+    console.warn('Erro ao buscar na BrasilAPI, tentando ViaCEP em seguida:', error);
+  }
+
+  try {
+    // Fallback para o ViaCEP
     const response = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
     const data: AddressData = await response.json();
-    
+
     if (data.erro) {
       return null;
     }
-    
+
     return data;
   } catch (error) {
-    console.error('Erro ao buscar endereço:', error);
+    console.error('Erro ao buscar endereço em ambos os provedores:', error);
     return null;
   }
 }
