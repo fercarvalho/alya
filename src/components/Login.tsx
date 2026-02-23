@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Lock, User, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import EsqueciSenhaModal from './modals/EsqueciSenhaModal';
+import ResetarSenhaModal from './modals/ResetarSenhaModal';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -11,6 +13,9 @@ const Login: React.FC = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordCopied, setPasswordCopied] = useState(false);
+  const [showEsqueciSenhaModal, setShowEsqueciSenhaModal] = useState(false);
+  const [showResetarSenhaModal, setShowResetarSenhaModal] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const { login, completeFirstLogin } = useAuth();
 
   // Detectar se está em modo demo
@@ -20,11 +25,24 @@ const Login: React.FC = () => {
   // Em produção normal (alya.sistemas.viverdepj.com.br), NÃO é modo demo
   const isDemoMode = typeof window !== 'undefined' && (
     import.meta.env.VITE_DEMO_MODE === 'true' ||
-    (window.location.hostname.includes('github.io') || 
-     window.location.hostname.includes('demo') ||
-     window.location.hostname.includes('demo.') ||
-     window.location.hostname === 'alya.fercarvalho.com')
+    (window.location.hostname.includes('github.io') ||
+      window.location.hostname.includes('demo') ||
+      window.location.hostname.includes('demo.') ||
+      window.location.hostname === 'alya.fercarvalho.com')
   );
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (token) {
+        setResetToken(token);
+        setShowResetarSenhaModal(true);
+        // Remove o token da URL sem desmontar o componente
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +50,7 @@ const Login: React.FC = () => {
     setError('');
 
     const result = await login(username, password);
-    
+
     if (!result.success) {
       setError('Usuário ou senha incorretos');
       setIsLoading(false);
@@ -144,6 +162,16 @@ const Login: React.FC = () => {
             </div>
           </div>
 
+          <div className="flex justify-end mt-1">
+            <button
+              type="button"
+              onClick={() => setShowEsqueciSenhaModal(true)}
+              className="text-sm text-amber-600 hover:text-amber-800 font-medium"
+            >
+              Esqueci minha senha
+            </button>
+          </div>
+
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="text-red-600 text-sm">{error}</p>
@@ -204,7 +232,7 @@ const Login: React.FC = () => {
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
               <p className="text-amber-800 text-sm">
-                <strong>⚠️ Importante:</strong> Anote esta senha em local seguro. 
+                <strong>⚠️ Importante:</strong> Anote esta senha em local seguro.
                 Você precisará dela para fazer login novamente.
               </p>
             </div>
@@ -218,6 +246,20 @@ const Login: React.FC = () => {
           </div>
         </div>
       )}
+
+      <EsqueciSenhaModal
+        isOpen={showEsqueciSenhaModal}
+        onClose={() => setShowEsqueciSenhaModal(false)}
+      />
+
+      <ResetarSenhaModal
+        isOpen={showResetarSenhaModal}
+        token={resetToken}
+        onClose={() => {
+          setShowResetarSenhaModal(false);
+          setResetToken(null);
+        }}
+      />
     </div>
   );
 };

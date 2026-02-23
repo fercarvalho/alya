@@ -10,6 +10,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const sgMail = require('@sendgrid/mail');
 const Database = require('./database-pg');
 
 const app = express();
@@ -23,6 +25,15 @@ if (!JWT_SECRET) {
   console.error('   Configure JWT_SECRET no arquivo .env ou nas variáveis de ambiente do sistema.');
   console.error('   Para gerar uma chave segura, execute: openssl rand -base64 32');
   process.exit(1);
+}
+
+// Configurar SendGrid
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'naoresponda@viverdepj.com.br';
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+} else {
+  console.warn('⚠️ AVISO: SENDGRID_API_KEY não definido. E-mails não serão enviados.');
 }
 
 // Middleware
@@ -55,18 +66,18 @@ app.use('/api/avatars', express.static(path.join(__dirname, 'public', 'avatars')
 // Função para validar formato de email
 function validateEmailFormat(email) {
   if (!email || typeof email !== 'string') return false;
-  
+
   // Regex RFC 5322 simplificado
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  
+
   // Validações adicionais
   if (email.length < 5 || email.length > 254) return false;
   if (email.startsWith('.') || email.startsWith('-') || email.endsWith('.') || email.endsWith('-')) return false;
-  
+
   const parts = email.split('@');
   if (parts.length !== 2) return false;
   if (!parts[1].includes('.')) return false;
-  
+
   return emailRegex.test(email);
 }
 
@@ -74,32 +85,32 @@ function validateEmailFormat(email) {
 function deleteAvatarFile(photoUrl) {
   try {
     if (!photoUrl) return;
-    
+
     // Extrair nome do arquivo do photoUrl
     // Ex: /api/avatars/user123-1234567890.webp -> user123-1234567890.webp
     let filename = photoUrl;
     if (photoUrl.includes('/')) {
       filename = photoUrl.split('/').pop();
     }
-    
+
     // Validar que não contém path traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       console.log('Tentativa de path traversal detectada:', filename);
       return;
     }
-    
+
     // Construir caminho completo
     const filePath = path.join(avatarsDir, filename);
-    
+
     // Verificar que o caminho resolvido está dentro do diretório de avatares
     const resolvedPath = path.resolve(filePath);
     const resolvedAvatarsDir = path.resolve(avatarsDir);
-    
+
     if (!resolvedPath.startsWith(resolvedAvatarsDir)) {
       console.log('Tentativa de acessar arquivo fora do diretório de avatares:', resolvedPath);
       return;
     }
-    
+
     // Verificar se arquivo existe e deletar
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -145,7 +156,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     // Aceitar apenas arquivos .xlsx
@@ -178,13 +189,13 @@ const avatarStorage = multer.diskStorage({
   }
 });
 
-const uploadAvatar = multer({ 
+const uploadAvatar = multer({
   storage: avatarStorage,
   fileFilter: (req, file, cb) => {
     // Aceitar apenas arquivos WebP (já processados no frontend)
     const ext = path.extname(file.originalname).toLowerCase();
     const mimeType = file.mimetype;
-    
+
     if (ext === '.webp' && mimeType === 'image/webp') {
       cb(null, true);
     } else {
@@ -343,7 +354,7 @@ function processClients(worksheet) {
 app.get('/api/modelo/:type', (req, res) => {
   try {
     const { type } = req.params;
-    
+
     if (!['transactions', 'products', 'clients'].includes(type)) {
       return res.status(400).json({ error: 'Tipo inválido! Use "transactions", "products" ou "clients"' });
     }
@@ -355,11 +366,11 @@ app.get('/api/modelo/:type', (req, res) => {
     if (type === 'transactions') {
       const fileName = 'modelo-transacoes.xlsx';
       const filePath = path.join(__dirname, 'public', fileName);
-      
+
       if (fs.existsSync(filePath)) {
         return res.download(filePath, fileName);
       }
-      
+
       // Criar dados de exemplo
       const sampleData = [
         {
@@ -375,11 +386,11 @@ app.get('/api/modelo/:type', (req, res) => {
     } else if (type === 'products') {
       const fileName = 'modelo-produtos.xlsx';
       const filePath = path.join(__dirname, 'public', fileName);
-      
+
       if (fs.existsSync(filePath)) {
         return res.download(filePath, fileName);
       }
-      
+
       // Criar dados de exemplo
       const sampleData = [{
         'Nome': '',
@@ -417,16 +428,16 @@ app.get('/api/modelo/:type', (req, res) => {
     }
 
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    const filename = type === 'transactions' ? 'modelo-transacoes.xlsx' : 
-                    type === 'clients' ? 'modelo-clientes.xlsx' : 
-                    'modelo-produtos.xlsx';
+    const filename = type === 'transactions' ? 'modelo-transacoes.xlsx' :
+      type === 'clients' ? 'modelo-clientes.xlsx' :
+        'modelo-produtos.xlsx';
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${filename}"`,
       'Content-Length': buffer.length
     });
     return res.send(buffer);
-    
+
   } catch (error) {
     console.error('Erro ao baixar modelo:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -484,11 +495,30 @@ const getDefaultModulesForRole = (role) => {
   }
 };
 
+// Rate Limiters para recuperação de senha
+const passwordRecoveryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Muitas tentativas de recuperação. Tente novamente após 15 minutos.' }
+});
+
+const passwordTokenValidationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Muitas tentativas de validação. Tente novamente após 15 minutos.' }
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Muitas tentativas de reset. Tente novamente após 15 minutos.' }
+});
+
 // Rotas de Autenticação
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
@@ -500,23 +530,23 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Verificar se é o primeiro login (lastLogin é null ou não existe)
     const isFirstLogin = !user.lastLogin;
-    
+
     let isValidPassword = false;
     let newPassword = null;
-    
+
     if (isFirstLogin) {
       // No primeiro login, aceitar qualquer senha
       isValidPassword = true;
-      
+
       // Gerar nova senha aleatória
       newPassword = generateRandomPassword();
       const hashedPassword = bcrypt.hashSync(newPassword, 10);
-      
+
       // Atualizar usuário com nova senha e lastLogin
       const now = new Date().toISOString();
-      await db.updateUser(user.id, { 
+      await db.updateUser(user.id, {
         password: hashedPassword,
-        lastLogin: now 
+        lastLogin: now
       });
     } else {
       // Login normal: verificar senha
@@ -585,7 +615,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/reset-first-login', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { username } = req.body;
-    
+
     if (!username) {
       return res.status(400).json({ error: 'Username é obrigatório' });
     }
@@ -642,7 +672,7 @@ app.post('/api/auth/verify', authenticateToken, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
-    
+
     const { password: _, ...safeUser } = user;
     res.json({
       success: true,
@@ -670,6 +700,153 @@ app.post('/api/auth/verify', authenticateToken, async (req, res) => {
   }
 });
 
+// Recuperação de senha: Solicitar token
+app.post('/api/auth/recuperar-senha', passwordRecoveryLimiter, async (req, res) => {
+  try {
+    const { login } = req.body; // pode ser username ou email
+
+    if (!login) {
+      return res.status(400).json({ error: 'Informe um email ou usuário para recuperar a senha' });
+    }
+
+    // Buscar usuário pelo username ou pelo email
+    let user = await db.getUserByUsername(login);
+    if (!user) {
+      // Se não encontrou por username, tenta por email iterando (ou cria-se getUserByEmail no pg).
+      // Como db-postgres.js não tem getUserByEmail, e getAllUsers pode ser pesado, 
+      // faremos um work-around (em produção ideal é ter getUserByEmail direto na query).
+      const all = await db.getAllUsers();
+      user = all.find(u => u.email === login);
+    }
+
+    // Se o usuário não existir ou não tiver email, não revelamos o erro por segurança. (Neutral response)
+    if (!user || (!user.email && validateEmailFormat(login))) {
+      return res.json({
+        success: true,
+        message: 'Se as informações estiverem corretas, você receberá um e-mail com as instruções para redefinir sua senha.'
+      });
+    }
+
+    if (!user.email) {
+      return res.status(400).json({ error: 'Usuário não tem um e-mail cadastrado. Contate o administrador.' });
+    }
+
+    // Gerar token (expira em 60 min)
+    const tokenRecord = await db.criarTokenRecuperacao(user.id, 60);
+
+    // Enviar e-mail via SendGrid se configurado
+    if (SENDGRID_API_KEY) {
+      const resetLink = `${process.env.VITE_API_URL || 'https://alya.sistemas.viverdepj.com.br'}/login?token=${tokenRecord.token}`;
+
+      const msg = {
+        to: user.email,
+        from: {
+          email: SENDGRID_FROM_EMAIL,
+          name: process.env.SENDGRID_FROM_NAME || 'Alya Sistemas',
+        },
+        subject: 'Alya - Recuperação de Senha',
+        text: `Olá ${user.firstName || user.username},\n\nVocê solicitou a recuperação de senha no sistema Alya.\n\nAcesse o link abaixo para redefinir sua senha. O link é válido por 60 minutos:\n\n${resetLink}\n\nSe você não solicitou isso, pode ignorar este e-mail.\n\nAtenciosamente,\nEquipe Alya`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <p style="text-align: center; margin-bottom: 30px;">
+                <span style="font-size: 24px; font-weight: bold; color: #d97706;">Alya</span>
+            </p>
+            <h2 style="color: #1e293b; margin-bottom: 20px;">Recuperação de Senha</h2>
+            <p style="color: #475569; font-size: 16px; line-height: 1.5;">Olá <strong>${user.firstName || user.username}</strong>,</p>
+            <p style="color: #475569; font-size: 16px; line-height: 1.5;">Você solicitou a recuperação de senha no sistema Alya.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Redefinir Senha</a>
+            </div>
+            <p style="color: #64748b; font-size: 14px; text-align: center;">Este link é válido por 60 minutos.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">Se você não solicitou a alteração de senha, pode ignorar este e-mail em segurança.</p>
+          </div>
+        `,
+      };
+
+      try {
+        await sgMail.send(msg);
+        console.log(`E-mail de recuperação enviado para: ${user.email}`);
+      } catch (sgError) {
+        console.error('Erro ao enviar e-mail pelo SendGrid:', sgError);
+        if (sgError.response) {
+          console.error(sgError.response.body);
+        }
+        return res.status(500).json({ error: 'Erro ao tentar enviar o e-mail de recuperação. Tente novamente mais tarde.' });
+      }
+    } else {
+      //Apenas logar se não houver sendgrid no env
+      console.log(`Recuperação de senha solicitada para ${user.email}. Token gerado: ${tokenRecord.token}`);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Se as informações estiverem corretas, você receberá um e-mail com as instruções para redefinir sua senha.'
+    });
+
+  } catch (error) {
+    console.error('Erro no recuperar senha:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Validação do token na view
+app.get('/api/auth/validar-token/:token', passwordTokenValidationLimiter, async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({ error: 'Token não fornecido' });
+    }
+
+    const tokenData = await db.validarTokenRecuperacao(token);
+    if (!tokenData) {
+      return res.status(400).json({ error: 'Token inválido ou expirado' });
+    }
+
+    res.json({ success: true, username: tokenData.username });
+  } catch (error) {
+    console.error('Erro ao validar token:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Execução do Reset
+app.post('/api/auth/resetar-senha', passwordResetLimiter, async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token e nova senha são obrigatórios' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
+    }
+
+    // Validar token novamente
+    const tokenData = await db.validarTokenRecuperacao(token);
+    if (!tokenData) {
+      return res.status(400).json({ error: 'Token inválido ou expirado' });
+    }
+
+    // Hash da nova senha
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+    // Resetar no banco
+    const updatedUser = await db.resetarSenhaComToken(token, hashedPassword);
+
+    // Logar atividade
+    await logActivity(updatedUser.id, updatedUser.username, 'reset_password_token', 'auth', 'user', updatedUser.id);
+
+    res.json({ success: true, message: 'Senha redefinida com sucesso!' });
+
+  } catch (error) {
+    console.error('Erro no resetar senha:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+
 // Endpoint para buscar dados do próprio perfil
 app.get('/api/user/profile', authenticateToken, async (req, res) => {
   try {
@@ -677,7 +854,7 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
-    
+
     const { password: _, ...safeUser } = user;
     res.json({
       success: true,
@@ -725,7 +902,7 @@ app.post('/api/user/upload-photo', authenticateToken, uploadAvatar.single('photo
 
     // Retornar caminho relativo da foto
     const photoUrl = `/api/avatars/${req.file.filename}`;
-    
+
     res.json({
       success: true,
       data: {
@@ -749,31 +926,31 @@ app.post('/api/user/upload-photo', authenticateToken, uploadAvatar.single('photo
 app.put('/api/user/profile', authenticateToken, async (req, res) => {
   try {
     const { firstName, lastName, email, phone, photoUrl, password, cpf, birthDate, gender, position, address } = req.body;
-    
+
     // Buscar usuário atual
     const currentUser = await db.getUserById(req.user.id);
     if (!currentUser) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
-    
+
     // Validar senha atual se fornecida (obrigatória para segurança)
     if (!password) {
       return res.status(400).json({ success: false, error: 'Senha atual é obrigatória para atualizar o perfil' });
     }
-    
+
     const isValidPassword = bcrypt.compareSync(password, currentUser.password);
     if (!isValidPassword) {
       return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
     }
-    
+
     if (!firstName || firstName.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
-    
+
     if (!lastName || lastName.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
-    
+
     if (email !== undefined && email !== null && email !== '') {
       if (!email || !email.trim()) {
         return res.status(400).json({ success: false, error: 'Email é obrigatório' });
@@ -784,7 +961,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
     } else {
       return res.status(400).json({ success: false, error: 'Email é obrigatório' });
     }
-    
+
     if (phone !== undefined && phone !== null && phone !== '') {
       if (!phone) {
         return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
@@ -796,7 +973,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
     } else {
       return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
     }
-    
+
     if (cpf !== undefined && cpf !== null && cpf !== '') {
       if (!cpf) {
         return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
@@ -808,32 +985,32 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
     } else {
       return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
     }
-    
+
     if (!birthDate) {
       return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
     }
-    
+
     if (!gender) {
       return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
     }
-    
+
     if (!position || !position.trim()) {
       return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
     }
-    
+
     // Preparar dados para atualização - todos os campos são obrigatórios
     const updateData = {};
-    
+
     if (firstName === undefined || !firstName || firstName.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
     updateData.firstName = firstName.trim();
-    
+
     if (lastName === undefined || !lastName || lastName.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
     updateData.lastName = lastName.trim();
-    
+
     if (email === undefined || !email || !email.trim()) {
       return res.status(400).json({ success: false, error: 'Email é obrigatório' });
     }
@@ -841,7 +1018,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Formato de email inválido' });
     }
     updateData.email = email.trim();
-    
+
     if (phone === undefined || !phone) {
       return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
     }
@@ -850,7 +1027,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
     }
     updateData.phone = phoneDigits;
-    
+
     if (cpf === undefined || !cpf) {
       return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
     }
@@ -859,22 +1036,22 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
     }
     updateData.cpf = cpfDigits;
-    
+
     if (!birthDate) {
       return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
     }
     updateData.birthDate = birthDate;
-    
+
     if (!gender) {
       return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
     }
     updateData.gender = gender;
-    
+
     if (!position || !position.trim()) {
       return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
     }
     updateData.position = position.trim();
-    
+
     if (!address || !address.cep) {
       return res.status(400).json({ success: false, error: 'CEP é obrigatório' });
     }
@@ -906,7 +1083,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
       city: address.city.trim(),
       state: address.state.trim().toUpperCase()
     };
-    
+
     // Se foto está sendo atualizada, deletar foto antiga
     if (photoUrl !== undefined) {
       if (currentUser.photoUrl && currentUser.photoUrl !== photoUrl) {
@@ -914,23 +1091,23 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
       }
       updateData.photoUrl = photoUrl || null;
     }
-    
+
     // Atualizar usuário
     const updatedUser = await db.updateUser(req.user.id, updateData);
-    
+
     // Gerar novo token
     const token = jwt.sign(
       { id: updatedUser.id, username: updatedUser.username, role: updatedUser.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
-    
+
     const { password: _, ...safeUser } = updatedUser;
-    
-    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', req.user.id, { 
-      fields: Object.keys(updateData) 
+
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', req.user.id, {
+      fields: Object.keys(updateData)
     });
-    
+
     res.json({
       success: true,
       data: safeUser,
@@ -945,42 +1122,42 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
 app.put('/api/user/password', authenticateToken, async (req, res) => {
   try {
     const { senhaAtual, novaSenha } = req.body;
-    
+
     if (!senhaAtual || !novaSenha) {
       return res.status(400).json({ success: false, error: 'Senha atual e nova senha são obrigatórias' });
     }
-    
+
     if (novaSenha.length < 6) {
       return res.status(400).json({ success: false, error: 'A nova senha deve ter no mínimo 6 caracteres' });
     }
-    
+
     // Buscar usuário atual
     const user = await db.getUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
-    
+
     // Validar senha atual
     const isValidPassword = bcrypt.compareSync(senhaAtual, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
     }
-    
+
     // Verificar se nova senha é diferente da atual
     const isSamePassword = bcrypt.compareSync(novaSenha, user.password);
     if (isSamePassword) {
       return res.status(400).json({ success: false, error: 'A nova senha deve ser diferente da senha atual' });
     }
-    
+
     // Hash da nova senha
     const hashedPassword = bcrypt.hashSync(novaSenha, 10);
-    
+
     // Atualizar senha
     await db.updateUser(req.user.id, { password: hashedPassword });
-    
+
     // Logar ação
     await logActivity(req.user.id, user.username, 'update_password', 'user', 'user', req.user.id);
-    
+
     res.json({
       success: true,
       message: 'Senha alterada com sucesso'
@@ -998,7 +1175,7 @@ app.post('/api/import', authenticateToken, upload.single('file'), async (req, re
     }
 
     const { type } = req.body; // 'transactions', 'products' ou 'clients'
-    
+
     if (!type || !['transactions', 'products', 'clients'].includes(type)) {
       return res.status(400).json({ error: 'Tipo inválido! Use "transactions", "products" ou "clients"' });
     }
@@ -1022,7 +1199,7 @@ app.post('/api/import', authenticateToken, upload.single('file'), async (req, re
     } else if (type === 'clients') {
       processedData = processClients(worksheet);
       message = `${processedData.length} clientes importados com sucesso!`;
-      
+
       // Salvar clientes processados no banco de dados
       for (const client of processedData) {
         try {
@@ -1046,15 +1223,15 @@ app.post('/api/import', authenticateToken, upload.single('file'), async (req, re
 
   } catch (error) {
     console.error('Erro ao processar arquivo:', error);
-    
+
     // Limpar arquivo em caso de erro
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Erro interno do servidor',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -1062,7 +1239,7 @@ app.post('/api/import', authenticateToken, upload.single('file'), async (req, re
 // Rota para exportar dados (futura implementação)
 app.post('/api/export', (req, res) => {
   const { type, data } = req.body;
-  
+
   try {
     // Criar um novo workbook
     const workbook = XLSX.utils.book_new();
@@ -1120,9 +1297,9 @@ app.post('/api/export', (req, res) => {
 
   } catch (error) {
     console.error('Erro ao exportar dados:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Erro ao exportar dados',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -1770,116 +1947,116 @@ app.get('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res
 
 app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { 
-      username, 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      photoUrl, 
+    const {
+      username,
+      firstName,
+      lastName,
+      email,
+      phone,
+      photoUrl,
       cpf,
       birthDate,
       gender,
       position,
       address,
-      role, 
-      modules, 
-      isActive 
+      role,
+      modules,
+      isActive
     } = req.body;
-    
+
     if (!username) {
       return res.status(400).json({ success: false, error: 'Username é obrigatório' });
     }
-    
+
     if (!firstName || firstName.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
-    
+
     if (!lastName || lastName.trim().length < 2) {
       return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
     }
-    
+
     if (!email || !email.trim()) {
       return res.status(400).json({ success: false, error: 'Email é obrigatório' });
     }
-    
+
     if (!validateEmailFormat(email)) {
       return res.status(400).json({ success: false, error: 'Formato de email inválido' });
     }
-    
+
     if (!phone) {
       return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
     }
-    
+
     const phoneDigits = phone.replace(/\D/g, '');
     if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
       return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
     }
-    
+
     if (!cpf) {
       return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
     }
-    
+
     const cpfDigits = cpf.replace(/\D/g, '');
     if (cpfDigits.length !== 11) {
       return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
     }
-    
+
     if (!birthDate) {
       return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
     }
-    
+
     if (!gender) {
       return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
     }
-    
+
     if (!position || !position.trim()) {
       return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
     }
-    
+
     if (!address || !address.cep) {
       return res.status(400).json({ success: false, error: 'CEP é obrigatório' });
     }
-    
+
     const cepDigits = address.cep.replace(/\D/g, '');
     if (cepDigits.length !== 8) {
       return res.status(400).json({ success: false, error: 'CEP deve ter 8 dígitos' });
     }
-    
+
     if (!address.street || !address.street.trim()) {
       return res.status(400).json({ success: false, error: 'Rua/Logradouro é obrigatório' });
     }
-    
+
     if (!address.number || !address.number.trim()) {
       return res.status(400).json({ success: false, error: 'Número do endereço é obrigatório' });
     }
-    
+
     if (!address.neighborhood || !address.neighborhood.trim()) {
       return res.status(400).json({ success: false, error: 'Bairro é obrigatório' });
     }
-    
+
     if (!address.city || !address.city.trim()) {
       return res.status(400).json({ success: false, error: 'Cidade é obrigatória' });
     }
-    
+
     if (!address.state || !address.state.trim() || address.state.length !== 2) {
       return res.status(400).json({ success: false, error: 'Estado (UF) é obrigatório e deve ter 2 caracteres' });
     }
-    
+
     // Verificar se usuário já existe
     if (await db.getUserByUsername(username)) {
       return res.status(400).json({ success: false, error: 'Usuário já existe' });
     }
-    
+
     // Criar hash placeholder que aceita qualquer senha no primeiro login
     // (igual aos usuários padrão)
     const placeholderPassword = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
-    
+
     // Se módulos não foram fornecidos, usar módulos padrão da role
     const userRole = role || 'user';
     const defaultModules = getDefaultModulesForRole(userRole);
     const userModules = modules && modules.length > 0 ? modules : defaultModules;
-    
+
     const newUser = {
       username,
       firstName: firstName || undefined,
@@ -1898,10 +2075,10 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =
       isActive: isActive !== undefined ? isActive : true,
       lastLogin: null // null indica que nunca fez login
     };
-    
+
     const user = await db.saveUser(newUser);
     await logActivity(req.user.id, req.user.username, 'create', 'admin', 'user', user.id, { username: user.username, role: user.role });
-    
+
     const { password: _, ...safeUser } = user;
     res.json({ success: true, data: safeUser });
   } catch (error) {
@@ -1913,7 +2090,7 @@ app.put('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res
   try {
     const { id } = req.params;
     const updates = { ...req.body };
-    
+
     // Se houver senha, hash ela
     if (updates.password) {
       if (updates.password.length < 6) {
@@ -1921,13 +2098,13 @@ app.put('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res
       }
       updates.password = bcrypt.hashSync(updates.password, 10);
     }
-    
+
     // Não permitir mudar role para admin de outro usuário (apenas o próprio admin pode ser admin)
     // Isso pode ser ajustado conforme necessário
-    
+
     const updatedUser = await db.updateUser(id, updates);
     await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', id, { changes: Object.keys(updates) });
-    
+
     const { password: _, ...safeUser } = updatedUser;
     res.json({ success: true, data: safeUser });
   } catch (error) {
@@ -1938,25 +2115,25 @@ app.put('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res
 app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Não permitir deletar a si mesmo
     if (id === req.user.id) {
       return res.status(400).json({ success: false, error: 'Não é possível deletar seu próprio usuário' });
     }
-    
+
     const user = await db.getUserById(id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
-    
+
     // Deletar foto do usuário se existir
     if (user.photoUrl) {
       deleteAvatarFile(user.photoUrl);
     }
-    
+
     await db.deleteUser(id);
     await logActivity(req.user.id, req.user.username, 'delete', 'admin', 'user', id, { username: user.username });
-    
+
     res.json({ success: true, message: 'Usuário deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -2004,11 +2181,11 @@ app.get('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, r
 app.post('/api/admin/modules', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { name, key, icon, description, route, isActive } = req.body;
-    
+
     if (!name || !key) {
       return res.status(400).json({ success: false, error: 'Nome e key são obrigatórios' });
     }
-    
+
     const moduleData = {
       name,
       key,
@@ -2018,10 +2195,10 @@ app.post('/api/admin/modules', authenticateToken, requireAdmin, async (req, res)
       isActive: isActive !== undefined ? isActive : true,
       isSystem: false
     };
-    
+
     const module = await db.saveSystemModule(moduleData);
     await logActivity(req.user.id, req.user.username, 'create', 'admin', 'module', module.id, { name: module.name, key: module.key });
-    
+
     res.json({ success: true, data: module });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -2032,13 +2209,13 @@ app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, r
   try {
     const { id } = req.params;
     const updates = req.body;
-    
+
     // Não permitir mudar isSystem
     delete updates.isSystem;
-    
+
     const module = await db.updateSystemModule(id, updates);
     await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'module', id, { changes: Object.keys(updates) });
-    
+
     res.json({ success: true, data: module });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -2048,15 +2225,15 @@ app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, r
 app.delete('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const module = await db.getSystemModuleById(id);
     if (!module) {
       return res.status(404).json({ success: false, error: 'Módulo não encontrado' });
     }
-    
+
     await db.deleteSystemModule(id);
     await logActivity(req.user.id, req.user.username, 'delete', 'admin', 'module', id, { name: module.name, key: module.key });
-    
+
     res.json({ success: true, message: 'Módulo deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -2067,7 +2244,7 @@ app.delete('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req
 app.get('/api/admin/activity-log', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { userId, module, action, startDate, endDate, limit, page } = req.query;
-    
+
     const filters = {};
     if (userId) filters.userId = userId;
     if (module) filters.module = module;
@@ -2076,7 +2253,7 @@ app.get('/api/admin/activity-log', authenticateToken, requireAdmin, async (req, 
     if (endDate) filters.endDate = endDate;
     if (limit) filters.limit = limit;
     if (page) filters.page = page;
-    
+
     const logs = await db.getActivityLogs(filters);
     res.json({ success: true, data: logs, count: logs.length });
   } catch (error) {
@@ -2126,8 +2303,8 @@ app.get('/api/admin/statistics/usage-timeline', authenticateToken, requireAdmin,
 
 // Rota de teste
 app.get('/api/test', (req, res) => {
-  res.json({ 
-    message: 'API funcionando!', 
+  res.json({
+    message: 'API funcionando!',
     timestamp: new Date().toISOString(),
     endpoints: [
       'GET /api/transactions - Listar transações',
@@ -2163,7 +2340,7 @@ app.use((error, req, res, next) => {
       return res.status(400).json({ error: 'Arquivo muito grande! Máximo 5MB.' });
     }
   }
-  
+
   res.status(400).json({ error: error.message });
 });
 

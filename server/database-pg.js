@@ -92,7 +92,7 @@ class Database extends FileDatabase {
   }
 
   /** Não criar arquivos JSON; o backend usa apenas PostgreSQL. */
-  ensureFilesExist() {}
+  ensureFilesExist() { }
 
   async _ensurePgDefaults() {
     try {
@@ -335,6 +335,87 @@ class Database extends FileDatabase {
       [id, userData.username, userData.password || '', userData.firstName || null, userData.lastName || null, userData.email || null, userData.phone || null, userData.photoUrl || null, userData.cpf || null, userData.birthDate || null, userData.gender || null, userData.position || null, addr, userData.role || 'user', userData.modules || [], userData.isActive !== false, userData.lastLogin || null, now, now]
     );
     return this.getUserById(id);
+  }
+
+  // --- Funções de Recuperação de Senha ---
+
+  async criarTokenRecuperacao(userId, expiresInMinutes = 60) {
+    try {
+      // Limpar tokens expirados antes de criar um novo
+      await this.pool.query('DELETE FROM password_reset_tokens WHERE expires_at < CURRENT_TIMESTAMP OR used = TRUE');
+
+      const token = crypto.randomUUID();
+      const r = await this.pool.query(
+        `INSERT INTO password_reset_tokens (user_id, token, expires_at) 
+         VALUES ($1, $2, CURRENT_TIMESTAMP + ($3 || ' minutes')::INTERVAL) RETURNING *`,
+        [userId, token, expiresInMinutes]
+      );
+      return r.rows[0];
+    } catch (error) {
+      console.error('Erro ao criar token de recuperação:', error);
+      throw new Error('Não foi possível gerar o token de recuperação');
+    }
+  }
+
+  async validarTokenRecuperacao(token) {
+    try {
+      const r = await this.pool.query(
+        `SELECT t.*, u.username, u.email 
+         FROM password_reset_tokens t
+         JOIN users u ON t.user_id = u.id
+         WHERE t.token = $1 AND t.used = FALSE AND t.expires_at > CURRENT_TIMESTAMP`,
+        [token]
+      );
+
+      if (r.rows.length === 0) {
+        return null; // Token inválido, usado ou expirado
+      }
+
+      return r.rows[0];
+    } catch (error) {
+      console.error('Erro ao validar token:', error);
+      throw new Error('Não foi possível validar o token');
+    }
+  }
+
+  async resetarSenhaComToken(token, newHash) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Validar token novamente (com FOR UPDATE para evitar race conditions, dependendo do design, mas o update direto com check já resolve)
+      const r = await client.query(
+        `SELECT user_id FROM password_reset_tokens 
+         WHERE token = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP FOR UPDATE`,
+        [token]
+      );
+
+      if (r.rows.length === 0) {
+        throw new Error('Token inválido ou expirado');
+      }
+
+      const userId = r.rows[0].user_id;
+
+      // 2. Atualizar senha do usuário e remover obrigatoriedade de first_login, se houver
+      await client.query(
+        `UPDATE users SET password = $1, last_login = COALESCE(last_login, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [newHash, userId]
+      );
+
+      // 3. Marcar token como usado (ou deletar)
+      await client.query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
+
+      await client.query('COMMIT');
+
+      const userRes = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
+      return parseUser(userRes.rows[0]);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Erro ao resetar senha com token:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async updateUser(id, data) {
@@ -713,18 +794,18 @@ class Database extends FileDatabase {
     try {
       const [growthRes, fixedRes, varRes, invRes, revRes, mktRes,
         ofFixedRes, ofVarRes, ofInvRes, ofMktRes, ofRevRes] = await Promise.all([
-        this.pool.query('SELECT minimo, medio, maximo FROM projection_growth WHERE id = 1'),
-        this.pool.query('SELECT month_num, value FROM projection_base_fixed_expenses ORDER BY month_num'),
-        this.pool.query('SELECT month_num, value FROM projection_base_variable_expenses ORDER BY month_num'),
-        this.pool.query('SELECT month_num, value FROM projection_base_investments ORDER BY month_num'),
-        this.pool.query('SELECT stream_id, month_num, value FROM projection_base_revenue ORDER BY stream_id, month_num'),
-        this.pool.query('SELECT component_id, month_num, value FROM projection_base_mkt ORDER BY component_id, month_num'),
-        this.pool.query('SELECT scenario, month_num, value FROM projection_override_fixed ORDER BY scenario, month_num'),
-        this.pool.query('SELECT scenario, month_num, value FROM projection_override_variable ORDER BY scenario, month_num'),
-        this.pool.query('SELECT scenario, month_num, value FROM projection_override_investments ORDER BY scenario, month_num'),
-        this.pool.query('SELECT scenario, month_num, value FROM projection_override_mkt ORDER BY scenario, month_num'),
-        this.pool.query('SELECT stream_id, scenario, month_num, value FROM projection_override_revenue ORDER BY stream_id, scenario, month_num'),
-      ]);
+          this.pool.query('SELECT minimo, medio, maximo FROM projection_growth WHERE id = 1'),
+          this.pool.query('SELECT month_num, value FROM projection_base_fixed_expenses ORDER BY month_num'),
+          this.pool.query('SELECT month_num, value FROM projection_base_variable_expenses ORDER BY month_num'),
+          this.pool.query('SELECT month_num, value FROM projection_base_investments ORDER BY month_num'),
+          this.pool.query('SELECT stream_id, month_num, value FROM projection_base_revenue ORDER BY stream_id, month_num'),
+          this.pool.query('SELECT component_id, month_num, value FROM projection_base_mkt ORDER BY component_id, month_num'),
+          this.pool.query('SELECT scenario, month_num, value FROM projection_override_fixed ORDER BY scenario, month_num'),
+          this.pool.query('SELECT scenario, month_num, value FROM projection_override_variable ORDER BY scenario, month_num'),
+          this.pool.query('SELECT scenario, month_num, value FROM projection_override_investments ORDER BY scenario, month_num'),
+          this.pool.query('SELECT scenario, month_num, value FROM projection_override_mkt ORDER BY scenario, month_num'),
+          this.pool.query('SELECT stream_id, scenario, month_num, value FROM projection_override_revenue ORDER BY stream_id, scenario, month_num'),
+        ]);
 
       const growthRow = growthRes.rows?.[0];
       const growth = {
