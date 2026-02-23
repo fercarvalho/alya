@@ -226,7 +226,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
                       Data de Nascimento
                     </label>
                     <p className="text-lg text-gray-800 mt-1">
-                      {new Date(profileData.birthDate).toLocaleDateString('pt-BR')}
+                      {(() => {
+                        const [year, month, day] = profileData.birthDate.split('T')[0].split('-');
+                        return `${day}/${month}/${year}`;
+                      })()}
                     </p>
                   </div>
                 )}

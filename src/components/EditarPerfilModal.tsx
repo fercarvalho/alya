@@ -56,7 +56,7 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         email: user.email || '',
         phone: user.phone ? applyPhoneMask(user.phone) : '',
         cpf: user.cpf ? applyCpfMask(user.cpf) : '',
-        birthDate: user.birthDate || '',
+        birthDate: user.birthDate ? user.birthDate.split('T')[0] : '',
         gender: user.gender || '',
         position: user.position || '',
         address: user.address ? {
@@ -83,7 +83,7 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
       setErrors({});
       initializedRef.current = true;
     }
-    
+
     // Reset quando o modal fechar
     if (!isOpen) {
       initializedRef.current = false;
@@ -112,7 +112,7 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
-    
+
     // Limpar erro do campo
     if (errors[field]) {
       setErrors(prev => {
@@ -219,22 +219,22 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validações
     const newErrors: { [key: string]: string } = {};
-    
+
     if (!password) {
       newErrors.password = 'Senha atual é obrigatória';
     }
-    
+
     if (!formData.firstName || formData.firstName.trim().length < 2) {
       newErrors.firstName = 'Nome deve ter pelo menos 2 caracteres';
     }
-    
+
     if (!formData.lastName || formData.lastName.trim().length < 2) {
       newErrors.lastName = 'Sobrenome deve ter pelo menos 2 caracteres';
     }
-    
+
     if (!formData.email || !formData.email.trim()) {
       newErrors.email = 'Email é obrigatório';
     } else {
@@ -243,7 +243,7 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         newErrors.email = emailValidation.error || 'Email inválido';
       }
     }
-    
+
     if (!formData.phone || !formData.phone.trim()) {
       newErrors.phone = 'Telefone é obrigatório';
     } else {
@@ -252,7 +252,7 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         newErrors.phone = phoneValidation.error || 'Telefone inválido';
       }
     }
-    
+
     if (!formData.cpf || !formData.cpf.trim()) {
       newErrors.cpf = 'CPF é obrigatório';
     } else {
@@ -261,19 +261,19 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         newErrors.cpf = cpfValidation.error || 'CPF inválido';
       }
     }
-    
+
     if (!formData.birthDate) {
       newErrors.birthDate = 'Data de nascimento é obrigatória';
     }
-    
+
     if (!formData.gender) {
       newErrors.gender = 'Gênero é obrigatório';
     }
-    
+
     if (!formData.position || !formData.position.trim()) {
       newErrors.position = 'Cargo é obrigatório';
     }
-    
+
     if (!formData.address.cep || !formData.address.cep.trim()) {
       newErrors['address.cep'] = 'CEP é obrigatório';
     } else {
@@ -282,34 +282,34 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         newErrors['address.cep'] = cepValidation.error || 'CEP inválido';
       }
     }
-    
+
     if (!formData.address.street || !formData.address.street.trim()) {
       newErrors['address.street'] = 'Rua/Logradouro é obrigatório';
     }
-    
+
     if (!formData.address.number || !formData.address.number.trim()) {
       newErrors['address.number'] = 'Número é obrigatório';
     }
-    
+
     if (!formData.address.neighborhood || !formData.address.neighborhood.trim()) {
       newErrors['address.neighborhood'] = 'Bairro é obrigatório';
     }
-    
+
     if (!formData.address.city || !formData.address.city.trim()) {
       newErrors['address.city'] = 'Cidade é obrigatória';
     }
-    
+
     if (!formData.address.state || !formData.address.state.trim() || formData.address.state.length !== 2) {
       newErrors['address.state'] = 'Estado (UF) é obrigatório e deve ter 2 caracteres';
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // Se há foto nova, fazer upload primeiro
       let finalPhotoUrl = photoUrl;
@@ -317,7 +317,7 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         finalPhotoUrl = await uploadPhoto(photoFile);
         setPhotoUrl(finalPhotoUrl);
       }
-      
+
       // Preparar dados para envio - todos os campos são obrigatórios
       const updateData: any = {
         firstName: formData.firstName.trim(),
@@ -339,11 +339,11 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         },
         password // Senha atual para validação
       };
-      
+
       if (finalPhotoUrl !== undefined) {
         updateData.photoUrl = finalPhotoUrl || null;
       }
-      
+
       const response = await fetch(`${API_BASE_URL}/user/profile`, {
         method: 'PUT',
         headers: {
@@ -352,9 +352,9 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
         },
         body: JSON.stringify(updateData)
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         // Atualizar contexto
         await refreshUser();
@@ -425,9 +425,8 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
                   });
                 }
               }}
-              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
-                errors.password ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
-              }`}
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${errors.password ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                }`}
               placeholder="Digite sua senha atual"
               disabled={isSubmitting}
             />
@@ -449,9 +448,8 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
-                  errors.firstName ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
-                }`}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${errors.firstName ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                  }`}
                 placeholder="Nome"
                 disabled={isSubmitting}
               />
@@ -468,9 +466,8 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
-                  errors.lastName ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
-                }`}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${errors.lastName ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                  }`}
                 placeholder="Sobrenome"
                 disabled={isSubmitting}
               />
@@ -491,9 +488,8 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 onBlur={handleEmailBlur}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
-                  errors.email ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
-                }`}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${errors.email ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                  }`}
                 placeholder="email@exemplo.com"
                 disabled={isSubmitting}
               />
@@ -511,9 +507,8 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 onBlur={handlePhoneBlur}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
-                  errors.phone ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
-                }`}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${errors.phone ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                  }`}
                 placeholder="(00) 00000-0000"
                 disabled={isSubmitting}
               />
@@ -534,9 +529,8 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
                 value={formData.cpf}
                 onChange={(e) => handleInputChange('cpf', e.target.value)}
                 onBlur={handleCpfBlur}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
-                  errors.cpf ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
-                }`}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${errors.cpf ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                  }`}
                 placeholder="000.000.000-00"
                 maxLength={14}
                 disabled={isSubmitting}
@@ -607,9 +601,8 @@ const EditarPerfilModal: React.FC<EditarPerfilModalProps> = ({
                 value={formData.address.cep}
                 onChange={(e) => handleInputChange('address.cep', e.target.value)}
                 onBlur={handleCepBlur}
-                className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${
-                  errors['address.cep'] ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
-                }`}
+                className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all ${errors['address.cep'] ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                  }`}
                 placeholder="00000-000"
                 maxLength={9}
                 disabled={isSubmitting || isSearchingCep}
