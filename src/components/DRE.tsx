@@ -216,6 +216,7 @@ const DRE: React.FC = () => {
       if (previousRow) {
         const prevVal = Number(previousRow.value) || 0
         const currVal = Number(row.value) || 0
+        const variation = currVal - prevVal
         const variationPercent = prevVal !== 0
           ? ((currVal - prevVal) / Math.abs(prevVal)) * 100
           : currVal > 0 ? 100 : (currVal < 0 ? -100 : 0)
@@ -530,10 +531,10 @@ const DRE: React.FC = () => {
                   <tr
                     key={row.id}
                     className={`${row.level === 0
-                        ? 'bg-amber-50 font-semibold'
-                        : row.level === 1
-                          ? 'bg-gray-50'
-                          : ''
+                      ? 'bg-amber-50 font-semibold'
+                      : row.level === 1
+                        ? 'bg-gray-50'
+                        : ''
                       } ${row.id === 'resultado' ? 'border-t-2 border-gray-300' : ''
                       }`}
                   >
@@ -546,12 +547,12 @@ const DRE: React.FC = () => {
                     </td>
                     <td
                       className={`px-4 sm:px-6 py-3 text-sm text-right font-medium ${row.type === 'receita'
-                          ? 'text-green-600'
-                          : row.type === 'despesa'
-                            ? 'text-red-600'
-                            : row.value >= 0
-                              ? 'text-green-600'
-                              : 'text-red-600'
+                        ? 'text-green-600'
+                        : row.type === 'despesa'
+                          ? 'text-red-600'
+                          : row.value >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
                         }`}
                     >
                       {formatCurrency(row.value)}
