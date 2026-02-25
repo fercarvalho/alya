@@ -4468,7 +4468,7 @@ const AppContent: React.FC = () => {
 
       transacoes.forEach(t => {
         if (isReceita(t.type)) {
-          vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + t.value
+          vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + Number(t.value)
         }
       })
 
@@ -4486,7 +4486,7 @@ const AppContent: React.FC = () => {
 
       transacoes.forEach(t => {
         if (isDespesa(t.type)) {
-          despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + t.value
+          despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + Number(t.value)
         }
       })
 
@@ -4506,7 +4506,7 @@ const AppContent: React.FC = () => {
         if (isReceita(t.type)) {
           // Usar a descrição como nome do produto
           const nomeProduto = t.description || 'Produto sem nome'
-          vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + t.value
+          vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + Number(t.value)
         }
       })
 
@@ -4934,7 +4934,7 @@ const AppContent: React.FC = () => {
                 </p>
                 <div className={`mt-2 p-2 rounded-lg ${lucroLiquido >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
                   <p className={`text-xs font-bold ${lucroLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    Margem: {((lucroLiquido / totalVendasCategoria) * 100).toFixed(1)}%
+                    Margem: {totalVendasCategoria > 0 ? ((lucroLiquido / totalVendasCategoria) * 100).toFixed(1) : '0.0'}%
                   </p>
                 </div>
               </div>
