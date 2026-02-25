@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Plus, Edit, Trash2, Save, X, Shield
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,7 +12,7 @@ const ModuleManagement: React.FC = () => {
   // const [isLoading, setIsLoading] = useState(false); // Reservado para uso futuro
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [editingModule, setEditingModule] = useState<SystemModule | null>(null);
-  
+
   const [newModule, setNewModule] = useState({
     name: '',
     key: '',
@@ -84,7 +84,7 @@ const ModuleManagement: React.FC = () => {
 
   const handleDeleteModule = async (moduleId: string) => {
     if (!confirm('Tem certeza que deseja deletar este módulo?')) return;
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/admin/modules/${moduleId}`, {
         method: 'DELETE',
@@ -120,7 +120,7 @@ const ModuleManagement: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editingModule) return;
-    
+
     try {
       const updates = {
         name: newModule.name,
@@ -130,7 +130,7 @@ const ModuleManagement: React.FC = () => {
         route: newModule.route || null,
         isActive: newModule.isActive
       };
-      
+
       await handleUpdateModule(editingModule.id, updates);
       setShowModuleModal(false);
       setEditingModule(null);
@@ -178,22 +178,20 @@ const ModuleManagement: React.FC = () => {
         {modules.map((module) => (
           <div
             key={module.id}
-            className={`bg-white rounded-lg shadow p-6 border-2 ${
-              module.isSystem ? 'border-amber-300' : 'border-gray-200'
-            }`}
+            className={`bg-white rounded-lg shadow p-6 border-2 ${module.isSystem ? 'border-amber-300' : 'border-gray-200'
+              }`}
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
                 {module.isSystem && <Shield className="h-5 w-5 text-amber-600" />}
                 <h3 className="text-lg font-semibold text-gray-900">{module.name}</h3>
               </div>
-              <span className={`px-2 py-1 text-xs rounded ${
-                module.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
+              <span className={`px-2 py-1 text-xs rounded ${module.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
                 {module.isActive ? 'Ativo' : 'Inativo'}
               </span>
             </div>
-            
+
             <div className="space-y-2 mb-4">
               <div>
                 <span className="text-sm font-medium text-gray-600">Key:</span>
@@ -245,7 +243,7 @@ const ModuleManagement: React.FC = () => {
 
       {/* Modal de Criar/Editar Módulo */}
       {showModuleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
           <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">

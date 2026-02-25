@@ -1,13 +1,13 @@
 import React, { useState, useEffect, Suspense, lazy, useMemo } from 'react'
-import { 
-  Home, 
-  DollarSign, 
-  Package, 
-  BarChart3, 
+import {
+  Home,
+  DollarSign,
+  Package,
+  BarChart3,
   Calculator,
-  TrendingUp, 
-  Plus, 
-  Edit, 
+  TrendingUp,
+  Plus,
+  Edit,
   Trash2,
   Download,
   Upload,
@@ -43,18 +43,18 @@ import html2canvas from 'html2canvas'
 import { API_BASE_URL } from './config/api'
 import { parseLocalDate, formatDatePtBR } from './utils/dateUtils'
 
-import { 
-  PieChart as RechartsPieChart, 
+import {
+  PieChart as RechartsPieChart,
   Pie,
-  Cell, 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend 
+  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
 } from 'recharts'
 
 interface NewTransaction {
@@ -113,7 +113,7 @@ type TabType = 'dashboard' | 'transactions' | 'products' | 'reports' | 'metas' |
 const AppContent: React.FC = () => {
   const { user, token, logout, isLoading } = useAuth();
   const { getVisibleModules } = useModules();
-  
+
   // Detectar se está em modo demo
   // Modo demo é ativado APENAS quando:
   // 1. A variável de ambiente VITE_DEMO_MODE está definida como 'true'
@@ -122,16 +122,16 @@ const AppContent: React.FC = () => {
   const isDemoMode = typeof window !== 'undefined' && (
     import.meta.env.VITE_DEMO_MODE === 'true' ||
     window.location.hostname === 'alya.fercarvalho.com' ||
-    window.location.hostname.includes('github.io') || 
+    window.location.hostname.includes('github.io') ||
     window.location.hostname.includes('demo') ||
     window.location.hostname.includes('demo.')
   );
-  
+
   // Função auxiliar para usar storage correto
   // Em produção, sempre usa localStorage (dados persistentes)
   // Em modo demo, usa sessionStorage (dados temporários)
   const getStorage = () => isDemoMode ? sessionStorage : localStorage;
-  
+
   // Mapeamento de ícones para os módulos (reservado para uso futuro)
   // const iconMap: Record<string, any> = {
   //   'Home': Home,
@@ -381,21 +381,21 @@ const AppContent: React.FC = () => {
   // Estados do formulário de transação
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<NewTransaction | null>(null)
-  
+
   // Estados do modal de importar/exportar
   const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false)
   const [importExportType, setImportExportType] = useState<'transactions' | 'products'>('transactions')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  
+
   // Estado do modal de seleção de período para exportar relatórios
   const [isPeriodoExportModalOpen, setIsPeriodoExportModalOpen] = useState(false)
-  
+
   // Estados do modal de exportação de transações
   const [isExportTransacoesModalOpen, setIsExportTransacoesModalOpen] = useState(false)
   const [exportarFiltradas, setExportarFiltradas] = useState(true)
   const [incluirResumo, setIncluirResumo] = useState(true)
-  
+
   // Estados do modal de exportação de produtos
   const [isExportProdutosModalOpen, setIsExportProdutosModalOpen] = useState(false)
   const [exportarFiltrados, setExportarFiltrados] = useState(true)
@@ -414,17 +414,17 @@ const AppContent: React.FC = () => {
     type: false,
     category: false
   })
-  
+
   // Estados do calendário personalizado
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [calendarDate, setCalendarDate] = useState(new Date())
-  
+
   // Estados para calendários dos filtros
   const [isFilterCalendarFromOpen, setIsFilterCalendarFromOpen] = useState(false)
   const [isFilterCalendarToOpen, setIsFilterCalendarToOpen] = useState(false)
   const [filterCalendarFromDate, setFilterCalendarFromDate] = useState<Date | null>(null)
   const [filterCalendarToDate, setFilterCalendarToDate] = useState<Date | null>(null)
-  
+
   // Estados para ordenação
   const [sortConfig, setSortConfig] = useState<{
     field: string | null
@@ -457,7 +457,7 @@ const AppContent: React.FC = () => {
   const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>([])
 
   // ⚠️ TODOS OS useEffect DEVEM ESTAR AQUI, ANTES DOS RETURNS CONDICIONAIS
-  
+
   // Carregar dados do banco de dados
   useEffect(() => {
     // Só carregar dados se o token estiver disponível
@@ -479,7 +479,7 @@ const AppContent: React.FC = () => {
         console.error('Erro ao carregar dados:', error)
       }
     }
-    
+
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user])
@@ -513,7 +513,7 @@ const AppContent: React.FC = () => {
       const savedTransactions = storage.getItem('alya-transactions')
       const savedProducts = storage.getItem('alya-products')
       const savedMetas = storage.getItem('alya-metas')
-      
+
       if (savedTransactions) setTransactions(JSON.parse(savedTransactions))
       if (savedProducts) setProducts(JSON.parse(savedProducts))
       if (savedMetas) setMetas(JSON.parse(savedMetas))
@@ -551,18 +551,18 @@ const AppContent: React.FC = () => {
           setIsFilterCalendarFromOpen(false)
           return
         }
-        
+
         if (isFilterCalendarToOpen) {
           setIsFilterCalendarToOpen(false)
           return
         }
-        
+
         // Fechar calendário se estiver aberto
         if (isCalendarOpen) {
           setIsCalendarOpen(false)
           return
         }
-        
+
         // Fechar modal de produto se estiver aberto
         if (isProductModalOpen) {
           setIsProductModalOpen(false)
@@ -578,17 +578,17 @@ const AppContent: React.FC = () => {
           })
           return
         }
-        
+
         // Fechar modal de transação se estiver aberto
         if (isTransactionModalOpen) {
           setIsTransactionModalOpen(false)
           setEditingTransaction(null)
-          setTransactionForm({ 
-            date: new Date().toISOString().split('T')[0], 
-            description: '', 
-            value: '', 
-            type: 'Receita', 
-            category: '' 
+          setTransactionForm({
+            date: new Date().toISOString().split('T')[0],
+            description: '',
+            value: '',
+            type: 'Receita',
+            category: ''
           })
           setTransactionFormErrors({
             date: false,
@@ -600,7 +600,7 @@ const AppContent: React.FC = () => {
           setIsCalendarOpen(false)
           return
         }
-        
+
         // Fechar modal de importar/exportar se estiver aberto
         if (isImportExportModalOpen) {
           setIsImportExportModalOpen(false)
@@ -646,7 +646,7 @@ const AppContent: React.FC = () => {
     }))
     setCalendarDate(date)
     setIsCalendarOpen(false)
-    
+
     // Limpar erro do campo quando uma data for selecionada
     setTransactionFormErrors(prev => ({
       ...prev,
@@ -778,7 +778,7 @@ const AppContent: React.FC = () => {
       // Reset category when type changes
       ...(name === 'type' ? { category: '' } : {})
     }))
-    
+
     // Limpar erro do campo quando o usuário digitar
     setTransactionFormErrors(prev => ({
       ...prev,
@@ -809,11 +809,11 @@ const AppContent: React.FC = () => {
 
   const handleDeleteSelectedProducts = async () => {
     if (selectedProducts.size === 0) return
-    
-    const confirmMessage = selectedProducts.size === 1 
-      ? 'Tem certeza que deseja deletar este produto?' 
+
+    const confirmMessage = selectedProducts.size === 1
+      ? 'Tem certeza que deseja deletar este produto?'
       : `Tem certeza que deseja deletar ${selectedProducts.size} produtos?`
-    
+
     if (confirm(confirmMessage)) {
       try {
         const ids = Array.from(selectedProducts)
@@ -851,11 +851,11 @@ const AppContent: React.FC = () => {
 
   const handleDeleteSelectedTransactions = async () => {
     if (selectedTransactions.size === 0) return
-    
-    const confirmMessage = selectedTransactions.size === 1 
-      ? 'Tem certeza que deseja deletar esta transação?' 
+
+    const confirmMessage = selectedTransactions.size === 1
+      ? 'Tem certeza que deseja deletar esta transação?'
       : `Tem certeza que deseja deletar ${selectedTransactions.size} transações?`
-    
+
     if (confirm(confirmMessage)) {
       try {
         const ids = Array.from(selectedTransactions)
@@ -873,11 +873,11 @@ const AppContent: React.FC = () => {
   // Funções de ordenação
   const handleSort = (field: string) => {
     let direction: 'asc' | 'desc' = 'asc'
-    
+
     if (sortConfig.field === field && sortConfig.direction === 'asc') {
       direction = 'desc'
     }
-    
+
     setSortConfig({ field, direction })
   }
 
@@ -885,8 +885,8 @@ const AppContent: React.FC = () => {
     if (sortConfig.field !== field) {
       return <span className="text-gray-400">↕</span>
     }
-    return sortConfig.direction === 'asc' ? 
-      <span className="text-amber-600">↑</span> : 
+    return sortConfig.direction === 'asc' ?
+      <span className="text-amber-600">↑</span> :
       <span className="text-amber-600">↓</span>
   }
 
@@ -1025,17 +1025,17 @@ const AppContent: React.FC = () => {
       type: !transactionForm.type || transactionForm.type.trim() === '',
       category: !transactionForm.category || transactionForm.category.trim() === ''
     }
-    
+
     setTransactionFormErrors(errors)
-    
+
     // Verificar se há erros
     const hasErrors = Object.values(errors).some(error => error)
-    
+
     if (hasErrors) {
       // Não mostrar notificação, apenas marcar os campos com erro visual
       return false
     }
-    
+
     return true
   }
 
@@ -1044,27 +1044,27 @@ const AppContent: React.FC = () => {
     const today = new Date()
     const currentMonth = calendarDate.getMonth()
     const currentYear = calendarDate.getFullYear()
-    
+
     // Primeiro dia do mês
     const firstDay = new Date(currentYear, currentMonth, 1)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay())
-    
+
     const days = []
     const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
-    
+
     // Gerar dias do calendário
     for (let i = 0; i < 42; i++) {
       const date = new Date(startDate)
       date.setDate(startDate.getDate() + i)
       days.push(date)
     }
-    
+
     const monthNames = [
       'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
     ]
-    
+
     return (
       <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
         {/* Header do calendário */}
@@ -1075,11 +1075,11 @@ const AppContent: React.FC = () => {
           >
             <ChevronLeft className="w-5 h-5 text-amber-600" />
           </button>
-          
+
           <h3 className="text-lg font-semibold text-amber-800">
             {monthNames[currentMonth]} {currentYear}
           </h3>
-          
+
           <button
             onClick={() => navigateMonth('next')}
             className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
@@ -1087,7 +1087,7 @@ const AppContent: React.FC = () => {
             <ChevronRight className="w-5 h-5 text-amber-600" />
           </button>
         </div>
-        
+
         {/* Dias da semana */}
         <div className="grid grid-cols-7 gap-1 mb-2">
           {weekDays.map((day, index) => (
@@ -1096,14 +1096,14 @@ const AppContent: React.FC = () => {
             </div>
           ))}
         </div>
-        
+
         {/* Dias do calendário */}
         <div className="grid grid-cols-7 gap-1">
           {days.map((date, index) => {
             const isCurrentMonth = date.getMonth() === currentMonth
             const isToday = date.toDateString() === today.toDateString()
             const isSelected = transactionForm.date === formatDateToInput(date)
-            
+
             return (
               <button
                 key={index}
@@ -1121,7 +1121,7 @@ const AppContent: React.FC = () => {
             )
           })}
         </div>
-        
+
         {/* Botões de ação */}
         <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
           <button
@@ -1147,25 +1147,25 @@ const AppContent: React.FC = () => {
     const currentDate = filterCalendarFromDate || new Date()
     const currentMonth = currentDate.getMonth()
     const currentYear = currentDate.getFullYear()
-    
+
     const firstDay = new Date(currentYear, currentMonth, 1)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay())
-    
+
     const days = []
     const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
-    
+
     for (let i = 0; i < 42; i++) {
       const date = new Date(startDate)
       date.setDate(startDate.getDate() + i)
       days.push(date)
     }
-    
+
     const monthNames = [
       'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
     ]
-    
+
     return (
       <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
         <div className="flex items-center justify-between mb-4">
@@ -1175,11 +1175,11 @@ const AppContent: React.FC = () => {
           >
             <ChevronLeft className="w-5 h-5 text-amber-600" />
           </button>
-          
+
           <h3 className="text-lg font-semibold text-amber-800">
             {monthNames[currentMonth]} {currentYear}
           </h3>
-          
+
           <button
             onClick={() => navigateFilterMonthFrom('next')}
             className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
@@ -1187,7 +1187,7 @@ const AppContent: React.FC = () => {
             <ChevronRight className="w-5 h-5 text-amber-600" />
           </button>
         </div>
-        
+
         <div className="grid grid-cols-7 gap-1 mb-2">
           {weekDays.map((day, index) => (
             <div key={index} className="text-center text-sm font-semibold text-gray-600 py-2">
@@ -1195,13 +1195,13 @@ const AppContent: React.FC = () => {
             </div>
           ))}
         </div>
-        
+
         <div className="grid grid-cols-7 gap-1">
           {days.map((date, index) => {
             const isCurrentMonth = date.getMonth() === currentMonth
             const isToday = date.toDateString() === today.toDateString()
             const isSelected = transactionFilters.dateFrom === formatDateToInput(date)
-            
+
             return (
               <button
                 key={index}
@@ -1219,7 +1219,7 @@ const AppContent: React.FC = () => {
             )
           })}
         </div>
-        
+
         <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
           <button
             onClick={clearFilterDateFrom}
@@ -1243,25 +1243,25 @@ const AppContent: React.FC = () => {
     const currentDate = filterCalendarToDate || new Date()
     const currentMonth = currentDate.getMonth()
     const currentYear = currentDate.getFullYear()
-    
+
     const firstDay = new Date(currentYear, currentMonth, 1)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay())
-    
+
     const days = []
     const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
-    
+
     for (let i = 0; i < 42; i++) {
       const date = new Date(startDate)
       date.setDate(startDate.getDate() + i)
       days.push(date)
     }
-    
+
     const monthNames = [
       'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
     ]
-    
+
     return (
       <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
         <div className="flex items-center justify-between mb-4">
@@ -1271,11 +1271,11 @@ const AppContent: React.FC = () => {
           >
             <ChevronLeft className="w-5 h-5 text-amber-600" />
           </button>
-          
+
           <h3 className="text-lg font-semibold text-amber-800">
             {monthNames[currentMonth]} {currentYear}
           </h3>
-          
+
           <button
             onClick={() => navigateFilterMonthTo('next')}
             className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
@@ -1283,7 +1283,7 @@ const AppContent: React.FC = () => {
             <ChevronRight className="w-5 h-5 text-amber-600" />
           </button>
         </div>
-        
+
         <div className="grid grid-cols-7 gap-1 mb-2">
           {weekDays.map((day, index) => (
             <div key={index} className="text-center text-sm font-semibold text-gray-600 py-2">
@@ -1291,13 +1291,13 @@ const AppContent: React.FC = () => {
             </div>
           ))}
         </div>
-        
+
         <div className="grid grid-cols-7 gap-1">
           {days.map((date, index) => {
             const isCurrentMonth = date.getMonth() === currentMonth
             const isToday = date.toDateString() === today.toDateString()
             const isSelected = transactionFilters.dateTo === formatDateToInput(date)
-            
+
             return (
               <button
                 key={index}
@@ -1315,7 +1315,7 @@ const AppContent: React.FC = () => {
             )
           })}
         </div>
-        
+
         <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
           <button
             onClick={clearFilterDateTo}
@@ -1368,7 +1368,7 @@ const AppContent: React.FC = () => {
       ...prev,
       [name]: value
     }))
-    
+
     // Limpar erro do campo quando o usuário digitar
     setProductFormErrors(prev => ({
       ...prev,
@@ -1386,17 +1386,17 @@ const AppContent: React.FC = () => {
       stock: false, // Não obrigatório
       sold: false  // Não obrigatório
     }
-    
+
     setProductFormErrors(errors)
-    
+
     // Verificar se há erros apenas nos campos obrigatórios
     const hasErrors = errors.name || errors.category || errors.price
-    
+
     if (hasErrors) {
       // Não mostrar notificação, apenas marcar os campos com erro visual
       return false
     }
-    
+
     return true
   }
 
@@ -1486,8 +1486,8 @@ const AppContent: React.FC = () => {
 
   // Função para alternar gráficos
   const toggleChart = (chartId: string) => {
-    setExpandedCharts(prev => 
-      prev.includes(chartId) 
+    setExpandedCharts(prev =>
+      prev.includes(chartId)
         ? prev.filter(id => id !== chartId)  // Remove se já existe
         : [...prev, chartId]                 // Adiciona se não existe
     )
@@ -1495,8 +1495,8 @@ const AppContent: React.FC = () => {
 
   // Função para alternar gráficos dos relatórios
   const toggleReportChart = (chartId: string) => {
-    setExpandedReportCharts(prev => 
-      prev.includes(chartId) 
+    setExpandedReportCharts(prev =>
+      prev.includes(chartId)
         ? prev.filter(id => id !== chartId)
         : [...prev, chartId]
     )
@@ -1529,18 +1529,18 @@ const AppContent: React.FC = () => {
     // Calcular totais das transações reais para o mês selecionado (para comparar com metas)
     const currentYear = new Date().getFullYear()
     const { receitas, despesas, resultado } = calculateTotalsForMonth(selectedMonth, currentYear)
-    
+
     // Obter o mês selecionado nas metas
     const mesSelecionadoMetas = mesesMetas.find(mes => mes.indice === selectedMonth) || mesesMetas[new Date().getMonth()]
-    
+
     // Dados reais das transações do mês selecionado
     const totalReceitasMes = receitas
     const totalDespesasMes = despesas
     const lucroLiquidoMes = resultado
-    
+
     // Função para determinar o trimestre de um mês (0-11)
     const getQuarter = (month: number) => Math.floor(month / 3)
-    
+
     // Determinar trimestre atual baseado no mês selecionado
     const trimestreAtual = getQuarter(selectedMonth)
     const mesesDoTrimestre = [
@@ -1548,19 +1548,19 @@ const AppContent: React.FC = () => {
       trimestreAtual * 3 + 1, // Segundo mês do trimestre
       trimestreAtual * 3 + 2  // Terceiro mês do trimestre
     ]
-    
+
     // Nomes dos trimestres
     const nomesTrimestres = [
       'Q1 (Jan-Mar)', 'Q2 (Abr-Jun)', 'Q3 (Jul-Set)', 'Q4 (Out-Dez)'
     ]
-    
+
     // Filtrar transações do trimestre atual usando função auxiliar
     const transacoesTrimestre = transactions.filter(t => {
       if (!t.date) return false
       const { month, year } = getMonthYearFromDate(t.date)
       return mesesDoTrimestre.includes(month) && year === currentYear
     })
-    
+
     // Dados trimestrais (usando dados reais das transações)
     const totalReceitasTrimestre = transacoesTrimestre
       .filter(t => isReceita(t.type))
@@ -1569,18 +1569,18 @@ const AppContent: React.FC = () => {
       .filter(t => isDespesa(t.type))
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
     const lucroLiquidoTrimestre = totalReceitasTrimestre - totalDespesasTrimestre
-    
+
     // Meta do trimestre (soma das metas dos 3 meses)
-    const metaTrimestre = mesesDoTrimestre.reduce((total, mesIndex) => 
+    const metaTrimestre = mesesDoTrimestre.reduce((total, mesIndex) =>
       total + (mesesMetas[mesIndex]?.meta || 0), 0
     )
-    
+
     // Filtrar transações do ano atual usando função auxiliar
     const transacoesAno = transactions.filter(t => {
       if (!t.date) return false
       return getYearFromDate(t.date) === currentYear
     })
-    
+
     // Dados anuais (usando dados reais das transações)
     const totalReceitasAno = transacoesAno
       .filter(t => isReceita(t.type))
@@ -1654,19 +1654,19 @@ const AppContent: React.FC = () => {
       // Se não houver dados ou todos os valores forem 0, exibir rosca cinza
       const hasData = data.length > 0 && data.some(item => item.value > 0);
       const displayData = hasData ? data : [{ name: 'Sem dados', value: 100, color: '#e5e7eb' }];
-      
+
       return (
         <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
           <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
           <ResponsiveContainer width="100%" height={350}>
             <RechartsPieChart>
               <Pie
-                data={displayData} 
-                cx="50%" 
-                cy="50%" 
-                innerRadius={80} 
-                outerRadius={140} 
-                paddingAngle={hasData ? 8 : 0} 
+                data={displayData}
+                cx="50%"
+                cy="50%"
+                innerRadius={80}
+                outerRadius={140}
+                paddingAngle={hasData ? 8 : 0}
                 dataKey="value"
                 cornerRadius={hasData ? 10 : 0}
                 stroke="none"
@@ -1676,7 +1676,7 @@ const AppContent: React.FC = () => {
                 ))}
               </Pie>
               {hasData && (
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number) => [
                     `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
                     ''
@@ -1690,8 +1690,8 @@ const AppContent: React.FC = () => {
                 />
               )}
               {hasData && (
-                <Legend 
-                  verticalAlign="bottom" 
+                <Legend
+                  verticalAlign="bottom"
                   height={36}
                   iconType="circle"
                   wrapperStyle={{
@@ -1702,11 +1702,11 @@ const AppContent: React.FC = () => {
                 />
               )}
               {!hasData && (
-                <text 
-                  x="50%" 
-                  y="50%" 
-                  textAnchor="middle" 
-                  dominantBaseline="middle" 
+                <text
+                  x="50%"
+                  y="50%"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
                   className="fill-gray-400 text-sm font-medium"
                 >
                   Sem dados disponíveis
@@ -1723,7 +1723,7 @@ const AppContent: React.FC = () => {
       <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
         <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
         <ResponsiveContainer width="100%" height={350}>
-          <BarChart 
+          <BarChart
             data={data}
             margin={{
               top: 20,
@@ -1732,24 +1732,24 @@ const AppContent: React.FC = () => {
               bottom: 20,
             }}
           >
-            <CartesianGrid 
-              strokeDasharray="3 3" 
+            <CartesianGrid
+              strokeDasharray="3 3"
               stroke="#f0f0f0"
               vertical={false}
             />
-            <XAxis 
-              dataKey="name" 
+            <XAxis
+              dataKey="name"
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#666' }}
             />
-            <YAxis 
+            <YAxis
               tickFormatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#666' }}
             />
-            <Tooltip 
+            <Tooltip
               formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               contentStyle={{
                 backgroundColor: 'white',
@@ -1758,8 +1758,8 @@ const AppContent: React.FC = () => {
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
               }}
             />
-            <Bar 
-              dataKey="value" 
+            <Bar
+              dataKey="value"
               fill="#8884d8"
               radius={[8, 8, 0, 0]}
             >
@@ -1808,12 +1808,12 @@ const AppContent: React.FC = () => {
               ))}
             </select>
           </div>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card Receitas */}
               <div className="space-y-4">
-                <div 
+                <div
                   className="bg-green-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart('receitas-mensal')}
                 >
@@ -1834,7 +1834,7 @@ const AppContent: React.FC = () => {
 
               {/* Card Despesas */}
               <div className="space-y-4">
-                <div 
+                <div
                   className="bg-red-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart('despesas-mensal')}
                 >
@@ -1855,10 +1855,9 @@ const AppContent: React.FC = () => {
 
               {/* Card Saldo */}
               <div className="space-y-4">
-                <div 
-                  className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
-                    lucroLiquidoMes >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
-                  }`}
+                <div
+                  className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${lucroLiquidoMes >= 0 ? 'bg-yellow-500' : 'bg-yellow-500'
+                    }`}
                   onClick={() => toggleChart('saldo-mensal')}
                 >
                   <div className="flex items-center gap-4">
@@ -1867,9 +1866,8 @@ const AppContent: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
-                      <p className={`text-2xl font-bold mt-1 ${
-                        lucroLiquidoMes >= 0 ? 'text-green-900' : 'text-red-900'
-                      }`}>
+                      <p className={`text-2xl font-bold mt-1 ${lucroLiquidoMes >= 0 ? 'text-green-900' : 'text-red-900'
+                        }`}>
                         R$ {lucroLiquidoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
@@ -1890,12 +1888,12 @@ const AppContent: React.FC = () => {
               {nomesTrimestres[trimestreAtual]}
             </span>
           </h2>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card Receitas Trimestrais */}
               <div className="space-y-4">
-                <div 
+                <div
                   className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart('receitas-trimestre')}
                 >
@@ -1916,7 +1914,7 @@ const AppContent: React.FC = () => {
 
               {/* Card Despesas Trimestrais */}
               <div className="space-y-4">
-                <div 
+                <div
                   className="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart('despesas-trimestre')}
                 >
@@ -1937,7 +1935,7 @@ const AppContent: React.FC = () => {
 
               {/* Card Saldo Trimestral */}
               <div className="space-y-4">
-                <div 
+                <div
                   className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart('saldo-trimestre')}
                 >
@@ -1947,9 +1945,8 @@ const AppContent: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo</p>
-                      <p className={`text-2xl font-bold mt-1 ${
-                        lucroLiquidoTrimestre >= 0 ? 'text-green-900' : 'text-red-900'
-                      }`}>
+                      <p className={`text-2xl font-bold mt-1 ${lucroLiquidoTrimestre >= 0 ? 'text-green-900' : 'text-red-900'
+                        }`}>
                         R$ {lucroLiquidoTrimestre.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
@@ -1967,12 +1964,12 @@ const AppContent: React.FC = () => {
             <PieChart className="w-6 h-6 text-purple-600" />
             Ano
           </h2>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card Receitas Anuais */}
               <div className="space-y-4">
-                <div 
+                <div
                   className="bg-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart('receitas-anual')}
                 >
@@ -1993,7 +1990,7 @@ const AppContent: React.FC = () => {
 
               {/* Card Despesas Anuais */}
               <div className="space-y-4">
-                <div 
+                <div
                   className="bg-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart('despesas-anual')}
                 >
@@ -2014,10 +2011,9 @@ const AppContent: React.FC = () => {
 
               {/* Card Saldo Anual */}
               <div className="space-y-4">
-                <div 
-                  className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
-                    lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-yellow-600'
-                  }`}
+                <div
+                  className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${lucroLiquidoAno >= 0 ? 'bg-yellow-600' : 'bg-yellow-600'
+                    }`}
                   onClick={() => toggleChart('saldo-anual')}
                 >
                   <div className="flex items-center gap-4">
@@ -2026,9 +2022,8 @@ const AppContent: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">Saldo Anual</p>
-                      <p className={`text-2xl font-bold mt-1 ${
-                        lucroLiquidoAno >= 0 ? 'text-green-900' : 'text-red-900'
-                      }`}>
+                      <p className={`text-2xl font-bold mt-1 ${lucroLiquidoAno >= 0 ? 'text-green-900' : 'text-red-900'
+                        }`}>
                         R$ {lucroLiquidoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
@@ -2046,7 +2041,7 @@ const AppContent: React.FC = () => {
             <DollarSign className="w-6 h-6 text-gray-600" />
             Transações Recentes
           </h2>
-          
+
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {transacoesRecentes.length === 0 ? (
               <div className="p-8 text-center">
@@ -2059,18 +2054,16 @@ const AppContent: React.FC = () => {
                   <div key={index} className="p-4 hover:bg-gray-50 transition-colors duration-200">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                          isReceita(transacao.type) ? 'bg-emerald-500' : 'bg-red-500'
-                        }`}></div>
+                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${isReceita(transacao.type) ? 'bg-emerald-500' : 'bg-red-500'
+                          }`}></div>
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-gray-900 truncate">{transacao.description}</p>
                           <p className="text-sm text-gray-500 truncate">{transacao.category}</p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className={`font-bold whitespace-nowrap ${
-                          isReceita(transacao.type) ? 'text-emerald-600' : 'text-red-600'
-                        }`}>
+                        <p className={`font-bold whitespace-nowrap ${isReceita(transacao.type) ? 'text-emerald-600' : 'text-red-600'
+                          }`}>
                           {isReceita(transacao.type) ? '+' : '-'}R$ {transacao.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         <p className="text-sm text-gray-500 whitespace-nowrap">
@@ -2082,9 +2075,9 @@ const AppContent: React.FC = () => {
                 ))}
               </div>
             )}
-            
+
             <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-100">
-              <button 
+              <button
                 onClick={() => setActiveTab('transactions')}
                 className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 group"
               >
@@ -2229,7 +2222,7 @@ const AppContent: React.FC = () => {
             <PieChart className="w-6 h-6 text-gray-600" />
             Resultado
           </h2>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro */}
             <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
@@ -2239,13 +2232,13 @@ const AppContent: React.FC = () => {
                   <span className="font-semibold text-gray-700">REFORÇO DE CAIXA</span>
                   <span className="font-bold text-gray-800">R$ 0,00</span>
                 </div>
-                
+
                 {/* SAÍDA DE CAIXA */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="font-semibold text-gray-700">SAÍDA DE CAIXA</span>
                   <span className="font-bold text-gray-800">R$ 0,00</span>
                 </div>
-                
+
                 {/* RECEITA */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="font-semibold text-emerald-700">RECEITA</span>
@@ -2253,7 +2246,7 @@ const AppContent: React.FC = () => {
                     R$ {totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-                
+
                 {/* DESPESA */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="font-semibold text-red-700">DESPESA</span>
@@ -2261,19 +2254,18 @@ const AppContent: React.FC = () => {
                     -R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-                
+
                 {/* SALDO INICIAL */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="font-semibold text-blue-700">SALDO INICIAL</span>
                   <span className="font-bold text-blue-800">R$ {saldoInicial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
-                
+
                 {/* TOTAL GERAL */}
                 <div className="flex justify-between items-center py-4 bg-gray-50 px-4 rounded-lg border-2 border-gray-300 mt-4">
                   <span className="font-bold text-gray-900 text-lg">Total geral</span>
-                  <span className={`font-bold text-xl ${
-                    (saldoInicial + totalReceitas - totalDespesas) >= 0 ? 'text-emerald-800' : 'text-red-800'
-                  }`}>
+                  <span className={`font-bold text-xl ${(saldoInicial + totalReceitas - totalDespesas) >= 0 ? 'text-emerald-800' : 'text-red-800'
+                    }`}>
                     R$ {(saldoInicial + totalReceitas - totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -2295,14 +2287,14 @@ const AppContent: React.FC = () => {
                     <span className="font-bold text-gray-800 text-xl">%</span>
                   </div>
                 </div>
-                
+
                 {/* META */}
                 <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
                   <div className="font-bold text-gray-800 italic">META</div>
                   <div className="text-center font-bold text-gray-800">R$ {metaValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                   <div className="text-center font-bold text-gray-800">100%</div>
                 </div>
-                
+
                 {/* ALCANÇADO */}
                 <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
                   <div className="font-bold text-emerald-700 italic">ALCANÇADO</div>
@@ -2313,7 +2305,7 @@ const AppContent: React.FC = () => {
                     {metaValue > 0 ? ((totalReceitas / metaValue) * 100).toFixed(0) : 0}%
                   </div>
                 </div>
-                
+
                 {/* RESTANTE */}
                 <div className="grid grid-cols-3 gap-4 py-3">
                   <div className="font-bold text-red-700 italic">RESTANTE</div>
@@ -2335,14 +2327,14 @@ const AppContent: React.FC = () => {
             <TrendingUp className="w-6 h-6 text-emerald-600" />
             Faturamento
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200 shadow-lg">
               <h3 className="text-lg font-bold text-emerald-800 mb-4">Faturamento TOTAL</h3>
               <div className="text-2xl font-bold text-emerald-900 mb-4">
                 R$ {reais.totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-emerald-700 mb-1">
@@ -2350,19 +2342,19 @@ const AppContent: React.FC = () => {
                   <span>{proj.faturamentoTotal > 0 ? ((reais.totalReceitas / proj.faturamentoTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-emerald-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.faturamentoTotal > 0 ? (reais.totalReceitas / proj.faturamentoTotal) * 100 : 0)}%` }}
                   ></div>
                   {proj.faturamentoTotal > 0 && (reais.totalReceitas / proj.faturamentoTotal) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-emerald-700 to-emerald-800 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.totalReceitas / proj.faturamentoTotal) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-emerald-700 font-medium">
                 R$ {reais.totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.faturamentoTotal - reais.totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2373,26 +2365,26 @@ const AppContent: React.FC = () => {
               <div className="text-2xl font-bold text-green-900 mb-4">
                 R$ {reais.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-green-700 mb-1">
                   <span>Progresso</span>
                   <span>{proj.faturamentoVarejo > 0 ? ((reais.receitasVarejo / proj.faturamentoVarejo) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-green-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.faturamentoVarejo > 0 ? (reais.receitasVarejo / proj.faturamentoVarejo) * 100 : 0)}%` }}
                   ></div>
                   {proj.faturamentoVarejo > 0 && (reais.receitasVarejo / proj.faturamentoVarejo) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-green-700 to-green-800 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.receitasVarejo / proj.faturamentoVarejo) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-green-700 font-medium">
                 R$ {reais.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.faturamentoVarejo - reais.receitasVarejo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2403,26 +2395,26 @@ const AppContent: React.FC = () => {
               <div className="text-2xl font-bold text-teal-900 mb-4">
                 R$ {reais.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-teal-700 mb-1">
                   <span>Progresso</span>
                   <span>{proj.faturamentoAtacado > 0 ? ((reais.receitasAtacado / proj.faturamentoAtacado) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-teal-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.faturamentoAtacado > 0 ? (reais.receitasAtacado / proj.faturamentoAtacado) * 100 : 0)}%` }}
                   ></div>
                   {proj.faturamentoAtacado > 0 && (reais.receitasAtacado / proj.faturamentoAtacado) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-teal-700 to-teal-800 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.receitasAtacado / proj.faturamentoAtacado) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-teal-700 font-medium">
                 R$ {reais.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.faturamentoAtacado - reais.receitasAtacado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2436,33 +2428,33 @@ const AppContent: React.FC = () => {
             <TrendingDown className="w-6 h-6 text-red-600" />
             Despesas
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
               <h3 className="text-lg font-bold text-red-800 mb-4">Despesas TOTAL</h3>
               <div className="text-2xl font-bold text-red-900 mb-4">
                 R$ {reais.totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-red-700 mb-1">
                   <span>Limite</span>
                   <span>{proj.despesasTotal > 0 ? ((reais.totalDespesas / proj.despesasTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-red-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.despesasTotal > 0 ? (reais.totalDespesas / proj.despesasTotal) * 100 : 0)}%` }}
                   ></div>
                   {proj.despesasTotal > 0 && (reais.totalDespesas / proj.despesasTotal) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-red-700 to-red-900 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.totalDespesas / proj.despesasTotal) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-red-700 font-medium">
                 R$ {reais.totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.despesasTotal - reais.totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2473,26 +2465,26 @@ const AppContent: React.FC = () => {
               <div className="text-2xl font-bold text-orange-900 mb-4">
                 R$ {reais.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-orange-700 mb-1">
                   <span>Limite</span>
                   <span>{proj.despesasVariável > 0 ? ((reais.despesasVariável / proj.despesasVariável) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-orange-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.despesasVariável > 0 ? (reais.despesasVariável / proj.despesasVariável) * 100 : 0)}%` }}
                   ></div>
                   {proj.despesasVariável > 0 && (reais.despesasVariável / proj.despesasVariável) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-orange-700 to-orange-900 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.despesasVariável / proj.despesasVariável) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-orange-700 font-medium">
                 R$ {reais.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.despesasVariável - reais.despesasVariável).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2503,26 +2495,26 @@ const AppContent: React.FC = () => {
               <div className="text-2xl font-bold text-amber-900 mb-4">
                 R$ {reais.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-amber-700 mb-1">
                   <span>Limite</span>
                   <span>{proj.despesasFixo > 0 ? ((reais.despesasFixo / proj.despesasFixo) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-amber-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.despesasFixo > 0 ? (reais.despesasFixo / proj.despesasFixo) * 100 : 0)}%` }}
                   ></div>
                   {proj.despesasFixo > 0 && (reais.despesasFixo / proj.despesasFixo) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-amber-700 to-amber-900 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.despesasFixo / proj.despesasFixo) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-amber-700 font-medium">
                 R$ {reais.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.despesasFixo - reais.despesasFixo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2536,33 +2528,33 @@ const AppContent: React.FC = () => {
             <ArrowUpCircle className="w-6 h-6 text-indigo-600" />
             Investimentos
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-lg">
               <h3 className="text-lg font-bold text-blue-800 mb-4">Investimentos Gerais</h3>
               <div className="text-2xl font-bold text-blue-900 mb-4">
                 R$ {reais.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-blue-700 mb-1">
                   <span>Meta</span>
                   <span>{proj.investimentosGerais > 0 ? ((reais.investimentos / proj.investimentosGerais) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-blue-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.investimentosGerais > 0 ? (reais.investimentos / proj.investimentosGerais) * 100 : 0)}%` }}
                   ></div>
                   {proj.investimentosGerais > 0 && (reais.investimentos / proj.investimentosGerais) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-blue-700 to-blue-900 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.investimentos / proj.investimentosGerais) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-blue-700 font-medium">
                 R$ {reais.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.investimentosGerais - reais.investimentos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2573,26 +2565,26 @@ const AppContent: React.FC = () => {
               <div className="text-2xl font-bold text-purple-900 mb-4">
                 R$ {reais.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-purple-700 mb-1">
                   <span>Meta</span>
                   <span>{proj.investimentosMkt > 0 ? ((reais.mkt / proj.investimentosMkt) * 100).toFixed(0) : 0}%</span>
                 </div>
                 <div className="w-full bg-purple-200 rounded-full h-2 relative">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, proj.investimentosMkt > 0 ? (reais.mkt / proj.investimentosMkt) * 100 : 0)}%` }}
                   ></div>
                   {proj.investimentosMkt > 0 && (reais.mkt / proj.investimentosMkt) * 100 > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-purple-700 to-purple-900 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, ((reais.mkt / proj.investimentosMkt) * 100) - 100)}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-sm text-purple-700 font-medium">
                 R$ {reais.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, proj.investimentosMkt - reais.mkt).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -2614,7 +2606,7 @@ const AppContent: React.FC = () => {
             {monthName} - {currentYear}
           </h2>
         </div>
-        
+
         {/* Conteúdo do Mês */}
         {renderMonthContent(monthName, monthIndex, metaValue, saldoInicial)}
       </div>
@@ -2624,7 +2616,7 @@ const AppContent: React.FC = () => {
   // Função para renderizar o total do ano
   const renderTotalAno = () => {
     const currentYear = new Date().getFullYear()
-    
+
     // Usar função auxiliar do escopo do componente para evitar problemas de timezone
     const transacoesDoAno = transactions.filter(t => {
       if (!t.date) return false
@@ -2661,7 +2653,7 @@ const AppContent: React.FC = () => {
             <PieChart className="w-8 h-8 text-purple-600" />
             Resultado Anual
           </h2>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro Anual */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl shadow-lg border-2 border-purple-200">
@@ -2671,13 +2663,13 @@ const AppContent: React.FC = () => {
                   <span className="font-bold text-purple-800 text-lg">REFORÇO DE CAIXA</span>
                   <span className="font-bold text-purple-900 text-lg">R$ 0,00</span>
                 </div>
-                
+
                 {/* SAÍDA DE CAIXA */}
                 <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
                   <span className="font-bold text-purple-800 text-lg">SAÍDA DE CAIXA</span>
                   <span className="font-bold text-purple-900 text-lg">R$ 0,00</span>
                 </div>
-                
+
                 {/* RECEITA ANUAL */}
                 <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
                   <span className="font-bold text-emerald-700 text-lg">RECEITA ANUAL</span>
@@ -2685,7 +2677,7 @@ const AppContent: React.FC = () => {
                     R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-                
+
                 {/* DESPESA ANUAL */}
                 <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
                   <span className="font-bold text-red-700 text-lg">DESPESA ANUAL</span>
@@ -2693,19 +2685,18 @@ const AppContent: React.FC = () => {
                     -R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-                
+
                 {/* SALDO INICIAL */}
                 <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
                   <span className="font-bold text-blue-700 text-lg">SALDO INICIAL</span>
                   <span className="font-bold text-blue-800 text-lg">R$ {saldoInicialAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
-                
+
                 {/* TOTAL GERAL ANUAL */}
                 <div className="flex justify-between items-center py-6 bg-gradient-to-r from-purple-100 to-indigo-100 px-6 rounded-xl border-3 border-purple-400 mt-6">
                   <span className="font-bold text-purple-900 text-2xl">Total Geral Anual</span>
-                  <span className={`font-bold text-2xl ${
-                    (saldoInicialAno + totalReceitasAno - totalDespesasAno) >= 0 ? 'text-emerald-800' : 'text-red-800'
-                  }`}>
+                  <span className={`font-bold text-2xl ${(saldoInicialAno + totalReceitasAno - totalDespesasAno) >= 0 ? 'text-emerald-800' : 'text-red-800'
+                    }`}>
                     R$ {(saldoInicialAno + totalReceitasAno - totalDespesasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -2727,14 +2718,14 @@ const AppContent: React.FC = () => {
                     <span className="font-bold text-purple-900 text-2xl">%</span>
                   </div>
                 </div>
-                
+
                 {/* META ANUAL */}
                 <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200">
                   <div className="font-bold text-purple-800 italic text-lg">META ANUAL</div>
                   <div className="text-center font-bold text-purple-900 text-lg">R$ {metaTotalAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                   <div className="text-center font-bold text-purple-900 text-lg">100%</div>
                 </div>
-                
+
                 {/* ALCANÇADO ANUAL */}
                 <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200">
                   <div className="font-bold text-emerald-700 italic text-lg">ALCANÇADO</div>
@@ -2745,7 +2736,7 @@ const AppContent: React.FC = () => {
                     {metaTotalAno > 0 ? ((totalReceitasAno / metaTotalAno) * 100).toFixed(0) : 0}%
                   </div>
                 </div>
-                
+
                 {/* RESTANTE ANUAL */}
                 <div className="grid grid-cols-3 gap-4 py-4">
                   <div className="font-bold text-red-700 italic text-lg">RESTANTE</div>
@@ -2767,14 +2758,14 @@ const AppContent: React.FC = () => {
             <TrendingUp className="w-8 h-8 text-emerald-600" />
             Faturamento Anual
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 p-8 rounded-2xl border-2 border-emerald-300 shadow-xl">
               <h3 className="text-xl font-bold text-emerald-900 mb-6">Faturamento TOTAL ANUAL</h3>
               <div className="text-3xl font-bold text-emerald-900 mb-4">
                 R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-emerald-800 mb-1">
@@ -2783,20 +2774,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-emerald-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-emerald-600 to-emerald-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.faturamentoTotal > 0 ? (totalReceitasAno / projAnual.faturamentoTotal) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.faturamentoTotal > 0 && ((totalReceitasAno / projAnual.faturamentoTotal) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-emerald-800 to-emerald-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((totalReceitasAno / projAnual.faturamentoTotal) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-emerald-800 font-medium">
                 R$ {totalReceitasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.faturamentoTotal - totalReceitasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -2808,7 +2799,7 @@ const AppContent: React.FC = () => {
               <div className="text-3xl font-bold text-green-900 mb-4">
                 R$ {reaisAnual.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-green-800 mb-1">
@@ -2817,20 +2808,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-green-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-green-600 to-green-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.faturamentoVarejo > 0 ? (reaisAnual.receitasVarejo / projAnual.faturamentoVarejo) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.faturamentoVarejo > 0 && ((reaisAnual.receitasVarejo / projAnual.faturamentoVarejo) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-green-800 to-green-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((reaisAnual.receitasVarejo / projAnual.faturamentoVarejo) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-green-800 font-medium">
                 R$ {reaisAnual.receitasVarejo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.faturamentoVarejo - reaisAnual.receitasVarejo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -2842,7 +2833,7 @@ const AppContent: React.FC = () => {
               <div className="text-3xl font-bold text-teal-900 mb-4">
                 R$ {reaisAnual.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-teal-800 mb-1">
@@ -2851,20 +2842,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-teal-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-teal-600 to-teal-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.faturamentoAtacado > 0 ? (reaisAnual.receitasAtacado / projAnual.faturamentoAtacado) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.faturamentoAtacado > 0 && ((reaisAnual.receitasAtacado / projAnual.faturamentoAtacado) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-teal-800 to-teal-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((reaisAnual.receitasAtacado / projAnual.faturamentoAtacado) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-teal-800 font-medium">
                 R$ {reaisAnual.receitasAtacado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.faturamentoAtacado - reaisAnual.receitasAtacado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -2879,14 +2870,14 @@ const AppContent: React.FC = () => {
             <TrendingDown className="w-8 h-8 text-red-600" />
             Despesas Anuais
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-red-100 to-red-200 p-8 rounded-2xl border-2 border-red-300 shadow-xl">
               <h3 className="text-xl font-bold text-red-900 mb-6">Despesas TOTAL Anuais</h3>
               <div className="text-3xl font-bold text-red-900 mb-4">
                 R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-red-800 mb-1">
@@ -2895,20 +2886,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-red-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-red-600 to-red-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.despesasTotal > 0 ? (totalDespesasAno / projAnual.despesasTotal) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.despesasTotal > 0 && ((totalDespesasAno / projAnual.despesasTotal) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-red-800 to-red-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((totalDespesasAno / projAnual.despesasTotal) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Usado/Restante */}
               <div className="text-sm text-red-800 font-medium">
                 R$ {totalDespesasAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.despesasTotal - totalDespesasAno).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -2920,7 +2911,7 @@ const AppContent: React.FC = () => {
               <div className="text-3xl font-bold text-orange-900 mb-4">
                 R$ {reaisAnual.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-orange-800 mb-1">
@@ -2929,20 +2920,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-orange-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-orange-600 to-orange-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.despesasVariável > 0 ? (reaisAnual.despesasVariável / projAnual.despesasVariável) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.despesasVariável > 0 && ((reaisAnual.despesasVariável / projAnual.despesasVariável) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-orange-800 to-orange-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((reaisAnual.despesasVariável / projAnual.despesasVariável) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Usado/Restante */}
               <div className="text-sm text-orange-800 font-medium">
                 R$ {reaisAnual.despesasVariável.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.despesasVariável - reaisAnual.despesasVariável).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -2954,7 +2945,7 @@ const AppContent: React.FC = () => {
               <div className="text-3xl font-bold text-amber-900 mb-4">
                 R$ {reaisAnual.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-amber-800 mb-1">
@@ -2963,20 +2954,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-amber-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-amber-600 to-amber-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.despesasFixo > 0 ? (reaisAnual.despesasFixo / projAnual.despesasFixo) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.despesasFixo > 0 && ((reaisAnual.despesasFixo / projAnual.despesasFixo) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-amber-800 to-amber-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((reaisAnual.despesasFixo / projAnual.despesasFixo) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Usado/Restante */}
               <div className="text-sm text-amber-800 font-medium">
                 R$ {reaisAnual.despesasFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.despesasFixo - reaisAnual.despesasFixo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -2991,14 +2982,14 @@ const AppContent: React.FC = () => {
             <ArrowUpCircle className="w-8 h-8 text-indigo-600" />
             Investimentos Anuais
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-8 rounded-2xl border-2 border-blue-300 shadow-xl">
               <h3 className="text-xl font-bold text-blue-900 mb-6">Investimentos Gerais Anuais</h3>
               <div className="text-3xl font-bold text-blue-900 mb-4">
                 R$ {reaisAnual.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-blue-800 mb-1">
@@ -3007,20 +2998,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-blue-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-blue-600 to-blue-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.investimentosGerais > 0 ? (reaisAnual.investimentos / projAnual.investimentosGerais) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.investimentosGerais > 0 && ((reaisAnual.investimentos / projAnual.investimentosGerais) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-blue-800 to-blue-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((reaisAnual.investimentos / projAnual.investimentosGerais) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-blue-800 font-medium">
                 R$ {reaisAnual.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.investimentosGerais - reaisAnual.investimentos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -3032,7 +3023,7 @@ const AppContent: React.FC = () => {
               <div className="text-3xl font-bold text-purple-900 mb-4">
                 R$ {reaisAnual.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
-              
+
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-purple-800 mb-1">
@@ -3041,20 +3032,20 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="w-full bg-purple-300 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-purple-600 to-purple-700 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, projAnual.investimentosMkt > 0 ? (reaisAnual.mkt / projAnual.investimentosMkt) * 100 : 0)}%` }}
                   ></div>
                   {/* Barra de excesso (>100%) */}
                   {projAnual.investimentosMkt > 0 && ((reaisAnual.mkt / projAnual.investimentosMkt) * 100) > 100 && (
-                    <div 
+                    <div
                       className="absolute top-0 left-0 bg-gradient-to-r from-purple-800 to-purple-900 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, (((reaisAnual.mkt / projAnual.investimentosMkt) * 100) - 100))}%` }}
                     ></div>
                   )}
                 </div>
               </div>
-              
+
               {/* Valores Alcançado/Restante */}
               <div className="text-sm text-purple-800 font-medium">
                 R$ {reaisAnual.mkt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / R$ {Math.max(0, projAnual.investimentosMkt - reaisAnual.mkt).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -3070,35 +3061,35 @@ const AppContent: React.FC = () => {
   const exportarTransacoesPDF = async () => {
     try {
       setIsExportTransacoesModalOpen(false)
-      
+
       // Obter transações para exportar
-      const transacoesParaExportar = exportarFiltradas 
-        ? getFilteredAndSortedTransactions() 
+      const transacoesParaExportar = exportarFiltradas
+        ? getFilteredAndSortedTransactions()
         : transactions
-      
+
       // Validar se há transações
       if (transacoesParaExportar.length === 0) {
         alert('Não há transações para exportar!')
         return
       }
-      
+
       // Calcular resumo financeiro (se habilitado)
       let totalReceitas = 0
       let totalDespesas = 0
       let saldo = 0
-      
+
       if (incluirResumo) {
         totalReceitas = transacoesParaExportar
           .filter(t => isReceita(t.type))
           .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
-        
+
         totalDespesas = transacoesParaExportar
           .filter(t => isDespesa(t.type))
           .reduce((sum, t) => sum + (Number(t.value) || 0), 0)
-        
+
         saldo = totalReceitas - totalDespesas
       }
-      
+
       // Criar elemento temporário para capturar o conteúdo
       const tempElement = document.createElement('div')
       tempElement.style.position = 'absolute'
@@ -3108,7 +3099,7 @@ const AppContent: React.FC = () => {
       tempElement.style.backgroundColor = 'white'
       tempElement.style.padding = '20px'
       tempElement.style.fontFamily = 'Arial, sans-serif'
-      
+
       // Construir informações de filtros aplicados
       let infoFiltros = 'Todas as transações'
       if (exportarFiltradas) {
@@ -3117,14 +3108,14 @@ const AppContent: React.FC = () => {
         if (transactionFilters.category) filtrosAtivos.push(`Categoria: ${transactionFilters.category}`)
         if (transactionFilters.dateFrom) filtrosAtivos.push(`De: ${new Date(transactionFilters.dateFrom).toLocaleDateString('pt-BR')}`)
         if (transactionFilters.dateTo) filtrosAtivos.push(`Até: ${new Date(transactionFilters.dateTo).toLocaleDateString('pt-BR')}`)
-        
+
         if (filtrosAtivos.length > 0) {
           infoFiltros = `Transações filtradas: ${filtrosAtivos.join(', ')}`
         } else {
           infoFiltros = 'Todas as transações (sem filtros ativos)'
         }
       }
-      
+
       // Construir HTML do relatório
       let htmlContent = `
         <div style="text-align: center; margin-bottom: 30px;">
@@ -3134,7 +3125,7 @@ const AppContent: React.FC = () => {
           <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
         </div>
       `
-      
+
       // Resumo Executivo (se habilitado)
       if (incluirResumo) {
         htmlContent += `
@@ -3161,7 +3152,7 @@ const AppContent: React.FC = () => {
           </div>
         `
       }
-      
+
       // Tabela de Transações
       htmlContent += `
         <div style="margin-bottom: 30px;">
@@ -3179,7 +3170,7 @@ const AppContent: React.FC = () => {
               </thead>
               <tbody>
       `
-      
+
       // Adicionar linhas da tabela
       transacoesParaExportar.forEach((transaction, index) => {
         const dataFormatada = formatDateToDisplay(transaction.date)
@@ -3189,7 +3180,7 @@ const AppContent: React.FC = () => {
         const valorCor = isReceita(transaction.type) ? '#059669' : '#dc2626'
         const sinal = isReceita(transaction.type) ? '+' : '-'
         const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
-        
+
         htmlContent += `
           <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
             <td style="padding: 10px; color: #374151;">${dataFormatada}</td>
@@ -3206,14 +3197,14 @@ const AppContent: React.FC = () => {
           </tr>
         `
       })
-      
+
       htmlContent += `
               </tbody>
             </table>
           </div>
         </div>
       `
-      
+
       // Rodapé
       htmlContent += `
         <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
@@ -3224,10 +3215,10 @@ const AppContent: React.FC = () => {
           </p>
         </div>
       `
-      
+
       tempElement.innerHTML = htmlContent
       document.body.appendChild(tempElement)
-      
+
       // Capturar o elemento como imagem
       const canvas = await html2canvas(tempElement, {
         scale: 2,
@@ -3235,10 +3226,10 @@ const AppContent: React.FC = () => {
         allowTaint: true,
         backgroundColor: '#ffffff'
       })
-      
+
       // Remover elemento temporário
       document.body.removeChild(tempElement)
-      
+
       // Criar PDF
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -3246,9 +3237,9 @@ const AppContent: React.FC = () => {
       const pageHeight = 295
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
-      
+
       let position = 0
-      
+
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
@@ -3306,7 +3297,7 @@ const AppContent: React.FC = () => {
           </button>
         </div>
       </div>
-      
+
       {/* Filtros de Transações */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
@@ -3315,98 +3306,98 @@ const AppContent: React.FC = () => {
             <Filter className="w-5 h-5 text-amber-600" />
             <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
           </div>
-          
+
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
-          {/* Filtro Tipo */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Tipo</label>
-            <select
-              value={transactionFilters.type}
-              onChange={(e) => setTransactionFilters(prev => ({ 
-                ...prev, 
-                type: e.target.value,
-                category: '' // Limpar categoria quando tipo mudar
-              }))}
-              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
-            >
-              <option value="">Todos os tipos</option>
-              <option value="Receita">Receitas</option>
-              <option value="Despesa">Despesas</option>
-            </select>
-          </div>
-          
-          {/* Filtro Categoria */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Categoria</label>
-            <select
-              value={transactionFilters.category}
-              onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
-              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
-            >
-              <option value="">Todas as categorias</option>
-              {transactionFilters.type ? (
-                getCategoriesByType(transactionFilters.type).map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))
-              ) : (
-                <>
-                  {/* Opções para Receita */}
-                  <optgroup label="Receita">
-                    {getCategoriesByType('Receita').map(category => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </optgroup>
-                  {/* Opções para Despesa */}
-                  <optgroup label="Despesa">
-                    {getCategoriesByType('Despesa').map(category => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </optgroup>
-                </>
-              )}
-            </select>
-          </div>
-          
-          {/* Filtro Data Início */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Data Início</label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Início"
-                value={transactionFilters.dateFrom ? formatDateToDisplay(transactionFilters.dateFrom) : ''}
-                readOnly
-                onClick={handleFilterCalendarFromToggle}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
-              />
-              <Calendar 
-                className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none" 
-              />
-              {isFilterCalendarFromOpen && renderFilterCalendarFrom()}
+            {/* Filtro Tipo */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Tipo</label>
+              <select
+                value={transactionFilters.type}
+                onChange={(e) => setTransactionFilters(prev => ({
+                  ...prev,
+                  type: e.target.value,
+                  category: '' // Limpar categoria quando tipo mudar
+                }))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+              >
+                <option value="">Todos os tipos</option>
+                <option value="Receita">Receitas</option>
+                <option value="Despesa">Despesas</option>
+              </select>
+            </div>
+
+            {/* Filtro Categoria */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Categoria</label>
+              <select
+                value={transactionFilters.category}
+                onChange={(e) => setTransactionFilters(prev => ({ ...prev, category: e.target.value }))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+              >
+                <option value="">Todas as categorias</option>
+                {transactionFilters.type ? (
+                  getCategoriesByType(transactionFilters.type).map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))
+                ) : (
+                  <>
+                    {/* Opções para Receita */}
+                    <optgroup label="Receita">
+                      {getCategoriesByType('Receita').map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </optgroup>
+                    {/* Opções para Despesa */}
+                    <optgroup label="Despesa">
+                      {getCategoriesByType('Despesa').map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </optgroup>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* Filtro Data Início */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Data Início</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Início"
+                  value={transactionFilters.dateFrom ? formatDateToDisplay(transactionFilters.dateFrom) : ''}
+                  readOnly
+                  onClick={handleFilterCalendarFromToggle}
+                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+                />
+                <Calendar
+                  className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none"
+                />
+                {isFilterCalendarFromOpen && renderFilterCalendarFrom()}
+              </div>
+            </div>
+
+            {/* Filtro Data Fim */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Data Fim</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Fim"
+                  value={transactionFilters.dateTo ? formatDateToDisplay(transactionFilters.dateTo) : ''}
+                  readOnly
+                  onClick={handleFilterCalendarToToggle}
+                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+                />
+                <Calendar
+                  className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none"
+                />
+                {isFilterCalendarToOpen && renderFilterCalendarTo()}
+              </div>
             </div>
           </div>
-          
-          {/* Filtro Data Fim */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">Data Fim</label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Fim"
-                value={transactionFilters.dateTo ? formatDateToDisplay(transactionFilters.dateTo) : ''}
-                readOnly
-                onClick={handleFilterCalendarToToggle}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
-              />
-              <Calendar 
-                className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none" 
-              />
-              {isFilterCalendarToOpen && renderFilterCalendarTo()}
-            </div>
-          </div>
-          </div>
-          
+
           {/* Botão Limpar Filtros */}
           <div className="lg:ml-auto">
             <button
@@ -3418,7 +3409,7 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Lista de Transações */}
       <div className="space-y-4">
         {transactions.length === 0 ? (
@@ -3443,7 +3434,7 @@ const AppContent: React.FC = () => {
 
             {/* Cabeçalho das Colunas */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
-               <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
+              <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -3452,39 +3443,39 @@ const AppContent: React.FC = () => {
                     className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                   />
                 </div>
-                <button 
+                <button
                   onClick={() => handleSort('date')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Data</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Data</p>
                   {getSortIcon('date')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('description')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Descrição</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Descrição</p>
                   {getSortIcon('description')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('type')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Tipo</p>
                   {getSortIcon('type')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('category')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Categoria</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Categoria</p>
                   {getSortIcon('category')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('value')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-28 sm:w-32"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide whitespace-nowrap">Valor</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide whitespace-nowrap">Valor</p>
                   {getSortIcon('value')}
                 </button>
                 <div className="flex-shrink-0 w-16 sm:w-20 flex justify-center">
@@ -3492,11 +3483,10 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             {getFilteredAndSortedTransactions().map((transaction, index) => (
-              <div key={transaction.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
-                index === transactions.length - 1 ? 'border-b-0' : ''
-              }`}>
+              <div key={transaction.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${index === transactions.length - 1 ? 'border-b-0' : ''
+                }`}>
                 <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
                   {/* Checkbox */}
                   <div className="flex-shrink-0 text-left">
@@ -3507,48 +3497,46 @@ const AppContent: React.FC = () => {
                       className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                     />
                   </div>
-                  
+
                   {/* Data */}
-                   <div className="flex-shrink-0 w-20 sm:w-24 text-left">
-                     <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                  <div className="flex-shrink-0 w-20 sm:w-24 text-left">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                       {formatDateToDisplay(transaction.date)}
                     </p>
                   </div>
-                  
+
                   {/* Descrição */}
-                   <div className="flex-1 min-w-0 text-left">
-                     <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
-                        {transaction.description}
-                      </h3>
-                    </div>
-                  
+                  <div className="flex-1 min-w-0 text-left">
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
+                      {transaction.description}
+                    </h3>
+                  </div>
+
                   {/* Tipo */}
                   <div className="flex-shrink-0 w-16 sm:w-20 text-center">
-                    <span className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium ${
-                      isReceita(transaction.type) 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium ${isReceita(transaction.type)
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
                       {transaction.type}
                     </span>
                   </div>
-                  
+
                   {/* Categoria */}
-                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
-                     <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
-                        {transaction.category}
-                      </span>
-                    </div>
-                  
+                  <div className="flex-shrink-0 w-20 sm:w-24 text-center">
+                    <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
+                      {transaction.category}
+                    </span>
+                  </div>
+
                   {/* Valor */}
                   <div className="flex-shrink-0 w-28 sm:w-32 text-center">
-                    <p className={`text-xs sm:text-sm md:text-lg font-bold whitespace-nowrap ${
-                      isReceita(transaction.type) ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    <p className={`text-xs sm:text-sm md:text-lg font-bold whitespace-nowrap ${isReceita(transaction.type) ? 'text-green-600' : 'text-red-600'
+                      }`}>
                       {isReceita(transaction.type) ? '+' : '-'}R$ {transaction.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  
+
                   {/* Ações */}
                   <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-center">
                     <button
@@ -3590,18 +3578,18 @@ const AppContent: React.FC = () => {
   const exportarProdutosPDF = async () => {
     try {
       setIsExportProdutosModalOpen(false)
-      
+
       // Obter produtos para exportar
-      const produtosParaExportar = exportarFiltrados 
-        ? getFilteredAndSortedProducts() 
+      const produtosParaExportar = exportarFiltrados
+        ? getFilteredAndSortedProducts()
         : products
-      
+
       // Validar se há produtos
       if (produtosParaExportar.length === 0) {
         alert('Não há produtos para exportar!')
         return
       }
-      
+
       // Calcular resumo estatístico (se habilitado)
       let totalProdutos = produtosParaExportar.length
       let valorTotalEstoque = 0
@@ -3612,34 +3600,34 @@ const AppContent: React.FC = () => {
       let produtosEmEstoque = 0
       let produtosSemEstoque = 0
       let produtosPorCategoria: { [key: string]: number } = {}
-      
+
       if (incluirResumoProdutos) {
         // Calcular valores totais
         produtosParaExportar.forEach(p => {
           valorTotalEstoque += p.price * p.stock
           custoTotalEstoque += p.cost * p.stock
           totalVendidos += p.sold
-          
+
           if (p.stock > 0) {
             produtosEmEstoque++
           } else {
             produtosSemEstoque++
           }
-          
+
           // Contar por categoria
           produtosPorCategoria[p.category] = (produtosPorCategoria[p.category] || 0) + 1
-          
+
           // Calcular margem de lucro (evitar divisão por zero)
           if (p.price > 0) {
             const margem = ((p.price - p.cost) / p.price) * 100
             margemMedia += margem
           }
         })
-        
+
         lucroPotencial = valorTotalEstoque - custoTotalEstoque
         margemMedia = produtosParaExportar.length > 0 ? margemMedia / produtosParaExportar.length : 0
       }
-      
+
       // Criar elemento temporário para capturar o conteúdo
       const tempElement = document.createElement('div')
       tempElement.style.position = 'absolute'
@@ -3649,7 +3637,7 @@ const AppContent: React.FC = () => {
       tempElement.style.backgroundColor = 'white'
       tempElement.style.padding = '20px'
       tempElement.style.fontFamily = 'Arial, sans-serif'
-      
+
       // Construir informações de filtros aplicados
       let infoFiltros = 'Todos os produtos'
       if (exportarFiltrados) {
@@ -3661,14 +3649,14 @@ const AppContent: React.FC = () => {
         if (productFilters.soldFilter === 'notSold') filtrosAtivos.push('Não vendidos')
         if (productFilters.costFilter === 'withCost') filtrosAtivos.push('Com preço de custo')
         if (productFilters.costFilter === 'withoutCost') filtrosAtivos.push('Sem preço de custo')
-        
+
         if (filtrosAtivos.length > 0) {
           infoFiltros = `Produtos filtrados: ${filtrosAtivos.join(', ')}`
         } else {
           infoFiltros = 'Todos os produtos (sem filtros ativos)'
         }
       }
-      
+
       // Construir HTML do relatório
       let htmlContent = `
         <div style="text-align: center; margin-bottom: 30px;">
@@ -3678,7 +3666,7 @@ const AppContent: React.FC = () => {
           <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
         </div>
       `
-      
+
       // Resumo Estatístico (se habilitado)
       if (incluirResumoProdutos) {
         htmlContent += `
@@ -3735,7 +3723,7 @@ const AppContent: React.FC = () => {
           </div>
         `
       }
-      
+
       // Tabela de Produtos
       htmlContent += `
         <div style="margin-bottom: 30px;">
@@ -3755,12 +3743,12 @@ const AppContent: React.FC = () => {
               </thead>
               <tbody>
       `
-      
+
       // Adicionar linhas da tabela
       produtosParaExportar.forEach((product, index) => {
         const precoFormatado = product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
         const custoFormatado = product.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-        
+
         // Calcular margem de lucro (evitar divisão por zero)
         let margemLucro = 0
         let margemCor = '#6b7280'
@@ -3768,7 +3756,7 @@ const AppContent: React.FC = () => {
           margemLucro = ((product.price - product.cost) / product.price) * 100
           margemCor = margemLucro >= 0 ? '#10b981' : '#ef4444'
         }
-        
+
         // Cor do estoque
         let estoqueCor = '#ef4444' // vermelho
         if (product.stock > 10) {
@@ -3776,9 +3764,9 @@ const AppContent: React.FC = () => {
         } else if (product.stock > 0) {
           estoqueCor = '#f59e0b' // amarelo
         }
-        
+
         const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
-        
+
         htmlContent += `
           <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
             <td style="padding: 10px; color: #374151; font-weight: 500;">${product.name}</td>
@@ -3791,14 +3779,14 @@ const AppContent: React.FC = () => {
           </tr>
         `
       })
-      
+
       htmlContent += `
               </tbody>
             </table>
           </div>
         </div>
       `
-      
+
       // Rodapé
       htmlContent += `
         <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
@@ -3809,10 +3797,10 @@ const AppContent: React.FC = () => {
           </p>
         </div>
       `
-      
+
       tempElement.innerHTML = htmlContent
       document.body.appendChild(tempElement)
-      
+
       // Capturar o elemento como imagem
       const canvas = await html2canvas(tempElement, {
         scale: 2,
@@ -3820,10 +3808,10 @@ const AppContent: React.FC = () => {
         allowTaint: true,
         backgroundColor: '#ffffff'
       })
-      
+
       // Remover elemento temporário
       document.body.removeChild(tempElement)
-      
+
       // Criar PDF
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -3831,9 +3819,9 @@ const AppContent: React.FC = () => {
       const pageHeight = 295
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
-      
+
       let position = 0
-      
+
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
@@ -3891,7 +3879,7 @@ const AppContent: React.FC = () => {
           </button>
         </div>
       </div>
-      
+
       {/* Filtros de Produtos */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
@@ -3900,67 +3888,67 @@ const AppContent: React.FC = () => {
             <Filter className="w-5 h-5 text-amber-600" />
             <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">FILTRE SEUS ITENS:</h2>
           </div>
-          
+
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
-          {/* Filtro Categoria */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Categoria</label>
-            <input
-              type="text"
-              placeholder="Categoria..."
-              value={productFilters.category}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, category: e.target.value }))}
-              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
-            />
+            {/* Filtro Categoria */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Categoria</label>
+              <input
+                type="text"
+                placeholder="Categoria..."
+                value={productFilters.category}
+                onChange={(e) => setProductFilters(prev => ({ ...prev, category: e.target.value }))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+              />
+            </div>
+
+            {/* Filtro Estoque */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Estoque</label>
+
+              <select
+                value={productFilters.stockFilter}
+                onChange={(e) => setProductFilters(prev => ({ ...prev, stockFilter: e.target.value }))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+              >
+                <option value="">Todos os estoques</option>
+                <option value="inStock">Em estoque</option>
+                <option value="outOfStock">Sem estoque</option>
+              </select>
+            </div>
+
+            {/* Filtro Vendidos */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Vendidos</label>
+
+              <select
+                value={productFilters.soldFilter}
+                onChange={(e) => setProductFilters(prev => ({ ...prev, soldFilter: e.target.value }))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+              >
+                <option value="">Todos os vendidos</option>
+                <option value="sold">Vendidos</option>
+                <option value="notSold">Não vendidos</option>
+              </select>
+            </div>
+
+            {/* Filtro Preço de Custo */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Preço de Custo</label>
+
+              <select
+                value={productFilters.costFilter}
+                onChange={(e) => setProductFilters(prev => ({ ...prev, costFilter: e.target.value }))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+              >
+                <option value="">Todos os custos</option>
+                <option value="withCost">Com preço de custo</option>
+                <option value="withoutCost">Sem preço de custo</option>
+              </select>
+            </div>
           </div>
-          
-          {/* Filtro Estoque */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Estoque</label>
-          
-            <select
-              value={productFilters.stockFilter}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, stockFilter: e.target.value }))}
-              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
-            >
-              <option value="">Todos os estoques</option>
-              <option value="inStock">Em estoque</option>
-              <option value="outOfStock">Sem estoque</option>
-            </select>
-          </div>
-          
-          {/* Filtro Vendidos */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Vendidos</label>
-          
-            <select
-              value={productFilters.soldFilter}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, soldFilter: e.target.value }))}
-              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
-            >
-              <option value="">Todos os vendidos</option>
-              <option value="sold">Vendidos</option>
-              <option value="notSold">Não vendidos</option>
-            </select>
-          </div>
-          
-          {/* Filtro Preço de Custo */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Preço de Custo</label>
-          
-            <select
-              value={productFilters.costFilter}
-              onChange={(e) => setProductFilters(prev => ({ ...prev, costFilter: e.target.value }))}
-              className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
-            >
-              <option value="">Todos os custos</option>
-              <option value="withCost">Com preço de custo</option>
-              <option value="withoutCost">Sem preço de custo</option>
-            </select>
-          </div>
-          </div>
-          
+
           {/* Botão Limpar Filtros */}
           <div className="lg:ml-auto">
             <button
@@ -3972,7 +3960,7 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Lista de Produtos */}
       <div className="space-y-4">
         {products.length === 0 ? (
@@ -3993,42 +3981,42 @@ const AppContent: React.FC = () => {
                     className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                   />
                 </div>
-                <button 
+                <button
                   onClick={() => handleSort('name')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Nome</p>
                   {getSortIcon('name')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('category')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Categoria</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Categoria</p>
                   {getSortIcon('category')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('price')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Preço</p>
                   {getSortIcon('price')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('cost')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Custo</p>
                   {getSortIcon('cost')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('stock')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
-                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Estoque</p>
                   {getSortIcon('stock')}
                 </button>
-                <button 
+                <button
                   onClick={() => handleSort('sold')}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
@@ -4040,11 +4028,10 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             {getFilteredAndSortedProducts().map((product, index) => (
-              <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
-                index === products.length - 1 ? 'border-b-0' : ''
-              }`}>
+              <div key={product.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${index === products.length - 1 ? 'border-b-0' : ''
+                }`}>
                 <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
                   {/* Checkbox */}
                   <div className="flex-shrink-0 text-left">
@@ -4061,42 +4048,42 @@ const AppContent: React.FC = () => {
                       {product.name}
                     </h3>
                   </div>
-                  
+
                   {/* Categoria */}
-                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
-                     <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
-                        {product.category}
-                      </span>
-                    </div>
-                  
+                  <div className="flex-shrink-0 w-20 sm:w-24 text-center">
+                    <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
+                      {product.category}
+                    </span>
+                  </div>
+
                   {/* Preço */}
                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-green-600 truncate">
                       R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  
+
                   {/* Custo */}
                   <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-orange-600 truncate">
                       R$ {product.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  
+
                   {/* Estoque */}
                   <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <p className={`text-xs sm:text-sm md:text-lg font-bold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'} truncate`}>
                       {product.stock}
                     </p>
                   </div>
-                  
+
                   {/* Vendidos */}
                   <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-blue-600 truncate">
                       {product.sold}
                     </p>
                   </div>
-                  
+
                   {/* Ações */}
                   <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-center">
                     <button
@@ -4128,7 +4115,7 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
             ))}
-            
+
             {/* Botão de Deletar Selecionados */}
             {selectedProducts.size > 0 && (
               <div className="flex justify-end p-4 bg-red-50 border-t border-red-200">
@@ -4156,13 +4143,13 @@ const AppContent: React.FC = () => {
   const exportarRelatoriosPDF = async (periodoSelecionado: string) => {
     try {
       setIsPeriodoExportModalOpen(false)
-      
+
       // Calcular dados reais das transações (mesma lógica de renderReports)
       const agora = new Date()
       const inicioSemana = new Date(agora)
       inicioSemana.setDate(agora.getDate() - agora.getDay())
       inicioSemana.setHours(0, 0, 0, 0)
-      
+
       const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
       const inicioTrimestre = new Date(agora.getFullYear(), Math.floor(agora.getMonth() / 3) * 3, 1)
       const inicioAno = new Date(agora.getFullYear(), 0, 1)
@@ -4191,13 +4178,13 @@ const AppContent: React.FC = () => {
       // Funções auxiliares de cálculo (reutilizadas de renderReports)
       const calcularVendasPorCategoria = (transacoes: any[]) => {
         const vendasPorCategoria: { [key: string]: number } = {}
-        
+
         transacoes.forEach(t => {
           if (isReceita(t.type)) {
             vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + t.value
           }
         })
-        
+
         const cores = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
         return Object.entries(vendasPorCategoria).map(([nome, valor], index) => ({
           nome,
@@ -4208,13 +4195,13 @@ const AppContent: React.FC = () => {
 
       const calcularDespesasPorCategoria = (transacoes: any[]) => {
         const despesasPorCategoria: { [key: string]: number } = {}
-        
+
         transacoes.forEach(t => {
           if (isDespesa(t.type)) {
             despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + t.value
           }
         })
-        
+
         const cores = ['#ef4444', '#f97316', '#84cc16', '#f59e0b', '#8b5cf6']
         return Object.entries(despesasPorCategoria).map(([nome, valor], index) => ({
           nome,
@@ -4225,17 +4212,17 @@ const AppContent: React.FC = () => {
 
       const calcularVendasPorProduto = (transacoes: any[]) => {
         const vendasPorProduto: { [key: string]: number } = {}
-        
+
         transacoes.forEach(t => {
           if (isReceita(t.type)) {
             const nomeProduto = t.description || 'Produto sem nome'
             vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + t.value
           }
         })
-        
+
         const cores = ['#8b5cf6', '#ec4899', '#06b6d4', '#22c55e', '#3b82f6']
         return Object.entries(vendasPorProduto)
-          .sort(([,a], [,b]) => b - a)
+          .sort(([, a], [, b]) => b - a)
           .slice(0, 5)
           .map(([nome, valor], index) => ({
             nome,
@@ -4245,8 +4232,8 @@ const AppContent: React.FC = () => {
       }
 
       // Determinar quais períodos exportar
-      const periodosParaExportar: Array<{nome: string, transacoes: any[]}> = []
-      
+      const periodosParaExportar: Array<{ nome: string, transacoes: any[] }> = []
+
       if (periodoSelecionado === 'Todos') {
         periodosParaExportar.push(
           { nome: 'Semana', transacoes: transacoesSemana },
@@ -4301,7 +4288,7 @@ const AppContent: React.FC = () => {
         const vendasPorCategoria = calcularVendasPorCategoria(periodo.transacoes)
         const vendasPorProduto = calcularVendasPorProduto(periodo.transacoes)
         const despesasPorCategoria = calcularDespesasPorCategoria(periodo.transacoes)
-        
+
         const totalVendasCategoria = vendasPorCategoria.reduce((sum, item) => sum + item.valor, 0)
         const totalDespesas = despesasPorCategoria.reduce((sum, item) => sum + item.valor, 0)
         const lucroLiquido = totalVendasCategoria - totalDespesas
@@ -4417,9 +4404,9 @@ const AppContent: React.FC = () => {
       const pageHeight = 295
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
-      
+
       let position = 0
-      
+
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
@@ -4449,7 +4436,7 @@ const AppContent: React.FC = () => {
     const inicioSemana = new Date(agora)
     inicioSemana.setDate(agora.getDate() - agora.getDay())
     inicioSemana.setHours(0, 0, 0, 0)
-    
+
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
     const inicioTrimestre = new Date(agora.getFullYear(), Math.floor(agora.getMonth() / 3) * 3, 1)
     const inicioAno = new Date(agora.getFullYear(), 0, 1)
@@ -4478,13 +4465,13 @@ const AppContent: React.FC = () => {
     // Função para calcular vendas por categoria
     const calcularVendasPorCategoria = (transacoes: any[]) => {
       const vendasPorCategoria: { [key: string]: number } = {}
-      
+
       transacoes.forEach(t => {
         if (isReceita(t.type)) {
           vendasPorCategoria[t.category] = (vendasPorCategoria[t.category] || 0) + t.value
         }
       })
-      
+
       const cores = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
       return Object.entries(vendasPorCategoria).map(([nome, valor], index) => ({
         nome,
@@ -4496,13 +4483,13 @@ const AppContent: React.FC = () => {
     // Função para calcular despesas por categoria
     const calcularDespesasPorCategoria = (transacoes: any[]) => {
       const despesasPorCategoria: { [key: string]: number } = {}
-      
+
       transacoes.forEach(t => {
         if (isDespesa(t.type)) {
           despesasPorCategoria[t.category] = (despesasPorCategoria[t.category] || 0) + t.value
         }
       })
-      
+
       const cores = ['#ef4444', '#f97316', '#84cc16', '#f59e0b', '#8b5cf6']
       return Object.entries(despesasPorCategoria).map(([nome, valor], index) => ({
         nome,
@@ -4514,7 +4501,7 @@ const AppContent: React.FC = () => {
     // Função para calcular vendas por produto (baseado nas transações)
     const calcularVendasPorProduto = (transacoes: any[]) => {
       const vendasPorProduto: { [key: string]: number } = {}
-      
+
       transacoes.forEach(t => {
         if (isReceita(t.type)) {
           // Usar a descrição como nome do produto
@@ -4522,10 +4509,10 @@ const AppContent: React.FC = () => {
           vendasPorProduto[nomeProduto] = (vendasPorProduto[nomeProduto] || 0) + t.value
         }
       })
-      
+
       const cores = ['#8b5cf6', '#ec4899', '#06b6d4', '#22c55e', '#3b82f6']
       return Object.entries(vendasPorProduto)
-        .sort(([,a], [,b]) => b - a) // Ordenar por valor decrescente
+        .sort(([, a], [, b]) => b - a) // Ordenar por valor decrescente
         .slice(0, 5) // Pegar apenas os 5 primeiros
         .map(([nome, valor], index) => ({
           nome,
@@ -4537,12 +4524,12 @@ const AppContent: React.FC = () => {
     // Função para calcular produtos vendidos por período
     const calcularProdutosPorPeriodo = (transacoes: any[], tipo: 'dia' | 'semana') => {
       const produtosPorPeriodo: { [key: string]: { [key: string]: number } } = {}
-      
+
       transacoes.forEach(t => {
         if (isReceita(t.type)) {
           const dataTransacao = parseLocalDate(t.date)
           let chavePeriodo: string
-          
+
           if (tipo === 'dia') {
             const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
             chavePeriodo = diasSemana[dataTransacao.getDay()]
@@ -4550,17 +4537,17 @@ const AppContent: React.FC = () => {
             const semanaDoMes = Math.ceil(dataTransacao.getDate() / 7)
             chavePeriodo = `Sem ${semanaDoMes}`
           }
-          
+
           if (!produtosPorPeriodo[chavePeriodo]) {
             produtosPorPeriodo[chavePeriodo] = {}
           }
-          
+
           const nomeProduto = t.description || 'Produto sem nome'
-          produtosPorPeriodo[chavePeriodo][nomeProduto] = 
+          produtosPorPeriodo[chavePeriodo][nomeProduto] =
             (produtosPorPeriodo[chavePeriodo][nomeProduto] || 0) + 1
         }
       })
-      
+
       return Object.entries(produtosPorPeriodo).map(([nome, produtos]) => ({
         nome,
         ...produtos
@@ -4604,10 +4591,10 @@ const AppContent: React.FC = () => {
       return (
         <div className="space-y-6 mb-12">
           <h2 className="text-2xl font-bold text-gray-800">{titulo}</h2>
-          
+
           {/* Cards principais lado a lado */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
+
             {/* Card Vendas por Categoria */}
             <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
               {/* Seção Vendas por Categoria */}
@@ -4616,7 +4603,7 @@ const AppContent: React.FC = () => {
                   <span className="text-gray-400 text-lg mr-3">📈</span>
                   <h3 className="text-lg font-bold text-gray-800">Vendas por Categoria</h3>
                 </div>
-                
+
                 <div className="space-y-3">
                   {dados.vendasPorCategoria.map((item: any, index: number) => {
                     // Cores baseadas na imagem - tons de verde claro para categorias vazias
@@ -4624,10 +4611,10 @@ const AppContent: React.FC = () => {
                     const labelBgColors = ['bg-green-200', 'bg-green-200', 'bg-green-200'];
                     const textColors = ['text-green-800', 'text-green-800', 'text-green-800'];
                     const chartId = `vendas-categoria-${periodo}-${index}`;
-                    
+
                     return (
                       <div key={index} className="space-y-3">
-                        <div 
+                        <div
                           className={`${backgroundColors[index]} p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity`}
                           onClick={() => toggleReportChart(chartId)}
                         >
@@ -4638,12 +4625,12 @@ const AppContent: React.FC = () => {
                             R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
-                        
+
                         {/* Gráfico expandido: categoria vs Total Vendas */}
                         {expandedReportCharts.includes(chartId) && (() => {
                           const chartData = [
-                            {nome: item.nome, valor: item.valor, cor: item.cor},
-                            {nome: 'Total Vendas', valor: totalVendasCategoria, cor: '#22c55e'}
+                            { nome: item.nome, valor: item.valor, cor: item.cor },
+                            { nome: 'Total Vendas', valor: totalVendasCategoria, cor: '#22c55e' }
                           ]
                           return (
                             <div className="bg-gray-50 p-4 rounded-lg" style={{ minHeight: 280 }}>
@@ -4667,11 +4654,11 @@ const AppContent: React.FC = () => {
                     );
                   })}
                 </div>
-                
+
                 {/* Total Vendas por Categoria */}
                 <div className="mt-6 pt-4 border-t border-gray-200">
                   <div className="space-y-3">
-                    <div 
+                    <div
                       className="bg-green-200 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => toggleReportChart(`total-vendas-categoria-${periodo}`)}
                     >
@@ -4682,7 +4669,7 @@ const AppContent: React.FC = () => {
                         R$ {totalVendasCategoria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
-                    
+
                     {/* Gráfico expandido do Total */}
                     {expandedReportCharts.includes(`total-vendas-categoria-${periodo}`) && (
                       <div className="bg-gray-50 p-4 rounded-lg">
@@ -4700,13 +4687,13 @@ const AppContent: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Seção Vendas por Tipo de Produto */}
               <div>
                 <div className="mb-4">
                   <h4 className="text-md font-bold text-gray-700">Vendas por Tipo de Produto</h4>
                 </div>
-                
+
                 <div className="space-y-3">
                   {dados.vendasPorProduto.map((item: any, index: number) => {
                     // Cores baseadas na imagem - tons de azul para produtos
@@ -4714,10 +4701,10 @@ const AppContent: React.FC = () => {
                     const labelBgColors = ['bg-blue-200', 'bg-blue-200', 'bg-blue-200'];
                     const textColors = ['text-blue-800', 'text-blue-800', 'text-blue-800'];
                     const chartId = `vendas-produto-${periodo}-${index}`;
-                    
+
                     return (
                       <div key={index} className="space-y-3">
-                        <div 
+                        <div
                           className={`${backgroundColors[index]} p-3 rounded-lg flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity`}
                           onClick={() => toggleReportChart(chartId)}
                         >
@@ -4728,12 +4715,12 @@ const AppContent: React.FC = () => {
                             R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
-                        
+
                         {/* Gráfico expandido: produto vs Total por Produto */}
                         {expandedReportCharts.includes(chartId) && (() => {
                           const chartData = [
-                            {nome: item.nome, valor: item.valor, cor: item.cor},
-                            {nome: 'Total por Produto', valor: totalVendasProduto, cor: '#3b82f6'}
+                            { nome: item.nome, valor: item.valor, cor: item.cor },
+                            { nome: 'Total por Produto', valor: totalVendasProduto, cor: '#3b82f6' }
                           ]
                           return (
                             <div className="bg-gray-50 p-4 rounded-lg" style={{ minHeight: 280 }}>
@@ -4757,11 +4744,11 @@ const AppContent: React.FC = () => {
                     );
                   })}
                 </div>
-                
+
                 {/* Total Vendas por Produto */}
                 <div className="mt-4 pt-3 border-t border-gray-200">
                   <div className="space-y-3">
-                    <div 
+                    <div
                       className="bg-blue-200 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => toggleReportChart(`total-vendas-produto-${periodo}`)}
                     >
@@ -4772,7 +4759,7 @@ const AppContent: React.FC = () => {
                         R$ {totalVendasProduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
-                    
+
                     {/* Gráfico expandido do Total */}
                     {expandedReportCharts.includes(`total-vendas-produto-${periodo}`) && (
                       <div className="bg-gray-50 p-4 rounded-lg">
@@ -4798,14 +4785,14 @@ const AppContent: React.FC = () => {
                 <span className="text-gray-400 text-lg mr-3">💸</span>
                 <h3 className="text-lg font-bold text-gray-800">Despesas por Categoria</h3>
               </div>
-              
+
               <div className="space-y-3">
                 {dados.despesasPorCategoria.map((item: any, index: number) => {
                   const chartId = `despesas-categoria-${periodo}-${index}`;
-                  
+
                   return (
                     <div key={index} className="space-y-3">
-                      <div 
+                      <div
                         className="bg-orange-50 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => toggleReportChart(chartId)}
                       >
@@ -4816,12 +4803,12 @@ const AppContent: React.FC = () => {
                           R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
-                      
+
                       {/* Gráfico expandido: categoria vs Total Despesas */}
                       {expandedReportCharts.includes(chartId) && (() => {
                         const chartData = [
-                          {nome: item.nome, valor: item.valor, cor: item.cor},
-                          {nome: 'Total Despesas', valor: totalDespesas, cor: '#f97316'}
+                          { nome: item.nome, valor: item.valor, cor: item.cor },
+                          { nome: 'Total Despesas', valor: totalDespesas, cor: '#f97316' }
                         ]
                         return (
                           <div className="bg-gray-50 p-4 rounded-lg" style={{ minHeight: 280 }}>
@@ -4845,11 +4832,11 @@ const AppContent: React.FC = () => {
                   );
                 })}
               </div>
-              
+
               {/* Total de Despesas - Mais escuro */}
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <div className="space-y-3">
-                  <div 
+                  <div
                     className="bg-orange-200 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => toggleReportChart(`total-despesas-${periodo}`)}
                   >
@@ -4860,7 +4847,7 @@ const AppContent: React.FC = () => {
                       R$ {totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  
+
                   {/* Gráfico expandido do Total */}
                   {expandedReportCharts.includes(`total-despesas-${periodo}`) && (
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -4887,22 +4874,22 @@ const AppContent: React.FC = () => {
                 <span className="text-gray-400 text-lg mr-3">📦</span>
                 <h3 className="text-lg font-bold text-gray-800">Produtos Vendidos por {periodo === 'Semana' ? 'Dia' : periodo === 'Mês' ? 'Semana' : periodo === 'Trimestre' ? 'Mês' : 'Trimestre'}</h3>
               </div>
-              <button 
+              <button
                 className="text-blue-600 hover:text-blue-800 font-medium"
                 onClick={() => toggleReportChart(`produtos-${periodo}`)}
               >
                 {expandedReportCharts.includes(`produtos-${periodo}`) ? 'Ocultar Gráfico' : 'Ver Gráfico'}
               </button>
             </div>
-            
+
             {expandedReportCharts.includes(`produtos-${periodo}`) && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={
                     periodo === 'Semana' ? dados.produtosPorDia :
-                    periodo === 'Mês' ? dados.produtosPorSemana :
-                    periodo === 'Trimestre' ? dados.produtosPorMes :
-                    dados.produtosPorTrimestre
+                      periodo === 'Mês' ? dados.produtosPorSemana :
+                        periodo === 'Trimestre' ? dados.produtosPorMes :
+                          dados.produtosPorTrimestre
                   }>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="nome" />
@@ -4922,7 +4909,7 @@ const AppContent: React.FC = () => {
           <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
             <h3 className="text-lg font-bold text-gray-800 mb-6">Resumo do {periodo}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              
+
               {/* Total Vendas */}
               <div className="text-center p-4 bg-green-50 rounded-xl">
                 <p className="text-sm font-bold text-green-600 mb-2">Total Vendas</p>
@@ -4994,13 +4981,13 @@ const AppContent: React.FC = () => {
 
         {/* Seção Semana */}
         {renderSecaoRelatorio('Relatório Semanal', dadosReais.semana, 'Semana')}
-        
+
         {/* Seção Mês */}
         {renderSecaoRelatorio('Relatório Mensal', dadosReais.mes, 'Mês')}
-        
+
         {/* Seção Trimestre */}
         {renderSecaoRelatorio('Relatório Trimestral', dadosReais.trimestre, 'Trimestre')}
-        
+
         {/* Seção Ano */}
         {renderSecaoRelatorio('Relatório Anual', dadosReais.ano, 'Ano')}
       </div>
@@ -5025,29 +5012,29 @@ const AppContent: React.FC = () => {
       tempElement.style.backgroundColor = 'white'
       tempElement.style.padding = '20px'
       tempElement.style.fontFamily = 'Arial, sans-serif'
-      
+
       // Obter dados REAIS do mês selecionado usando a mesma função do dashboard
       const monthIndex = selectedMonth
       const currentYear = new Date().getFullYear()
-      
+
       // Usar a mesma função de cálculo do dashboard para garantir consistência
       const { receitas, despesas, resultado } = calculateTotalsForMonth(monthIndex, currentYear)
       const totalReceitas = receitas
       const totalDespesas = despesas
-      
+
       // Transações do mês (para exibir quantidade no PDF)
       const transacoesDoMes = transactions.filter(t => {
         if (!t.date) return false
         const { month: m, year: y } = getMonthYearFromDate(t.date)
         return m === monthIndex && y === currentYear
       })
-      
+
       // Meta de faturamento = meta do mês selecionado
       const metaFaturamento = mesSelecionado.meta
-      
+
       // Resultado financeiro
       const resultadoFinanceiro = resultado
-      
+
       // Criar HTML do relatório com dados REAIS
       tempElement.innerHTML = `
         <div style="text-align: center; margin-bottom: 30px;">
@@ -5142,9 +5129,9 @@ const AppContent: React.FC = () => {
           </p>
         </div>
       `
-      
+
       document.body.appendChild(tempElement)
-      
+
       // Capturar o elemento como imagem
       const canvas = await html2canvas(tempElement, {
         scale: 2,
@@ -5152,10 +5139,10 @@ const AppContent: React.FC = () => {
         allowTaint: true,
         backgroundColor: '#ffffff'
       })
-      
+
       // Remover elemento temporário
       document.body.removeChild(tempElement)
-      
+
       // Criar PDF
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -5163,25 +5150,25 @@ const AppContent: React.FC = () => {
       const pageHeight = 295
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
-      
+
       let position = 0
-      
+
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
-      
+
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight
         pdf.addPage()
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
       }
-      
+
       // Salvar PDF
       const fileName = `Metas_${mesSelecionado.nome}_${new Date().getFullYear()}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(fileName)
-      
+
       alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Meta de Faturamento: R$ ${metaFaturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Faturamento Realizado: R$ ${totalReceitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Total de Despesas: R$ ${totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n• Resultado Financeiro: R$ ${resultadoFinanceiro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
-      
+
     } catch (error) {
       console.error('Erro ao exportar PDF:', error)
       alert('❌ Erro ao exportar PDF. Tente novamente.')
@@ -5254,11 +5241,11 @@ const AppContent: React.FC = () => {
           <div className="space-y-6 mb-12">
             {/* Dropdown do Mês Selecionado */}
             <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
-              <select 
+              <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 className="w-full text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
-                style={{ 
+                style={{
                   appearance: 'none',
                   WebkitAppearance: 'none',
                   MozAppearance: 'none',
@@ -5276,7 +5263,7 @@ const AppContent: React.FC = () => {
                 ))}
               </select>
             </div>
-            
+
             {/* Conteúdo do Mês */}
             {renderMonthContent(mesSelecionado.nome, mesSelecionado.indice, mesSelecionado.meta, 0)}
           </div>
@@ -5286,7 +5273,7 @@ const AppContent: React.FC = () => {
         {renderTotalAno()}
 
         {/* Renderizar todos os 12 meses em ordem normal */}
-        {mesesMetas.map((mes) => 
+        {mesesMetas.map((mes) =>
           renderMonth(mes.nome, mes.indice, mes.meta, 0)
         )}
       </div>
@@ -5302,9 +5289,9 @@ const AppContent: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-5 overflow-x-auto scrollbar-hide">
               <div className="flex items-center min-w-max flex-shrink-0">
-                <img 
-                  src={isDemoMode ? "/app/alya-logo.png" : "/alya-logo.png"} 
-                  alt="Alya Velas Logo" 
+                <img
+                  src={isDemoMode ? "/app/alya-logo.png" : "/alya-logo.png"}
+                  alt="Alya Velas Logo"
                   className="w-10 h-10 mr-3 rounded-lg shadow-sm object-contain"
                 />
                 <div className="min-w-0 flex-shrink">
@@ -5331,62 +5318,61 @@ const AppContent: React.FC = () => {
 
         {/* Navigation - sempre abaixo do header */}
         <nav className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center overflow-x-auto scrollbar-hide">
-            <div className="flex items-center space-x-2 min-w-max">
-              {(() => {
-                // const visibleModules = getVisibleModules(); // Reservado para uso futuro
-                const allTabs = [
-                  { id: 'dashboard', name: 'Dashboard', icon: Home, key: 'dashboard' },
-                  { id: 'metas', name: 'Metas', icon: TrendingUp, key: 'metas' },
-                  { id: 'projecao', name: 'Projeção', icon: Calculator, key: 'projecao' },
-                  { id: 'reports', name: 'Relatórios', icon: BarChart3, key: 'reports' },
-                  { id: 'transactions', name: 'Transações', icon: DollarSign, key: 'transactions' },
-                  { id: 'products', name: 'Produtos', icon: Package, key: 'products' },
-                  { id: 'clients', name: 'Clientes', icon: Users, key: 'clients' },
-                  { id: 'dre', name: 'DRE', icon: BarChart3, key: 'dre' }
-                ];
-                
-                // Filtrar abas baseado nos módulos visíveis
-                const filteredTabs = allTabs.filter(tab => {
-                  // Se não há módulos definidos ou usuário é admin, mostrar todos
-                  if (!user?.modules || user.modules.length === 0 || user.role === 'admin') {
-                    return true;
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center overflow-x-auto scrollbar-hide">
+              <div className="flex items-center space-x-2 min-w-max">
+                {(() => {
+                  // const visibleModules = getVisibleModules(); // Reservado para uso futuro
+                  const allTabs = [
+                    { id: 'dashboard', name: 'Dashboard', icon: Home, key: 'dashboard' },
+                    { id: 'metas', name: 'Metas', icon: TrendingUp, key: 'metas' },
+                    { id: 'projecao', name: 'Projeção', icon: Calculator, key: 'projecao' },
+                    { id: 'reports', name: 'Relatórios', icon: BarChart3, key: 'reports' },
+                    { id: 'transactions', name: 'Transações', icon: DollarSign, key: 'transactions' },
+                    { id: 'products', name: 'Produtos', icon: Package, key: 'products' },
+                    { id: 'clients', name: 'Clientes', icon: Users, key: 'clients' },
+                    { id: 'dre', name: 'DRE', icon: BarChart3, key: 'dre' }
+                  ];
+
+                  // Filtrar abas baseado nos módulos visíveis
+                  const filteredTabs = allTabs.filter(tab => {
+                    // Se não há módulos definidos ou usuário é admin, mostrar todos
+                    if (!user?.modules || user.modules.length === 0 || user.role === 'admin') {
+                      return true;
+                    }
+                    // Caso contrário, mostrar apenas módulos na lista do usuário
+                    return user.modules.includes(tab.key);
+                  });
+
+                  // Adicionar aba Admin se o usuário for admin
+                  if (user?.role === 'admin') {
+                    filteredTabs.push({ id: 'admin', name: 'Admin', icon: Shield, key: 'admin' });
                   }
-                  // Caso contrário, mostrar apenas módulos na lista do usuário
-                  return user.modules.includes(tab.key);
-                });
-                
-                // Adicionar aba Admin se o usuário for admin
-                if (user?.role === 'admin') {
-                  filteredTabs.push({ id: 'admin', name: 'Admin', icon: Shield, key: 'admin' });
-                }
-                
-                return filteredTabs.map(tab => {
-                  const Icon = tab.icon
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id as TabType)
-                        setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
-                      }}
-                      className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
-                        activeTab === tab.id
+
+                  return filteredTabs.map(tab => {
+                    const Icon = tab.icon
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id as TabType)
+                          setExpandedCharts([]) // Limpa todos os gráficos ao trocar de aba
+                        }}
+                        className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${activeTab === tab.id
                           ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
                           : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5 mr-2" />
-                      {tab.name}
-                    </button>
-                  )
-                })
-              })()}
+                          }`}
+                      >
+                        <Icon className="h-5 w-5 mr-2" />
+                        {tab.name}
+                      </button>
+                    )
+                  })
+                })()}
+              </div>
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
       </div>
 
       {/* Main Content - padding-top para compensar header + nav (altura dinâmica) */}
@@ -5412,8 +5398,8 @@ const AppContent: React.FC = () => {
 
       {/* Modal de Produto */}
       {isProductModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsProductModalOpen(false)
@@ -5462,12 +5448,12 @@ const AppContent: React.FC = () => {
             {/* Formulário */}
             <form onSubmit={async (e) => {
               e.preventDefault()
-              
+
               // Validar formulário antes de prosseguir
               if (!validateProductForm()) {
                 return
               }
-              
+
               if (editingProduct) {
                 // Editar produto existente
                 try {
@@ -5479,9 +5465,9 @@ const AppContent: React.FC = () => {
                     stock: parseInt(productForm.stock) || 0,
                     sold: parseInt(productForm.sold) || 0
                   })
-                  
+
                   if (updatedProduct) {
-                    setProducts(prev => prev.map(p => 
+                    setProducts(prev => prev.map(p =>
                       p.id === editingProduct.id ? updatedProduct : p
                     ))
                   }
@@ -5499,7 +5485,7 @@ const AppContent: React.FC = () => {
                     stock: parseInt(productForm.stock) || 0,
                     sold: parseInt(productForm.sold) || 0
                   })
-                  
+
                   if (newProduct) {
                     setProducts(prev => [newProduct, ...prev])
                   }
@@ -5507,13 +5493,13 @@ const AppContent: React.FC = () => {
                   console.error('Erro ao salvar produto:', error)
                 }
               }
-              
+
               // Limpar formulário e fechar modal
               setEditingProduct(null)
               setIsProductModalOpen(false)
               setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
             }} className="space-y-4">
-              
+
               {/* Nome do Produto */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -5525,11 +5511,10 @@ const AppContent: React.FC = () => {
                   required
                   value={productForm.name}
                   onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
-                    productFormErrors.name 
-                      ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                      : 'bg-gray-50 border-gray-200'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${productFormErrors.name
+                    ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                    : 'bg-gray-50 border-gray-200'
+                    }`}
                   placeholder="Ex: Vela Aromática Lavanda"
                 />
               </div>
@@ -5545,11 +5530,10 @@ const AppContent: React.FC = () => {
                   required
                   value={productForm.category}
                   onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
-                    productFormErrors.category 
-                      ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                      : 'bg-gray-50 border-gray-200'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${productFormErrors.category
+                    ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                    : 'bg-gray-50 border-gray-200'
+                    }`}
                   placeholder="Ex: Velas Aromáticas"
                 />
               </div>
@@ -5567,11 +5551,10 @@ const AppContent: React.FC = () => {
                   required
                   value={productForm.price}
                   onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
-                    productFormErrors.price 
-                      ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                      : 'bg-gray-50 border-gray-200'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${productFormErrors.price
+                    ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                    : 'bg-gray-50 border-gray-200'
+                    }`}
                   placeholder="0,00"
                 />
               </div>
@@ -5660,17 +5643,17 @@ const AppContent: React.FC = () => {
 
       {/* Modal de Nova Transação */}
       {isTransactionModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsTransactionModalOpen(false)
-              setTransactionForm({ 
-                date: new Date().toISOString().split('T')[0], 
-                description: '', 
-                value: '', 
-                type: 'Receita', 
-                category: '' 
+              setTransactionForm({
+                date: new Date().toISOString().split('T')[0],
+                description: '',
+                value: '',
+                type: 'Receita',
+                category: ''
               })
               setTransactionFormErrors({
                 date: false,
@@ -5694,12 +5677,12 @@ const AppContent: React.FC = () => {
                   onClick={() => {
                     setIsTransactionModalOpen(false)
                     setEditingTransaction(null)
-                    setTransactionForm({ 
-                      date: new Date().toISOString().split('T')[0], 
-                      description: '', 
-                      value: '', 
-                      type: 'Receita', 
-                      category: '' 
+                    setTransactionForm({
+                      date: new Date().toISOString().split('T')[0],
+                      description: '',
+                      value: '',
+                      type: 'Receita',
+                      category: ''
                     })
                     setTransactionFormErrors({
                       date: false,
@@ -5720,12 +5703,12 @@ const AppContent: React.FC = () => {
             {/* Formulário */}
             <form onSubmit={async (e) => {
               e.preventDefault()
-              
+
               // Validar formulário antes de prosseguir
               if (!validateTransactionForm()) {
                 return
               }
-              
+
               if (editingTransaction) {
                 // Editar transação existente
                 try {
@@ -5736,9 +5719,9 @@ const AppContent: React.FC = () => {
                     type: transactionForm.type as 'Receita' | 'Despesa',
                     category: transactionForm.category
                   })
-                  
+
                   if (updatedTransaction) {
-                    setTransactions(prev => prev.map(t => 
+                    setTransactions(prev => prev.map(t =>
                       t.id === editingTransaction.id ? updatedTransaction : t
                     ))
                   }
@@ -5755,7 +5738,7 @@ const AppContent: React.FC = () => {
                     type: transactionForm.type as 'Receita' | 'Despesa',
                     category: transactionForm.category
                   })
-                  
+
                   if (newTransaction) {
                     setTransactions(prev => [newTransaction, ...prev])
                   }
@@ -5763,19 +5746,19 @@ const AppContent: React.FC = () => {
                   console.error('Erro ao salvar transação:', error)
                 }
               }
-              
+
               // Limpar formulário e fechar modal
               setEditingTransaction(null)
-              setTransactionForm({ 
-                date: new Date().toISOString().split('T')[0], 
-                description: '', 
-                value: '', 
-                type: 'Receita', 
-                category: '' 
+              setTransactionForm({
+                date: new Date().toISOString().split('T')[0],
+                description: '',
+                value: '',
+                type: 'Receita',
+                category: ''
               })
               setIsTransactionModalOpen(false)
             }} className="space-y-5">
-              
+
               {/* Data */}
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -5787,11 +5770,10 @@ const AppContent: React.FC = () => {
                     name="date"
                     value={transactionForm.date ? formatDateToDisplay(transactionForm.date) : ''}
                     readOnly
-                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white cursor-pointer ${
-                      transactionFormErrors.date 
-                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                        : 'bg-gray-100 border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white cursor-pointer ${transactionFormErrors.date
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                      : 'bg-gray-100 border-gray-300'
+                      }`}
                     placeholder="Selecione uma data"
                     onClick={handleCalendarToggle}
                     required
@@ -5803,7 +5785,7 @@ const AppContent: React.FC = () => {
                   >
                     <Calendar className="w-5 h-5" />
                   </button>
-                  
+
                   {/* Ícone de erro e tooltip */}
                   {transactionFormErrors.date && (
                     <div className="absolute -bottom-8 left-0 z-50">
@@ -5819,7 +5801,7 @@ const AppContent: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Calendário personalizado */}
                 {isCalendarOpen && renderCustomCalendar()}
               </div>
@@ -5835,15 +5817,14 @@ const AppContent: React.FC = () => {
                     name="description"
                     value={transactionForm.description}
                     onChange={handleTransactionInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
-                      transactionFormErrors.description 
-                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                        : 'bg-gray-100 border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${transactionFormErrors.description
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                      : 'bg-gray-100 border-gray-300'
+                      }`}
                     placeholder="Digite a descrição da transação..."
                     required
                   />
-                  
+
                   {/* Ícone de erro e tooltip */}
                   {transactionFormErrors.description && (
                     <div className="absolute -bottom-8 left-0 z-50">
@@ -5872,17 +5853,16 @@ const AppContent: React.FC = () => {
                     name="value"
                     value={transactionForm.value}
                     onChange={handleTransactionInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
-                      transactionFormErrors.value 
-                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                        : 'bg-gray-100 border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${transactionFormErrors.value
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                      : 'bg-gray-100 border-gray-300'
+                      }`}
                     placeholder="0,00"
                     step="0.01"
                     min="0"
                     required
                   />
-                  
+
                   {/* Ícone de erro e tooltip */}
                   {transactionFormErrors.value && (
                     <div className="absolute -bottom-8 left-0 z-50">
@@ -5910,18 +5890,17 @@ const AppContent: React.FC = () => {
                     name="type"
                     value={transactionForm.type}
                     onChange={handleTransactionInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
-                      transactionFormErrors.type 
-                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                        : 'bg-gray-100 border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${transactionFormErrors.type
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                      : 'bg-gray-100 border-gray-300'
+                      }`}
                     required
                   >
                     <option value="">Selecione o tipo</option>
                     <option value="Receita">Receita</option>
                     <option value="Despesa">Despesa</option>
                   </select>
-                  
+
                   {/* Ícone de erro e tooltip */}
                   {transactionFormErrors.type && (
                     <div className="absolute -bottom-8 left-0 z-50">
@@ -5949,11 +5928,10 @@ const AppContent: React.FC = () => {
                     name="category"
                     value={transactionForm.category}
                     onChange={handleTransactionInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
-                      transactionFormErrors.category 
-                        ? 'bg-red-50 border-red-300 focus:ring-red-500' 
-                        : 'bg-gray-100 border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${transactionFormErrors.category
+                      ? 'bg-red-50 border-red-300 focus:ring-red-500'
+                      : 'bg-gray-100 border-gray-300'
+                      }`}
                     required
                   >
                     <option value="" disabled>Selecione uma categoria</option>
@@ -5961,7 +5939,7 @@ const AppContent: React.FC = () => {
                       <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
-                  
+
                   {/* Ícone de erro e tooltip */}
                   {transactionFormErrors.category && (
                     <div className="absolute -bottom-8 left-0 z-50">
@@ -5986,12 +5964,12 @@ const AppContent: React.FC = () => {
                   onClick={() => {
                     setIsTransactionModalOpen(false)
                     setEditingTransaction(null)
-                    setTransactionForm({ 
-                      date: new Date().toISOString().split('T')[0], 
-                      description: '', 
-                      value: '', 
-                      type: 'Receita', 
-                      category: '' 
+                    setTransactionForm({
+                      date: new Date().toISOString().split('T')[0],
+                      description: '',
+                      value: '',
+                      type: 'Receita',
+                      category: ''
                     })
                     setTransactionFormErrors({
                       date: false,
@@ -6020,8 +5998,8 @@ const AppContent: React.FC = () => {
 
       {/* Modal de Importar/Exportar */}
       {isImportExportModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsImportExportModalOpen(false)
@@ -6070,10 +6048,10 @@ const AppContent: React.FC = () => {
                   onClick={async () => {
                     try {
                       console.log('Baixando modelo para:', importExportType)
-                      
+
                       // Tentar baixar do servidor
                       const response = await fetch(`${API_BASE_URL}/modelo/${importExportType}`)
-                      
+
                       if (response.ok) {
                         const blob = await response.blob()
                         const url = window.URL.createObjectURL(blob)
@@ -6084,18 +6062,18 @@ const AppContent: React.FC = () => {
                         a.click()
                         window.URL.revokeObjectURL(url)
                         document.body.removeChild(a)
-                        
+
                         alert(`Modelo baixado! Preencha o arquivo e depois importe.`)
                       } else {
                         throw new Error('Servidor offline')
                       }
                     } catch (error) {
                       console.error('Servidor offline, criando modelo local:', error)
-                      
+
                       // Fallback: criar CSV modelo localmente
                       let csvContent = ''
                       let filename = ''
-                      
+
                       if (importExportType === 'transactions') {
                         csvContent = 'Data,Descrição,Valor,Tipo,Categoria\n'
                         csvContent += '2025-09-23,"Exemplo de venda",150.00,Entrada,Vendas\n'
@@ -6109,7 +6087,7 @@ const AppContent: React.FC = () => {
                         csvContent += 'Produto Exemplo 3,Casa,149.90,75.00,10,3'
                         filename = 'modelo-produtos.csv'
                       }
-                      
+
                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
                       const url = window.URL.createObjectURL(blob)
                       const a = document.createElement('a')
@@ -6119,7 +6097,7 @@ const AppContent: React.FC = () => {
                       a.click()
                       window.URL.revokeObjectURL(url)
                       document.body.removeChild(a)
-                      
+
                       alert('Modelo CSV criado localmente! Preencha o arquivo e importe.')
                     }
                   }}
@@ -6139,7 +6117,7 @@ const AppContent: React.FC = () => {
                     fileInput.type = 'file'
                     fileInput.accept = '.xlsx'
                     fileInput.style.display = 'none'
-                    
+
                     fileInput.onchange = (event) => {
                       const file = (event.target as HTMLInputElement).files?.[0]
                       if (file) {
@@ -6152,7 +6130,7 @@ const AppContent: React.FC = () => {
                       }
                       document.body.removeChild(fileInput)
                     }
-                    
+
                     document.body.appendChild(fileInput)
                     fileInput.click()
                   }}
@@ -6193,15 +6171,15 @@ const AppContent: React.FC = () => {
                 onClick={async () => {
                   try {
                     setIsUploading(true)
-                    
+
                     // Preparar dados para exportação
                     const dataToExport = importExportType === 'transactions' ? transactions : products
-                    
+
                     if (dataToExport.length === 0) {
                       alert(`Nenhuma ${importExportType === 'transactions' ? 'transação' : 'produto'} encontrada para exportar!`)
                       return
                     }
-                    
+
                     // Chamar API de exportação
                     const response = await fetch(`${API_BASE_URL}/export`, {
                       method: 'POST',
@@ -6213,7 +6191,7 @@ const AppContent: React.FC = () => {
                         data: dataToExport
                       })
                     })
-                    
+
                     if (response.ok) {
                       // Baixar arquivo
                       const blob = await response.blob()
@@ -6225,7 +6203,7 @@ const AppContent: React.FC = () => {
                       a.click()
                       window.URL.revokeObjectURL(url)
                       document.body.removeChild(a)
-                      
+
                       alert(`Arquivo ${importExportType === 'transactions' ? 'de transações' : 'de produtos'} exportado com sucesso!`)
                     } else {
                       const error = await response.text()
@@ -6258,9 +6236,9 @@ const AppContent: React.FC = () => {
                       const formData = new FormData()
                       formData.append('file', selectedFile)
                       formData.append('type', importExportType) // 'transactions' ou 'products'
-                      
+
                       console.log(`Enviando arquivo: ${selectedFile.name} (${importExportType})`)
-                      
+
                       // Tentar fazer requisição para o servidor backend
                       try {
                         const headers: HeadersInit = {};
@@ -6272,11 +6250,11 @@ const AppContent: React.FC = () => {
                           headers,
                           body: formData
                         })
-                        
+
                         if (response.ok) {
                           const result = await response.json()
                           console.log('Resposta do servidor:', result)
-                          
+
                           // Atualizar os dados no frontend baseado na resposta
                           if (importExportType === 'transactions' && result.data) {
                             // Salvar cada transação no banco de dados
@@ -6316,7 +6294,7 @@ const AppContent: React.FC = () => {
                               }
                             }
                           }
-                          
+
                           alert(`Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || 'Dados processados com sucesso.'}`)
                         } else {
                           const error = await response.text()
@@ -6325,10 +6303,10 @@ const AppContent: React.FC = () => {
                         }
                       } catch (networkError) {
                         console.error('Erro de conexão com servidor:', networkError)
-                        
+
                         // Fallback: processar dados mock localmente quando servidor não estiver disponível
                         console.log('Servidor não disponível, usando dados de exemplo...')
-                        
+
                         if (importExportType === 'transactions') {
                           const mockTransactions = [
                             { id: (Date.now() + 1).toString(), date: new Date().toISOString().split('T')[0], description: 'Transação Importada 1', value: 150, type: 'Receita' as const, category: 'Vendas', createdAt: new Date() },
@@ -6355,17 +6333,16 @@ const AppContent: React.FC = () => {
                     } finally {
                       setIsUploading(false)
                     }
-                    
+
                     // Fechar modal e limpar arquivo após tentativa
                     setSelectedFile(null)
                     setIsImportExportModalOpen(false)
                   }}
                   disabled={isUploading}
-                  className={`w-full px-6 py-3 font-semibold rounded-lg shadow-lg transition-all duration-200 ${
-                    isUploading 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-xl transform hover:-translate-y-0.5'
-                  }`}
+                  className={`w-full px-6 py-3 font-semibold rounded-lg shadow-lg transition-all duration-200 ${isUploading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-xl transform hover:-translate-y-0.5'
+                    }`}
                 >
                   {isUploading ? 'Enviando arquivo...' : 'Importar Arquivo'}
                 </button>
@@ -6390,8 +6367,8 @@ const AppContent: React.FC = () => {
 
       {/* Modal de Seleção de Período para Exportar Relatórios */}
       {isPeriodoExportModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsPeriodoExportModalOpen(false)
@@ -6420,7 +6397,7 @@ const AppContent: React.FC = () => {
               <p className="text-gray-700 text-center mb-6">
                 Selecione o período que deseja exportar:
               </p>
-              
+
               <div className="grid grid-cols-1 gap-3">
                 <button
                   onClick={() => exportarRelatoriosPDF('Semana')}
@@ -6493,8 +6470,8 @@ const AppContent: React.FC = () => {
 
       {/* Modal de Configuração de Exportação de Transações */}
       {isExportTransacoesModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsExportTransacoesModalOpen(false)
@@ -6523,7 +6500,7 @@ const AppContent: React.FC = () => {
               <p className="text-gray-700 text-sm">
                 Configure as opções de exportação:
               </p>
-              
+
               {/* Opção: Exportar Filtradas */}
               <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
                 <input
@@ -6538,7 +6515,7 @@ const AppContent: React.FC = () => {
                     Exportar apenas transações filtradas
                   </label>
                   <p className="text-sm text-gray-600">
-                    {exportarFiltradas 
+                    {exportarFiltradas
                       ? 'Serão exportadas apenas as transações que estão visíveis na lista (com filtros aplicados).'
                       : 'Todas as transações serão exportadas, independente dos filtros ativos.'}
                   </p>
@@ -6559,7 +6536,7 @@ const AppContent: React.FC = () => {
                     Incluir resumo financeiro
                   </label>
                   <p className="text-sm text-gray-600">
-                    {incluirResumo 
+                    {incluirResumo
                       ? 'O PDF incluirá um resumo com totais de receitas, despesas, saldo e quantidade de transações.'
                       : 'Apenas a tabela de transações será incluída no PDF.'}
                   </p>
@@ -6601,8 +6578,8 @@ const AppContent: React.FC = () => {
 
       {/* Modal de Configuração de Exportação de Produtos */}
       {isExportProdutosModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsExportProdutosModalOpen(false)
@@ -6631,7 +6608,7 @@ const AppContent: React.FC = () => {
               <p className="text-gray-700 text-sm">
                 Configure as opções de exportação:
               </p>
-              
+
               {/* Opção: Exportar Filtrados */}
               <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
                 <input
@@ -6646,7 +6623,7 @@ const AppContent: React.FC = () => {
                     Exportar apenas produtos filtrados
                   </label>
                   <p className="text-sm text-gray-600">
-                    {exportarFiltrados 
+                    {exportarFiltrados
                       ? 'Serão exportados apenas os produtos que estão visíveis na lista (com filtros aplicados).'
                       : 'Todos os produtos serão exportados, independente dos filtros ativos.'}
                   </p>
@@ -6667,7 +6644,7 @@ const AppContent: React.FC = () => {
                     Incluir resumo estatístico
                   </label>
                   <p className="text-sm text-gray-600">
-                    {incluirResumoProdutos 
+                    {incluirResumoProdutos
                       ? 'O PDF incluirá um resumo com totais de estoque, custos, lucro potencial, margem média e distribuição por categoria.'
                       : 'Apenas a tabela de produtos será incluída no PDF.'}
                   </p>
@@ -6716,9 +6693,9 @@ const AppContent: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center mb-3">
-                <img 
-                  src={isDemoMode ? "/app/logo_rodape.png" : "/logo_rodape.png"} 
-                  alt="Viver de PJ Logo" 
+                <img
+                  src={isDemoMode ? "/app/logo_rodape.png" : "/logo_rodape.png"}
+                  alt="Viver de PJ Logo"
                   className="h-12 w-12 mr-2 object-contain"
                 />
                 <div>
@@ -6732,7 +6709,7 @@ const AppContent: React.FC = () => {
                 Autor: Fernando Carvalho Gomes dos Santos 39063242816.
               </p>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-3">Contato</h3>
               <div className="space-y-2 text-amber-100">
@@ -6750,7 +6727,7 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-3">Serviços</h3>
               <div className="space-y-2 text-amber-100">
@@ -6768,7 +6745,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="border-t border-amber-500 mt-8 pt-8 text-center text-amber-100">
             <p>&copy; 2026 Viver de PJ. TODOS OS DIREITOS RESERVADOS</p>
           </div>

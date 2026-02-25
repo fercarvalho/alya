@@ -200,9 +200,8 @@ const NumberCell: React.FC<{
       value={Number.isFinite(value) ? value : 0}
       disabled={disabled}
       onChange={e => onChange(asNumber(e.target.value))}
-      className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${
-        disabled ? 'bg-gray-100 text-gray-500' : 'bg-white'
-      }`}
+      className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${disabled ? 'bg-gray-100 text-gray-500' : 'bg-white'
+        }`}
     />
   )
 }
@@ -222,9 +221,8 @@ const OverrideCell: React.FC<{
         value={Number.isFinite(valueEffective) ? valueEffective : 0}
         disabled={disabled}
         onChange={e => onSet(asNumber(e.target.value))}
-        className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${
-          disabled ? 'bg-gray-100 text-gray-500' : hasOverride ? 'bg-amber-50 border-amber-300' : 'bg-white'
-        }`}
+        className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${disabled ? 'bg-gray-100 text-gray-500' : hasOverride ? 'bg-amber-50 border-amber-300' : 'bg-white'
+          }`}
         title={hasOverride ? 'Valor com override manual' : 'Valor calculado automaticamente'}
       />
       {hasOverride && (
@@ -1410,12 +1408,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1423,12 +1421,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1532,12 +1530,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1545,12 +1543,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1642,12 +1640,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1655,12 +1653,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1755,12 +1753,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? nv : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1768,12 +1766,12 @@ export default function Projection() {
                                 setBase(b =>
                                   b
                                     ? {
-                                        ...b,
-                                        manualOverrides: {
-                                          ...b.manualOverrides,
-                                          [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
-                                        }
+                                      ...b,
+                                      manualOverrides: {
+                                        ...b.manualOverrides,
+                                        [row.key]: ensure12Nullable(b.manualOverrides[row.key]).map((x, idx) => (idx === col.monthIndex ? null : x))
                                       }
+                                    }
                                     : b
                                 )
                               }}
@@ -1980,7 +1978,7 @@ export default function Projection() {
 
       {/* Modal limpeza seletiva */}
       {showSelectiveClear && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSelectiveClear(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]" onClick={() => setShowSelectiveClear(false)}>
           <div className="bg-white rounded-xl p-6 w-full max-w-xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-amber-900">Limpeza seletiva</h3>
             <p className="text-sm text-gray-600 mt-1">Selecione o que deseja limpar (apenas admin).</p>

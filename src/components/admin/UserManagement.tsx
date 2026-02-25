@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle, Edit
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -40,7 +40,7 @@ const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  
+
   const [newUser, setNewUser] = useState({
     username: '',
     role: 'user',
@@ -118,7 +118,7 @@ const UserManagement: React.FC = () => {
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Tem certeza que deseja deletar este usuário?')) return;
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         method: 'DELETE',
@@ -142,12 +142,12 @@ const UserManagement: React.FC = () => {
   const toggleModuleForUser = (userId: string, moduleKey: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-    
+
     const currentModules = user.modules || [];
     const newModules = currentModules.includes(moduleKey)
       ? currentModules.filter(m => m !== moduleKey)
       : [...currentModules, moduleKey];
-    
+
     handleUpdateUser(userId, { modules: newModules });
   };
 
@@ -179,7 +179,7 @@ const UserManagement: React.FC = () => {
 
   const handleResetIndividualPassword = async () => {
     if (!userToReset) return;
-    
+
     setIsResettingIndividual(true);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/reset-first-login`, {
@@ -208,16 +208,16 @@ const UserManagement: React.FC = () => {
 
   const filteredUsers = users.filter(u => {
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       u.username.toLowerCase().includes(searchLower) ||
       (u.firstName && u.firstName.toLowerCase().includes(searchLower)) ||
       (u.lastName && u.lastName.toLowerCase().includes(searchLower)) ||
       (u.email && u.email.toLowerCase().includes(searchLower));
     const matchesRole = filterRole === 'all' || u.role === filterRole;
-    const matchesStatus = filterStatus === 'all' || 
+    const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'active' && u.isActive !== false) ||
       (filterStatus === 'inactive' && u.isActive === false);
-    
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -335,11 +335,10 @@ const UserManagement: React.FC = () => {
                         <button
                           key={mod.id}
                           onClick={() => toggleModuleForUser(u.id, mod.key)}
-                          className={`px-2 py-1 text-xs rounded transition-colors ${
-                            (u.modules || []).includes(mod.key)
+                          className={`px-2 py-1 text-xs rounded transition-colors ${(u.modules || []).includes(mod.key)
                               ? 'bg-amber-500 text-white'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                            }`}
                         >
                           {mod.name}
                           {(u.modules || []).includes(mod.key) ? (
@@ -352,9 +351,8 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      u.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs rounded ${u.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
                       {u.isActive !== false ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
@@ -428,7 +426,7 @@ const UserManagement: React.FC = () => {
 
       {/* Modal de Confirmação para Resetar Todas as Senhas */}
       {showResetAllModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center mb-4">
               <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
@@ -471,7 +469,7 @@ const UserManagement: React.FC = () => {
 
       {/* Modal de Confirmação para Resetar Senha Individual */}
       {userToReset && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center mb-4">
               <AlertTriangle className="h-6 w-6 text-blue-500 mr-3" />

@@ -32,10 +32,10 @@ const Clients: React.FC = () => {
   }>({
     name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: ''
   })
-  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({})
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
   const [isImportExportOpen, setIsImportExportOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  
+
   // Estados do modal de exportação de clientes
   const [isExportClientesModalOpen, setIsExportClientesModalOpen] = useState(false)
   const [exportarFiltrados, setExportarFiltrados] = useState(true)
@@ -51,7 +51,7 @@ const Clients: React.FC = () => {
         const r = await fetch(`${API_BASE_URL}/clients`)
         const j = await r.json()
         if (j.success) setClients(j.data)
-      } catch {}
+      } catch { }
     }
     load()
   }, [])
@@ -112,27 +112,27 @@ const Clients: React.FC = () => {
 
   // CRUD
   const validateForm = () => {
-    const errors: {[key: string]: string} = {}
-    
+    const errors: { [key: string]: string } = {}
+
     if (!form.name.trim()) errors.name = 'Campo obrigatório'
     if (!form.email.trim()) errors.email = 'Campo obrigatório'
     if (!form.phone.trim()) errors.phone = 'Campo obrigatório'
     if (!form.address.trim()) errors.address = 'Campo obrigatório'
-    
+
     // Validar CPF ou CNPJ baseado no tipo selecionado
     if (form.documentType === 'cpf' && !form.cpf.trim()) {
       errors.cpf = 'Campo obrigatório'
     } else if (form.documentType === 'cnpj' && !form.cnpj.trim()) {
       errors.cnpj = 'Campo obrigatório'
     }
-    
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
 
   const saveClient = async () => {
     if (!validateForm()) return
-    
+
     const payload = {
       id: editing?.id,
       name: form.name,
@@ -160,7 +160,7 @@ const Clients: React.FC = () => {
     try {
       const r = await fetch(`${API_BASE_URL}/clients/${id}`, { method: 'DELETE' })
       const j = await r.json(); if (j.success) setClients(prev => prev.filter(c => c.id !== id))
-    } catch {}
+    } catch { }
   }
 
   const deleteSelected = async () => {
@@ -169,7 +169,7 @@ const Clients: React.FC = () => {
       await fetch(`${API_BASE_URL}/clients`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) })
       setClients(prev => prev.filter(c => !selectedClients.has(c.id)))
       setSelectedClients(new Set())
-    } catch {}
+    } catch { }
   }
 
   // Import/Export
@@ -190,7 +190,7 @@ const Clients: React.FC = () => {
         setClients(prev => [...j.data, ...prev])
         setIsImportExportOpen(false)
       }
-    } catch {}
+    } catch { }
   }
 
   const handleExport = async () => {
@@ -198,25 +198,25 @@ const Clients: React.FC = () => {
       const r = await fetch(`${API_BASE_URL}/export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'clients', data: clients }) })
       const blob = await r.blob(); const url = URL.createObjectURL(blob)
       const a = document.createElement('a'); a.href = url; a.download = `clients_${new Date().toISOString().split('T')[0]}.xlsx`; a.click(); URL.revokeObjectURL(url)
-    } catch {}
+    } catch { }
   }
 
   // Função para exportar clientes em PDF
   const exportarClientesPDF = async () => {
     try {
       setIsExportClientesModalOpen(false)
-      
+
       // Obter clientes para exportar
-      const clientesParaExportar = exportarFiltrados 
-        ? filteredAndSorted 
+      const clientesParaExportar = exportarFiltrados
+        ? filteredAndSorted
         : clients
-      
+
       // Validar se há clientes
       if (clientesParaExportar.length === 0) {
         alert('Não há clientes para exportar!')
         return
       }
-      
+
       // Calcular resumo estatístico (se habilitado)
       let totalClientes = clientesParaExportar.length
       let clientesComCPF = 0
@@ -227,7 +227,7 @@ const Clients: React.FC = () => {
       let clientesSemTelefone = 0
       let clientesComEndereco = 0
       let clientesSemEndereco = 0
-      
+
       if (incluirResumo) {
         clientesParaExportar.forEach(c => {
           if (c.cpf) clientesComCPF++
@@ -240,7 +240,7 @@ const Clients: React.FC = () => {
           else clientesSemEndereco++
         })
       }
-      
+
       // Criar elemento temporário para capturar o conteúdo
       const tempElement = document.createElement('div')
       tempElement.style.position = 'absolute'
@@ -250,7 +250,7 @@ const Clients: React.FC = () => {
       tempElement.style.backgroundColor = 'white'
       tempElement.style.padding = '20px'
       tempElement.style.fontFamily = 'Arial, sans-serif'
-      
+
       // Construir informações de filtros aplicados
       let infoFiltros = 'Todos os clientes'
       if (exportarFiltrados) {
@@ -258,14 +258,14 @@ const Clients: React.FC = () => {
         if (filters.name) filtrosAtivos.push(`Nome: ${filters.name}`)
         if (filters.email) filtrosAtivos.push(`Email: ${filters.email}`)
         if (filters.phone) filtrosAtivos.push(`Telefone: ${filters.phone}`)
-        
+
         if (filtrosAtivos.length > 0) {
           infoFiltros = `Clientes filtrados: ${filtrosAtivos.join(', ')}`
         } else {
           infoFiltros = 'Todos os clientes (sem filtros ativos)'
         }
       }
-      
+
       // Construir HTML do relatório
       let htmlContent = `
         <div style="text-align: center; margin-bottom: 30px;">
@@ -275,7 +275,7 @@ const Clients: React.FC = () => {
           <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
         </div>
       `
-      
+
       // Resumo Estatístico (se habilitado)
       if (incluirResumo) {
         htmlContent += `
@@ -318,7 +318,7 @@ const Clients: React.FC = () => {
           </div>
         `
       }
-      
+
       // Tabela de Clientes
       htmlContent += `
         <div style="margin-bottom: 30px;">
@@ -336,12 +336,12 @@ const Clients: React.FC = () => {
               </thead>
               <tbody>
       `
-      
+
       // Adicionar linhas da tabela
       clientesParaExportar.forEach((client, index) => {
         const documento = client.cpf || client.cnpj || '-'
         const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
-        
+
         htmlContent += `
           <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
             <td style="padding: 10px; color: #374151; font-weight: 500;">${client.name}</td>
@@ -352,14 +352,14 @@ const Clients: React.FC = () => {
           </tr>
         `
       })
-      
+
       htmlContent += `
               </tbody>
             </table>
           </div>
         </div>
       `
-      
+
       // Rodapé
       htmlContent += `
         <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
@@ -370,10 +370,10 @@ const Clients: React.FC = () => {
           </p>
         </div>
       `
-      
+
       tempElement.innerHTML = htmlContent
       document.body.appendChild(tempElement)
-      
+
       // Capturar o elemento como imagem
       const canvas = await html2canvas(tempElement, {
         scale: 2,
@@ -381,10 +381,10 @@ const Clients: React.FC = () => {
         allowTaint: true,
         backgroundColor: '#ffffff'
       })
-      
+
       // Remover elemento temporário
       document.body.removeChild(tempElement)
-      
+
       // Criar PDF
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -392,9 +392,9 @@ const Clients: React.FC = () => {
       const pageHeight = 295
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
-      
+
       let position = 0
-      
+
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
@@ -600,13 +600,12 @@ const Clients: React.FC = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Nome <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  value={form.name} 
-                  onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))} 
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                    formErrors.name ? 'border-red-500 bg-red-50' : ''
-                  }`} 
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${formErrors.name ? 'border-red-500 bg-red-50' : ''
+                    }`}
                 />
                 {formErrors.name && (
                   <div className="absolute top-full left-0 mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg z-10">
@@ -619,13 +618,12 @@ const Clients: React.FC = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Email <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="email" 
-                  value={form.email} 
-                  onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))} 
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                    formErrors.email ? 'border-red-500 bg-red-50' : ''
-                  }`} 
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${formErrors.email ? 'border-red-500 bg-red-50' : ''
+                    }`}
                 />
                 {formErrors.email && (
                   <div className="absolute top-full left-0 mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg z-10">
@@ -638,13 +636,12 @@ const Clients: React.FC = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Telefone <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  value={form.phone} 
-                  onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))} 
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                    formErrors.phone ? 'border-red-500 bg-red-50' : ''
-                  }`} 
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${formErrors.phone ? 'border-red-500 bg-red-50' : ''
+                    }`}
                 />
                 {formErrors.phone && (
                   <div className="absolute top-full left-0 mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg z-10">
@@ -657,13 +654,12 @@ const Clients: React.FC = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Endereço <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  value={form.address} 
-                  onChange={(e) => setForm(prev => ({ ...prev, address: e.target.value }))} 
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                    formErrors.address ? 'border-red-500 bg-red-50' : ''
-                  }`} 
+                <input
+                  type="text"
+                  value={form.address}
+                  onChange={(e) => setForm(prev => ({ ...prev, address: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${formErrors.address ? 'border-red-500 bg-red-50' : ''
+                    }`}
                 />
                 {formErrors.address && (
                   <div className="absolute top-full left-0 mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg z-10">
@@ -676,14 +672,14 @@ const Clients: React.FC = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Tipo de Documento <span className="text-red-500">*</span>
                 </label>
-                <select 
-                  value={form.documentType} 
-                  onChange={(e) => setForm(prev => ({ 
-                    ...prev, 
+                <select
+                  value={form.documentType}
+                  onChange={(e) => setForm(prev => ({
+                    ...prev,
                     documentType: e.target.value as 'cpf' | 'cnpj',
                     cpf: '', // Limpar campos ao trocar tipo
                     cnpj: ''
-                  }))} 
+                  }))}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="cpf">CPF (Pessoa Física)</option>
@@ -694,17 +690,16 @@ const Clients: React.FC = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   {form.documentType === 'cpf' ? 'CPF' : 'CNPJ'} <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  value={form.documentType === 'cpf' ? form.cpf : form.cnpj} 
-                  onChange={(e) => setForm(prev => ({ 
-                    ...prev, 
-                    [form.documentType]: e.target.value 
-                  }))} 
+                <input
+                  type="text"
+                  value={form.documentType === 'cpf' ? form.cpf : form.cnpj}
+                  onChange={(e) => setForm(prev => ({
+                    ...prev,
+                    [form.documentType]: e.target.value
+                  }))}
                   placeholder={form.documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
-                    (form.documentType === 'cpf' && formErrors.cpf) || (form.documentType === 'cnpj' && formErrors.cnpj) ? 'border-red-500 bg-red-50' : ''
-                  }`} 
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${(form.documentType === 'cpf' && formErrors.cpf) || (form.documentType === 'cnpj' && formErrors.cnpj) ? 'border-red-500 bg-red-50' : ''
+                    }`}
                 />
                 {((form.documentType === 'cpf' && formErrors.cpf) || (form.documentType === 'cnpj' && formErrors.cnpj)) && (
                   <div className="absolute top-full left-0 mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg z-10">
@@ -785,8 +780,8 @@ const Clients: React.FC = () => {
 
       {/* Modal de Configuração de Exportação de Clientes */}
       {isExportClientesModalOpen && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsExportClientesModalOpen(false)
@@ -815,7 +810,7 @@ const Clients: React.FC = () => {
               <p className="text-gray-700 text-sm">
                 Configure as opções de exportação:
               </p>
-              
+
               {/* Opção: Exportar Filtrados */}
               <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
                 <input
@@ -830,7 +825,7 @@ const Clients: React.FC = () => {
                     Exportar apenas clientes filtrados
                   </label>
                   <p className="text-sm text-gray-600">
-                    {exportarFiltrados 
+                    {exportarFiltrados
                       ? 'Serão exportados apenas os clientes que estão visíveis na lista (com filtros aplicados).'
                       : 'Todos os clientes serão exportados, independente dos filtros ativos.'}
                   </p>
@@ -851,7 +846,7 @@ const Clients: React.FC = () => {
                     Incluir resumo estatístico
                   </label>
                   <p className="text-sm text-gray-600">
-                    {incluirResumo 
+                    {incluirResumo
                       ? 'O PDF incluirá um resumo com totais de clientes, distribuição por tipo de documento (CPF/CNPJ) e estatísticas de dados completos.'
                       : 'Apenas a tabela de clientes será incluída no PDF.'}
                   </p>
