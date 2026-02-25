@@ -244,7 +244,7 @@ const ModuleManagement: React.FC = () => {
       {/* Modal de Criar/Editar Módulo */}
       {showModuleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">
                 {editingModule ? 'Editar Módulo' : 'Novo Módulo'}

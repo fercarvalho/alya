@@ -1979,7 +1979,7 @@ export default function Projection() {
       {/* Modal limpeza seletiva */}
       {showSelectiveClear && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]" onClick={() => setShowSelectiveClear(false)}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-xl max-h-[calc(100vh-220px)] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-amber-900">Limpeza seletiva</h3>
             <p className="text-sm text-gray-600 mt-1">Selecione o que deseja limpar (apenas admin).</p>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">

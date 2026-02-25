@@ -336,8 +336,8 @@ const UserManagement: React.FC = () => {
                           key={mod.id}
                           onClick={() => toggleModuleForUser(u.id, mod.key)}
                           className={`px-2 py-1 text-xs rounded transition-colors ${(u.modules || []).includes(mod.key)
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
                         >
                           {mod.name}
@@ -427,7 +427,7 @@ const UserManagement: React.FC = () => {
       {/* Modal de Confirmação para Resetar Todas as Senhas */}
       {showResetAllModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[calc(100vh-220px)] overflow-y-auto">
             <div className="flex items-center mb-4">
               <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
               <h3 className="text-xl font-bold text-gray-900">Confirmar Reset de Senhas</h3>
@@ -470,7 +470,7 @@ const UserManagement: React.FC = () => {
       {/* Modal de Confirmação para Resetar Senha Individual */}
       {userToReset && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[calc(100vh-220px)] overflow-y-auto">
             <div className="flex items-center mb-4">
               <AlertTriangle className="h-6 w-6 text-blue-500 mr-3" />
               <h3 className="text-xl font-bold text-gray-900">Confirmar Reset de Senha</h3>
