@@ -51,12 +51,12 @@ const DRE: React.FC = () => {
       }
       const response = await fetch(`${API_BASE_URL}/transactions`, { headers })
       const result = await response.json()
-      
+
       if (response.status === 401 || response.status === 403) {
         logout()
         return
       }
-      
+
       if (result.success) {
         setTransactions(result.data)
       }
@@ -125,15 +125,15 @@ const DRE: React.FC = () => {
     const receitas = transactions.filter(t => isReceita(t.type))
     const despesas = transactions.filter(t => isDespesa(t.type))
 
-    const totalReceitas = receitas.reduce((sum, t) => sum + t.value, 0)
-    const totalDespesas = despesas.reduce((sum, t) => sum + t.value, 0)
+    const totalReceitas = receitas.reduce((sum, t) => sum + Number(t.value), 0)
+    const totalDespesas = despesas.reduce((sum, t) => sum + Number(t.value), 0)
     const resultadoLiquido = totalReceitas - totalDespesas
 
     // Agrupar receitas por categoria (tratar categoria vazia como "Outros")
     const receitasPorCategoria = receitas.reduce((acc, t) => {
       const categoria = t.category && t.category.trim() ? t.category : 'Outros'
       if (!acc[categoria]) acc[categoria] = 0
-      acc[categoria] += t.value
+      acc[categoria] += Number(t.value)
       return acc
     }, {} as Record<string, number>)
 
@@ -141,7 +141,7 @@ const DRE: React.FC = () => {
     const despesasPorCategoria = despesas.reduce((acc, t) => {
       const categoria = t.category && t.category.trim() ? t.category : 'Outros'
       if (!acc[categoria]) acc[categoria] = 0
-      acc[categoria] += t.value
+      acc[categoria] += Number(t.value)
       return acc
     }, {} as Record<string, number>)
 
@@ -214,11 +214,12 @@ const DRE: React.FC = () => {
     return currentDRE.map(row => {
       const previousRow = previousDRE.find(r => r.id === row.id)
       if (previousRow) {
-        const variation = row.value - previousRow.value
-        const variationPercent = previousRow.value !== 0
-          ? ((row.value - previousRow.value) / previousRow.value) * 100
-          : row.value > 0 ? 100 : (row.value < 0 ? -100 : 0)
-        
+        const prevVal = Number(previousRow.value) || 0
+        const currVal = Number(row.value) || 0
+        const variationPercent = prevVal !== 0
+          ? ((currVal - prevVal) / Math.abs(prevVal)) * 100
+          : currVal > 0 ? 100 : (currVal < 0 ? -100 : 0)
+
         return {
           ...row,
           valuePrevious: previousRow.value,
@@ -292,9 +293,9 @@ const DRE: React.FC = () => {
       const pageHeight = 295 // Altura de uma página A4 em mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       let heightLeft = imgHeight
-      
+
       let position = 0
-      
+
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
@@ -304,7 +305,7 @@ const DRE: React.FC = () => {
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
       }
-      
+
       const filename = `DRE_${getPeriodLabel().replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(filename)
     } catch (error) {
@@ -389,18 +390,18 @@ const DRE: React.FC = () => {
   const resultadoAnterior = previousDRE.find(r => r.id === 'resultado')?.value || 0
 
   const variacaoReceitas = totalReceitas - receitasAnterior
-  const variacaoReceitasPercent = receitasAnterior !== 0
-    ? ((totalReceitas - receitasAnterior) / receitasAnterior) * 100
+  const variacaoReceitasPercent = (receitasAnterior && Number(receitasAnterior) !== 0)
+    ? ((totalReceitas - receitasAnterior) / Math.abs(receitasAnterior)) * 100
     : totalReceitas > 0 ? 100 : 0
 
   const variacaoDespesas = totalDespesas - despesasAnterior
-  const variacaoDespesasPercent = despesasAnterior !== 0
-    ? ((totalDespesas - despesasAnterior) / despesasAnterior) * 100
+  const variacaoDespesasPercent = (despesasAnterior && Number(despesasAnterior) !== 0)
+    ? ((totalDespesas - despesasAnterior) / Math.abs(despesasAnterior)) * 100
     : totalDespesas > 0 ? 100 : 0
 
   const variacaoResultado = resultadoLiquido - resultadoAnterior
-  const variacaoResultadoPercent = resultadoAnterior !== 0
-    ? ((resultadoLiquido - resultadoAnterior) / resultadoAnterior) * 100
+  const variacaoResultadoPercent = (resultadoAnterior && Number(resultadoAnterior) !== 0)
+    ? ((resultadoLiquido - resultadoAnterior) / Math.abs(resultadoAnterior)) * 100
     : resultadoLiquido > 0 ? 100 : (resultadoLiquido < 0 ? -100 : 0)
 
   return (
@@ -528,34 +529,30 @@ const DRE: React.FC = () => {
                 dreWithComparison.map((row) => (
                   <tr
                     key={row.id}
-                    className={`${
-                      row.level === 0
+                    className={`${row.level === 0
                         ? 'bg-amber-50 font-semibold'
                         : row.level === 1
-                        ? 'bg-gray-50'
-                        : ''
-                    } ${
-                      row.id === 'resultado' ? 'border-t-2 border-gray-300' : ''
-                    }`}
+                          ? 'bg-gray-50'
+                          : ''
+                      } ${row.id === 'resultado' ? 'border-t-2 border-gray-300' : ''
+                      }`}
                   >
                     <td
-                      className={`px-4 sm:px-6 py-3 text-sm ${
-                        row.level === 0 ? 'text-amber-900' : 'text-gray-900'
-                      }`}
+                      className={`px-4 sm:px-6 py-3 text-sm ${row.level === 0 ? 'text-amber-900' : 'text-gray-900'
+                        }`}
                       style={{ paddingLeft: `${row.level * 20 + 16}px` }}
                     >
                       {row.description}
                     </td>
                     <td
-                      className={`px-4 sm:px-6 py-3 text-sm text-right font-medium ${
-                        row.type === 'receita'
+                      className={`px-4 sm:px-6 py-3 text-sm text-right font-medium ${row.type === 'receita'
                           ? 'text-green-600'
                           : row.type === 'despesa'
-                          ? 'text-red-600'
-                          : row.value >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }`}
+                            ? 'text-red-600'
+                            : row.value >= 0
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                        }`}
                     >
                       {formatCurrency(row.value)}
                     </td>
@@ -568,16 +565,14 @@ const DRE: React.FC = () => {
                           {row.variation !== undefined && row.variationPercent !== undefined ? (
                             <div className="flex items-center justify-end gap-1">
                               <span
-                                className={`font-medium ${
-                                  row.variation >= 0 ? 'text-green-600' : 'text-red-600'
-                                }`}
+                                className={`font-medium ${row.variation >= 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}
                               >
                                 {row.variation >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(row.variation))}
                               </span>
                               <span
-                                className={`text-xs ${
-                                  row.variationPercent >= 0 ? 'text-green-600' : 'text-red-600'
-                                }`}
+                                className={`text-xs ${row.variationPercent >= 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}
                               >
                                 ({formatPercent(row.variationPercent)})
                               </span>
@@ -653,9 +648,8 @@ const DRE: React.FC = () => {
             </div>
             <div className="ml-4 flex-1">
               <p className="text-sm font-medium text-gray-500">Resultado Líquido</p>
-              <p className={`text-2xl font-semibold ${
-                resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
+              <p className={`text-2xl font-semibold ${resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
                 {formatCurrency(resultadoLiquido)}
               </p>
               {previousPeriodTransactions.length > 0 && resultadoAnterior !== 0 && (
