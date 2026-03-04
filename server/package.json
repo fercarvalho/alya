@@ -18,7 +18,12 @@
     "audit-logs:recent": "node view-audit-logs.js recent",
     "audit-logs:failures": "node view-audit-logs.js failures",
     "audit-logs:suspicious": "node view-audit-logs.js suspicious",
-    "audit-logs:stats": "node view-audit-logs.js stats"
+    "audit-logs:stats": "node view-audit-logs.js stats",
+    "archive-logs": "node archive-audit-logs.js",
+    "archive-logs:dry-run": "node archive-audit-logs.js --dry-run",
+    "archive-logs:90d": "node archive-audit-logs.js --days=90",
+    "archive-logs:180d": "node archive-audit-logs.js --days=180",
+    "archive-logs:1y": "node archive-audit-logs.js --days=365"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
