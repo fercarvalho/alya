@@ -47,6 +47,15 @@ const {
 } = require('./utils/audit');
 
 const {
+  TOKEN_EXPIRY,
+  createRefreshToken,
+  verifyRefreshToken,
+  revokeRefreshToken,
+  revokeAllUserTokens,
+  rotateRefreshToken,
+} = require('./utils/refresh-tokens');
+
+const {
   generateSecurePassword,
   validateCPF,
   validateCNPJ,
@@ -684,11 +693,19 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
       await db.updateUser(user.id, { lastLogin: now });
     }
 
-    const token = jwt.sign(
+    // 🔒 FASE 3: Access token de curta duração (15 minutos)
+    const accessToken = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN }
     );
+
+    // 🔒 FASE 3: Criar refresh token de longa duração (7 dias)
+    const refreshToken = await createRefreshToken({
+      userId: user.id,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    });
 
     // Logar ação de login
     await logActivity(user.id, user.username, 'login', 'auth', 'user', user.id);
@@ -713,7 +730,9 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
 
     const response = {
       success: true,
-      token,
+      accessToken,
+      refreshToken,
+      expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
       user: {
         id: safeUser.id,
         username: safeUser.username,
@@ -743,6 +762,131 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('Erro no login:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🔒 FASE 3: Endpoint para renovar access token usando refresh token
+app.post('/api/auth/refresh', authLimiter, async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token é obrigatório' });
+    }
+
+    // Verificar refresh token
+    const tokenData = await verifyRefreshToken(refreshToken);
+
+    if (!tokenData) {
+      // 🔒 AUDITORIA: Tentativa de refresh com token inválido
+      await logAudit({
+        operation: AUDIT_OPERATIONS.INVALID_TOKEN,
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        details: { reason: 'invalid_refresh_token' },
+        status: AUDIT_STATUS.FAILURE,
+        errorMessage: 'Refresh token inválido ou expirado',
+      });
+      return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
+    }
+
+    // Gerar novo access token
+    const newAccessToken = jwt.sign(
+      { id: tokenData.userId, username: tokenData.username, role: tokenData.role },
+      JWT_SECRET,
+      { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN }
+    );
+
+    // Rotacionar refresh token (opcional, mas recomendado para segurança)
+    const newRefreshToken = await rotateRefreshToken(
+      refreshToken,
+      req.ip || req.connection?.remoteAddress,
+      req.headers['user-agent']
+    );
+
+    if (!newRefreshToken) {
+      return res.status(401).json({ error: 'Erro ao rotacionar refresh token' });
+    }
+
+    // 🔒 AUDITORIA: Token renovado com sucesso
+    await logAudit({
+      operation: 'token_refresh',
+      userId: tokenData.userId,
+      username: tokenData.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { role: tokenData.role },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({
+      success: true,
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+    });
+  } catch (error) {
+    console.error('Erro ao renovar token:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🔒 FASE 3: Endpoint para logout (revogar refresh token)
+app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      await revokeRefreshToken(refreshToken);
+    }
+
+    // Logar ação de logout
+    await logActivity(req.user.id, req.user.username, 'logout', 'auth', 'user', req.user.id);
+
+    // 🔒 AUDITORIA: Logout
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LOGOUT,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: {},
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, message: 'Logout realizado com sucesso' });
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🔒 FASE 3: Endpoint para logout de todos os dispositivos
+app.post('/api/auth/logout-all', authenticateToken, async (req, res) => {
+  try {
+    const revokedCount = await revokeAllUserTokens(req.user.id);
+
+    // Logar ação
+    await logActivity(req.user.id, req.user.username, 'logout_all_devices', 'auth', 'user', req.user.id);
+
+    // 🔒 AUDITORIA: Logout de todos os dispositivos
+    await logAudit({
+      operation: 'logout_all_devices',
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { devicesLoggedOut: revokedCount },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({
+      success: true,
+      message: `${revokedCount} sessão(ões) encerrada(s) com sucesso`,
+    });
+  } catch (error) {
+    console.error('Erro ao fazer logout de todos os dispositivos:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

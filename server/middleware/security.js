@@ -14,17 +14,20 @@ const hpp = require('hpp');
  */
 function configureHelmet() {
   return helmet({
-    // Content Security Policy
+    // Content Security Policy - FASE 3
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline necessário para React
+        scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline necessário para React (ver CSP-ANALYSIS.md)
         styleSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline necessário para styled-components
         imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
         fontSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
         frameSrc: ["'none'"],
         objectSrc: ["'none'"],
+        baseUri: ["'self'"], // Previne injeção de <base> tag
+        formAction: ["'self'"], // Previne forms apontando para sites maliciosos
+        manifestSrc: ["'self'"], // Para PWA
         upgradeInsecureRequests: [],
       },
     },

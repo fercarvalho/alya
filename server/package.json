@@ -14,6 +14,7 @@
     "cleanup-json": "node cleanup-json-files.js",
     "fix-dates": "node fix-transaction-dates.js",
     "create-audit-table": "node create-audit-logs-table.js",
+    "create-refresh-tokens-table": "node create-refresh-tokens-table.js",
     "audit-logs": "node view-audit-logs.js",
     "audit-logs:recent": "node view-audit-logs.js recent",
     "audit-logs:failures": "node view-audit-logs.js failures",
@@ -23,7 +24,11 @@
     "archive-logs:dry-run": "node archive-audit-logs.js --dry-run",
     "archive-logs:90d": "node archive-audit-logs.js --days=90",
     "archive-logs:180d": "node archive-audit-logs.js --days=180",
-    "archive-logs:1y": "node archive-audit-logs.js --days=365"
+    "archive-logs:1y": "node archive-audit-logs.js --days=365",
+    "security:audit": "npm audit --production",
+    "security:fix": "npm audit fix",
+    "security:check": "npm outdated && npm audit",
+    "security:full-scan": "npm audit && npm outdated"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
