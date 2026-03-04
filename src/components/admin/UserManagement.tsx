@@ -7,6 +7,9 @@ import { useModules } from '../../hooks/useModules';
 import { API_BASE_URL } from '../../config/api';
 import CadastrarUsuarioModal from '../CadastrarUsuarioModal';
 import EditarUsuarioModal from '../EditarUsuarioModal';
+import UserCreationTypeModal from './UserCreationTypeModal';
+import SimpleUserModal from './SimpleUserModal';
+import UserCreatedModal from './UserCreatedModal';
 import LazyAvatar from '../LazyAvatar';
 import { applyPhoneMask } from '../../utils/phoneMask';
 
@@ -40,6 +43,12 @@ const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Novos estados para o fluxo de criação de usuários
+  const [showCreationTypeModal, setShowCreationTypeModal] = useState(false);
+  const [showSimpleUserModal, setShowSimpleUserModal] = useState(false);
+  const [showUserCreatedModal, setShowUserCreatedModal] = useState(false);
+  const [createdUserData, setCreatedUserData] = useState<any>(null);
 
   const [newUser, setNewUser] = useState({
     username: '',
@@ -206,6 +215,57 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  // Handlers para o fluxo de criação de usuários
+  const handleSelectSimple = () => {
+    setShowCreationTypeModal(false);
+    setShowSimpleUserModal(true);
+  };
+
+  const handleSelectComplete = () => {
+    setShowCreationTypeModal(false);
+    setShowUserModal(true);
+  };
+
+  const handleUserCreatedFromSimple = (result: any) => {
+    // Combinar dados do usuário com invite em um formato que o modal espera
+    const userData = {
+      username: result.data.username,
+      email: result.data.email,
+      role: result.data.role,
+      inviteToken: result.invite?.token,
+      tempPassword: result.invite?.tempPassword
+    };
+    setCreatedUserData(userData);
+    setShowSimpleUserModal(false);
+    setShowUserCreatedModal(true);
+    loadUsers();
+  };
+
+  const handleUserCreatedFromComplete = (result: any) => {
+    // Combinar dados do usuário com invite em um formato que o modal espera
+    const userData = {
+      username: result.data.username,
+      email: result.data.email,
+      role: result.data.role,
+      inviteToken: result.invite?.token,
+      tempPassword: result.invite?.tempPassword
+    };
+    setCreatedUserData(userData);
+    setShowUserCreatedModal(true);
+    loadUsers();
+  };
+
+  const handleCreateAnother = () => {
+    setShowUserCreatedModal(false);
+    setCreatedUserData(null);
+    setShowCreationTypeModal(true);
+  };
+
+  const handleCloseUserCreatedModal = () => {
+    setShowUserCreatedModal(false);
+    setCreatedUserData(null);
+  };
+
   const filteredUsers = users.filter(u => {
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
@@ -239,7 +299,7 @@ const UserManagement: React.FC = () => {
             Resetar Todas as Senhas
           </button>
           <button
-            onClick={() => setShowUserModal(true)}
+            onClick={() => setShowCreationTypeModal(true)}
             className="flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
           >
             <UserPlus className="h-5 w-5 mr-2" />
@@ -407,11 +467,41 @@ const UserManagement: React.FC = () => {
       </div>
 
       {/* Modal de Novo Usuário */}
+      {/* Modal de Seleção do Tipo de Cadastro */}
+      <UserCreationTypeModal
+        isOpen={showCreationTypeModal}
+        onClose={() => setShowCreationTypeModal(false)}
+        onSelectSimple={handleSelectSimple}
+        onSelectComplete={handleSelectComplete}
+      />
+
+      {/* Modal de Cadastro Simplificado */}
+      <SimpleUserModal
+        isOpen={showSimpleUserModal}
+        onClose={() => setShowSimpleUserModal(false)}
+        onSuccess={handleUserCreatedFromSimple}
+        availableModules={modules}
+      />
+
+      {/* Modal de Cadastro Completo */}
       <CadastrarUsuarioModal
         isOpen={showUserModal}
-        onClose={() => setShowUserModal(false)}
+        onClose={() => {
+          setShowUserModal(false);
+        }}
         onSuccess={loadUsers}
+        onUserCreated={handleUserCreatedFromComplete}
       />
+
+      {/* Modal de Confirmação de Usuário Criado */}
+      {createdUserData && (
+        <UserCreatedModal
+          isOpen={showUserCreatedModal}
+          onClose={handleCloseUserCreatedModal}
+          onCreateAnother={handleCreateAnother}
+          userData={createdUserData}
+        />
+      )}
 
       {/* Modal de Editar Usuário */}
       <EditarUsuarioModal
@@ -426,11 +516,13 @@ const UserManagement: React.FC = () => {
 
       {/* Modal de Confirmação para Resetar Todas as Senhas */}
       {showResetAllModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[calc(100vh-220px)] overflow-y-auto">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
-              <h3 className="text-xl font-bold text-gray-900">Confirmar Reset de Senhas</h3>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 max-w-md w-full mx-4 max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-red-200/50">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+                <h3 className="text-xl font-bold text-red-800">Confirmar Reset de Senhas</h3>
+              </div>
             </div>
             <p className="text-gray-700 mb-6">
               Tem certeza que deseja resetar as senhas de <strong>todos os usuários</strong>?
@@ -469,11 +561,13 @@ const UserManagement: React.FC = () => {
 
       {/* Modal de Confirmação para Resetar Senha Individual */}
       {userToReset && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[calc(100vh-220px)] overflow-y-auto">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-blue-500 mr-3" />
-              <h3 className="text-xl font-bold text-gray-900">Confirmar Reset de Senha</h3>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 max-w-md w-full mx-4 max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+            <div className="bg-gradient-to-r from-blue-50 to-amber-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-blue-200/50">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-blue-600" />
+                <h3 className="text-xl font-bold text-blue-800">Confirmar Reset de Senha</h3>
+              </div>
             </div>
             <p className="text-gray-700 mb-6">
               Tem certeza que deseja resetar a senha do usuário <strong>{userToReset.username}</strong>?

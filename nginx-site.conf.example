@@ -1,0 +1,81 @@
+# Configuração Completa do Nginx para Alya
+# Sistema Alya - Exemplo de Configuração de Produção
+# Localização: /etc/nginx/sites-available/alya.conf
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name alya.sistemas.viverdepj.com.br;
+
+    # Redirecionar todo tráfego HTTP para HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+# HTTPS Server
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name alya.sistemas.viverdepj.com.br;
+
+    # SSL Certificate (Let's Encrypt)
+    ssl_certificate /etc/letsencrypt/live/alya.sistemas.viverdepj.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/alya.sistemas.viverdepj.com.br/privkey.pem;
+
+    # Incluir headers de segurança
+    include /www/alya/nginx-security-headers.conf;
+
+    # Root directory para frontend
+    root /www/alya/dist;
+    index index.html;
+
+    # Logs
+    access_log /var/log/nginx/alya-access.log;
+    error_log /var/log/nginx/alya-error.log;
+
+    # Servir arquivos estáticos do frontend
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy para API backend
+    location /api/ {
+        proxy_pass http://localhost:8001/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Cache para assets estáticos
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # Servir avatares com cache
+    location /api/avatars/ {
+        alias /www/alya/server/public/avatars/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # Segurança adicional
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+
+    # Limite de tamanho de upload (5MB para Excel)
+    client_max_body_size 5M;
+}

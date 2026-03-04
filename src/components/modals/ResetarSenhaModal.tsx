@@ -103,28 +103,30 @@ const ResetarSenhaModal: React.FC<ResetarSenhaModalProps> = ({ isOpen, token, on
 
     return (
         <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+            className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
             onClick={(event) => {
                 if (event.target === event.currentTarget && !isSubmitting) onClose();
             }}
         >
-            <div className="w-full max-w-md bg-white rounded-xl shadow-xl border border-amber-100 animate-in fade-in zoom-in duration-200">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-amber-100 bg-amber-50 rounded-t-xl">
-                    <h2 className="text-lg font-semibold text-amber-900 flex items-center gap-2">
-                        <KeyRound className="w-5 h-5 text-amber-600" />
-                        Redefinir senha
-                    </h2>
-                    <button
-                        onClick={() => {
-                            if (!isSubmitting) onClose();
-                        }}
-                        className="p-2 rounded-full text-amber-700 hover:bg-amber-100 transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+            <div className="w-full max-w-md bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 shadow-2xl border border-gray-200/50 max-h-[calc(100vh-220px)] overflow-y-auto">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                            <KeyRound className="w-6 h-6 text-amber-700" />
+                            Redefinir senha
+                        </h2>
+                        <button
+                            onClick={() => {
+                                if (!isSubmitting) onClose();
+                            }}
+                            className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     {isValidating ? (
                         <p className="text-sm text-gray-600 animate-pulse">Validando token de recuperação...</p>
                     ) : null}

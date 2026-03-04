@@ -616,6 +616,45 @@ const AppContent: React.FC = () => {
     }
   }, [isFilterCalendarFromOpen, isFilterCalendarToOpen, isCalendarOpen, isProductModalOpen, isTransactionModalOpen, isImportExportModalOpen])
 
+  // Fechar modais ao mudar de guia
+  useEffect(() => {
+    // Fechar modal de produto se estiver aberto
+    if (isProductModalOpen) {
+      setIsProductModalOpen(false)
+      setEditingProduct(null)
+      setProductForm({ name: '', category: '', price: '', cost: '', stock: '', sold: '' })
+      setProductFormErrors({
+        name: false,
+        category: false,
+        price: false,
+        cost: false,
+        stock: false,
+        sold: false
+      })
+    }
+
+    // Fechar modal de transação se estiver aberto
+    if (isTransactionModalOpen) {
+      setIsTransactionModalOpen(false)
+      setEditingTransaction(null)
+      setTransactionForm({
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        value: '',
+        type: 'Receita',
+        category: ''
+      })
+      setTransactionFormErrors({
+        date: false,
+        description: false,
+        value: false,
+        type: false,
+        category: false
+      })
+      setIsCalendarOpen(false)
+    }
+  }, [activeTab])
+
   // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
   if (isLoading) {
     return (

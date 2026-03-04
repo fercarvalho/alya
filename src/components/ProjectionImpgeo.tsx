@@ -1978,10 +1978,12 @@ export default function Projection() {
 
       {/* Modal limpeza seletiva */}
       {showSelectiveClear && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]" onClick={() => setShowSelectiveClear(false)}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-xl max-h-[calc(100vh-220px)] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xl font-bold text-amber-900">Limpeza seletiva</h3>
-            <p className="text-sm text-gray-600 mt-1">Selecione o que deseja limpar (apenas admin).</p>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]" onClick={() => setShowSelectiveClear(false)}>
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-xl max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <h3 className="text-xl font-bold text-amber-800">Limpeza seletiva</h3>
+              <p className="text-sm text-gray-600 mt-1">Selecione o que deseja limpar (apenas admin).</p>
+            </div>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {clearMap.map(it => (
                 <label key={it.id} className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer">

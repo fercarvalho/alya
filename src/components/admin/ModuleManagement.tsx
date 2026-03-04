@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Plus, Edit, Trash2, Save, X, Shield
+  Plus, Edit, Trash2, Save, X, Shield, Package
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { SystemModule, useModules } from '../../hooks/useModules';
@@ -243,21 +243,24 @@ const ModuleManagement: React.FC = () => {
 
       {/* Modal de Criar/Editar Módulo */}
       {showModuleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">
-                {editingModule ? 'Editar Módulo' : 'Novo Módulo'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowModuleModal(false);
-                  setEditingModule(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Package className="w-6 h-6 text-amber-700" />
+                  {editingModule ? 'Editar Módulo' : 'Novo Módulo'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowModuleModal(false);
+                    setEditingModule(null);
+                  }}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="space-y-4">
               <div>

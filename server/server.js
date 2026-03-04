@@ -14,9 +14,64 @@ const rateLimit = require('express-rate-limit');
 const sgMail = require('@sendgrid/mail');
 const Database = require('./database-pg');
 
+// 🔒 FASE 2: Middlewares de Segurança
+const {
+  configureHelmet,
+  generalLimiter,
+  authLimiter,
+  createLimiter,
+  uploadLimiter,
+  passwordRecoveryLimiter,
+  passwordTokenValidationLimiter,
+  passwordResetLimiter,
+  configureSanitization,
+  securityLogger,
+  customSecurityHeaders,
+} = require('./middleware/security');
+
+const {
+  validateLogin,
+  validateUserRegistration,
+  validateProfileUpdate,
+  validateClientCreation,
+  validateTransaction,
+  validatePasswordRecovery,
+  validatePasswordReset,
+  sanitizeBody,
+} = require('./middleware/validation');
+
+const {
+  logAudit,
+  AUDIT_OPERATIONS,
+  AUDIT_STATUS,
+} = require('./utils/audit');
+
+const {
+  generateSecurePassword,
+  validateCPF,
+  validateCNPJ,
+  validateDocument,
+  sanitizeForLogging,
+} = require('./utils/security-utils');
+
 const app = express();
 const port = process.env.PORT || 8001;
 const db = new Database();
+
+// 🔒 CORREÇÃO DE SEGURANÇA: Forçar HTTPS em produção
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    // Verificar se a requisição já está em HTTPS
+    const proto = req.headers['x-forwarded-proto'];
+    if (proto && proto !== 'https') {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+
+  // Trust proxy (necessário para Nginx)
+  app.set('trust proxy', 1);
+}
 
 // Validar JWT_SECRET
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -36,18 +91,45 @@ if (SENDGRID_API_KEY) {
   console.warn('⚠️ AVISO: SENDGRID_API_KEY não definido. E-mails não serão enviados.');
 }
 
+// 🔒 FASE 2: Aplicar middlewares de segurança
+// Helmet deve vir primeiro para definir headers de segurança
+app.use(configureHelmet());
+app.use(customSecurityHeaders);
+
+// Rate limiting geral para todas as requisições
+app.use('/api/', generalLimiter);
+
+// Sanitização de dados (NoSQL injection e HPP)
+app.use(configureSanitization());
+
+// Configurar origens CORS a partir da variável de ambiente
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+      'https://alya.sistemas.viverdepj.com.br',
+      'http://localhost:8000',
+      'http://localhost:5173',
+      'http://127.0.0.1:8000',
+      'http://127.0.0.1:5173'
+    ];
+
 // Middleware
 app.use(cors({
-  origin: [
-    'https://alya.sistemas.viverdepj.com.br',
-    'http://localhost:8000',
-    'http://localhost:5173',
-    'http://127.0.0.1:8000',
-    'http://127.0.0.1:5173'
-  ],
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+  maxAge: 86400, // 24 horas de cache para preflight
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Limitar tamanho do payload
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Logger de segurança
+app.use(securityLogger);
+
+// Sanitização adicional do body
+app.use(sanitizeBody);
 
 
 // Criar pasta de avatares se não existir
@@ -473,12 +555,10 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-// Função auxiliar para gerar senhas aleatórias seguras
+// 🔒 FASE 3: Função de geração de senha melhorada
+// Agora usa generateSecurePassword() que garante requisitos de complexidade
 const generateRandomPassword = () => {
-  return crypto.randomBytes(16).toString('base64').slice(0, 16).replace(/[+/=]/g, (char) => {
-    const replacements = { '+': 'A', '/': 'B', '=': 'C' };
-    return replacements[char] || char;
-  });
+  return generateSecurePassword(16);
 };
 
 // Função auxiliar para obter módulos padrão por role
@@ -495,29 +575,12 @@ const getDefaultModulesForRole = (role) => {
   }
 };
 
-// Rate Limiters para recuperação de senha
-const passwordRecoveryLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { error: 'Muitas tentativas de recuperação. Tente novamente após 15 minutos.' }
-});
-
-const passwordTokenValidationLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'Muitas tentativas de validação. Tente novamente após 15 minutos.' }
-});
-
-const passwordResetLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { error: 'Muitas tentativas de reset. Tente novamente após 15 minutos.' }
-});
+// 🔒 Rate Limiters movidos para ./middleware/security.js
 
 // Rotas de Autenticação
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, inviteToken } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
@@ -525,6 +588,16 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await db.getUserByUsername(username);
     if (!user) {
+      // 🔒 AUDITORIA: Login falhou - usuário não encontrado
+      await logAudit({
+        operation: AUDIT_OPERATIONS.LOGIN_FAILURE,
+        username,
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        details: { reason: 'user_not_found' },
+        status: AUDIT_STATUS.FAILURE,
+        errorMessage: 'Usuário não encontrado',
+      });
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
@@ -535,10 +608,46 @@ app.post('/api/auth/login', async (req, res) => {
     let newPassword = null;
 
     if (isFirstLogin) {
-      // No primeiro login, aceitar qualquer senha
-      isValidPassword = true;
+      // 🔒 CORREÇÃO DE SEGURANÇA CRÍTICA:
+      // Primeiro login agora requer token de convite válido e senha temporária
 
-      // Gerar nova senha aleatória
+      if (!inviteToken) {
+        return res.status(401).json({
+          error: 'Token de convite necessário para primeiro acesso',
+          requiresInvite: true
+        });
+      }
+
+      // Validar token de convite
+      const invite = await db.validateUserInvite(inviteToken);
+      if (!invite) {
+        return res.status(401).json({ error: 'Token de convite inválido ou expirado' });
+      }
+
+      // Verificar se o token pertence a este usuário
+      if (invite.userId !== user.id) {
+        return res.status(401).json({ error: 'Token de convite não pertence a este usuário' });
+      }
+
+      // Validar senha temporária contra o hash do convite
+      isValidPassword = bcrypt.compareSync(password, invite.tempPasswordHash);
+
+      if (!isValidPassword) {
+        // 🔒 AUDITORIA: Login falhou - senha temporária incorreta
+        await logAudit({
+          operation: AUDIT_OPERATIONS.LOGIN_FAILURE,
+          userId: user.id,
+          username: user.username,
+          ipAddress: req.ip || req.connection?.remoteAddress,
+          userAgent: req.headers['user-agent'],
+          details: { reason: 'invalid_temp_password', firstLogin: true },
+          status: AUDIT_STATUS.FAILURE,
+          errorMessage: 'Senha temporária incorreta',
+        });
+        return res.status(401).json({ error: 'Senha temporária incorreta' });
+      }
+
+      // Gerar nova senha aleatória para o usuário alterar posteriormente
       newPassword = generateRandomPassword();
       const hashedPassword = bcrypt.hashSync(newPassword, 10);
 
@@ -548,17 +657,29 @@ app.post('/api/auth/login', async (req, res) => {
         password: hashedPassword,
         lastLogin: now
       });
+
+      // Marcar convite como usado
+      await db.markInviteAsUsed(inviteToken);
     } else {
       // Login normal: verificar senha
       isValidPassword = bcrypt.compareSync(password, user.password);
-    }
 
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
+      if (!isValidPassword) {
+        // 🔒 AUDITORIA: Login falhou - senha incorreta
+        await logAudit({
+          operation: AUDIT_OPERATIONS.LOGIN_FAILURE,
+          userId: user.id,
+          username: user.username,
+          ipAddress: req.ip || req.connection?.remoteAddress,
+          userAgent: req.headers['user-agent'],
+          details: { reason: 'invalid_password' },
+          status: AUDIT_STATUS.FAILURE,
+          errorMessage: 'Senha incorreta',
+        });
+        return res.status(401).json({ error: 'Credenciais inválidas' });
+      }
 
-    // Se não for primeiro login, atualizar lastLogin
-    if (!isFirstLogin) {
+      // Atualizar lastLogin
       const now = new Date().toISOString();
       await db.updateUser(user.id, { lastLogin: now });
     }
@@ -571,6 +692,20 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Logar ação de login
     await logActivity(user.id, user.username, 'login', 'auth', 'user', user.id);
+
+    // 🔒 AUDITORIA: Login bem-sucedido
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LOGIN_SUCCESS,
+      userId: user.id,
+      username: user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: {
+        role: user.role,
+        firstLogin: isFirstLogin,
+      },
+      status: AUDIT_STATUS.SUCCESS,
+    });
 
     // Retornar dados completos do usuário
     const userData = await db.getUserById(user.id);
@@ -607,6 +742,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json(response);
   } catch (error) {
+    console.error('Erro no login:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -776,7 +912,8 @@ app.post('/api/auth/recuperar-senha', passwordRecoveryLimiter, async (req, res) 
       }
     } else {
       //Apenas logar se não houver sendgrid no env
-      console.log(`Recuperação de senha solicitada para ${user.email}. Token gerado: ${tokenRecord.token}`);
+      // 🔒 FASE 3: Log sanitizado - não expõe o token completo
+      console.log(`Recuperação de senha solicitada para ${user.email}. Token gerado: ${tokenRecord.token.substring(0, 8)}...`);
     }
 
     return res.json({
@@ -811,7 +948,7 @@ app.get('/api/auth/validar-token/:token', passwordTokenValidationLimiter, async 
 });
 
 // Execução do Reset
-app.post('/api/auth/resetar-senha', passwordResetLimiter, async (req, res) => {
+app.post('/api/auth/resetar-senha', passwordResetLimiter, validatePasswordReset, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
@@ -885,7 +1022,7 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
 });
 
 // Endpoint para upload de foto de perfil
-app.post('/api/user/upload-photo', authenticateToken, uploadAvatar.single('photo'), (req, res) => {
+app.post('/api/user/upload-photo', authenticateToken, uploadLimiter, uploadAvatar.single('photo'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado' });
@@ -923,7 +1060,7 @@ app.post('/api/user/upload-photo', authenticateToken, uploadAvatar.single('photo
 });
 
 // Endpoint para atualizar perfil do próprio usuário
-app.put('/api/user/profile', authenticateToken, async (req, res) => {
+app.put('/api/user/profile', authenticateToken, validateProfileUpdate, async (req, res) => {
   try {
     const { firstName, lastName, email, phone, photoUrl, password, cpf, birthDate, gender, position, address } = req.body;
 
@@ -1236,8 +1373,9 @@ app.post('/api/import', authenticateToken, upload.single('file'), async (req, re
   }
 });
 
-// Rota para exportar dados (futura implementação)
-app.post('/api/export', (req, res) => {
+// Rota para exportar dados
+// 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
+app.post('/api/export', authenticateToken, (req, res) => {
   const { type, data } = req.body;
 
   try {
@@ -1305,7 +1443,8 @@ app.post('/api/export', (req, res) => {
 });
 
 // APIs para Transações
-app.get('/api/transactions', async (req, res) => {
+// 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
+app.get('/api/transactions', authenticateToken, async (req, res) => {
   try {
     const transactions = await db.getAllTransactions();
     res.json({ success: true, data: transactions });
@@ -1314,7 +1453,7 @@ app.get('/api/transactions', async (req, res) => {
   }
 });
 
-app.post('/api/transactions', authenticateToken, async (req, res) => {
+app.post('/api/transactions', authenticateToken, createLimiter, validateTransaction, async (req, res) => {
   try {
     const transaction = await db.saveTransaction(req.body);
     await logActivity(req.user.id, req.user.username, 'create', 'transactions', 'transaction', transaction.id);
@@ -1361,7 +1500,8 @@ app.delete('/api/transactions', authenticateToken, async (req, res) => {
 });
 
 // APIs para Produtos
-app.get('/api/products', async (req, res) => {
+// 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
+app.get('/api/products', authenticateToken, async (req, res) => {
   try {
     const products = await db.getAllProducts();
     res.json({ success: true, data: products });
@@ -1417,7 +1557,8 @@ app.delete('/api/products', authenticateToken, async (req, res) => {
 });
 
 // APIs para Clientes
-app.get('/api/clients', async (req, res) => {
+// 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
+app.get('/api/clients', authenticateToken, async (req, res) => {
   try {
     const clients = await db.getAllClients();
     res.json({ success: true, data: clients });
@@ -1426,7 +1567,7 @@ app.get('/api/clients', async (req, res) => {
   }
 });
 
-app.post('/api/clients', authenticateToken, async (req, res) => {
+app.post('/api/clients', authenticateToken, createLimiter, validateClientCreation, async (req, res) => {
   try {
     const client = await db.saveClient(req.body);
     await logActivity(req.user.id, req.user.username, 'create', 'clients', 'client', client.id);
@@ -2048,9 +2189,9 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =
       return res.status(400).json({ success: false, error: 'Usuário já existe' });
     }
 
-    // Criar hash placeholder que aceita qualquer senha no primeiro login
-    // (igual aos usuários padrão)
-    const placeholderPassword = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
+    // 🔒 CORREÇÃO DE SEGURANÇA: Gerar senha temporária forte para convite
+    const tempPassword = generateRandomPassword();
+    const tempPasswordHash = bcrypt.hashSync(tempPassword, 10);
 
     // Se módulos não foram fornecidos, usar módulos padrão da role
     const userRole = role || 'user';
@@ -2069,7 +2210,7 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =
       gender: gender || undefined,
       position: position || undefined,
       address: address || undefined,
-      password: placeholderPassword,
+      password: tempPasswordHash, // Senha temporária
       role: userRole,
       modules: userModules,
       isActive: isActive !== undefined ? isActive : true,
@@ -2077,10 +2218,65 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =
     };
 
     const user = await db.saveUser(newUser);
+
+    // Criar convite de usuário (expira em 7 dias)
+    const invite = await db.createUserInvite(user.id, tempPasswordHash, 7, req.user.id);
+
+    // Enviar email com credenciais (se SendGrid configurado)
+    if (SENDGRID_API_KEY && user.email) {
+      const inviteLink = `${process.env.FRONTEND_URL || 'https://alya.sistemas.viverdepj.com.br'}/login?invite=${invite.inviteToken}`;
+
+      const msg = {
+        to: user.email,
+        from: {
+          email: SENDGRID_FROM_EMAIL,
+          name: process.env.SENDGRID_FROM_NAME || 'Alya Sistemas',
+        },
+        subject: 'Alya - Bem-vindo(a) ao Sistema',
+        text: `Olá ${user.firstName || user.username},\n\nVocê foi cadastrado no sistema Alya.\n\nSuas credenciais temporárias:\nUsuário: ${user.username}\nSenha Temporária: ${tempPassword}\n\nLink de acesso:\n${inviteLink}\n\nEste convite expira em 7 dias.\n\nApós o primeiro acesso, você receberá uma nova senha que deverá ser alterada.\n\nAtenciosamente,\nEquipe Alya`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <p style="text-align: center; margin-bottom: 30px;">
+              <span style="font-size: 24px; font-weight: bold; color: #d97706;">Alya</span>
+            </p>
+            <h2 style="color: #1e293b; margin-bottom: 20px;">Bem-vindo(a) ao Sistema!</h2>
+            <p style="color: #475569; font-size: 16px; line-height: 1.5;">Olá <strong>${user.firstName || user.username}</strong>,</p>
+            <p style="color: #475569; font-size: 16px; line-height: 1.5;">Você foi cadastrado no sistema Alya.</p>
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <p style="margin: 5px 0; color: #78350f;"><strong>Usuário:</strong> ${user.username}</p>
+              <p style="margin: 5px 0; color: #78350f;"><strong>Senha Temporária:</strong> <code style="background-color: #fde68a; padding: 2px 6px; border-radius: 3px;">${tempPassword}</code></p>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${inviteLink}" style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Acessar Sistema</a>
+            </div>
+            <p style="color: #64748b; font-size: 14px; text-align: center;">Este convite expira em 7 dias.</p>
+            <p style="color: #64748b; font-size: 14px;">Após o primeiro acesso, você receberá uma nova senha que deverá ser alterada nas configurações do seu perfil.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">Se você não solicitou este cadastro, pode ignorar este e-mail.</p>
+          </div>
+        `,
+      };
+
+      try {
+        await sgMail.send(msg);
+        console.log(`Email de convite enviado para: ${user.email}`);
+      } catch (sgError) {
+        console.error('Erro ao enviar e-mail de convite:', sgError);
+      }
+    }
+
     await logActivity(req.user.id, req.user.username, 'create', 'admin', 'user', user.id, { username: user.username, role: user.role });
 
     const { password: _, ...safeUser } = user;
-    res.json({ success: true, data: safeUser });
+    res.json({
+      success: true,
+      data: safeUser,
+      invite: {
+        token: invite.inviteToken,
+        expiresAt: invite.expiresAt,
+        tempPassword: SENDGRID_API_KEY ? undefined : tempPassword // Só retornar se não enviou email
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

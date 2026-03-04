@@ -445,6 +445,87 @@ class Database extends FileDatabase {
     if (r.rowCount === 0) throw new Error('Usuário não encontrado');
   }
 
+  // --- Funções de Convite de Usuário (Segurança) ---
+
+  async createUserInvite(userId, tempPasswordHash, expiresInDays = 7, createdBy = null) {
+    try {
+      const inviteToken = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+      const r = await this.pool.query(
+        `INSERT INTO user_invites (id, user_id, invite_token, temp_password_hash, expires_at, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [this.generateId(), userId, inviteToken, tempPasswordHash, expiresAt.toISOString(), createdBy]
+      );
+
+      return {
+        id: r.rows[0].id,
+        userId: r.rows[0].user_id,
+        inviteToken: r.rows[0].invite_token,
+        expiresAt: r.rows[0].expires_at
+      };
+    } catch (error) {
+      console.error('Erro ao criar convite de usuário:', error);
+      throw new Error('Não foi possível gerar o convite de usuário');
+    }
+  }
+
+  async validateUserInvite(inviteToken) {
+    try {
+      const r = await this.pool.query(
+        `SELECT i.*, u.username, u.email, u.id as user_id
+         FROM user_invites i
+         JOIN users u ON i.user_id = u.id
+         WHERE i.invite_token = $1 AND i.used = FALSE AND i.expires_at > CURRENT_TIMESTAMP`,
+        [inviteToken]
+      );
+
+      if (r.rows.length === 0) {
+        return null; // Convite inválido, usado ou expirado
+      }
+
+      return {
+        id: r.rows[0].id,
+        userId: r.rows[0].user_id,
+        username: r.rows[0].username,
+        email: r.rows[0].email,
+        tempPasswordHash: r.rows[0].temp_password_hash,
+        expiresAt: r.rows[0].expires_at
+      };
+    } catch (error) {
+      console.error('Erro ao validar convite:', error);
+      throw new Error('Não foi possível validar o convite');
+    }
+  }
+
+  async markInviteAsUsed(inviteToken) {
+    try {
+      const r = await this.pool.query(
+        `UPDATE user_invites SET used = TRUE, used_at = CURRENT_TIMESTAMP
+         WHERE invite_token = $1 RETURNING *`,
+        [inviteToken]
+      );
+
+      return r.rows.length > 0;
+    } catch (error) {
+      console.error('Erro ao marcar convite como usado:', error);
+      throw new Error('Não foi possível atualizar o convite');
+    }
+  }
+
+  async cleanupExpiredInvites() {
+    try {
+      const r = await this.pool.query(
+        `DELETE FROM user_invites WHERE expires_at < CURRENT_TIMESTAMP AND used = FALSE`
+      );
+      return r.rowCount;
+    } catch (error) {
+      console.error('Erro ao limpar convites expirados:', error);
+      return 0;
+    }
+  }
+
   async getAllActivityLogs() {
     try {
       const r = await this.pool.query('SELECT * FROM activity_logs ORDER BY timestamp DESC LIMIT 10000');

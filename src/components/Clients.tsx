@@ -65,6 +65,29 @@ const Clients: React.FC = () => {
     return () => { body.classList.remove('modal-open') }
   }, [isImportExportOpen, isModalOpen])
 
+  // Fechar modais com ESC
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (isModalOpen) {
+          setIsModalOpen(false);
+          setEditing(null);
+          setFormErrors({});
+        } else if (isImportExportOpen) {
+          setIsImportExportOpen(false);
+        }
+      }
+    };
+
+    if (isModalOpen || isImportExportOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isModalOpen, isImportExportOpen]);
+
   const handleSort = (field: keyof Client) => {
     let direction: 'asc' | 'desc' = 'asc'
     if (sortConfig.field === field && sortConfig.direction === 'asc') direction = 'desc'
@@ -589,11 +612,19 @@ const Clients: React.FC = () => {
 
       {/* Modal Novo/Editar Cliente */}
       {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] p-4" onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setEditing(null); setFormErrors({}) } }}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">{editing ? 'Editar Cliente' : 'Novo Cliente'}</h2>
-              <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}) }} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50" onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setEditing(null); setFormErrors({}) } }}>
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Users className="w-6 h-6 text-amber-700" />
+                  {editing ? 'Editar Cliente' : 'Novo Cliente'}
+                </h2>
+                <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}) }} className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="space-y-3">
               <div className="relative">
@@ -719,7 +750,7 @@ const Clients: React.FC = () => {
 
       {/* Modal Importar/Exportar */}
       {isImportExportOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsImportExportOpen(false) }}>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50" onClick={(e) => { if (e.target === e.currentTarget) setIsImportExportOpen(false) }}>
           <div className="relative bg-white rounded-2xl w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-b from-amber-50 to-white border-b">
