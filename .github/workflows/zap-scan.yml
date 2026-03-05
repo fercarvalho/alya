@@ -1,0 +1,133 @@
+name: OWASP ZAP Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Executar toda segunda-feira às 2AM BRT (5AM UTC)
+    - cron: '0 5 * * 1'
+  workflow_dispatch: # Permitir execução manual
+
+jobs:
+  zap-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan with OWASP ZAP
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: cd server && npm ci
+
+      - name: Start PostgreSQL
+        uses: ikalnytskyi/action-setup-postgres@v4
+        with:
+          username: alya_user
+          password: test_password
+          database: alya_db
+          port: 5432
+
+      - name: Setup database
+        run: |
+          cd server
+          psql -U alya_user -d alya_db -f migrations/001-create-users-table.sql
+          psql -U alya_user -d alya_db -f migrations/002-create-audit-logs.sql
+          psql -U alya_user -d alya_db -f migrations/003-create-refresh-tokens.sql
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: alya_user
+          PGPASSWORD: test_password
+          PGDATABASE: alya_db
+
+      - name: Start backend server
+        run: |
+          cd server
+          npm start &
+          echo $! > backend.pid
+          sleep 10
+        env:
+          NODE_ENV: test
+          PORT: 8001
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: alya_user
+          DB_PASSWORD: test_password
+          DB_NAME: alya_db
+          JWT_SECRET: test-secret-for-ci
+          CORS_ORIGINS: http://localhost:5173
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Start frontend server
+        run: |
+          npx vite preview --port 5173 --host &
+          echo $! > frontend.pid
+          sleep 10
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for backend..."
+          timeout 30 bash -c 'until curl -s http://localhost:8001/health > /dev/null; do sleep 2; done' || exit 1
+          echo "✅ Backend ready"
+
+          echo "Waiting for frontend..."
+          timeout 30 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 2; done' || exit 1
+          echo "✅ Frontend ready"
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.7.0
+        with:
+          target: 'http://localhost:5173'
+          docker_name: 'owasp/zap2docker-stable'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a -j -l INFO'
+          fail_action: false # Não falhar o build, apenas reportar
+          allow_issue_writing: false
+
+      - name: Upload ZAP Report (HTML)
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: zap-report-html
+          path: report_html.html
+          retention-days: 30
+
+      - name: Upload ZAP Report (Markdown)
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: zap-report-md
+          path: report_md.md
+          retention-days: 30
+
+      - name: Upload ZAP Report (JSON)
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: zap-report-json
+          path: report_json.json
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f frontend.pid ]; then
+            kill $(cat frontend.pid) || true
+          fi
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) || true
+          fi

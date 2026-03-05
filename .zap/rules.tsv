@@ -1,0 +1,78 @@
+# OWASP ZAP Scanning Rules Configuration
+# Formato: ruleId	THRESHOLD	URL	PARAMETER
+#
+# THRESHOLD values:
+#   IGNORE  - Ignorar completamente esta regra
+#   OFF     - Desabilitar esta verificação
+#   DEFAULT - Usar threshold padrão
+#   LOW     - Baixa sensibilidade (menos falsos positivos)
+#   MEDIUM  - Sensibilidade média
+#   HIGH    - Alta sensibilidade (mais falsos positivos)
+#
+# ruleId reference: https://www.zaproxy.org/docs/alerts/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FALSOS POSITIVOS CONHECIDOS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Ignorar X-Content-Type-Options em arquivos estáticos
+10021	IGNORE	http://localhost:5173/assets/.*
+
+# Ignorar avisos de CSP em assets (já configurado no backend)
+10038	IGNORE	http://localhost:5173/assets/.*
+
+# Ignorar avisos de cache em static files (intencional)
+10049	IGNORE	http://localhost:5173/assets/.*
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AJUSTES DE SENSIBILIDADE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# SQL Injection - Manter alta sensibilidade
+40018	HIGH
+
+# Cross Site Scripting (XSS) - Manter alta sensibilidade
+40012	HIGH
+40014	HIGH
+40016	HIGH
+40017	HIGH
+
+# Path Traversal - Manter alta sensibilidade
+6	HIGH
+
+# Remote File Inclusion - Manter alta sensibilidade
+7	HIGH
+
+# Server Side Include - Manter alta sensibilidade
+40009	HIGH
+
+# CSRF - Manter média (usamos JWT, não cookies de sessão)
+10202	MEDIUM
+
+# Clickjacking - Já implementado X-Frame-Options
+10020	LOW
+
+# Cookie Security - Baixa prioridade (usamos localStorage)
+10011	LOW
+10054	LOW
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INFORMAÇÕES GERAIS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Tecnologias detectadas - Apenas informativo
+10000	INFO
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOTAS
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Este arquivo é usado tanto pelo script local (zap-scan.sh) quanto pelo
+# GitHub Actions workflow (.github/workflows/zap-scan.yml).
+#
+# Para adicionar novas regras, consulte:
+# https://www.zaproxy.org/docs/alerts/
+#
+# Para testar localmente:
+# cd security/owasp-zap && ./zap-scan.sh quick
+#
