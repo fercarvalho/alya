@@ -64,7 +64,8 @@ server/backup-json-data.js
 # **/cleanup*.js
 # **/validate*.js
 
-# Documentation files (keep only README.md)
+# Documentation files (keep only README.md and CLAUDE.md)
 *.md
 !README.md
+!CLAUDE.md
 
