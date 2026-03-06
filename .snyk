@@ -1,0 +1,66 @@
+# Snyk (https://snyk.io) policy file
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VULNERABILIDADES CONHECIDAS E MITIGADAS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# xlsx - HIGH severity (documentado em TECH-DEBT.md)
+# Mitigação: Rate limiting, file size limits, sanitization
+# Plano: Migrar para exceljs (Etapa 2 - Fase 4)
+ignore:
+  'SNYK-JS-XLSX-*':
+    - '*':
+        reason: 'Vulnerabilidade documentada em TECH-DEBT.md. Migração para exceljs planejada (Etapa 2).'
+        expires: '2026-06-01'
+        created: 2026-03-04
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXCLUSÕES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Excluir diretórios de desenvolvimento
+exclude:
+  global:
+    - node_modules/
+    - dist/
+    - build/
+    - coverage/
+    - .git/
+    - server/node_modules/
+    - server/dist/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONFIGURAÇÕES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Threshold: Alertar apenas sobre HIGH e CRITICAL
+# (MEDIUM e LOW serão reportados mas não falharão o build)
+failThreshold: high
+
+# Monitorar projeto continuamente
+monitor: true
+
+# Incluir dev dependencies no scan
+devDependencies: true
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PATCHES AUTOMÁTICOS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Habilitar patches automáticos da Snyk quando disponíveis
+patch: {}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOTAS
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Para testar localmente:
+#   npm install -g snyk
+#   snyk auth
+#   snyk test
+#
+# Para monitorar:
+#   snyk monitor
+#
+# Dashboard: https://app.snyk.io
+#
