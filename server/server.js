@@ -1,18 +1,18 @@
 // Carregar variáveis de ambiente
-require('dotenv').config();
+require("dotenv").config();
 
-const express = require('express');
-const multer = require('multer');
-const XLSX = require('xlsx');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
-const sgMail = require('@sendgrid/mail');
-const Database = require('./database-pg');
+const express = require("express");
+const multer = require("multer");
+const XLSX = require("xlsx");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
+const sgMail = require("@sendgrid/mail");
+const Database = require("./database-pg");
 
 // 🔒 FASE 2: Middlewares de Segurança
 const {
@@ -27,7 +27,7 @@ const {
   configureSanitization,
   securityLogger,
   customSecurityHeaders,
-} = require('./middleware/security');
+} = require("./middleware/security");
 
 const {
   validateLogin,
@@ -38,13 +38,9 @@ const {
   validatePasswordRecovery,
   validatePasswordReset,
   sanitizeBody,
-} = require('./middleware/validation');
+} = require("./middleware/validation");
 
-const {
-  logAudit,
-  AUDIT_OPERATIONS,
-  AUDIT_STATUS,
-} = require('./utils/audit');
+const { logAudit, AUDIT_OPERATIONS, AUDIT_STATUS } = require("./utils/audit");
 
 const {
   TOKEN_EXPIRY,
@@ -53,7 +49,7 @@ const {
   revokeRefreshToken,
   revokeAllUserTokens,
   rotateRefreshToken,
-} = require('./utils/refresh-tokens');
+} = require("./utils/refresh-tokens");
 
 const {
   generateSecurePassword,
@@ -61,43 +57,55 @@ const {
   validateCNPJ,
   validateDocument,
   sanitizeForLogging,
-} = require('./utils/security-utils');
+} = require("./utils/security-utils");
+
+// 🚨 Sistema de Alertas de Segurança
+const securityAlerts = require("./utils/security-alerts");
 
 const app = express();
 const port = process.env.PORT || 8001;
 const db = new Database();
 
 // 🔒 CORREÇÃO DE SEGURANÇA: Forçar HTTPS em produção
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   app.use((req, res, next) => {
     // Verificar se a requisição já está em HTTPS
-    const proto = req.headers['x-forwarded-proto'];
-    if (proto && proto !== 'https') {
+    const proto = req.headers["x-forwarded-proto"];
+    if (proto && proto !== "https") {
       return res.redirect(301, `https://${req.headers.host}${req.url}`);
     }
     next();
   });
 
   // Trust proxy (necessário para Nginx)
-  app.set('trust proxy', 1);
+  app.set("trust proxy", 1);
 }
 
 // Validar JWT_SECRET
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  console.error('❌ ERRO CRÍTICO: JWT_SECRET não está definido nas variáveis de ambiente!');
-  console.error('   Configure JWT_SECRET no arquivo .env ou nas variáveis de ambiente do sistema.');
-  console.error('   Para gerar uma chave segura, execute: openssl rand -base64 32');
+  console.error(
+    "❌ ERRO CRÍTICO: JWT_SECRET não está definido nas variáveis de ambiente!",
+  );
+  console.error(
+    "   Configure JWT_SECRET no arquivo .env ou nas variáveis de ambiente do sistema.",
+  );
+  console.error(
+    "   Para gerar uma chave segura, execute: openssl rand -base64 32",
+  );
   process.exit(1);
 }
 
 // Configurar SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'naoresponda@viverdepj.com.br';
+const SENDGRID_FROM_EMAIL =
+  process.env.SENDGRID_FROM_EMAIL || "naoresponda@viverdepj.com.br";
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 } else {
-  console.warn('⚠️ AVISO: SENDGRID_API_KEY não definido. E-mails não serão enviados.');
+  console.warn(
+    "⚠️ AVISO: SENDGRID_API_KEY não definido. E-mails não serão enviados.",
+  );
 }
 
 // 🔒 FASE 2: Aplicar middlewares de segurança
@@ -106,33 +114,35 @@ app.use(configureHelmet());
 app.use(customSecurityHeaders);
 
 // Rate limiting geral para todas as requisições
-app.use('/api/', generalLimiter);
+app.use("/api/", generalLimiter);
 
 // Sanitização de dados (NoSQL injection e HPP)
 app.use(configureSanitization());
 
 // Configurar origens CORS a partir da variável de ambiente
 const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
   : [
-      'https://alya.sistemas.viverdepj.com.br',
-      'http://localhost:8000',
-      'http://localhost:5173',
-      'http://127.0.0.1:8000',
-      'http://127.0.0.1:5173'
+      "https://alya.sistemas.viverdepj.com.br",
+      "http://localhost:8000",
+      "http://localhost:5173",
+      "http://127.0.0.1:8000",
+      "http://127.0.0.1:5173",
     ];
 
 // Middleware
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
-  maxAge: 86400, // 24 horas de cache para preflight
-}));
-app.use(express.json({ limit: '10mb' })); // Limitar tamanho do payload
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["X-RateLimit-Limit", "X-RateLimit-Remaining"],
+    maxAge: 86400, // 24 horas de cache para preflight
+  }),
+);
+app.use(express.json({ limit: "10mb" })); // Limitar tamanho do payload
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Logger de segurança
 app.use(securityLogger);
@@ -140,34 +150,42 @@ app.use(securityLogger);
 // Sanitização adicional do body
 app.use(sanitizeBody);
 
-
 // Criar pasta de avatares se não existir
-const avatarsDir = path.join(__dirname, 'public', 'avatars');
+const avatarsDir = path.join(__dirname, "public", "avatars");
 if (!fs.existsSync(avatarsDir)) {
   fs.mkdirSync(avatarsDir, { recursive: true });
 }
 
 // Rota estática para servir avatares com cache
-app.use('/api/avatars', express.static(path.join(__dirname, 'public', 'avatars'), {
-  maxAge: '1y', // Cache por 1 ano
-  etag: true, // Usar ETag para validação condicional
-  lastModified: true // Usar Last-Modified header
-}));
+app.use(
+  "/api/avatars",
+  express.static(path.join(__dirname, "public", "avatars"), {
+    maxAge: "1y", // Cache por 1 ano
+    etag: true, // Usar ETag para validação condicional
+    lastModified: true, // Usar Last-Modified header
+  }),
+);
 
 // Função para validar formato de email
 function validateEmailFormat(email) {
-  if (!email || typeof email !== 'string') return false;
+  if (!email || typeof email !== "string") return false;
 
   // Regex RFC 5322 simplificado
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   // Validações adicionais
   if (email.length < 5 || email.length > 254) return false;
-  if (email.startsWith('.') || email.startsWith('-') || email.endsWith('.') || email.endsWith('-')) return false;
+  if (
+    email.startsWith(".") ||
+    email.startsWith("-") ||
+    email.endsWith(".") ||
+    email.endsWith("-")
+  )
+    return false;
 
-  const parts = email.split('@');
+  const parts = email.split("@");
   if (parts.length !== 2) return false;
-  if (!parts[1].includes('.')) return false;
+  if (!parts[1].includes(".")) return false;
 
   return emailRegex.test(email);
 }
@@ -180,13 +198,17 @@ function deleteAvatarFile(photoUrl) {
     // Extrair nome do arquivo do photoUrl
     // Ex: /api/avatars/user123-1234567890.webp -> user123-1234567890.webp
     let filename = photoUrl;
-    if (photoUrl.includes('/')) {
-      filename = photoUrl.split('/').pop();
+    if (photoUrl.includes("/")) {
+      filename = photoUrl.split("/").pop();
     }
 
     // Validar que não contém path traversal
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      console.log('Tentativa de path traversal detectada:', filename);
+    if (
+      filename.includes("..") ||
+      filename.includes("/") ||
+      filename.includes("\\")
+    ) {
+      console.log("Tentativa de path traversal detectada:", filename);
       return;
     }
 
@@ -198,33 +220,36 @@ function deleteAvatarFile(photoUrl) {
     const resolvedAvatarsDir = path.resolve(avatarsDir);
 
     if (!resolvedPath.startsWith(resolvedAvatarsDir)) {
-      console.log('Tentativa de acessar arquivo fora do diretório de avatares:', resolvedPath);
+      console.log(
+        "Tentativa de acessar arquivo fora do diretório de avatares:",
+        resolvedPath,
+      );
       return;
     }
 
     // Verificar se arquivo existe e deletar
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      console.log('Avatar deletado:', filename);
+      console.log("Avatar deletado:", filename);
     }
   } catch (error) {
     // Logar erro mas não falhar a operação principal
-    console.log('Erro ao deletar foto antiga:', error.message);
+    console.log("Erro ao deletar foto antiga:", error.message);
   }
 }
 
 // Middleware de autenticação
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Token de acesso requerido' });
+    return res.status(401).json({ error: "Token de acesso requerido" });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({ error: 'Token inválido' });
+      return res.status(403).json({ error: "Token inválido" });
     }
     req.user = user;
     next();
@@ -234,7 +259,7 @@ const authenticateToken = (req, res, next) => {
 // Configuração do Multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, 'uploads');
+    const uploadDir = path.join(__dirname, "uploads");
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -242,24 +267,27 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     // Manter o nome original com timestamp para evitar conflitos
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
+    );
+  },
 });
 
 const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     // Aceitar apenas arquivos .xlsx
-    if (path.extname(file.originalname).toLowerCase() === '.xlsx') {
+    if (path.extname(file.originalname).toLowerCase() === ".xlsx") {
       cb(null, true);
     } else {
-      cb(new Error('Apenas arquivos .xlsx são permitidos!'), false);
+      cb(new Error("Apenas arquivos .xlsx são permitidos!"), false);
     }
   },
   limits: {
-    fileSize: 5 * 1024 * 1024 // Limite de 5MB
-  }
+    fileSize: 5 * 1024 * 1024, // Limite de 5MB
+  },
 });
 
 // Configuração do Multer para upload de avatares (WebP)
@@ -277,7 +305,7 @@ const avatarStorage = multer.diskStorage({
     const userId = req.user?.id || crypto.randomUUID();
     const timestamp = Date.now();
     cb(null, `${userId}-${timestamp}.webp`);
-  }
+  },
 });
 
 const uploadAvatar = multer({
@@ -287,25 +315,29 @@ const uploadAvatar = multer({
     const ext = path.extname(file.originalname).toLowerCase();
     const mimeType = file.mimetype;
 
-    if (ext === '.webp' && mimeType === 'image/webp') {
+    if (ext === ".webp" && mimeType === "image/webp") {
       cb(null, true);
     } else {
-      cb(new Error('Apenas arquivos WebP são permitidos!'), false);
+      cb(new Error("Apenas arquivos WebP são permitidos!"), false);
     }
   },
   limits: {
-    fileSize: 2 * 1024 * 1024 // Limite de 2MB após processamento
-  }
+    fileSize: 2 * 1024 * 1024, // Limite de 2MB após processamento
+  },
 });
 
 // Helper genérico para ler coluna do Excel de forma case-insensitive,
 // ignorando acentos e espaços extras no cabeçalho.
 function getCellValue(row, possibleHeaders, defaultValue = undefined) {
-  if (!row || typeof row !== 'object') return defaultValue;
+  if (!row || typeof row !== "object") return defaultValue;
 
   // 1) Tentativa direta (case-sensitive), para não quebrar nada existente
   for (const header of possibleHeaders) {
-    if (row[header] !== undefined && row[header] !== null && row[header] !== '') {
+    if (
+      row[header] !== undefined &&
+      row[header] !== null &&
+      row[header] !== ""
+    ) {
       return row[header];
     }
   }
@@ -313,15 +345,15 @@ function getCellValue(row, possibleHeaders, defaultValue = undefined) {
   // 2) Tentativa case-insensitive e accent-insensitive
   const normalize = (str) =>
     String(str)
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .trim();
 
   const normalizedTargets = possibleHeaders.map(normalize);
 
   for (const [key, value] of Object.entries(row)) {
-    if (value === undefined || value === null || value === '') continue;
+    if (value === undefined || value === null || value === "") continue;
     const nk = normalize(key);
     if (normalizedTargets.includes(nk)) {
       return value;
@@ -338,27 +370,53 @@ function processTransactions(worksheet) {
 
   data.forEach((row, index) => {
     try {
-      const rawDate = getCellValue(row, ['Data', 'date', 'data']);
-      const rawDescription = getCellValue(row, ['Descrição', 'Descricao', 'description', 'Description']);
-      const rawValue = getCellValue(row, ['Valor', 'value', 'Value', 'Valor (R$)']);
-      const rawType = getCellValue(row, ['Tipo', 'tipo', 'type', 'Type', 'Tipo de Categoria', 'tipo de categoria']);
-      const rawCategory = getCellValue(row, ['Categoria', 'categoria', 'category', 'Category']);
+      const rawDate = getCellValue(row, ["Data", "date", "data"]);
+      const rawDescription = getCellValue(row, [
+        "Descrição",
+        "Descricao",
+        "description",
+        "Description",
+      ]);
+      const rawValue = getCellValue(row, [
+        "Valor",
+        "value",
+        "Value",
+        "Valor (R$)",
+      ]);
+      const rawType = getCellValue(row, [
+        "Tipo",
+        "tipo",
+        "type",
+        "Type",
+        "Tipo de Categoria",
+        "tipo de categoria",
+      ]);
+      const rawCategory = getCellValue(row, [
+        "Categoria",
+        "categoria",
+        "category",
+        "Category",
+      ]);
 
-      let typeFormatted = (rawType || 'Receita').toString().trim();
+      let typeFormatted = (rawType || "Receita").toString().trim();
       const typeLower = typeFormatted.toLowerCase();
-      if (typeLower === 'despesa' || typeLower === 'saida' || typeLower === 'saída') {
-        typeFormatted = 'Despesa';
+      if (
+        typeLower === "despesa" ||
+        typeLower === "saida" ||
+        typeLower === "saída"
+      ) {
+        typeFormatted = "Despesa";
       } else {
-        typeFormatted = 'Receita';
+        typeFormatted = "Receita";
       }
 
       const transaction = {
         id: Date.now() + index,
-        date: rawDate || new Date().toISOString().split('T')[0],
-        description: (rawDescription || '').toString().trim(),
+        date: rawDate || new Date().toISOString().split("T")[0],
+        description: (rawDescription || "").toString().trim(),
         value: parseFloat(rawValue || 0),
         type: typeFormatted,
-        category: (rawCategory || 'Outros').toString().trim(),
+        category: (rawCategory || "Outros").toString().trim(),
       };
 
       // Validar se tem dados essenciais
@@ -380,17 +438,29 @@ function processProducts(worksheet) {
 
   data.forEach((row, index) => {
     try {
-      const name = getCellValue(row, ['Nome', 'name', 'Name']);
-      const category = getCellValue(row, ['Categoria', 'categoria', 'category', 'Category']);
-      const price = getCellValue(row, ['Preço', 'Preco', 'preco', 'price', 'Price', 'Preço (R$)']);
-      const cost = getCellValue(row, ['Custo', 'custo', 'cost', 'Cost']);
-      const stock = getCellValue(row, ['Estoque', 'estoque', 'stock', 'Stock']);
-      const sold = getCellValue(row, ['Vendido', 'vendido', 'sold', 'Sold']);
+      const name = getCellValue(row, ["Nome", "name", "Name"]);
+      const category = getCellValue(row, [
+        "Categoria",
+        "categoria",
+        "category",
+        "Category",
+      ]);
+      const price = getCellValue(row, [
+        "Preço",
+        "Preco",
+        "preco",
+        "price",
+        "Price",
+        "Preço (R$)",
+      ]);
+      const cost = getCellValue(row, ["Custo", "custo", "cost", "Cost"]);
+      const stock = getCellValue(row, ["Estoque", "estoque", "stock", "Stock"]);
+      const sold = getCellValue(row, ["Vendido", "vendido", "sold", "Sold"]);
 
       const product = {
         id: Date.now() + index,
-        name: (name || '').toString().trim(),
-        category: (category || 'Outros').toString().trim(),
+        name: (name || "").toString().trim(),
+        category: (category || "Outros").toString().trim(),
         price: parseFloat(price || 0),
         cost: parseFloat(cost || 0),
         stock: parseInt(stock || 0),
@@ -418,15 +488,30 @@ function processClients(worksheet) {
     try {
       // Mapear colunas do Excel para o formato esperado
       const documentType =
-        getCellValue(row, ['Tipo de Documento', 'tipo de documento', 'Tipo de documento']) || 'cpf';
+        getCellValue(row, [
+          "Tipo de Documento",
+          "tipo de documento",
+          "Tipo de documento",
+        ]) || "cpf";
       const client = {
         id: Date.now() + index,
-        name: row['Nome'] || row['name'] || row['Name'] || '',
-        email: row['Email'] || row['email'] || row['Email'] || '',
-        phone: row['Telefone'] || row['phone'] || row['Phone'] || '',
-        address: row['Endereço'] || row['Endereco'] || row['address'] || row['Address'] || '',
-        cpf: documentType === 'cpf' ? (row['CPF'] || row['cpf'] || row['Cpf'] || '') : '',
-        cnpj: documentType === 'cnpj' ? (row['CNPJ'] || row['cnpj'] || row['Cnpj'] || '') : ''
+        name: row["Nome"] || row["name"] || row["Name"] || "",
+        email: row["Email"] || row["email"] || row["Email"] || "",
+        phone: row["Telefone"] || row["phone"] || row["Phone"] || "",
+        address:
+          row["Endereço"] ||
+          row["Endereco"] ||
+          row["address"] ||
+          row["Address"] ||
+          "",
+        cpf:
+          documentType === "cpf"
+            ? row["CPF"] || row["cpf"] || row["Cpf"] || ""
+            : "",
+        cnpj:
+          documentType === "cnpj"
+            ? row["CNPJ"] || row["cnpj"] || row["Cnpj"] || ""
+            : "",
       };
 
       // Validar se tem dados essenciais
@@ -442,21 +527,25 @@ function processClients(worksheet) {
 }
 
 // Rota para baixar modelo de arquivo
-app.get('/api/modelo/:type', (req, res) => {
+app.get("/api/modelo/:type", (req, res) => {
   try {
     const { type } = req.params;
 
-    if (!['transactions', 'products', 'clients'].includes(type)) {
-      return res.status(400).json({ error: 'Tipo inválido! Use "transactions", "products" ou "clients"' });
+    if (!["transactions", "products", "clients"].includes(type)) {
+      return res
+        .status(400)
+        .json({
+          error: 'Tipo inválido! Use "transactions", "products" ou "clients"',
+        });
     }
 
     // Sempre gerar arquivo modelo dinamicamente para garantir colunas atualizadas
     const workbook = XLSX.utils.book_new();
     let worksheet;
 
-    if (type === 'transactions') {
-      const fileName = 'modelo-transacoes.xlsx';
-      const filePath = path.join(__dirname, 'public', fileName);
+    if (type === "transactions") {
+      const fileName = "modelo-transacoes.xlsx";
+      const filePath = path.join(__dirname, "public", fileName);
 
       if (fs.existsSync(filePath)) {
         return res.download(filePath, fileName);
@@ -465,101 +554,118 @@ app.get('/api/modelo/:type', (req, res) => {
       // Criar dados de exemplo
       const sampleData = [
         {
-          'Data': '2024-01-15',
-          'Descrição': 'Venda de produto',
-          'Valor': 150.00,
-          'Tipo': 'Receita',
-          'Categoria': 'Vendas'
-        }
+          Data: "2024-01-15",
+          Descrição: "Venda de produto",
+          Valor: 150.0,
+          Tipo: "Receita",
+          Categoria: "Vendas",
+        },
       ];
       worksheet = XLSX.utils.json_to_sheet(sampleData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Transações');
-    } else if (type === 'products') {
-      const fileName = 'modelo-produtos.xlsx';
-      const filePath = path.join(__dirname, 'public', fileName);
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Transações");
+    } else if (type === "products") {
+      const fileName = "modelo-produtos.xlsx";
+      const filePath = path.join(__dirname, "public", fileName);
 
       if (fs.existsSync(filePath)) {
         return res.download(filePath, fileName);
       }
 
       // Criar dados de exemplo
-      const sampleData = [{
-        'Nome': '',
-        'Categoria': '',
-        'Preço': '',
-        'Custo': '',
-        'Estoque': '',
-        'Vendido': ''
-      }];
-      worksheet = XLSX.utils.json_to_sheet(sampleData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Produtos');
-    } else if (type === 'clients') {
       const sampleData = [
         {
-          'Nome': 'João Silva',
-          'Email': 'joao@email.com',
-          'Telefone': '(11) 99999-9999',
-          'Endereço': 'Rua das Flores, 123',
-          'Tipo de Documento': 'cpf',
-          'CPF': '123.456.789-00',
-          'CNPJ': ''
+          Nome: "",
+          Categoria: "",
+          Preço: "",
+          Custo: "",
+          Estoque: "",
+          Vendido: "",
+        },
+      ];
+      worksheet = XLSX.utils.json_to_sheet(sampleData);
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Produtos");
+    } else if (type === "clients") {
+      const sampleData = [
+        {
+          Nome: "João Silva",
+          Email: "joao@email.com",
+          Telefone: "(11) 99999-9999",
+          Endereço: "Rua das Flores, 123",
+          "Tipo de Documento": "cpf",
+          CPF: "123.456.789-00",
+          CNPJ: "",
         },
         {
-          'Nome': 'Empresa XYZ Ltda',
-          'Email': 'contato@empresa.com',
-          'Telefone': '(11) 88888-8888',
-          'Endereço': 'Av. Principal, 456',
-          'Tipo de Documento': 'cnpj',
-          'CPF': '',
-          'CNPJ': '12.345.678/0001-90'
-        }
+          Nome: "Empresa XYZ Ltda",
+          Email: "contato@empresa.com",
+          Telefone: "(11) 88888-8888",
+          Endereço: "Av. Principal, 456",
+          "Tipo de Documento": "cnpj",
+          CPF: "",
+          CNPJ: "12.345.678/0001-90",
+        },
       ];
       worksheet = XLSX.utils.json_to_sheet(sampleData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Clientes");
     }
 
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    const filename = type === 'transactions' ? 'modelo-transacoes.xlsx' :
-      type === 'clients' ? 'modelo-clientes.xlsx' :
-        'modelo-produtos.xlsx';
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const filename =
+      type === "transactions"
+        ? "modelo-transacoes.xlsx"
+        : type === "clients"
+          ? "modelo-clientes.xlsx"
+          : "modelo-produtos.xlsx";
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': buffer.length
+      "Content-Type":
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": buffer.length,
     });
     return res.send(buffer);
-
   } catch (error) {
-    console.error('Erro ao baixar modelo:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error("Erro ao baixar modelo:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // Função auxiliar para log de atividades
-async function logActivity(userId, username, action, module, entityType = null, entityId = null, details = {}) {
+async function logActivity(
+  userId,
+  username,
+  action,
+  module,
+  entityType = null,
+  entityId = null,
+  details = {},
+) {
   try {
     const log = {
       id: db.generateId(),
       userId,
       username,
       action,
-      module: module || 'general',
+      module: module || "general",
       entityType,
       entityId,
       details,
       timestamp: new Date().toISOString(),
-      ipAddress: null // Será preenchido nas rotas quando disponível
+      ipAddress: null, // Será preenchido nas rotas quando disponível
     };
     await db.saveActivityLog(log);
   } catch (error) {
-    console.error('Erro ao salvar log de atividade:', error);
+    console.error("Erro ao salvar log de atividade:", error);
   }
 }
 
 // Middleware para verificar se é admin
 const requireAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar esta rota.' });
+  if (req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({
+        error: "Acesso negado. Apenas administradores podem acessar esta rota.",
+      });
   }
   next();
 };
@@ -573,12 +679,29 @@ const generateRandomPassword = () => {
 // Função auxiliar para obter módulos padrão por role
 const getDefaultModulesForRole = (role) => {
   switch (role) {
-    case 'admin':
-      return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
-    case 'user':
-      return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
-    case 'guest':
-      return ['dashboard', 'metas', 'reports', 'dre'];
+    case "admin":
+      return [
+        "dashboard",
+        "transactions",
+        "products",
+        "clients",
+        "reports",
+        "metas",
+        "dre",
+        "admin",
+      ];
+    case "user":
+      return [
+        "dashboard",
+        "transactions",
+        "products",
+        "clients",
+        "reports",
+        "metas",
+        "dre",
+      ];
+    case "guest":
+      return ["dashboard", "metas", "reports", "dre"];
     default:
       return [];
   }
@@ -587,12 +710,14 @@ const getDefaultModulesForRole = (role) => {
 // 🔒 Rate Limiters movidos para ./middleware/security.js
 
 // Rotas de Autenticação
-app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
+app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
   try {
     const { username, password, inviteToken } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
+      return res
+        .status(400)
+        .json({ error: "Usuário e senha são obrigatórios" });
     }
 
     const user = await db.getUserByUsername(username);
@@ -602,12 +727,35 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
         operation: AUDIT_OPERATIONS.LOGIN_FAILURE,
         username,
         ipAddress: req.ip || req.connection?.remoteAddress,
-        userAgent: req.headers['user-agent'],
-        details: { reason: 'user_not_found' },
+        userAgent: req.headers["user-agent"],
+        details: { reason: "user_not_found" },
         status: AUDIT_STATUS.FAILURE,
-        errorMessage: 'Usuário não encontrado',
+        errorMessage: "Usuário não encontrado",
       });
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+
+      // 🚨 ALERTA: Verificar tentativas de brute force para usuário inexistente
+      try {
+        const recentFailures = await db.query(
+          `SELECT COUNT(*) as count FROM audit_logs
+           WHERE username = $1
+           AND action = 'login_failure'
+           AND created_at > NOW() - INTERVAL '10 minutes'`,
+          [username],
+        );
+
+        if (recentFailures.rows[0]?.count >= 5) {
+          await securityAlerts.alertBruteForce(
+            username,
+            parseInt(recentFailures.rows[0].count),
+            req.ip || req.connection?.remoteAddress,
+            "10 minutos",
+          );
+        }
+      } catch (alertError) {
+        console.error("Erro ao enviar alerta de segurança:", alertError);
+      }
+
+      return res.status(401).json({ error: "Credenciais inválidas" });
     }
 
     // Verificar se é o primeiro login (lastLogin é null ou não existe)
@@ -622,20 +770,24 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
 
       if (!inviteToken) {
         return res.status(401).json({
-          error: 'Token de convite necessário para primeiro acesso',
-          requiresInvite: true
+          error: "Token de convite necessário para primeiro acesso",
+          requiresInvite: true,
         });
       }
 
       // Validar token de convite
       const invite = await db.validateUserInvite(inviteToken);
       if (!invite) {
-        return res.status(401).json({ error: 'Token de convite inválido ou expirado' });
+        return res
+          .status(401)
+          .json({ error: "Token de convite inválido ou expirado" });
       }
 
       // Verificar se o token pertence a este usuário
       if (invite.userId !== user.id) {
-        return res.status(401).json({ error: 'Token de convite não pertence a este usuário' });
+        return res
+          .status(401)
+          .json({ error: "Token de convite não pertence a este usuário" });
       }
 
       // Validar senha temporária contra o hash do convite
@@ -648,12 +800,24 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
           userId: user.id,
           username: user.username,
           ipAddress: req.ip || req.connection?.remoteAddress,
-          userAgent: req.headers['user-agent'],
-          details: { reason: 'invalid_temp_password', firstLogin: true },
+          userAgent: req.headers["user-agent"],
+          details: { reason: "invalid_temp_password", firstLogin: true },
           status: AUDIT_STATUS.FAILURE,
-          errorMessage: 'Senha temporária incorreta',
+          errorMessage: "Senha temporária incorreta",
         });
-        return res.status(401).json({ error: 'Senha temporária incorreta' });
+
+        // 🚨 ALERTA: Senha temporária incorreta em primeiro login (suspeito)
+        try {
+          await securityAlerts.alertSuspiciousLogin(
+            user.username,
+            req.ip || req.connection?.remoteAddress,
+            "Tentativa de primeiro login com senha temporária incorreta",
+          );
+        } catch (alertError) {
+          console.error("Erro ao enviar alerta de segurança:", alertError);
+        }
+
+        return res.status(401).json({ error: "Senha temporária incorreta" });
       }
 
       // Gerar nova senha aleatória para o usuário alterar posteriormente
@@ -664,7 +828,7 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
       const now = new Date().toISOString();
       await db.updateUser(user.id, {
         password: hashedPassword,
-        lastLogin: now
+        lastLogin: now,
       });
 
       // Marcar convite como usado
@@ -680,12 +844,35 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
           userId: user.id,
           username: user.username,
           ipAddress: req.ip || req.connection?.remoteAddress,
-          userAgent: req.headers['user-agent'],
-          details: { reason: 'invalid_password' },
+          userAgent: req.headers["user-agent"],
+          details: { reason: "invalid_password" },
           status: AUDIT_STATUS.FAILURE,
-          errorMessage: 'Senha incorreta',
+          errorMessage: "Senha incorreta",
         });
-        return res.status(401).json({ error: 'Credenciais inválidas' });
+
+        // 🚨 ALERTA: Verificar tentativas de brute force (senha incorreta)
+        try {
+          const recentFailures = await db.query(
+            `SELECT COUNT(*) as count FROM audit_logs
+             WHERE user_id = $1
+             AND action = 'login_failure'
+             AND created_at > NOW() - INTERVAL '10 minutes'`,
+            [user.id],
+          );
+
+          if (recentFailures.rows[0]?.count >= 5) {
+            await securityAlerts.alertBruteForce(
+              user.username,
+              parseInt(recentFailures.rows[0].count),
+              req.ip || req.connection?.remoteAddress,
+              "10 minutos",
+            );
+          }
+        } catch (alertError) {
+          console.error("Erro ao enviar alerta de segurança:", alertError);
+        }
+
+        return res.status(401).json({ error: "Credenciais inválidas" });
       }
 
       // Atualizar lastLogin
@@ -697,18 +884,18 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
     const accessToken = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       JWT_SECRET,
-      { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN }
+      { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN },
     );
 
     // 🔒 FASE 3: Criar refresh token de longa duração (7 dias)
     const refreshToken = await createRefreshToken({
       userId: user.id,
       ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
     });
 
     // Logar ação de login
-    await logActivity(user.id, user.username, 'login', 'auth', 'user', user.id);
+    await logActivity(user.id, user.username, "login", "auth", "user", user.id);
 
     // 🔒 AUDITORIA: Login bem-sucedido
     await logAudit({
@@ -716,13 +903,68 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
       userId: user.id,
       username: user.username,
       ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       details: {
         role: user.role,
         firstLogin: isFirstLogin,
       },
       status: AUDIT_STATUS.SUCCESS,
     });
+
+    // 🚨 ALERTA: Detectar múltiplos IPs (login bem-sucedido de IPs diferentes)
+    try {
+      const recentIPs = await db.query(
+        `SELECT DISTINCT ip_address FROM audit_logs
+         WHERE user_id = $1
+         AND action = 'login_success'
+         AND created_at > NOW() - INTERVAL '1 hour'
+         ORDER BY created_at DESC
+         LIMIT 5`,
+        [user.id],
+      );
+
+      const uniqueIPs = recentIPs.rows
+        .map((row) => row.ip_address)
+        .filter(Boolean);
+
+      if (uniqueIPs.length >= 3) {
+        await securityAlerts.alertMultipleIPs(
+          user.username,
+          uniqueIPs,
+          "1 hora",
+        );
+      }
+    } catch (alertError) {
+      console.error("Erro ao enviar alerta de segurança:", alertError);
+    }
+
+    // 🚨 ALERTA: Detectar múltiplos dispositivos (User-Agents diferentes)
+    try {
+      const recentDevices = await db.query(
+        `SELECT DISTINCT user_agent FROM audit_logs
+         WHERE user_id = $1
+         AND action = 'login_success'
+         AND created_at > NOW() - INTERVAL '24 hours'
+         ORDER BY created_at DESC
+         LIMIT 10`,
+        [user.id],
+      );
+
+      const uniqueDevices = recentDevices.rows
+        .map((row) => row.user_agent)
+        .filter(Boolean)
+        .filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
+
+      if (uniqueDevices.length >= 4) {
+        await securityAlerts.alertMultipleDevices(
+          user.username,
+          uniqueDevices.slice(0, 5), // Limita a 5 dispositivos no alerta
+          "24 horas",
+        );
+      }
+    } catch (alertError) {
+      console.error("Erro ao enviar alerta de segurança:", alertError);
+    }
 
     // Retornar dados completos do usuário
     const userData = await db.getUserById(user.id);
@@ -749,8 +991,8 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
-        lastLogin: safeUser.lastLogin
-      }
+        lastLogin: safeUser.lastLogin,
+      },
     };
 
     // Se for primeiro login, incluir a nova senha gerada
@@ -761,18 +1003,18 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Erro no login:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error("Erro no login:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // 🔒 FASE 3: Endpoint para renovar access token usando refresh token
-app.post('/api/auth/refresh', authLimiter, async (req, res) => {
+app.post("/api/auth/refresh", authLimiter, async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ error: 'Refresh token é obrigatório' });
+      return res.status(400).json({ error: "Refresh token é obrigatório" });
     }
 
     // Verificar refresh token
@@ -783,39 +1025,59 @@ app.post('/api/auth/refresh', authLimiter, async (req, res) => {
       await logAudit({
         operation: AUDIT_OPERATIONS.INVALID_TOKEN,
         ipAddress: req.ip || req.connection?.remoteAddress,
-        userAgent: req.headers['user-agent'],
-        details: { reason: 'invalid_refresh_token' },
+        userAgent: req.headers["user-agent"],
+        details: { reason: "invalid_refresh_token" },
         status: AUDIT_STATUS.FAILURE,
-        errorMessage: 'Refresh token inválido ou expirado',
+        errorMessage: "Refresh token inválido ou expirado",
       });
-      return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
+
+      // 🚨 ALERTA: Possível roubo de token (refresh token inválido ou revogado)
+      try {
+        await securityAlerts.alertTokenTheft(
+          "Desconhecido",
+          req.ip || req.connection?.remoteAddress,
+          refreshToken.substring(0, 20) + "...",
+        );
+      } catch (alertError) {
+        console.error("Erro ao enviar alerta de segurança:", alertError);
+      }
+
+      return res
+        .status(401)
+        .json({ error: "Refresh token inválido ou expirado" });
     }
 
     // Gerar novo access token
     const newAccessToken = jwt.sign(
-      { id: tokenData.userId, username: tokenData.username, role: tokenData.role },
+      {
+        id: tokenData.userId,
+        username: tokenData.username,
+        role: tokenData.role,
+      },
       JWT_SECRET,
-      { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN }
+      { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN },
     );
 
     // Rotacionar refresh token (opcional, mas recomendado para segurança)
     const newRefreshToken = await rotateRefreshToken(
       refreshToken,
       req.ip || req.connection?.remoteAddress,
-      req.headers['user-agent']
+      req.headers["user-agent"],
     );
 
     if (!newRefreshToken) {
-      return res.status(401).json({ error: 'Erro ao rotacionar refresh token' });
+      return res
+        .status(401)
+        .json({ error: "Erro ao rotacionar refresh token" });
     }
 
     // 🔒 AUDITORIA: Token renovado com sucesso
     await logAudit({
-      operation: 'token_refresh',
+      operation: "token_refresh",
       userId: tokenData.userId,
       username: tokenData.username,
       ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       details: { role: tokenData.role },
       status: AUDIT_STATUS.SUCCESS,
     });
@@ -827,13 +1089,13 @@ app.post('/api/auth/refresh', authLimiter, async (req, res) => {
       expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
     });
   } catch (error) {
-    console.error('Erro ao renovar token:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error("Erro ao renovar token:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // 🔒 FASE 3: Endpoint para logout (revogar refresh token)
-app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+app.post("/api/auth/logout", authenticateToken, async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
@@ -842,7 +1104,14 @@ app.post('/api/auth/logout', authenticateToken, async (req, res) => {
     }
 
     // Logar ação de logout
-    await logActivity(req.user.id, req.user.username, 'logout', 'auth', 'user', req.user.id);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "logout",
+      "auth",
+      "user",
+      req.user.id,
+    );
 
     // 🔒 AUDITORIA: Logout
     await logAudit({
@@ -850,33 +1119,40 @@ app.post('/api/auth/logout', authenticateToken, async (req, res) => {
       userId: req.user.id,
       username: req.user.username,
       ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       details: {},
       status: AUDIT_STATUS.SUCCESS,
     });
 
-    res.json({ success: true, message: 'Logout realizado com sucesso' });
+    res.json({ success: true, message: "Logout realizado com sucesso" });
   } catch (error) {
-    console.error('Erro no logout:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error("Erro no logout:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // 🔒 FASE 3: Endpoint para logout de todos os dispositivos
-app.post('/api/auth/logout-all', authenticateToken, async (req, res) => {
+app.post("/api/auth/logout-all", authenticateToken, async (req, res) => {
   try {
     const revokedCount = await revokeAllUserTokens(req.user.id);
 
     // Logar ação
-    await logActivity(req.user.id, req.user.username, 'logout_all_devices', 'auth', 'user', req.user.id);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "logout_all_devices",
+      "auth",
+      "user",
+      req.user.id,
+    );
 
     // 🔒 AUDITORIA: Logout de todos os dispositivos
     await logAudit({
-      operation: 'logout_all_devices',
+      operation: "logout_all_devices",
       userId: req.user.id,
       username: req.user.username,
       ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       details: { devicesLoggedOut: revokedCount },
       status: AUDIT_STATUS.SUCCESS,
     });
@@ -886,71 +1162,95 @@ app.post('/api/auth/logout-all', authenticateToken, async (req, res) => {
       message: `${revokedCount} sessão(ões) encerrada(s) com sucesso`,
     });
   } catch (error) {
-    console.error('Erro ao fazer logout de todos os dispositivos:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error("Erro ao fazer logout de todos os dispositivos:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // Endpoint para resetar primeiro login de um usuário específico (apenas para admin)
-app.post('/api/auth/reset-first-login', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { username } = req.body;
+app.post(
+  "/api/auth/reset-first-login",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { username } = req.body;
 
-    if (!username) {
-      return res.status(400).json({ error: 'Username é obrigatório' });
+      if (!username) {
+        return res.status(400).json({ error: "Username é obrigatório" });
+      }
+
+      const user = await db.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      // Resetar lastLogin para null (permitir primeiro login novamente)
+      await db.updateUser(user.id, { lastLogin: null });
+
+      // Logar ação
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "reset_password",
+        "admin",
+        "user",
+        user.id,
+      );
+
+      res.json({
+        success: true,
+        message: `Primeiro login resetado para o usuário ${username}. Agora você pode fazer login com qualquer senha novamente.`,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
-
-    const user = await db.getUserByUsername(username);
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
-
-    // Resetar lastLogin para null (permitir primeiro login novamente)
-    await db.updateUser(user.id, { lastLogin: null });
-
-    // Logar ação
-    await logActivity(req.user.id, req.user.username, 'reset_password', 'admin', 'user', user.id);
-
-    res.json({
-      success: true,
-      message: `Primeiro login resetado para o usuário ${username}. Agora você pode fazer login com qualquer senha novamente.`
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
+  },
+);
 
 // Endpoint para resetar senhas de TODOS os usuários (apenas admin)
-app.post('/api/auth/reset-all-passwords', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const allUsers = await db.getAllUsers();
-    let resetCount = 0;
+app.post(
+  "/api/auth/reset-all-passwords",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const allUsers = await db.getAllUsers();
+      let resetCount = 0;
 
-    // Resetar lastLogin para null em todos os usuários
-    for (const user of allUsers) {
-      await db.updateUser(user.id, { lastLogin: null });
-      resetCount++;
+      // Resetar lastLogin para null em todos os usuários
+      for (const user of allUsers) {
+        await db.updateUser(user.id, { lastLogin: null });
+        resetCount++;
+      }
+
+      // Logar ação
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "reset_all_passwords",
+        "admin",
+        "system",
+        null,
+      );
+
+      res.json({
+        success: true,
+        message: `Senhas resetadas para ${resetCount} usuário(s). Todos os usuários precisarão fazer primeiro login novamente.`,
+        resetCount,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
+  },
+);
 
-    // Logar ação
-    await logActivity(req.user.id, req.user.username, 'reset_all_passwords', 'admin', 'system', null);
-
-    res.json({
-      success: true,
-      message: `Senhas resetadas para ${resetCount} usuário(s). Todos os usuários precisarão fazer primeiro login novamente.`,
-      resetCount
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-app.post('/api/auth/verify', authenticateToken, async (req, res) => {
+app.post("/api/auth/verify", authenticateToken, async (req, res) => {
   try {
     // Buscar dados completos do usuário
     const user = await db.getUserById(req.user.id);
     if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+      return res.status(404).json({ error: "Usuário não encontrado" });
     }
 
     const { password: _, ...safeUser } = user;
@@ -972,61 +1272,74 @@ app.post('/api/auth/verify', authenticateToken, async (req, res) => {
         role: safeUser.role,
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
-        lastLogin: safeUser.lastLogin
-      }
+        lastLogin: safeUser.lastLogin,
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // Recuperação de senha: Solicitar token
-app.post('/api/auth/recuperar-senha', passwordRecoveryLimiter, async (req, res) => {
-  try {
-    const { login } = req.body; // pode ser username ou email
+app.post(
+  "/api/auth/recuperar-senha",
+  passwordRecoveryLimiter,
+  async (req, res) => {
+    try {
+      const { login } = req.body; // pode ser username ou email
 
-    if (!login) {
-      return res.status(400).json({ error: 'Informe um email ou usuário para recuperar a senha' });
-    }
+      if (!login) {
+        return res
+          .status(400)
+          .json({
+            error: "Informe um email ou usuário para recuperar a senha",
+          });
+      }
 
-    // Buscar usuário pelo username ou pelo email
-    let user = await db.getUserByUsername(login);
-    if (!user) {
-      // Se não encontrou por username, tenta por email iterando (ou cria-se getUserByEmail no pg).
-      // Como db-postgres.js não tem getUserByEmail, e getAllUsers pode ser pesado, 
-      // faremos um work-around (em produção ideal é ter getUserByEmail direto na query).
-      const all = await db.getAllUsers();
-      user = all.find(u => u.email === login);
-    }
+      // Buscar usuário pelo username ou pelo email
+      let user = await db.getUserByUsername(login);
+      if (!user) {
+        // Se não encontrou por username, tenta por email iterando (ou cria-se getUserByEmail no pg).
+        // Como db-postgres.js não tem getUserByEmail, e getAllUsers pode ser pesado,
+        // faremos um work-around (em produção ideal é ter getUserByEmail direto na query).
+        const all = await db.getAllUsers();
+        user = all.find((u) => u.email === login);
+      }
 
-    // Se o usuário não existir ou não tiver email, não revelamos o erro por segurança. (Neutral response)
-    if (!user || (!user.email && validateEmailFormat(login))) {
-      return res.json({
-        success: true,
-        message: 'Se as informações estiverem corretas, você receberá um e-mail com as instruções para redefinir sua senha.'
-      });
-    }
+      // Se o usuário não existir ou não tiver email, não revelamos o erro por segurança. (Neutral response)
+      if (!user || (!user.email && validateEmailFormat(login))) {
+        return res.json({
+          success: true,
+          message:
+            "Se as informações estiverem corretas, você receberá um e-mail com as instruções para redefinir sua senha.",
+        });
+      }
 
-    if (!user.email) {
-      return res.status(400).json({ error: 'Usuário não tem um e-mail cadastrado. Contate o administrador.' });
-    }
+      if (!user.email) {
+        return res
+          .status(400)
+          .json({
+            error:
+              "Usuário não tem um e-mail cadastrado. Contate o administrador.",
+          });
+      }
 
-    // Gerar token (expira em 60 min)
-    const tokenRecord = await db.criarTokenRecuperacao(user.id, 60);
+      // Gerar token (expira em 60 min)
+      const tokenRecord = await db.criarTokenRecuperacao(user.id, 60);
 
-    // Enviar e-mail via SendGrid se configurado
-    if (SENDGRID_API_KEY) {
-      const resetLink = `${process.env.VITE_API_URL || 'https://alya.sistemas.viverdepj.com.br'}/login?token=${tokenRecord.token}`;
+      // Enviar e-mail via SendGrid se configurado
+      if (SENDGRID_API_KEY) {
+        const resetLink = `${process.env.VITE_API_URL || "https://alya.sistemas.viverdepj.com.br"}/login?token=${tokenRecord.token}`;
 
-      const msg = {
-        to: user.email,
-        from: {
-          email: SENDGRID_FROM_EMAIL,
-          name: process.env.SENDGRID_FROM_NAME || 'Alya Sistemas',
-        },
-        subject: 'Alya - Recuperação de Senha',
-        text: `Olá ${user.firstName || user.username},\n\nVocê solicitou a recuperação de senha no sistema Alya.\n\nAcesse o link abaixo para redefinir sua senha. O link é válido por 60 minutos:\n\n${resetLink}\n\nSe você não solicitou isso, pode ignorar este e-mail.\n\nAtenciosamente,\nEquipe Alya`,
-        html: `
+        const msg = {
+          to: user.email,
+          from: {
+            email: SENDGRID_FROM_EMAIL,
+            name: process.env.SENDGRID_FROM_NAME || "Alya Sistemas",
+          },
+          subject: "Alya - Recuperação de Senha",
+          text: `Olá ${user.firstName || user.username},\n\nVocê solicitou a recuperação de senha no sistema Alya.\n\nAcesse o link abaixo para redefinir sua senha. O link é válido por 60 minutos:\n\n${resetLink}\n\nSe você não solicitou isso, pode ignorar este e-mail.\n\nAtenciosamente,\nEquipe Alya`,
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
             <p style="text-align: center; margin-bottom: 30px;">
                 <span style="font-size: 24px; font-weight: bold; color: #d97706;">Alya</span>
@@ -1042,98 +1355,126 @@ app.post('/api/auth/recuperar-senha', passwordRecoveryLimiter, async (req, res) 
             <p style="color: #94a3b8; font-size: 12px; text-align: center;">Se você não solicitou a alteração de senha, pode ignorar este e-mail em segurança.</p>
           </div>
         `,
-      };
+        };
 
-      try {
-        await sgMail.send(msg);
-        console.log(`E-mail de recuperação enviado para: ${user.email}`);
-      } catch (sgError) {
-        console.error('Erro ao enviar e-mail pelo SendGrid:', sgError);
-        if (sgError.response) {
-          console.error(sgError.response.body);
+        try {
+          await sgMail.send(msg);
+          console.log(`E-mail de recuperação enviado para: ${user.email}`);
+        } catch (sgError) {
+          console.error("Erro ao enviar e-mail pelo SendGrid:", sgError);
+          if (sgError.response) {
+            console.error(sgError.response.body);
+          }
+          return res
+            .status(500)
+            .json({
+              error:
+                "Erro ao tentar enviar o e-mail de recuperação. Tente novamente mais tarde.",
+            });
         }
-        return res.status(500).json({ error: 'Erro ao tentar enviar o e-mail de recuperação. Tente novamente mais tarde.' });
+      } else {
+        //Apenas logar se não houver sendgrid no env
+        // 🔒 FASE 3: Log sanitizado - não expõe o token completo
+        console.log(
+          `Recuperação de senha solicitada para ${user.email}. Token gerado: ${tokenRecord.token.substring(0, 8)}...`,
+        );
       }
-    } else {
-      //Apenas logar se não houver sendgrid no env
-      // 🔒 FASE 3: Log sanitizado - não expõe o token completo
-      console.log(`Recuperação de senha solicitada para ${user.email}. Token gerado: ${tokenRecord.token.substring(0, 8)}...`);
+
+      return res.json({
+        success: true,
+        message:
+          "Se as informações estiverem corretas, você receberá um e-mail com as instruções para redefinir sua senha.",
+      });
+    } catch (error) {
+      console.error("Erro no recuperar senha:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
-
-    return res.json({
-      success: true,
-      message: 'Se as informações estiverem corretas, você receberá um e-mail com as instruções para redefinir sua senha.'
-    });
-
-  } catch (error) {
-    console.error('Erro no recuperar senha:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
+  },
+);
 
 // Validação do token na view
-app.get('/api/auth/validar-token/:token', passwordTokenValidationLimiter, async (req, res) => {
-  try {
-    const { token } = req.params;
-    if (!token) {
-      return res.status(400).json({ error: 'Token não fornecido' });
-    }
+app.get(
+  "/api/auth/validar-token/:token",
+  passwordTokenValidationLimiter,
+  async (req, res) => {
+    try {
+      const { token } = req.params;
+      if (!token) {
+        return res.status(400).json({ error: "Token não fornecido" });
+      }
 
-    const tokenData = await db.validarTokenRecuperacao(token);
-    if (!tokenData) {
-      return res.status(400).json({ error: 'Token inválido ou expirado' });
-    }
+      const tokenData = await db.validarTokenRecuperacao(token);
+      if (!tokenData) {
+        return res.status(400).json({ error: "Token inválido ou expirado" });
+      }
 
-    res.json({ success: true, username: tokenData.username });
-  } catch (error) {
-    console.error('Erro ao validar token:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
+      res.json({ success: true, username: tokenData.username });
+    } catch (error) {
+      console.error("Erro ao validar token:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  },
+);
 
 // Execução do Reset
-app.post('/api/auth/resetar-senha', passwordResetLimiter, validatePasswordReset, async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
+app.post(
+  "/api/auth/resetar-senha",
+  passwordResetLimiter,
+  validatePasswordReset,
+  async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token e nova senha são obrigatórios' });
+      if (!token || !newPassword) {
+        return res
+          .status(400)
+          .json({ error: "Token e nova senha são obrigatórios" });
+      }
+
+      if (newPassword.length < 6) {
+        return res
+          .status(400)
+          .json({ error: "A senha deve ter no mínimo 6 caracteres" });
+      }
+
+      // Validar token novamente
+      const tokenData = await db.validarTokenRecuperacao(token);
+      if (!tokenData) {
+        return res.status(400).json({ error: "Token inválido ou expirado" });
+      }
+
+      // Hash da nova senha
+      const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+      // Resetar no banco
+      const updatedUser = await db.resetarSenhaComToken(token, hashedPassword);
+
+      // Logar atividade
+      await logActivity(
+        updatedUser.id,
+        updatedUser.username,
+        "reset_password_token",
+        "auth",
+        "user",
+        updatedUser.id,
+      );
+
+      res.json({ success: true, message: "Senha redefinida com sucesso!" });
+    } catch (error) {
+      console.error("Erro no resetar senha:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
-    }
-
-    // Validar token novamente
-    const tokenData = await db.validarTokenRecuperacao(token);
-    if (!tokenData) {
-      return res.status(400).json({ error: 'Token inválido ou expirado' });
-    }
-
-    // Hash da nova senha
-    const hashedPassword = bcrypt.hashSync(newPassword, 10);
-
-    // Resetar no banco
-    const updatedUser = await db.resetarSenhaComToken(token, hashedPassword);
-
-    // Logar atividade
-    await logActivity(updatedUser.id, updatedUser.username, 'reset_password_token', 'auth', 'user', updatedUser.id);
-
-    res.json({ success: true, message: 'Senha redefinida com sucesso!' });
-
-  } catch (error) {
-    console.error('Erro no resetar senha:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
+  },
+);
 
 // Endpoint para buscar dados do próprio perfil
-app.get('/api/user/profile', authenticateToken, async (req, res) => {
+app.get("/api/user/profile", authenticateToken, async (req, res) => {
   try {
     const user = await db.getUserById(req.user.id);
     if (!user) {
-      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuário não encontrado" });
     }
 
     const { password: _, ...safeUser } = user;
@@ -1157,277 +1498,456 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
         lastLogin: safeUser.lastLogin,
         createdAt: safeUser.createdAt,
-        updatedAt: safeUser.updatedAt
-      }
+        updatedAt: safeUser.updatedAt,
+      },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    res.status(500).json({ success: false, error: "Erro interno do servidor" });
   }
 });
 
 // Endpoint para upload de foto de perfil
-app.post('/api/user/upload-photo', authenticateToken, uploadLimiter, uploadAvatar.single('photo'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado' });
-    }
-
-    // Validar que é WebP
-    if (req.file.mimetype !== 'image/webp' || !req.file.filename.endsWith('.webp')) {
-      // Deletar arquivo inválido
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+app.post(
+  "/api/user/upload-photo",
+  authenticateToken,
+  uploadLimiter,
+  uploadAvatar.single("photo"),
+  (req, res) => {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Nenhum arquivo enviado" });
       }
-      return res.status(400).json({ success: false, error: 'Apenas arquivos WebP são permitidos' });
-    }
 
-    // Retornar caminho relativo da foto
-    const photoUrl = `/api/avatars/${req.file.filename}`;
+      // Validar que é WebP
+      if (
+        req.file.mimetype !== "image/webp" ||
+        !req.file.filename.endsWith(".webp")
+      ) {
+        // Deletar arquivo inválido
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Apenas arquivos WebP são permitidos",
+          });
+      }
 
-    res.json({
-      success: true,
-      data: {
-        photoUrl
+      // Retornar caminho relativo da foto
+      const photoUrl = `/api/avatars/${req.file.filename}`;
+
+      res.json({
+        success: true,
+        data: {
+          photoUrl,
+        },
+      });
+    } catch (error) {
+      // Se houver erro, tentar deletar arquivo se foi criado
+      if (req.file && fs.existsSync(req.file.path)) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (e) {
+          console.log("Erro ao deletar arquivo após erro:", e.message);
+        }
       }
-    });
-  } catch (error) {
-    // Se houver erro, tentar deletar arquivo se foi criado
-    if (req.file && fs.existsSync(req.file.path)) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        console.log('Erro ao deletar arquivo após erro:', e.message);
-      }
+      res
+        .status(500)
+        .json({
+          success: false,
+          error: error.message || "Erro ao fazer upload da foto",
+        });
     }
-    res.status(500).json({ success: false, error: error.message || 'Erro ao fazer upload da foto' });
-  }
-});
+  },
+);
 
 // Endpoint para atualizar perfil do próprio usuário
-app.put('/api/user/profile', authenticateToken, validateProfileUpdate, async (req, res) => {
-  try {
-    const { firstName, lastName, email, phone, photoUrl, password, cpf, birthDate, gender, position, address } = req.body;
+app.put(
+  "/api/user/profile",
+  authenticateToken,
+  validateProfileUpdate,
+  async (req, res) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        email,
+        phone,
+        photoUrl,
+        password,
+        cpf,
+        birthDate,
+        gender,
+        position,
+        address,
+      } = req.body;
 
-    // Buscar usuário atual
-    const currentUser = await db.getUserById(req.user.id);
-    if (!currentUser) {
-      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
-    }
+      // Buscar usuário atual
+      const currentUser = await db.getUserById(req.user.id);
+      if (!currentUser) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Usuário não encontrado" });
+      }
 
-    // Validar senha atual se fornecida (obrigatória para segurança)
-    if (!password) {
-      return res.status(400).json({ success: false, error: 'Senha atual é obrigatória para atualizar o perfil' });
-    }
+      // Validar senha atual se fornecida (obrigatória para segurança)
+      if (!password) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Senha atual é obrigatória para atualizar o perfil",
+          });
+      }
 
-    const isValidPassword = bcrypt.compareSync(password, currentUser.password);
-    if (!isValidPassword) {
-      return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
-    }
+      const isValidPassword = bcrypt.compareSync(
+        password,
+        currentUser.password,
+      );
+      if (!isValidPassword) {
+        return res
+          .status(401)
+          .json({ success: false, error: "Senha atual incorreta" });
+      }
 
-    if (!firstName || firstName.trim().length < 2) {
-      return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
-    }
+      if (!firstName || firstName.trim().length < 2) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
+          });
+      }
 
-    if (!lastName || lastName.trim().length < 2) {
-      return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
-    }
+      if (!lastName || lastName.trim().length < 2) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
+          });
+      }
 
-    if (email !== undefined && email !== null && email !== '') {
-      if (!email || !email.trim()) {
-        return res.status(400).json({ success: false, error: 'Email é obrigatório' });
+      if (email !== undefined && email !== null && email !== "") {
+        if (!email || !email.trim()) {
+          return res
+            .status(400)
+            .json({ success: false, error: "Email é obrigatório" });
+        }
+        if (!validateEmailFormat(email)) {
+          return res
+            .status(400)
+            .json({ success: false, error: "Formato de email inválido" });
+        }
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, error: "Email é obrigatório" });
+      }
+
+      if (phone !== undefined && phone !== null && phone !== "") {
+        if (!phone) {
+          return res
+            .status(400)
+            .json({ success: false, error: "Telefone é obrigatório" });
+        }
+        const phoneDigits = phone.replace(/\D/g, "");
+        if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+          return res
+            .status(400)
+            .json({
+              success: false,
+              error: "Telefone deve ter 10 ou 11 dígitos",
+            });
+        }
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, error: "Telefone é obrigatório" });
+      }
+
+      if (cpf !== undefined && cpf !== null && cpf !== "") {
+        if (!cpf) {
+          return res
+            .status(400)
+            .json({ success: false, error: "CPF é obrigatório" });
+        }
+        const cpfDigits = cpf.replace(/\D/g, "");
+        if (cpfDigits.length !== 11) {
+          return res
+            .status(400)
+            .json({ success: false, error: "CPF deve ter 11 dígitos" });
+        }
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, error: "CPF é obrigatório" });
+      }
+
+      if (!birthDate) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Data de nascimento é obrigatória" });
+      }
+
+      if (!gender) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Gênero é obrigatório" });
+      }
+
+      if (!position || !position.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Cargo é obrigatório" });
+      }
+
+      // Preparar dados para atualização - todos os campos são obrigatórios
+      const updateData = {};
+
+      if (
+        firstName === undefined ||
+        !firstName ||
+        firstName.trim().length < 2
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
+          });
+      }
+      updateData.firstName = firstName.trim();
+
+      if (lastName === undefined || !lastName || lastName.trim().length < 2) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
+          });
+      }
+      updateData.lastName = lastName.trim();
+
+      if (email === undefined || !email || !email.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Email é obrigatório" });
       }
       if (!validateEmailFormat(email)) {
-        return res.status(400).json({ success: false, error: 'Formato de email inválido' });
+        return res
+          .status(400)
+          .json({ success: false, error: "Formato de email inválido" });
       }
-    } else {
-      return res.status(400).json({ success: false, error: 'Email é obrigatório' });
-    }
+      updateData.email = email.trim();
 
-    if (phone !== undefined && phone !== null && phone !== '') {
-      if (!phone) {
-        return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
+      if (phone === undefined || !phone) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Telefone é obrigatório" });
       }
-      const phoneDigits = phone.replace(/\D/g, '');
+      const phoneDigits = phone.replace(/\D/g, "");
       if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
-        return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Telefone deve ter 10 ou 11 dígitos",
+          });
       }
-    } else {
-      return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
-    }
+      updateData.phone = phoneDigits;
 
-    if (cpf !== undefined && cpf !== null && cpf !== '') {
-      if (!cpf) {
-        return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
+      if (cpf === undefined || !cpf) {
+        return res
+          .status(400)
+          .json({ success: false, error: "CPF é obrigatório" });
       }
-      const cpfDigits = cpf.replace(/\D/g, '');
+      const cpfDigits = cpf.replace(/\D/g, "");
       if (cpfDigits.length !== 11) {
-        return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
+        return res
+          .status(400)
+          .json({ success: false, error: "CPF deve ter 11 dígitos" });
       }
-    } else {
-      return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
-    }
+      updateData.cpf = cpfDigits;
 
-    if (!birthDate) {
-      return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
-    }
-
-    if (!gender) {
-      return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
-    }
-
-    if (!position || !position.trim()) {
-      return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
-    }
-
-    // Preparar dados para atualização - todos os campos são obrigatórios
-    const updateData = {};
-
-    if (firstName === undefined || !firstName || firstName.trim().length < 2) {
-      return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
-    }
-    updateData.firstName = firstName.trim();
-
-    if (lastName === undefined || !lastName || lastName.trim().length < 2) {
-      return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
-    }
-    updateData.lastName = lastName.trim();
-
-    if (email === undefined || !email || !email.trim()) {
-      return res.status(400).json({ success: false, error: 'Email é obrigatório' });
-    }
-    if (!validateEmailFormat(email)) {
-      return res.status(400).json({ success: false, error: 'Formato de email inválido' });
-    }
-    updateData.email = email.trim();
-
-    if (phone === undefined || !phone) {
-      return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
-    }
-    const phoneDigits = phone.replace(/\D/g, '');
-    if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
-      return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
-    }
-    updateData.phone = phoneDigits;
-
-    if (cpf === undefined || !cpf) {
-      return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
-    }
-    const cpfDigits = cpf.replace(/\D/g, '');
-    if (cpfDigits.length !== 11) {
-      return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
-    }
-    updateData.cpf = cpfDigits;
-
-    if (!birthDate) {
-      return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
-    }
-    updateData.birthDate = birthDate;
-
-    if (!gender) {
-      return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
-    }
-    updateData.gender = gender;
-
-    if (!position || !position.trim()) {
-      return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
-    }
-    updateData.position = position.trim();
-
-    if (!address || !address.cep) {
-      return res.status(400).json({ success: false, error: 'CEP é obrigatório' });
-    }
-    const cepDigits = address.cep.replace(/\D/g, '');
-    if (cepDigits.length !== 8) {
-      return res.status(400).json({ success: false, error: 'CEP deve ter 8 dígitos' });
-    }
-    if (!address.street || !address.street.trim()) {
-      return res.status(400).json({ success: false, error: 'Rua/Logradouro é obrigatório' });
-    }
-    if (!address.number || !address.number.trim()) {
-      return res.status(400).json({ success: false, error: 'Número do endereço é obrigatório' });
-    }
-    if (!address.neighborhood || !address.neighborhood.trim()) {
-      return res.status(400).json({ success: false, error: 'Bairro é obrigatório' });
-    }
-    if (!address.city || !address.city.trim()) {
-      return res.status(400).json({ success: false, error: 'Cidade é obrigatória' });
-    }
-    if (!address.state || !address.state.trim() || address.state.length !== 2) {
-      return res.status(400).json({ success: false, error: 'Estado (UF) é obrigatório e deve ter 2 caracteres' });
-    }
-    updateData.address = {
-      cep: cepDigits,
-      street: address.street.trim(),
-      number: address.number.trim(),
-      complement: address.complement ? address.complement.trim() : '',
-      neighborhood: address.neighborhood.trim(),
-      city: address.city.trim(),
-      state: address.state.trim().toUpperCase()
-    };
-
-    // Se foto está sendo atualizada, deletar foto antiga
-    if (photoUrl !== undefined) {
-      if (currentUser.photoUrl && currentUser.photoUrl !== photoUrl) {
-        deleteAvatarFile(currentUser.photoUrl);
+      if (!birthDate) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Data de nascimento é obrigatória" });
       }
-      updateData.photoUrl = photoUrl || null;
+      updateData.birthDate = birthDate;
+
+      if (!gender) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Gênero é obrigatório" });
+      }
+      updateData.gender = gender;
+
+      if (!position || !position.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Cargo é obrigatório" });
+      }
+      updateData.position = position.trim();
+
+      if (!address || !address.cep) {
+        return res
+          .status(400)
+          .json({ success: false, error: "CEP é obrigatório" });
+      }
+      const cepDigits = address.cep.replace(/\D/g, "");
+      if (cepDigits.length !== 8) {
+        return res
+          .status(400)
+          .json({ success: false, error: "CEP deve ter 8 dígitos" });
+      }
+      if (!address.street || !address.street.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Rua/Logradouro é obrigatório" });
+      }
+      if (!address.number || !address.number.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Número do endereço é obrigatório" });
+      }
+      if (!address.neighborhood || !address.neighborhood.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Bairro é obrigatório" });
+      }
+      if (!address.city || !address.city.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Cidade é obrigatória" });
+      }
+      if (
+        !address.state ||
+        !address.state.trim() ||
+        address.state.length !== 2
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Estado (UF) é obrigatório e deve ter 2 caracteres",
+          });
+      }
+      updateData.address = {
+        cep: cepDigits,
+        street: address.street.trim(),
+        number: address.number.trim(),
+        complement: address.complement ? address.complement.trim() : "",
+        neighborhood: address.neighborhood.trim(),
+        city: address.city.trim(),
+        state: address.state.trim().toUpperCase(),
+      };
+
+      // Se foto está sendo atualizada, deletar foto antiga
+      if (photoUrl !== undefined) {
+        if (currentUser.photoUrl && currentUser.photoUrl !== photoUrl) {
+          deleteAvatarFile(currentUser.photoUrl);
+        }
+        updateData.photoUrl = photoUrl || null;
+      }
+
+      // Atualizar usuário
+      const updatedUser = await db.updateUser(req.user.id, updateData);
+
+      // Gerar novo token
+      const token = jwt.sign(
+        {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          role: updatedUser.role,
+        },
+        JWT_SECRET,
+        { expiresIn: "7d" },
+      );
+
+      const { password: _, ...safeUser } = updatedUser;
+
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "edit",
+        "admin",
+        "user",
+        req.user.id,
+        {
+          fields: Object.keys(updateData),
+        },
+      );
+
+      res.json({
+        success: true,
+        data: safeUser,
+        token,
+      });
+    } catch (error) {
+      res
+        .status(500)
+        .json({
+          success: false,
+          error: error.message || "Erro interno do servidor",
+        });
     }
-
-    // Atualizar usuário
-    const updatedUser = await db.updateUser(req.user.id, updateData);
-
-    // Gerar novo token
-    const token = jwt.sign(
-      { id: updatedUser.id, username: updatedUser.username, role: updatedUser.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    const { password: _, ...safeUser } = updatedUser;
-
-    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', req.user.id, {
-      fields: Object.keys(updateData)
-    });
-
-    res.json({
-      success: true,
-      data: safeUser,
-      token
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message || 'Erro interno do servidor' });
-  }
-});
+  },
+);
 
 // Endpoint para alterar senha do próprio usuário
-app.put('/api/user/password', authenticateToken, async (req, res) => {
+app.put("/api/user/password", authenticateToken, async (req, res) => {
   try {
     const { senhaAtual, novaSenha } = req.body;
 
     if (!senhaAtual || !novaSenha) {
-      return res.status(400).json({ success: false, error: 'Senha atual e nova senha são obrigatórias' });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "Senha atual e nova senha são obrigatórias",
+        });
     }
 
     if (novaSenha.length < 6) {
-      return res.status(400).json({ success: false, error: 'A nova senha deve ter no mínimo 6 caracteres' });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "A nova senha deve ter no mínimo 6 caracteres",
+        });
     }
 
     // Buscar usuário atual
     const user = await db.getUserById(req.user.id);
     if (!user) {
-      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuário não encontrado" });
     }
 
     // Validar senha atual
     const isValidPassword = bcrypt.compareSync(senhaAtual, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ success: false, error: 'Senha atual incorreta' });
+      return res
+        .status(401)
+        .json({ success: false, error: "Senha atual incorreta" });
     }
 
     // Verificar se nova senha é diferente da atual
     const isSamePassword = bcrypt.compareSync(novaSenha, user.password);
     if (isSamePassword) {
-      return res.status(400).json({ success: false, error: 'A nova senha deve ser diferente da senha atual' });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "A nova senha deve ser diferente da senha atual",
+        });
     }
 
     // Hash da nova senha
@@ -1437,89 +1957,109 @@ app.put('/api/user/password', authenticateToken, async (req, res) => {
     await db.updateUser(req.user.id, { password: hashedPassword });
 
     // Logar ação
-    await logActivity(req.user.id, user.username, 'update_password', 'user', 'user', req.user.id);
+    await logActivity(
+      req.user.id,
+      user.username,
+      "update_password",
+      "user",
+      "user",
+      req.user.id,
+    );
 
     res.json({
       success: true,
-      message: 'Senha alterada com sucesso'
+      message: "Senha alterada com sucesso",
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message || 'Erro interno do servidor' });
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: error.message || "Erro interno do servidor",
+      });
   }
 });
 
 // Rota para importar arquivos
-app.post('/api/import', authenticateToken, upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Nenhum arquivo foi enviado!' });
-    }
+app.post(
+  "/api/import",
+  authenticateToken,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhum arquivo foi enviado!" });
+      }
 
-    const { type } = req.body; // 'transactions', 'products' ou 'clients'
+      const { type } = req.body; // 'transactions', 'products' ou 'clients'
 
-    if (!type || !['transactions', 'products', 'clients'].includes(type)) {
-      return res.status(400).json({ error: 'Tipo inválido! Use "transactions", "products" ou "clients"' });
-    }
+      if (!type || !["transactions", "products", "clients"].includes(type)) {
+        return res
+          .status(400)
+          .json({
+            error: 'Tipo inválido! Use "transactions", "products" ou "clients"',
+          });
+      }
 
-    console.log(`Processando arquivo: ${req.file.originalname} (${type})`);
+      console.log(`Processando arquivo: ${req.file.originalname} (${type})`);
 
-    // Ler o arquivo Excel
-    const workbook = XLSX.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0]; // Pegar a primeira aba
-    const worksheet = workbook.Sheets[sheetName];
+      // Ler o arquivo Excel
+      const workbook = XLSX.readFile(req.file.path);
+      const sheetName = workbook.SheetNames[0]; // Pegar a primeira aba
+      const worksheet = workbook.Sheets[sheetName];
 
-    let processedData = [];
-    let message = '';
+      let processedData = [];
+      let message = "";
 
-    if (type === 'transactions') {
-      processedData = processTransactions(worksheet);
-      message = `${processedData.length} transações importadas com sucesso!`;
-    } else if (type === 'products') {
-      processedData = processProducts(worksheet);
-      message = `${processedData.length} produtos importados com sucesso!`;
-    } else if (type === 'clients') {
-      processedData = processClients(worksheet);
-      message = `${processedData.length} clientes importados com sucesso!`;
+      if (type === "transactions") {
+        processedData = processTransactions(worksheet);
+        message = `${processedData.length} transações importadas com sucesso!`;
+      } else if (type === "products") {
+        processedData = processProducts(worksheet);
+        message = `${processedData.length} produtos importados com sucesso!`;
+      } else if (type === "clients") {
+        processedData = processClients(worksheet);
+        message = `${processedData.length} clientes importados com sucesso!`;
 
-      // Salvar clientes processados no banco de dados
-      for (const client of processedData) {
-        try {
-          await db.saveClient(client);
-        } catch (error) {
-          console.error('Erro ao salvar cliente:', error);
+        // Salvar clientes processados no banco de dados
+        for (const client of processedData) {
+          try {
+            await db.saveClient(client);
+          } catch (error) {
+            console.error("Erro ao salvar cliente:", error);
+          }
         }
       }
-    }
 
-    // Limpar o arquivo temporário
-    fs.unlinkSync(req.file.path);
-
-    res.json({
-      success: true,
-      message: message,
-      data: processedData,
-      count: processedData.length,
-      type: type
-    });
-
-  } catch (error) {
-    console.error('Erro ao processar arquivo:', error);
-
-    // Limpar arquivo em caso de erro
-    if (req.file && fs.existsSync(req.file.path)) {
+      // Limpar o arquivo temporário
       fs.unlinkSync(req.file.path);
-    }
 
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: error.message
-    });
-  }
-});
+      res.json({
+        success: true,
+        message: message,
+        data: processedData,
+        count: processedData.length,
+        type: type,
+      });
+    } catch (error) {
+      console.error("Erro ao processar arquivo:", error);
+
+      // Limpar arquivo em caso de erro
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
+      res.status(500).json({
+        error: "Erro interno do servidor",
+        message: error.message,
+      });
+    }
+  },
+);
 
 // Rota para exportar dados
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
-app.post('/api/export', authenticateToken, (req, res) => {
+app.post("/api/export", authenticateToken, (req, res) => {
   const { type, data } = req.body;
 
   try {
@@ -1527,68 +2067,68 @@ app.post('/api/export', authenticateToken, (req, res) => {
     const workbook = XLSX.utils.book_new();
     let worksheet;
 
-    if (type === 'transactions') {
+    if (type === "transactions") {
       // Mapear dados para formato Excel
-      const excelData = data.map(t => ({
-        'Data': t.date,
-        'Descrição': t.description,
-        'Valor': t.value,
-        'Tipo': t.type,
-        'Categoria': t.category
+      const excelData = data.map((t) => ({
+        Data: t.date,
+        Descrição: t.description,
+        Valor: t.value,
+        Tipo: t.type,
+        Categoria: t.category,
       }));
       worksheet = XLSX.utils.json_to_sheet(excelData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Transações');
-    } else if (type === 'products') {
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Transações");
+    } else if (type === "products") {
       // Mapear dados para formato Excel
-      const excelData = data.map(p => ({
-        'Nome': p.name,
-        'Categoria': p.category,
-        'Preço': p.price,
-        'Custo': p.cost,
-        'Estoque': p.stock,
-        'Vendido': p.sold
+      const excelData = data.map((p) => ({
+        Nome: p.name,
+        Categoria: p.category,
+        Preço: p.price,
+        Custo: p.cost,
+        Estoque: p.stock,
+        Vendido: p.sold,
       }));
       worksheet = XLSX.utils.json_to_sheet(excelData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Produtos');
-    } else if (type === 'clients') {
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Produtos");
+    } else if (type === "clients") {
       // Mapear dados para formato Excel
-      const excelData = data.map(c => ({
-        'Nome': c.name,
-        'Email': c.email,
-        'Telefone': c.phone,
-        'Endereço': c.address,
-        'CPF': c.cpf || '',
-        'CNPJ': c.cnpj || ''
+      const excelData = data.map((c) => ({
+        Nome: c.name,
+        Email: c.email,
+        Telefone: c.phone,
+        Endereço: c.address,
+        CPF: c.cpf || "",
+        CNPJ: c.cnpj || "",
       }));
       worksheet = XLSX.utils.json_to_sheet(excelData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Clientes");
     }
 
     // Gerar buffer do arquivo
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
     // Configurar headers para download
-    const filename = `${type}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const filename = `${type}_${new Date().toISOString().split("T")[0]}.xlsx`;
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': buffer.length
+      "Content-Type":
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": buffer.length,
     });
 
     res.send(buffer);
-
   } catch (error) {
-    console.error('Erro ao exportar dados:', error);
+    console.error("Erro ao exportar dados:", error);
     res.status(500).json({
-      error: 'Erro ao exportar dados',
-      message: error.message
+      error: "Erro ao exportar dados",
+      message: error.message,
     });
   }
 });
 
 // APIs para Transações
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
-app.get('/api/transactions', authenticateToken, async (req, res) => {
+app.get("/api/transactions", authenticateToken, async (req, res) => {
   try {
     const transactions = await db.getAllTransactions();
     res.json({ success: true, data: transactions });
@@ -1597,47 +2137,87 @@ app.get('/api/transactions', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/transactions', authenticateToken, createLimiter, validateTransaction, async (req, res) => {
-  try {
-    const transaction = await db.saveTransaction(req.body);
-    await logActivity(req.user.id, req.user.username, 'create', 'transactions', 'transaction', transaction.id);
-    res.json({ success: true, data: transaction });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.post(
+  "/api/transactions",
+  authenticateToken,
+  createLimiter,
+  validateTransaction,
+  async (req, res) => {
+    try {
+      const transaction = await db.saveTransaction(req.body);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "create",
+        "transactions",
+        "transaction",
+        transaction.id,
+      );
+      res.json({ success: true, data: transaction });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.put('/api/transactions/:id', authenticateToken, async (req, res) => {
+app.put("/api/transactions/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const transaction = await db.updateTransaction(id, req.body);
-    await logActivity(req.user.id, req.user.username, 'edit', 'transactions', 'transaction', id);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "edit",
+      "transactions",
+      "transaction",
+      id,
+    );
     res.json({ success: true, data: transaction });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
+app.delete("/api/transactions/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     await db.deleteTransaction(id);
-    await logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', id);
-    res.json({ success: true, message: 'Transação deletada com sucesso' });
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "delete",
+      "transactions",
+      "transaction",
+      id,
+    );
+    res.json({ success: true, message: "Transação deletada com sucesso" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/transactions', authenticateToken, async (req, res) => {
+app.delete("/api/transactions", authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
-      return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
+      return res
+        .status(400)
+        .json({ success: false, error: "IDs devem ser um array" });
     }
     await db.deleteMultipleTransactions(ids);
-    await logActivity(req.user.id, req.user.username, 'delete', 'transactions', 'transaction', null, { count: ids.length });
-    res.json({ success: true, message: `${ids.length} transações deletadas com sucesso` });
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "delete",
+      "transactions",
+      "transaction",
+      null,
+      { count: ids.length },
+    );
+    res.json({
+      success: true,
+      message: `${ids.length} transações deletadas com sucesso`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -1645,7 +2225,7 @@ app.delete('/api/transactions', authenticateToken, async (req, res) => {
 
 // APIs para Produtos
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
-app.get('/api/products', authenticateToken, async (req, res) => {
+app.get("/api/products", authenticateToken, async (req, res) => {
   try {
     const products = await db.getAllProducts();
     res.json({ success: true, data: products });
@@ -1654,47 +2234,81 @@ app.get('/api/products', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/products', authenticateToken, async (req, res) => {
+app.post("/api/products", authenticateToken, async (req, res) => {
   try {
     const product = await db.saveProduct(req.body);
-    await logActivity(req.user.id, req.user.username, 'create', 'products', 'product', product.id);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "create",
+      "products",
+      "product",
+      product.id,
+    );
     res.json({ success: true, data: product });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.put('/api/products/:id', authenticateToken, async (req, res) => {
+app.put("/api/products/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const product = await db.updateProduct(id, req.body);
-    await logActivity(req.user.id, req.user.username, 'edit', 'products', 'product', id);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "edit",
+      "products",
+      "product",
+      id,
+    );
     res.json({ success: true, data: product });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/products/:id', authenticateToken, async (req, res) => {
+app.delete("/api/products/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     await db.deleteProduct(id);
-    await logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', id);
-    res.json({ success: true, message: 'Produto deletado com sucesso' });
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "delete",
+      "products",
+      "product",
+      id,
+    );
+    res.json({ success: true, message: "Produto deletado com sucesso" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/products', authenticateToken, async (req, res) => {
+app.delete("/api/products", authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
-      return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
+      return res
+        .status(400)
+        .json({ success: false, error: "IDs devem ser um array" });
     }
     await db.deleteMultipleProducts(ids);
-    await logActivity(req.user.id, req.user.username, 'delete', 'products', 'product', null, { count: ids.length });
-    res.json({ success: true, message: `${ids.length} produtos deletados com sucesso` });
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "delete",
+      "products",
+      "product",
+      null,
+      { count: ids.length },
+    );
+    res.json({
+      success: true,
+      message: `${ids.length} produtos deletados com sucesso`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -1702,7 +2316,7 @@ app.delete('/api/products', authenticateToken, async (req, res) => {
 
 // APIs para Clientes
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
-app.get('/api/clients', authenticateToken, async (req, res) => {
+app.get("/api/clients", authenticateToken, async (req, res) => {
   try {
     const clients = await db.getAllClients();
     res.json({ success: true, data: clients });
@@ -1711,47 +2325,87 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/clients', authenticateToken, createLimiter, validateClientCreation, async (req, res) => {
-  try {
-    const client = await db.saveClient(req.body);
-    await logActivity(req.user.id, req.user.username, 'create', 'clients', 'client', client.id);
-    res.json({ success: true, data: client });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.post(
+  "/api/clients",
+  authenticateToken,
+  createLimiter,
+  validateClientCreation,
+  async (req, res) => {
+    try {
+      const client = await db.saveClient(req.body);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "create",
+        "clients",
+        "client",
+        client.id,
+      );
+      res.json({ success: true, data: client });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.put('/api/clients/:id', authenticateToken, async (req, res) => {
+app.put("/api/clients/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const client = await db.updateClient(id, req.body);
-    await logActivity(req.user.id, req.user.username, 'edit', 'clients', 'client', id);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "edit",
+      "clients",
+      "client",
+      id,
+    );
     res.json({ success: true, data: client });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/clients/:id', authenticateToken, async (req, res) => {
+app.delete("/api/clients/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     await db.deleteClient(id);
-    await logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', id);
-    res.json({ success: true, message: 'Cliente deletado com sucesso' });
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "delete",
+      "clients",
+      "client",
+      id,
+    );
+    res.json({ success: true, message: "Cliente deletado com sucesso" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/clients', authenticateToken, async (req, res) => {
+app.delete("/api/clients", authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
-      return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
+      return res
+        .status(400)
+        .json({ success: false, error: "IDs devem ser um array" });
     }
     await db.deleteMultipleClients(ids);
-    await logActivity(req.user.id, req.user.username, 'delete', 'clients', 'client', null, { count: ids.length });
-    res.json({ success: true, message: `${ids.length} clientes deletados com sucesso` });
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "delete",
+      "clients",
+      "client",
+      null,
+      { count: ids.length },
+    );
+    res.json({
+      success: true,
+      message: `${ids.length} clientes deletados com sucesso`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -1763,7 +2417,7 @@ app.delete('/api/clients', authenticateToken, async (req, res) => {
 // - admin-only: config/sync/clear-all exigem admin
 // - base do ano anterior + overrides: impgeo-style (projection-base.json)
 
-app.get('/api/projection', authenticateToken, async (req, res) => {
+app.get("/api/projection", authenticateToken, async (req, res) => {
   try {
     const snapshot = await db.getProjectionSnapshot();
     if (!snapshot) {
@@ -1777,7 +2431,7 @@ app.get('/api/projection', authenticateToken, async (req, res) => {
 });
 
 // Base (Resultado do Ano Anterior + overrides manuais)
-app.get('/api/projection/base', authenticateToken, async (req, res) => {
+app.get("/api/projection/base", authenticateToken, async (req, res) => {
   try {
     const base = await db.getProjectionBase();
     res.json({ success: true, data: base });
@@ -1786,7 +2440,7 @@ app.get('/api/projection/base', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/projection/base', authenticateToken, async (req, res) => {
+app.put("/api/projection/base", authenticateToken, async (req, res) => {
   try {
     const current = await db.getProjectionBase();
     const body = req.body || {};
@@ -1798,56 +2452,108 @@ app.put('/api/projection/base', authenticateToken, async (req, res) => {
       prevYear: {
         ...(current.prevYear || {}),
         ...(body.prevYear || {}),
-        revenueStreams: { ...(current.prevYear?.revenueStreams || {}), ...(body.prevYear?.revenueStreams || {}) },
-        mktComponents: { ...(current.prevYear?.mktComponents || {}), ...(body.prevYear?.mktComponents || {}) }
+        revenueStreams: {
+          ...(current.prevYear?.revenueStreams || {}),
+          ...(body.prevYear?.revenueStreams || {}),
+        },
+        mktComponents: {
+          ...(current.prevYear?.mktComponents || {}),
+          ...(body.prevYear?.mktComponents || {}),
+        },
       },
       manualOverrides: {
         ...(current.manualOverrides || {}),
         ...(body.manualOverrides || {}),
-        revenueManual: { ...(current.manualOverrides?.revenueManual || {}), ...(body.manualOverrides?.revenueManual || {}) }
-      }
+        revenueManual: {
+          ...(current.manualOverrides?.revenueManual || {}),
+          ...(body.manualOverrides?.revenueManual || {}),
+        },
+      },
     };
 
     // merge profundo por stream (para não perder campos quando vierem parciais)
-    if (body?.manualOverrides?.revenueManual && typeof body.manualOverrides.revenueManual === 'object') {
-      for (const [streamId, v] of Object.entries(body.manualOverrides.revenueManual)) {
+    if (
+      body?.manualOverrides?.revenueManual &&
+      typeof body.manualOverrides.revenueManual === "object"
+    ) {
+      for (const [streamId, v] of Object.entries(
+        body.manualOverrides.revenueManual,
+      )) {
         const prev = current.manualOverrides?.revenueManual?.[streamId] || {};
-        merged.manualOverrides.revenueManual[streamId] = { ...prev, ...(v || {}) };
+        merged.manualOverrides.revenueManual[streamId] = {
+          ...prev,
+          ...(v || {}),
+        };
       }
     }
 
     const updatedBase = await db.updateProjectionBase(merged);
     const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_base', null);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "edit",
+      "projecao",
+      "projection_base",
+      null,
+    );
     res.json({ success: true, data: updatedBase, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/projection/sync', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection', null);
-    res.json({ success: true, data: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.post(
+  "/api/projection/sync",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "sync",
+        "projecao",
+        "projection",
+        null,
+      );
+      res.json({ success: true, data: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Importar base da projeção a partir das transações reais (ano anterior)
-app.post('/api/projection/sync-from-transactions', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const year = req.body?.year || new Date().getFullYear() - 1;
-    const synced = await db.syncProjectionBaseFromTransactions(year);
-    await logActivity(req.user.id, req.user.username, 'sync', 'projecao', 'projection_from_transactions', { year });
-    res.json({ success: true, data: synced, message: `Base importada das transações de ${year}` });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.post(
+  "/api/projection/sync-from-transactions",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const year = req.body?.year || new Date().getFullYear() - 1;
+      const synced = await db.syncProjectionBaseFromTransactions(year);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "sync",
+        "projecao",
+        "projection_from_transactions",
+        { year },
+      );
+      res.json({
+        success: true,
+        data: synced,
+        message: `Base importada das transações de ${year}`,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.get('/api/projection/config', authenticateToken, async (req, res) => {
+app.get("/api/projection/config", authenticateToken, async (req, res) => {
   try {
     const cfg = await db.getProjectionConfig();
     res.json({ success: true, data: cfg });
@@ -1856,26 +2562,38 @@ app.get('/api/projection/config', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/projection/config', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const updated = await db.updateProjectionConfig(req.body || {});
-    // Persistir chaves novas no projection-base (streams/componentes recém-criados)
+app.put(
+  "/api/projection/config",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
     try {
-      const base = await db.getProjectionBase();
-      await db.updateProjectionBase(base);
-    } catch (e) {
-      // não falhar a rota por isso
+      const updated = await db.updateProjectionConfig(req.body || {});
+      // Persistir chaves novas no projection-base (streams/componentes recém-criados)
+      try {
+        const base = await db.getProjectionBase();
+        await db.updateProjectionBase(base);
+      } catch (e) {
+        // não falhar a rota por isso
+      }
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "edit",
+        "projecao",
+        "projection_config",
+        null,
+      );
+      res.json({ success: true, data: updated, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'projection_config', null);
-    res.json({ success: true, data: updated, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  },
+);
 
 // Growth (percentuais de cenários)
-app.put('/api/projection/growth', authenticateToken, async (req, res) => {
+app.put("/api/projection/growth", authenticateToken, async (req, res) => {
   try {
     const { minimo, medio, maximo } = req.body || {};
     const current = await db.getProjectionBase();
@@ -1884,11 +2602,18 @@ app.put('/api/projection/growth', authenticateToken, async (req, res) => {
       growth: {
         minimo: Number(minimo) || 0,
         medio: Number(medio) || 0,
-        maximo: Number(maximo) || 0
-      }
+        maximo: Number(maximo) || 0,
+      },
     });
     const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'growth', null);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "edit",
+      "projecao",
+      "growth",
+      null,
+    );
     res.json({ success: true, data: updated.growth, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1896,7 +2621,7 @@ app.put('/api/projection/growth', authenticateToken, async (req, res) => {
 });
 
 // Revenue (por stream)
-app.get('/api/projection/revenue', authenticateToken, async (req, res) => {
+app.get("/api/projection/revenue", authenticateToken, async (req, res) => {
   try {
     const data = await db.getRevenueData();
     res.json({ success: true, data });
@@ -1905,37 +2630,51 @@ app.get('/api/projection/revenue', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/projection/revenue', authenticateToken, async (req, res) => {
+app.put("/api/projection/revenue", authenticateToken, async (req, res) => {
   try {
     const updated = await db.updateRevenueData(req.body || {});
     const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'revenue', null);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "edit",
+      "projecao",
+      "revenue",
+      null,
+    );
     res.json({ success: true, data: updated, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.delete('/api/projection/revenue', authenticateToken, async (req, res) => {
+app.delete("/api/projection/revenue", authenticateToken, async (req, res) => {
   try {
     const cfg = await db.getProjectionConfig();
     const months12 = new Array(12).fill(0);
     const base = await db.getProjectionBase();
     const next = { ...base };
-    for (const s of (cfg.revenueStreams || [])) {
+    for (const s of cfg.revenueStreams || []) {
       if (!s?.id) continue;
       next.prevYear.revenueStreams[s.id] = [...months12];
       if (next.manualOverrides?.revenueManual?.[s.id]) {
         next.manualOverrides.revenueManual[s.id] = {
           previsto: new Array(12).fill(null),
           medio: new Array(12).fill(null),
-          maximo: new Array(12).fill(null)
+          maximo: new Array(12).fill(null),
         };
       }
     }
     const cleared = await db.updateProjectionBase(next);
     const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'revenue', null);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "delete",
+      "projecao",
+      "revenue",
+      null,
+    );
     res.json({ success: true, data: cleared, projection: synced });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1943,151 +2682,229 @@ app.delete('/api/projection/revenue', authenticateToken, async (req, res) => {
 });
 
 // MKT components (por componente)
-app.get('/api/projection/mkt-components', authenticateToken, async (req, res) => {
-  try {
-    const data = await db.getMktComponentsData();
-    res.json({ success: true, data });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.put('/api/projection/mkt-components', authenticateToken, async (req, res) => {
-  try {
-    const updated = await db.updateMktComponentsData(req.body || {});
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'mkt_components', null);
-    res.json({ success: true, data: updated, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/projection/mkt-components', authenticateToken, async (req, res) => {
-  try {
-    const cfg = await db.getProjectionConfig();
-    const months12 = new Array(12).fill(0);
-    const base = await db.getProjectionBase();
-    const next = { ...base };
-    for (const c of (cfg.mktComponents || [])) {
-      if (!c?.id) continue;
-      next.prevYear.mktComponents[c.id] = [...months12];
+app.get(
+  "/api/projection/mkt-components",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const data = await db.getMktComponentsData();
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
-    // também limpar overrides do MKT do ano corrente
-    next.manualOverrides.mktPrevistoManual = new Array(12).fill(null);
-    next.manualOverrides.mktMedioManual = new Array(12).fill(null);
-    next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
-    const cleared = await db.updateProjectionBase(next);
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'mkt_components', null);
-    res.json({ success: true, data: cleared, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  },
+);
+
+app.put(
+  "/api/projection/mkt-components",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const updated = await db.updateMktComponentsData(req.body || {});
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "edit",
+        "projecao",
+        "mkt_components",
+        null,
+      );
+      res.json({ success: true, data: updated, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
+
+app.delete(
+  "/api/projection/mkt-components",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const cfg = await db.getProjectionConfig();
+      const months12 = new Array(12).fill(0);
+      const base = await db.getProjectionBase();
+      const next = { ...base };
+      for (const c of cfg.mktComponents || []) {
+        if (!c?.id) continue;
+        next.prevYear.mktComponents[c.id] = [...months12];
+      }
+      // também limpar overrides do MKT do ano corrente
+      next.manualOverrides.mktPrevistoManual = new Array(12).fill(null);
+      next.manualOverrides.mktMedioManual = new Array(12).fill(null);
+      next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
+      const cleared = await db.updateProjectionBase(next);
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "delete",
+        "projecao",
+        "mkt_components",
+        null,
+      );
+      res.json({ success: true, data: cleared, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Fixed expenses
-app.get('/api/projection/fixed-expenses', authenticateToken, async (req, res) => {
-  try {
-    const data = await db.getFixedExpensesData();
-    res.json({ success: true, data });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.get(
+  "/api/projection/fixed-expenses",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const data = await db.getFixedExpensesData();
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.put('/api/projection/fixed-expenses', authenticateToken, async (req, res) => {
-  try {
-    const body = req.body || {};
-    const months = Array.isArray(body?.previsto) ? body.previsto : [];
-    const base = await db.getProjectionBase();
-    const updated = await db.updateProjectionBase({
-      ...base,
-      prevYear: { ...(base.prevYear || {}), fixedExpenses: months }
-    });
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'fixed_expenses', null);
-    const fixedData = await db.getFixedExpensesData();
-    res.json({ success: true, data: fixedData, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.put(
+  "/api/projection/fixed-expenses",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const body = req.body || {};
+      const months = Array.isArray(body?.previsto) ? body.previsto : [];
+      const base = await db.getProjectionBase();
+      const updated = await db.updateProjectionBase({
+        ...base,
+        prevYear: { ...(base.prevYear || {}), fixedExpenses: months },
+      });
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "edit",
+        "projecao",
+        "fixed_expenses",
+        null,
+      );
+      const fixedData = await db.getFixedExpensesData();
+      res.json({ success: true, data: fixedData, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.delete('/api/projection/fixed-expenses', authenticateToken, async (req, res) => {
-  try {
-    const months12 = new Array(12).fill(0);
-    const base = await db.getProjectionBase();
-    const cleared = await db.updateProjectionBase({
-      ...base,
-      prevYear: { ...(base.prevYear || {}), fixedExpenses: [...months12] },
-      manualOverrides: {
-        ...(base.manualOverrides || {}),
-        fixedPrevistoManual: new Array(12).fill(null),
-        fixedMediaManual: new Array(12).fill(null),
-        fixedMaximoManual: new Array(12).fill(null)
-      }
-    });
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'fixed_expenses', null);
-    res.json({ success: true, data: cleared, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.delete(
+  "/api/projection/fixed-expenses",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const months12 = new Array(12).fill(0);
+      const base = await db.getProjectionBase();
+      const cleared = await db.updateProjectionBase({
+        ...base,
+        prevYear: { ...(base.prevYear || {}), fixedExpenses: [...months12] },
+        manualOverrides: {
+          ...(base.manualOverrides || {}),
+          fixedPrevistoManual: new Array(12).fill(null),
+          fixedMediaManual: new Array(12).fill(null),
+          fixedMaximoManual: new Array(12).fill(null),
+        },
+      });
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "delete",
+        "projecao",
+        "fixed_expenses",
+        null,
+      );
+      res.json({ success: true, data: cleared, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Variable expenses
-app.get('/api/projection/variable-expenses', authenticateToken, async (req, res) => {
-  try {
-    const data = await db.getVariableExpensesData();
-    res.json({ success: true, data });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.get(
+  "/api/projection/variable-expenses",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const data = await db.getVariableExpensesData();
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.put('/api/projection/variable-expenses', authenticateToken, async (req, res) => {
-  try {
-    const body = req.body || {};
-    const months = Array.isArray(body?.previsto) ? body.previsto : [];
-    const base = await db.getProjectionBase();
-    const updated = await db.updateProjectionBase({
-      ...base,
-      prevYear: { ...(base.prevYear || {}), variableExpenses: months }
-    });
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'variable_expenses', null);
-    const varData = await db.getVariableExpensesData();
-    res.json({ success: true, data: varData, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.put(
+  "/api/projection/variable-expenses",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const body = req.body || {};
+      const months = Array.isArray(body?.previsto) ? body.previsto : [];
+      const base = await db.getProjectionBase();
+      const updated = await db.updateProjectionBase({
+        ...base,
+        prevYear: { ...(base.prevYear || {}), variableExpenses: months },
+      });
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "edit",
+        "projecao",
+        "variable_expenses",
+        null,
+      );
+      const varData = await db.getVariableExpensesData();
+      res.json({ success: true, data: varData, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.delete('/api/projection/variable-expenses', authenticateToken, async (req, res) => {
-  try {
-    const months12 = new Array(12).fill(0);
-    const base = await db.getProjectionBase();
-    const cleared = await db.updateProjectionBase({
-      ...base,
-      prevYear: { ...(base.prevYear || {}), variableExpenses: [...months12] },
-      manualOverrides: {
-        ...(base.manualOverrides || {}),
-        variablePrevistoManual: new Array(12).fill(null),
-        variableMedioManual: new Array(12).fill(null),
-        variableMaximoManual: new Array(12).fill(null)
-      }
-    });
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'variable_expenses', null);
-    res.json({ success: true, data: cleared, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.delete(
+  "/api/projection/variable-expenses",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const months12 = new Array(12).fill(0);
+      const base = await db.getProjectionBase();
+      const cleared = await db.updateProjectionBase({
+        ...base,
+        prevYear: { ...(base.prevYear || {}), variableExpenses: [...months12] },
+        manualOverrides: {
+          ...(base.manualOverrides || {}),
+          variablePrevistoManual: new Array(12).fill(null),
+          variableMedioManual: new Array(12).fill(null),
+          variableMaximoManual: new Array(12).fill(null),
+        },
+      });
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "delete",
+        "projecao",
+        "variable_expenses",
+        null,
+      );
+      res.json({ success: true, data: cleared, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Investments
-app.get('/api/projection/investments', authenticateToken, async (req, res) => {
+app.get("/api/projection/investments", authenticateToken, async (req, res) => {
   try {
     const data = await db.getInvestmentsData();
     res.json({ success: true, data });
@@ -2096,17 +2913,24 @@ app.get('/api/projection/investments', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/projection/investments', authenticateToken, async (req, res) => {
+app.put("/api/projection/investments", authenticateToken, async (req, res) => {
   try {
     const body = req.body || {};
     const months = Array.isArray(body?.previsto) ? body.previsto : [];
     const base = await db.getProjectionBase();
     const updated = await db.updateProjectionBase({
       ...base,
-      prevYear: { ...(base.prevYear || {}), investments: months }
+      prevYear: { ...(base.prevYear || {}), investments: months },
     });
     const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'edit', 'projecao', 'investments', null);
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "edit",
+      "projecao",
+      "investments",
+      null,
+    );
     const invData = await db.getInvestmentsData();
     res.json({ success: true, data: invData, projection: synced });
   } catch (error) {
@@ -2114,30 +2938,41 @@ app.put('/api/projection/investments', authenticateToken, async (req, res) => {
   }
 });
 
-app.delete('/api/projection/investments', authenticateToken, async (req, res) => {
-  try {
-    const months12 = new Array(12).fill(0);
-    const base = await db.getProjectionBase();
-    const cleared = await db.updateProjectionBase({
-      ...base,
-      prevYear: { ...(base.prevYear || {}), investments: [...months12] },
-      manualOverrides: {
-        ...(base.manualOverrides || {}),
-        investimentosPrevistoManual: new Array(12).fill(null),
-        investimentosMedioManual: new Array(12).fill(null),
-        investimentosMaximoManual: new Array(12).fill(null)
-      }
-    });
-    const synced = await db.syncProjectionData();
-    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'investments', null);
-    res.json({ success: true, data: cleared, projection: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.delete(
+  "/api/projection/investments",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const months12 = new Array(12).fill(0);
+      const base = await db.getProjectionBase();
+      const cleared = await db.updateProjectionBase({
+        ...base,
+        prevYear: { ...(base.prevYear || {}), investments: [...months12] },
+        manualOverrides: {
+          ...(base.manualOverrides || {}),
+          investimentosPrevistoManual: new Array(12).fill(null),
+          investimentosMedioManual: new Array(12).fill(null),
+          investimentosMaximoManual: new Array(12).fill(null),
+        },
+      });
+      const synced = await db.syncProjectionData();
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "delete",
+        "projecao",
+        "investments",
+        null,
+      );
+      res.json({ success: true, data: cleared, projection: synced });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Derived read-only endpoints (budget/resultado)
-app.get('/api/projection/budget', authenticateToken, async (req, res) => {
+app.get("/api/projection/budget", authenticateToken, async (req, res) => {
   try {
     const data = await db.getBudgetData();
     res.json({ success: true, data });
@@ -2146,7 +2981,7 @@ app.get('/api/projection/budget', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/projection/resultado', authenticateToken, async (req, res) => {
+app.get("/api/projection/resultado", authenticateToken, async (req, res) => {
   try {
     const data = await db.getResultadoData();
     res.json({ success: true, data });
@@ -2156,229 +2991,325 @@ app.get('/api/projection/resultado', authenticateToken, async (req, res) => {
 });
 
 // Clear all projection data (admin)
-app.delete('/api/clear-all-projection-data', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const months12 = new Array(12).fill(0);
-    const cfg = await db.getProjectionConfig();
-    const base = await db.getProjectionBase();
-    const next = { ...base };
-    next.growth = { minimo: 0, medio: 0, maximo: 0 };
-    next.prevYear.fixedExpenses = [...months12];
-    next.prevYear.variableExpenses = [...months12];
-    next.prevYear.investments = [...months12];
-    for (const s of (cfg.revenueStreams || [])) {
-      if (!s?.id) continue;
-      next.prevYear.revenueStreams[s.id] = [...months12];
-      next.manualOverrides.revenueManual[s.id] = {
-        previsto: new Array(12).fill(null),
-        medio: new Array(12).fill(null),
-        maximo: new Array(12).fill(null)
-      };
-    }
-    for (const c of (cfg.mktComponents || [])) {
-      if (!c?.id) continue;
-      next.prevYear.mktComponents[c.id] = [...months12];
-    }
-    next.manualOverrides.fixedPrevistoManual = new Array(12).fill(null);
-    next.manualOverrides.fixedMediaManual = new Array(12).fill(null);
-    next.manualOverrides.fixedMaximoManual = new Array(12).fill(null);
-    next.manualOverrides.variablePrevistoManual = new Array(12).fill(null);
-    next.manualOverrides.variableMedioManual = new Array(12).fill(null);
-    next.manualOverrides.variableMaximoManual = new Array(12).fill(null);
-    next.manualOverrides.investimentosPrevistoManual = new Array(12).fill(null);
-    next.manualOverrides.investimentosMedioManual = new Array(12).fill(null);
-    next.manualOverrides.investimentosMaximoManual = new Array(12).fill(null);
-    next.manualOverrides.mktPrevistoManual = new Array(12).fill(null);
-    next.manualOverrides.mktMedioManual = new Array(12).fill(null);
-    next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
+app.delete(
+  "/api/clear-all-projection-data",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const months12 = new Array(12).fill(0);
+      const cfg = await db.getProjectionConfig();
+      const base = await db.getProjectionBase();
+      const next = { ...base };
+      next.growth = { minimo: 0, medio: 0, maximo: 0 };
+      next.prevYear.fixedExpenses = [...months12];
+      next.prevYear.variableExpenses = [...months12];
+      next.prevYear.investments = [...months12];
+      for (const s of cfg.revenueStreams || []) {
+        if (!s?.id) continue;
+        next.prevYear.revenueStreams[s.id] = [...months12];
+        next.manualOverrides.revenueManual[s.id] = {
+          previsto: new Array(12).fill(null),
+          medio: new Array(12).fill(null),
+          maximo: new Array(12).fill(null),
+        };
+      }
+      for (const c of cfg.mktComponents || []) {
+        if (!c?.id) continue;
+        next.prevYear.mktComponents[c.id] = [...months12];
+      }
+      next.manualOverrides.fixedPrevistoManual = new Array(12).fill(null);
+      next.manualOverrides.fixedMediaManual = new Array(12).fill(null);
+      next.manualOverrides.fixedMaximoManual = new Array(12).fill(null);
+      next.manualOverrides.variablePrevistoManual = new Array(12).fill(null);
+      next.manualOverrides.variableMedioManual = new Array(12).fill(null);
+      next.manualOverrides.variableMaximoManual = new Array(12).fill(null);
+      next.manualOverrides.investimentosPrevistoManual = new Array(12).fill(
+        null,
+      );
+      next.manualOverrides.investimentosMedioManual = new Array(12).fill(null);
+      next.manualOverrides.investimentosMaximoManual = new Array(12).fill(null);
+      next.manualOverrides.mktPrevistoManual = new Array(12).fill(null);
+      next.manualOverrides.mktMedioManual = new Array(12).fill(null);
+      next.manualOverrides.mktMaximoManual = new Array(12).fill(null);
 
-    await db.updateProjectionBase(next);
-    const synced = await db.syncProjectionData();
+      await db.updateProjectionBase(next);
+      const synced = await db.syncProjectionData();
 
-    await logActivity(req.user.id, req.user.username, 'delete', 'projecao', 'clear_all', null);
-    res.json({ success: true, message: 'Dados de Projeção limpos com sucesso', data: synced });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "delete",
+        "projecao",
+        "clear_all",
+        null,
+      );
+      res.json({
+        success: true,
+        message: "Dados de Projeção limpos com sucesso",
+        data: synced,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // ===== ROTAS ADMINISTRATIVAS =====
 
 // Rotas de Usuários
-app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const users = await db.getAllUsers();
-    // Remover senhas antes de enviar
-    const safeUsers = users.map(({ password, ...user }) => user);
-    res.json({ success: true, data: safeUsers });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await db.getUserById(id);
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+app.get(
+  "/api/admin/users",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const users = await db.getAllUsers();
+      // Remover senhas antes de enviar
+      const safeUsers = users.map(({ password, ...user }) => user);
+      res.json({ success: true, data: safeUsers });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
-    const { password: _, ...safeUser } = user;
-    res.json({ success: true, data: safeUser });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  },
+);
 
-app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const {
-      username,
-      firstName,
-      lastName,
-      email,
-      phone,
-      photoUrl,
-      cpf,
-      birthDate,
-      gender,
-      position,
-      address,
-      role,
-      modules,
-      isActive
-    } = req.body;
-
-    if (!username) {
-      return res.status(400).json({ success: false, error: 'Username é obrigatório' });
+app.get(
+  "/api/admin/users/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await db.getUserById(id);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Usuário não encontrado" });
+      }
+      const { password: _, ...safeUser } = user;
+      res.json({ success: true, data: safeUser });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
+  },
+);
 
-    if (!firstName || firstName.trim().length < 2) {
-      return res.status(400).json({ success: false, error: 'Nome é obrigatório e deve ter pelo menos 2 caracteres' });
-    }
+app.post(
+  "/api/admin/users",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const {
+        username,
+        firstName,
+        lastName,
+        email,
+        phone,
+        photoUrl,
+        cpf,
+        birthDate,
+        gender,
+        position,
+        address,
+        role,
+        modules,
+        isActive,
+      } = req.body;
 
-    if (!lastName || lastName.trim().length < 2) {
-      return res.status(400).json({ success: false, error: 'Sobrenome é obrigatório e deve ter pelo menos 2 caracteres' });
-    }
+      if (!username) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Username é obrigatório" });
+      }
 
-    if (!email || !email.trim()) {
-      return res.status(400).json({ success: false, error: 'Email é obrigatório' });
-    }
+      if (!firstName || firstName.trim().length < 2) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
+          });
+      }
 
-    if (!validateEmailFormat(email)) {
-      return res.status(400).json({ success: false, error: 'Formato de email inválido' });
-    }
+      if (!lastName || lastName.trim().length < 2) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
+          });
+      }
 
-    if (!phone) {
-      return res.status(400).json({ success: false, error: 'Telefone é obrigatório' });
-    }
+      if (!email || !email.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Email é obrigatório" });
+      }
 
-    const phoneDigits = phone.replace(/\D/g, '');
-    if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
-      return res.status(400).json({ success: false, error: 'Telefone deve ter 10 ou 11 dígitos' });
-    }
+      if (!validateEmailFormat(email)) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Formato de email inválido" });
+      }
 
-    if (!cpf) {
-      return res.status(400).json({ success: false, error: 'CPF é obrigatório' });
-    }
+      if (!phone) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Telefone é obrigatório" });
+      }
 
-    const cpfDigits = cpf.replace(/\D/g, '');
-    if (cpfDigits.length !== 11) {
-      return res.status(400).json({ success: false, error: 'CPF deve ter 11 dígitos' });
-    }
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Telefone deve ter 10 ou 11 dígitos",
+          });
+      }
 
-    if (!birthDate) {
-      return res.status(400).json({ success: false, error: 'Data de nascimento é obrigatória' });
-    }
+      if (!cpf) {
+        return res
+          .status(400)
+          .json({ success: false, error: "CPF é obrigatório" });
+      }
 
-    if (!gender) {
-      return res.status(400).json({ success: false, error: 'Gênero é obrigatório' });
-    }
+      const cpfDigits = cpf.replace(/\D/g, "");
+      if (cpfDigits.length !== 11) {
+        return res
+          .status(400)
+          .json({ success: false, error: "CPF deve ter 11 dígitos" });
+      }
 
-    if (!position || !position.trim()) {
-      return res.status(400).json({ success: false, error: 'Cargo é obrigatório' });
-    }
+      if (!birthDate) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Data de nascimento é obrigatória" });
+      }
 
-    if (!address || !address.cep) {
-      return res.status(400).json({ success: false, error: 'CEP é obrigatório' });
-    }
+      if (!gender) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Gênero é obrigatório" });
+      }
 
-    const cepDigits = address.cep.replace(/\D/g, '');
-    if (cepDigits.length !== 8) {
-      return res.status(400).json({ success: false, error: 'CEP deve ter 8 dígitos' });
-    }
+      if (!position || !position.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Cargo é obrigatório" });
+      }
 
-    if (!address.street || !address.street.trim()) {
-      return res.status(400).json({ success: false, error: 'Rua/Logradouro é obrigatório' });
-    }
+      if (!address || !address.cep) {
+        return res
+          .status(400)
+          .json({ success: false, error: "CEP é obrigatório" });
+      }
 
-    if (!address.number || !address.number.trim()) {
-      return res.status(400).json({ success: false, error: 'Número do endereço é obrigatório' });
-    }
+      const cepDigits = address.cep.replace(/\D/g, "");
+      if (cepDigits.length !== 8) {
+        return res
+          .status(400)
+          .json({ success: false, error: "CEP deve ter 8 dígitos" });
+      }
 
-    if (!address.neighborhood || !address.neighborhood.trim()) {
-      return res.status(400).json({ success: false, error: 'Bairro é obrigatório' });
-    }
+      if (!address.street || !address.street.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Rua/Logradouro é obrigatório" });
+      }
 
-    if (!address.city || !address.city.trim()) {
-      return res.status(400).json({ success: false, error: 'Cidade é obrigatória' });
-    }
+      if (!address.number || !address.number.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Número do endereço é obrigatório" });
+      }
 
-    if (!address.state || !address.state.trim() || address.state.length !== 2) {
-      return res.status(400).json({ success: false, error: 'Estado (UF) é obrigatório e deve ter 2 caracteres' });
-    }
+      if (!address.neighborhood || !address.neighborhood.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Bairro é obrigatório" });
+      }
 
-    // Verificar se usuário já existe
-    if (await db.getUserByUsername(username)) {
-      return res.status(400).json({ success: false, error: 'Usuário já existe' });
-    }
+      if (!address.city || !address.city.trim()) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Cidade é obrigatória" });
+      }
 
-    // 🔒 CORREÇÃO DE SEGURANÇA: Gerar senha temporária forte para convite
-    const tempPassword = generateRandomPassword();
-    const tempPasswordHash = bcrypt.hashSync(tempPassword, 10);
+      if (
+        !address.state ||
+        !address.state.trim() ||
+        address.state.length !== 2
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Estado (UF) é obrigatório e deve ter 2 caracteres",
+          });
+      }
 
-    // Se módulos não foram fornecidos, usar módulos padrão da role
-    const userRole = role || 'user';
-    const defaultModules = getDefaultModulesForRole(userRole);
-    const userModules = modules && modules.length > 0 ? modules : defaultModules;
+      // Verificar se usuário já existe
+      if (await db.getUserByUsername(username)) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Usuário já existe" });
+      }
 
-    const newUser = {
-      username,
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
-      email: email || undefined,
-      phone: phone ? phone.replace(/\D/g, '') : undefined, // Remover máscara
-      photoUrl: photoUrl || undefined,
-      cpf: cpf ? cpf.replace(/\D/g, '') : undefined, // Remover máscara
-      birthDate: birthDate || undefined,
-      gender: gender || undefined,
-      position: position || undefined,
-      address: address || undefined,
-      password: tempPasswordHash, // Senha temporária
-      role: userRole,
-      modules: userModules,
-      isActive: isActive !== undefined ? isActive : true,
-      lastLogin: null // null indica que nunca fez login
-    };
+      // 🔒 CORREÇÃO DE SEGURANÇA: Gerar senha temporária forte para convite
+      const tempPassword = generateRandomPassword();
+      const tempPasswordHash = bcrypt.hashSync(tempPassword, 10);
 
-    const user = await db.saveUser(newUser);
+      // Se módulos não foram fornecidos, usar módulos padrão da role
+      const userRole = role || "user";
+      const defaultModules = getDefaultModulesForRole(userRole);
+      const userModules =
+        modules && modules.length > 0 ? modules : defaultModules;
 
-    // Criar convite de usuário (expira em 7 dias)
-    const invite = await db.createUserInvite(user.id, tempPasswordHash, 7, req.user.id);
+      const newUser = {
+        username,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        email: email || undefined,
+        phone: phone ? phone.replace(/\D/g, "") : undefined, // Remover máscara
+        photoUrl: photoUrl || undefined,
+        cpf: cpf ? cpf.replace(/\D/g, "") : undefined, // Remover máscara
+        birthDate: birthDate || undefined,
+        gender: gender || undefined,
+        position: position || undefined,
+        address: address || undefined,
+        password: tempPasswordHash, // Senha temporária
+        role: userRole,
+        modules: userModules,
+        isActive: isActive !== undefined ? isActive : true,
+        lastLogin: null, // null indica que nunca fez login
+      };
 
-    // Enviar email com credenciais (se SendGrid configurado)
-    if (SENDGRID_API_KEY && user.email) {
-      const inviteLink = `${process.env.FRONTEND_URL || 'https://alya.sistemas.viverdepj.com.br'}/login?invite=${invite.inviteToken}`;
+      const user = await db.saveUser(newUser);
 
-      const msg = {
-        to: user.email,
-        from: {
-          email: SENDGRID_FROM_EMAIL,
-          name: process.env.SENDGRID_FROM_NAME || 'Alya Sistemas',
-        },
-        subject: 'Alya - Bem-vindo(a) ao Sistema',
-        text: `Olá ${user.firstName || user.username},\n\nVocê foi cadastrado no sistema Alya.\n\nSuas credenciais temporárias:\nUsuário: ${user.username}\nSenha Temporária: ${tempPassword}\n\nLink de acesso:\n${inviteLink}\n\nEste convite expira em 7 dias.\n\nApós o primeiro acesso, você receberá uma nova senha que deverá ser alterada.\n\nAtenciosamente,\nEquipe Alya`,
-        html: `
+      // Criar convite de usuário (expira em 7 dias)
+      const invite = await db.createUserInvite(
+        user.id,
+        tempPasswordHash,
+        7,
+        req.user.id,
+      );
+
+      // Enviar email com credenciais (se SendGrid configurado)
+      if (SENDGRID_API_KEY && user.email) {
+        const inviteLink = `${process.env.FRONTEND_URL || "https://alya.sistemas.viverdepj.com.br"}/login?invite=${invite.inviteToken}`;
+
+        const msg = {
+          to: user.email,
+          from: {
+            email: SENDGRID_FROM_EMAIL,
+            name: process.env.SENDGRID_FROM_NAME || "Alya Sistemas",
+          },
+          subject: "Alya - Bem-vindo(a) ao Sistema",
+          text: `Olá ${user.firstName || user.username},\n\nVocê foi cadastrado no sistema Alya.\n\nSuas credenciais temporárias:\nUsuário: ${user.username}\nSenha Temporária: ${tempPassword}\n\nLink de acesso:\n${inviteLink}\n\nEste convite expira em 7 dias.\n\nApós o primeiro acesso, você receberá uma nova senha que deverá ser alterada.\n\nAtenciosamente,\nEquipe Alya`,
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
             <p style="text-align: center; margin-bottom: 30px;">
               <span style="font-size: 24px; font-weight: bold; color: #d97706;">Alya</span>
@@ -2399,94 +3330,141 @@ app.post('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =
             <p style="color: #94a3b8; font-size: 12px; text-align: center;">Se você não solicitou este cadastro, pode ignorar este e-mail.</p>
           </div>
         `,
-      };
+        };
 
-      try {
-        await sgMail.send(msg);
-        console.log(`Email de convite enviado para: ${user.email}`);
-      } catch (sgError) {
-        console.error('Erro ao enviar e-mail de convite:', sgError);
+        try {
+          await sgMail.send(msg);
+          console.log(`Email de convite enviado para: ${user.email}`);
+        } catch (sgError) {
+          console.error("Erro ao enviar e-mail de convite:", sgError);
+        }
       }
+
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "create",
+        "admin",
+        "user",
+        user.id,
+        { username: user.username, role: user.role },
+      );
+
+      const { password: _, ...safeUser } = user;
+      res.json({
+        success: true,
+        data: safeUser,
+        invite: {
+          token: invite.inviteToken,
+          expiresAt: invite.expiresAt,
+          tempPassword: SENDGRID_API_KEY ? undefined : tempPassword, // Só retornar se não enviou email
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
+  },
+);
 
-    await logActivity(req.user.id, req.user.username, 'create', 'admin', 'user', user.id, { username: user.username, role: user.role });
+app.put(
+  "/api/admin/users/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = { ...req.body };
 
-    const { password: _, ...safeUser } = user;
-    res.json({
-      success: true,
-      data: safeUser,
-      invite: {
-        token: invite.inviteToken,
-        expiresAt: invite.expiresAt,
-        tempPassword: SENDGRID_API_KEY ? undefined : tempPassword // Só retornar se não enviou email
+      // Se houver senha, hash ela
+      if (updates.password) {
+        if (updates.password.length < 6) {
+          return res
+            .status(400)
+            .json({
+              success: false,
+              error: "Senha deve ter no mínimo 6 caracteres",
+            });
+        }
+        updates.password = bcrypt.hashSync(updates.password, 10);
       }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 
-app.put('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = { ...req.body };
+      // Não permitir mudar role para admin de outro usuário (apenas o próprio admin pode ser admin)
+      // Isso pode ser ajustado conforme necessário
 
-    // Se houver senha, hash ela
-    if (updates.password) {
-      if (updates.password.length < 6) {
-        return res.status(400).json({ success: false, error: 'Senha deve ter no mínimo 6 caracteres' });
+      const updatedUser = await db.updateUser(id, updates);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "edit",
+        "admin",
+        "user",
+        id,
+        { changes: Object.keys(updates) },
+      );
+
+      const { password: _, ...safeUser } = updatedUser;
+      res.json({ success: true, data: safeUser });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/users/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Não permitir deletar a si mesmo
+      if (id === req.user.id) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Não é possível deletar seu próprio usuário",
+          });
       }
-      updates.password = bcrypt.hashSync(updates.password, 10);
+
+      const user = await db.getUserById(id);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Usuário não encontrado" });
+      }
+
+      // Deletar foto do usuário se existir
+      if (user.photoUrl) {
+        deleteAvatarFile(user.photoUrl);
+      }
+
+      await db.deleteUser(id);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "delete",
+        "admin",
+        "user",
+        id,
+        { username: user.username },
+      );
+
+      res.json({ success: true, message: "Usuário deletado com sucesso" });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
-
-    // Não permitir mudar role para admin de outro usuário (apenas o próprio admin pode ser admin)
-    // Isso pode ser ajustado conforme necessário
-
-    const updatedUser = await db.updateUser(id, updates);
-    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user', id, { changes: Object.keys(updates) });
-
-    const { password: _, ...safeUser } = updatedUser;
-    res.json({ success: true, data: safeUser });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Não permitir deletar a si mesmo
-    if (id === req.user.id) {
-      return res.status(400).json({ success: false, error: 'Não é possível deletar seu próprio usuário' });
-    }
-
-    const user = await db.getUserById(id);
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
-    }
-
-    // Deletar foto do usuário se existir
-    if (user.photoUrl) {
-      deleteAvatarFile(user.photoUrl);
-    }
-
-    await db.deleteUser(id);
-    await logActivity(req.user.id, req.user.username, 'delete', 'admin', 'user', id, { username: user.username });
-
-    res.json({ success: true, message: 'Usuário deletado com sucesso' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  },
+);
 
 // Rota pública para listar módulos (todos os usuários precisam ver módulos disponíveis)
-app.get('/api/modules', authenticateToken, async (req, res) => {
+app.get("/api/modules", authenticateToken, async (req, res) => {
   try {
     const modules = await db.getAllSystemModules();
     // Retornar apenas módulos ativos para usuários não-admin
-    if (req.user.role !== 'admin') {
-      const activeModules = modules.filter(m => m.isActive);
+    if (req.user.role !== "admin") {
+      const activeModules = modules.filter((m) => m.isActive);
       return res.json({ success: true, data: activeModules });
     }
     res.json({ success: true, data: modules });
@@ -2496,188 +3474,274 @@ app.get('/api/modules', authenticateToken, async (req, res) => {
 });
 
 // Rotas de Módulos (Admin)
-app.get('/api/admin/modules', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const modules = await db.getAllSystemModules();
-    res.json({ success: true, data: modules });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const module = await db.getSystemModuleById(id);
-    if (!module) {
-      return res.status(404).json({ success: false, error: 'Módulo não encontrado' });
+app.get(
+  "/api/admin/modules",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const modules = await db.getAllSystemModules();
+      res.json({ success: true, data: modules });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
-    res.json({ success: true, data: module });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  },
+);
 
-app.post('/api/admin/modules', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { name, key, icon, description, route, isActive } = req.body;
-
-    if (!name || !key) {
-      return res.status(400).json({ success: false, error: 'Nome e key são obrigatórios' });
+app.get(
+  "/api/admin/modules/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const module = await db.getSystemModuleById(id);
+      if (!module) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Módulo não encontrado" });
+      }
+      res.json({ success: true, data: module });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
+  },
+);
 
-    const moduleData = {
-      name,
-      key,
-      icon: icon || 'Package',
-      description: description || '',
-      route: route || null,
-      isActive: isActive !== undefined ? isActive : true,
-      isSystem: false
-    };
+app.post(
+  "/api/admin/modules",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { name, key, icon, description, route, isActive } = req.body;
 
-    const module = await db.saveSystemModule(moduleData);
-    await logActivity(req.user.id, req.user.username, 'create', 'admin', 'module', module.id, { name: module.name, key: module.key });
+      if (!name || !key) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Nome e key são obrigatórios" });
+      }
 
-    res.json({ success: true, data: module });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+      const moduleData = {
+        name,
+        key,
+        icon: icon || "Package",
+        description: description || "",
+        route: route || null,
+        isActive: isActive !== undefined ? isActive : true,
+        isSystem: false,
+      };
 
-app.put('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
+      const module = await db.saveSystemModule(moduleData);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "create",
+        "admin",
+        "module",
+        module.id,
+        { name: module.name, key: module.key },
+      );
 
-    // Não permitir mudar isSystem
-    delete updates.isSystem;
-
-    const module = await db.updateSystemModule(id, updates);
-    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'module', id, { changes: Object.keys(updates) });
-
-    res.json({ success: true, data: module });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.delete('/api/admin/modules/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const module = await db.getSystemModuleById(id);
-    if (!module) {
-      return res.status(404).json({ success: false, error: 'Módulo não encontrado' });
+      res.json({ success: true, data: module });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
+  },
+);
 
-    await db.deleteSystemModule(id);
-    await logActivity(req.user.id, req.user.username, 'delete', 'admin', 'module', id, { name: module.name, key: module.key });
+app.put(
+  "/api/admin/modules/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
 
-    res.json({ success: true, message: 'Módulo deletado com sucesso' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+      // Não permitir mudar isSystem
+      delete updates.isSystem;
+
+      const module = await db.updateSystemModule(id, updates);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "edit",
+        "admin",
+        "module",
+        id,
+        { changes: Object.keys(updates) },
+      );
+
+      res.json({ success: true, data: module });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/modules/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const module = await db.getSystemModuleById(id);
+      if (!module) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Módulo não encontrado" });
+      }
+
+      await db.deleteSystemModule(id);
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "delete",
+        "admin",
+        "module",
+        id,
+        { name: module.name, key: module.key },
+      );
+
+      res.json({ success: true, message: "Módulo deletado com sucesso" });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Rotas de Activity Log
-app.get('/api/admin/activity-log', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { userId, module, action, startDate, endDate, limit, page } = req.query;
+app.get(
+  "/api/admin/activity-log",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { userId, module, action, startDate, endDate, limit, page } =
+        req.query;
 
-    const filters = {};
-    if (userId) filters.userId = userId;
-    if (module) filters.module = module;
-    if (action) filters.action = action;
-    if (startDate) filters.startDate = startDate;
-    if (endDate) filters.endDate = endDate;
-    if (limit) filters.limit = limit;
-    if (page) filters.page = page;
+      const filters = {};
+      if (userId) filters.userId = userId;
+      if (module) filters.module = module;
+      if (action) filters.action = action;
+      if (startDate) filters.startDate = startDate;
+      if (endDate) filters.endDate = endDate;
+      if (limit) filters.limit = limit;
+      if (page) filters.page = page;
 
-    const logs = await db.getActivityLogs(filters);
-    res.json({ success: true, data: logs, count: logs.length });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+      const logs = await db.getActivityLogs(filters);
+      res.json({ success: true, data: logs, count: logs.length });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Rotas de Estatísticas
-app.get('/api/admin/statistics', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const stats = await db.getSystemStatistics();
-    res.json({ success: true, data: stats });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.get(
+  "/api/admin/statistics",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const stats = await db.getSystemStatistics();
+      res.json({ success: true, data: stats });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.get('/api/admin/statistics/users/:userId', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const stats = await db.getUserStatistics(userId);
-    res.json({ success: true, data: stats });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.get(
+  "/api/admin/statistics/users/:userId",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const stats = await db.getUserStatistics(userId);
+      res.json({ success: true, data: stats });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.get('/api/admin/statistics/modules/:moduleKey', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { moduleKey } = req.params;
-    const stats = await db.getModuleStatistics(moduleKey);
-    res.json({ success: true, data: stats });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.get(
+  "/api/admin/statistics/modules/:moduleKey",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { moduleKey } = req.params;
+      const stats = await db.getModuleStatistics(moduleKey);
+      res.json({ success: true, data: stats });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
-app.get('/api/admin/statistics/usage-timeline', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { startDate, endDate, groupBy } = req.query;
-    const timeline = await db.getUsageTimeline(startDate, endDate, groupBy || 'day');
-    res.json({ success: true, data: timeline });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+app.get(
+  "/api/admin/statistics/usage-timeline",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { startDate, endDate, groupBy } = req.query;
+      const timeline = await db.getUsageTimeline(
+        startDate,
+        endDate,
+        groupBy || "day",
+      );
+      res.json({ success: true, data: timeline });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Rota de teste
-app.get('/api/test', (req, res) => {
+app.get("/api/test", (req, res) => {
   res.json({
-    message: 'API funcionando!',
+    message: "API funcionando!",
     timestamp: new Date().toISOString(),
     endpoints: [
-      'GET /api/transactions - Listar transações',
-      'POST /api/transactions - Criar transação',
-      'PUT /api/transactions/:id - Atualizar transação',
-      'DELETE /api/transactions/:id - Deletar transação',
-      'DELETE /api/transactions - Deletar múltiplas transações',
-      'GET /api/products - Listar produtos',
-      'POST /api/products - Criar produto',
-      'PUT /api/products/:id - Atualizar produto',
-      'DELETE /api/products/:id - Deletar produto',
-      'DELETE /api/products - Deletar múltiplos produtos',
-      'GET /api/clients - Listar clientes',
-      'POST /api/clients - Criar cliente',
-      'PUT /api/clients/:id - Atualizar cliente',
-      'DELETE /api/clients/:id - Deletar cliente',
-      'DELETE /api/clients - Deletar múltiplos clientes',
-      'POST /api/import - Importar arquivos Excel',
-      'POST /api/export - Exportar dados para Excel',
-      'POST /api/auth/login - Fazer login',
-      'POST /api/auth/verify - Verificar token',
-      'GET /api/test - Testar API'
-    ]
+      "GET /api/transactions - Listar transações",
+      "POST /api/transactions - Criar transação",
+      "PUT /api/transactions/:id - Atualizar transação",
+      "DELETE /api/transactions/:id - Deletar transação",
+      "DELETE /api/transactions - Deletar múltiplas transações",
+      "GET /api/products - Listar produtos",
+      "POST /api/products - Criar produto",
+      "PUT /api/products/:id - Atualizar produto",
+      "DELETE /api/products/:id - Deletar produto",
+      "DELETE /api/products - Deletar múltiplos produtos",
+      "GET /api/clients - Listar clientes",
+      "POST /api/clients - Criar cliente",
+      "PUT /api/clients/:id - Atualizar cliente",
+      "DELETE /api/clients/:id - Deletar cliente",
+      "DELETE /api/clients - Deletar múltiplos clientes",
+      "POST /api/import - Importar arquivos Excel",
+      "POST /api/export - Exportar dados para Excel",
+      "POST /api/auth/login - Fazer login",
+      "POST /api/auth/verify - Verificar token",
+      "GET /api/test - Testar API",
+    ],
   });
 });
 
-
 // Middleware de tratamento de erros
 app.use((error, req, res, next) => {
-  console.error('[ERROR] Erro capturado:', error);
+  console.error("[ERROR] Erro capturado:", error);
   if (error instanceof multer.MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Arquivo muito grande! Máximo 5MB.' });
+    if (error.code === "LIMIT_FILE_SIZE") {
+      return res
+        .status(400)
+        .json({ error: "Arquivo muito grande! Máximo 5MB." });
     }
   }
 
