@@ -743,7 +743,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
       // 🚨 ALERTA: Verificar tentativas de brute force para usuário inexistente
       try {
-        const recentFailures = await pool.query(
+        const recentFailures = await db.pool.query(
           `SELECT COUNT(*) as count FROM audit_logs
            WHERE username = $1
            AND action = 'login_failure'
@@ -860,7 +860,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
         // 🚨 ALERTA: Verificar tentativas de brute force (senha incorreta)
         try {
-          const recentFailures = await pool.query(
+          const recentFailures = await db.pool.query(
             `SELECT COUNT(*) as count FROM audit_logs
              WHERE user_id = $1
              AND action = 'login_failure'
@@ -931,7 +931,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
     // 🚨 ALERTA: Detectar múltiplos IPs (login bem-sucedido de IPs diferentes)
     try {
-      const recentIPs = await pool.query(
+      const recentIPs = await db.pool.query(
         `SELECT DISTINCT ip_address FROM audit_logs
          WHERE user_id = $1
          AND action = 'login_success'
@@ -958,7 +958,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
     // 🚨 ALERTA: Detectar múltiplos dispositivos (User-Agents diferentes)
     try {
-      const recentDevices = await pool.query(
+      const recentDevices = await db.pool.query(
         `SELECT DISTINCT user_agent FROM audit_logs
          WHERE user_id = $1
          AND action = 'login_success'
@@ -1339,7 +1339,7 @@ app.get(
       const { days = 7 } = req.query;
 
       // Buscar anomalias recentes
-      const anomaliesQuery = await pool.query(`
+      const anomaliesQuery = await db.pool.query(`
       SELECT
         COUNT(*) as total_anomalies,
         COUNT(DISTINCT user_id) as affected_users,
@@ -1351,7 +1351,7 @@ app.get(
     `);
 
       // Top usuários com mais anomalias
-      const topUsersQuery = await pool.query(`
+      const topUsersQuery = await db.pool.query(`
       SELECT
         user_id,
         username,
@@ -1366,7 +1366,7 @@ app.get(
     `);
 
       // Anomalias por tipo
-      const byTypeQuery = await pool.query(`
+      const byTypeQuery = await db.pool.query(`
       SELECT
         details->>'type' as type,
         COUNT(*) as count,
@@ -1425,7 +1425,7 @@ app.get(
 
       query += ` ORDER BY created_at DESC LIMIT ${parseInt(limit)}`;
 
-      const result = await pool.query(query);
+      const result = await db.pool.query(query);
 
       res.json({
         success: true,
@@ -1579,7 +1579,7 @@ app.get("/api/admin/security-alerts", authenticateToken, requireAdmin, async (re
     query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
 
-    const result = await pool.query(query, params);
+    const result = await db.pool.query(query, params);
 
     // Contar total de alertas
     let countQuery = `
@@ -1603,7 +1603,7 @@ app.get("/api/admin/security-alerts", authenticateToken, requireAdmin, async (re
       countParams.push(type);
     }
 
-    const countResult = await pool.query(countQuery, countParams);
+    const countResult = await db.pool.query(countQuery, countParams);
 
     res.json({
       alerts: result.rows,
@@ -1644,7 +1644,7 @@ app.get("/api/admin/security-alerts/stats", authenticateToken, requireAdmin, asy
       ORDER BY count DESC
     `;
 
-    const result = await pool.query(statsQuery, [since]);
+    const result = await db.pool.query(statsQuery, [since]);
 
     const total = result.rows.reduce((sum, row) => sum + parseInt(row.count), 0);
     const uniqueUsers = new Set(result.rows.map(row => row.affected_users));
