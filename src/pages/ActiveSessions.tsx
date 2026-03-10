@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Lock, XCircle, RefreshCw } from 'lucide-react';
 import './ActiveSessions.css';
 
 interface Session {
@@ -127,10 +128,11 @@ export default function ActiveSessions() {
     return (
       <div className="active-sessions">
         <div className="error-message">
-          <h3>❌ Erro ao carregar sessões</h3>
+          <h3><XCircle size={20} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Erro ao carregar sessões</h3>
           <p>{error}</p>
           <button onClick={fetchSessions} className="btn-retry">
-            🔄 Tentar novamente
+            <RefreshCw size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+            Tentar novamente
           </button>
         </div>
       </div>
@@ -140,7 +142,7 @@ export default function ActiveSessions() {
   if (sessions.length === 0) {
     return (
       <div className="active-sessions">
-        <h2 className="page-title">🔐 Sessões Ativas</h2>
+        <h2 className="page-title"><Lock size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Sessões Ativas</h2>
         <div className="empty-state">
           <p>Nenhuma sessão ativa encontrada.</p>
         </div>
@@ -151,7 +153,7 @@ export default function ActiveSessions() {
   return (
     <div className="active-sessions">
       <div className="page-header">
-        <h2 className="page-title">🔐 Sessões Ativas</h2>
+        <h2 className="page-title"><Lock size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Sessões Ativas</h2>
         <p className="page-subtitle">
           Gerencie os dispositivos conectados à sua conta
         </p>
