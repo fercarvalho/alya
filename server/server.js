@@ -746,7 +746,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
         const recentFailures = await db.pool.query(
           `SELECT COUNT(*) as count FROM audit_logs
            WHERE username = $1
-           AND action = 'login_failure'
+           AND operation = 'login_failure'
            AND created_at > NOW() - INTERVAL '10 minutes'`,
           [username],
         );
@@ -863,7 +863,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
           const recentFailures = await db.pool.query(
             `SELECT COUNT(*) as count FROM audit_logs
              WHERE user_id = $1
-             AND action = 'login_failure'
+             AND operation = 'login_failure'
              AND created_at > NOW() - INTERVAL '10 minutes'`,
             [user.id],
           );
@@ -934,7 +934,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
       const recentIPs = await db.pool.query(
         `SELECT DISTINCT ip_address FROM audit_logs
          WHERE user_id = $1
-         AND action = 'login_success'
+         AND operation = 'login_success'
          AND created_at > NOW() - INTERVAL '1 hour'
          ORDER BY created_at DESC
          LIMIT 5`,
@@ -961,7 +961,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
       const recentDevices = await db.pool.query(
         `SELECT DISTINCT user_agent FROM audit_logs
          WHERE user_id = $1
-         AND action = 'login_success'
+         AND operation = 'login_success'
          AND created_at > NOW() - INTERVAL '24 hours'
          ORDER BY created_at DESC
          LIMIT 10`,
@@ -1346,7 +1346,7 @@ app.get(
         AVG((details->>'score')::numeric) as avg_score,
         jsonb_agg(DISTINCT details->>'type') as anomaly_types
       FROM audit_logs
-      WHERE action = 'anomaly_detected'
+      WHERE operation = 'anomaly_detected'
         AND created_at > NOW() - INTERVAL '${parseInt(days)} days'
     `);
 
@@ -1358,7 +1358,7 @@ app.get(
         COUNT(*) as anomaly_count,
         MAX(created_at) as last_anomaly
       FROM audit_logs
-      WHERE action = 'anomaly_detected'
+      WHERE operation = 'anomaly_detected'
         AND created_at > NOW() - INTERVAL '${parseInt(days)} days'
       GROUP BY user_id, username
       ORDER BY anomaly_count DESC
@@ -1372,7 +1372,7 @@ app.get(
         COUNT(*) as count,
         AVG((details->>'score')::numeric) as avg_score
       FROM audit_logs
-      WHERE action = 'anomaly_detected'
+      WHERE operation = 'anomaly_detected'
         AND created_at > NOW() - INTERVAL '${parseInt(days)} days'
       GROUP BY details->>'type'
       ORDER BY count DESC
@@ -1411,12 +1411,12 @@ app.get(
         id,
         user_id,
         username,
-        action,
+        operation,
         details,
         ip_address,
         created_at
       FROM audit_logs
-      WHERE action = 'anomaly_detected'
+      WHERE operation = 'anomaly_detected'
     `;
 
       if (severity) {
@@ -1550,12 +1550,12 @@ app.get("/api/admin/security-alerts", authenticateToken, requireAdmin, async (re
         id,
         user_id,
         username,
-        action,
+        operation as action,
         details,
         ip_address,
         created_at
       FROM audit_logs
-      WHERE action IN (
+      WHERE operation IN (
         'login_failed_suspicious',
         'multiple_ips_detected',
         'token_theft_detected',
@@ -1571,7 +1571,7 @@ app.get("/api/admin/security-alerts", authenticateToken, requireAdmin, async (re
     let paramIndex = 1;
 
     if (type) {
-      query += ` AND action = $${paramIndex}`;
+      query += ` AND operation = $${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
@@ -1585,7 +1585,7 @@ app.get("/api/admin/security-alerts", authenticateToken, requireAdmin, async (re
     let countQuery = `
       SELECT COUNT(*) as total
       FROM audit_logs
-      WHERE action IN (
+      WHERE operation IN (
         'login_failed_suspicious',
         'multiple_ips_detected',
         'token_theft_detected',
@@ -1599,7 +1599,7 @@ app.get("/api/admin/security-alerts", authenticateToken, requireAdmin, async (re
 
     const countParams = [];
     if (type) {
-      countQuery += ` AND action = $1`;
+      countQuery += ` AND operation = $1`;
       countParams.push(type);
     }
 
@@ -1625,11 +1625,11 @@ app.get("/api/admin/security-alerts/stats", authenticateToken, requireAdmin, asy
 
     const statsQuery = `
       SELECT
-        action,
+        operation as action,
         COUNT(*) as count,
         COUNT(DISTINCT username) as affected_users
       FROM audit_logs
-      WHERE action IN (
+      WHERE operation IN (
         'login_failed_suspicious',
         'multiple_ips_detected',
         'token_theft_detected',
@@ -1640,7 +1640,7 @@ app.get("/api/admin/security-alerts/stats", authenticateToken, requireAdmin, asy
         'multiple_devices_detected'
       )
       AND created_at >= $1
-      GROUP BY action
+      GROUP BY operation
       ORDER BY count DESC
     `;
 
