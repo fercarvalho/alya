@@ -27,6 +27,8 @@ import {
   Phone,
   Mail,
   Map,
+  Lock,
+  Activity,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -36,6 +38,9 @@ import MenuUsuario from "./components/MenuUsuario";
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 // Lazy load Projeção (componente grande)
 const Projection = lazy(() => import("./components/Projection"));
+// Lazy load páginas de segurança
+const ActiveSessions = lazy(() => import("./pages/ActiveSessions"));
+const AnomalyDashboard = lazy(() => import("./pages/admin/AnomalyDashboard"));
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
@@ -118,7 +123,9 @@ type TabType =
   | "clients"
   | "projecao"
   | "admin"
-  | "dre";
+  | "dre"
+  | "activeSessions"
+  | "anomalies";
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -6952,13 +6959,27 @@ const AppContent: React.FC = () => {
                     return user.modules.includes(tab.key);
                   });
 
-                  // Adicionar aba Admin se o usuário for admin
+                  // Adicionar aba de Sessões Ativas (todos os usuários)
+                  filteredTabs.push({
+                    id: "activeSessions",
+                    name: "Sessões",
+                    icon: Lock,
+                    key: "activeSessions",
+                  });
+
+                  // Adicionar abas Admin se o usuário for admin
                   if (user?.role === "admin") {
                     filteredTabs.push({
                       id: "admin",
                       name: "Admin",
                       icon: Shield,
                       key: "admin",
+                    });
+                    filteredTabs.push({
+                      id: "anomalies",
+                      name: "Anomalias",
+                      icon: Activity,
+                      key: "anomalies",
                     });
                   }
 
@@ -7020,6 +7041,32 @@ const AppContent: React.FC = () => {
             }
           >
             <AdminPanel />
+          </Suspense>
+        )}
+        {activeTab === "activeSessions" && (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">
+                  Carregando sessões ativas...
+                </div>
+              </div>
+            }
+          >
+            <ActiveSessions />
+          </Suspense>
+        )}
+        {activeTab === "anomalies" && (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">
+                  Carregando dashboard de anomalias...
+                </div>
+              </div>
+            }
+          >
+            <AnomalyDashboard />
           </Suspense>
         )}
       </main>
