@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Bell, Shield, BarChart3, Clock, Globe, User, XCircle, RefreshCw } from 'lucide-react';
 import './SecurityAlerts.css';
 
 interface Alert {
@@ -59,14 +60,14 @@ export default function SecurityAlerts() {
 
   const getAlertTypeLabel = (action: string): string => {
     const labels: Record<string, string> = {
-      login_failed_suspicious: '🔐 Login Suspeito',
-      multiple_ips_detected: '🌐 Múltiplos IPs',
-      token_theft_detected: '🚨 Roubo de Token',
-      sql_injection_attempt: '💉 SQL Injection',
-      xss_attempt: '⚠️ Tentativa XSS',
-      brute_force_detected: '🔨 Brute Force',
-      new_country_login: '🌍 Novo País',
-      multiple_devices_detected: '📱 Múltiplos Dispositivos'
+      login_failed_suspicious: 'Login Suspeito',
+      multiple_ips_detected: 'Múltiplos IPs',
+      token_theft_detected: 'Roubo de Token',
+      sql_injection_attempt: 'SQL Injection',
+      xss_attempt: 'Tentativa XSS',
+      brute_force_detected: 'Brute Force',
+      new_country_login: 'Novo País',
+      multiple_devices_detected: 'Múltiplos Dispositivos'
     };
     return labels[action] || action;
   };
@@ -120,9 +121,12 @@ export default function SecurityAlerts() {
     return (
       <div className="security-alerts">
         <div className="error-message">
-          <h3>❌ Erro</h3>
+          <h3><XCircle size={20} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Erro</h3>
           <p>{error}</p>
-          <button onClick={fetchData} className="btn-retry">🔄 Tentar novamente</button>
+          <button onClick={fetchData} className="btn-retry">
+            <RefreshCw size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+            Tentar novamente
+          </button>
         </div>
       </div>
     );
@@ -130,16 +134,16 @@ export default function SecurityAlerts() {
 
   return (
     <div className="security-alerts">
-      <div className="alerts-header">
-        <h1>🚨 Portal de Alertas de Segurança</h1>
-        <p className="alerts-subtitle">Monitoramento de eventos de segurança em tempo real</p>
+      <div className="page-header">
+        <h2 className="page-title"><Bell size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Portal de Alertas de Segurança</h2>
+        <p className="page-subtitle">Monitoramento de eventos de segurança em tempo real</p>
       </div>
 
       {/* Estatísticas */}
       {stats && (
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-icon">🚨</div>
+            <div className="stat-icon"><Shield size={40} color="#2196F3" /></div>
             <div className="stat-content">
               <div className="stat-value">{stats.total}</div>
               <div className="stat-label">Total de Alertas</div>
@@ -147,7 +151,7 @@ export default function SecurityAlerts() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon">👥</div>
+            <div className="stat-icon"><User size={40} color="#2196F3" /></div>
             <div className="stat-content">
               <div className="stat-value">{stats.affectedUsers}</div>
               <div className="stat-label">Usuários Afetados</div>
@@ -155,7 +159,7 @@ export default function SecurityAlerts() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon">📊</div>
+            <div className="stat-icon"><BarChart3 size={40} color="#2196F3" /></div>
             <div className="stat-content">
               <div className="stat-value">{stats.byType.length}</div>
               <div className="stat-label">Tipos Diferentes</div>
@@ -163,7 +167,7 @@ export default function SecurityAlerts() {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon">⏱️</div>
+            <div className="stat-icon"><Clock size={40} color="#2196F3" /></div>
             <div className="stat-content">
               <div className="stat-value">{stats.period}</div>
               <div className="stat-label">Período</div>
@@ -258,7 +262,8 @@ export default function SecurityAlerts() {
                   </div>
 
                   <div className="alert-user">
-                    👤 Usuário: <strong>{alert.username}</strong>
+                    <User size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                    Usuário: <strong>{alert.username}</strong>
                   </div>
 
                   {alert.details && typeof alert.details === 'object' && (
@@ -280,13 +285,16 @@ export default function SecurityAlerts() {
 
                   <div className="alert-footer">
                     <div className="alert-time">
-                      🕐 {getTimeAgo(alert.created_at)}
+                      <Clock size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                      {getTimeAgo(alert.created_at)}
                     </div>
                     <div className="alert-ip">
-                      🌐 {alert.ip_address}
+                      <Globe size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                      {alert.ip_address}
                     </div>
                     <div className="alert-date">
-                      📅 {new Date(alert.created_at).toLocaleString('pt-BR')}
+                      <Clock size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                      {new Date(alert.created_at).toLocaleString('pt-BR')}
                     </div>
                   </div>
                 </div>
