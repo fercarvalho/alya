@@ -284,7 +284,8 @@ async function revokeSession(sessionId, reason = "Revogada pelo usuário") {
     await pool.query(
       `
       UPDATE refresh_tokens
-      SET used_at = CURRENT_TIMESTAMP
+      SET revoked = TRUE,
+          revoked_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `,
       [result.rows[0].refresh_token_id],
@@ -323,8 +324,9 @@ async function revokeAllUserSessions(
     await pool.query(
       `
       UPDATE refresh_tokens
-      SET used_at = CURRENT_TIMESTAMP
-      WHERE user_id = $1 AND used_at IS NULL
+      SET revoked = TRUE,
+          revoked_at = CURRENT_TIMESTAMP
+      WHERE user_id = $1 AND revoked = FALSE
     `,
       [userId],
     );
