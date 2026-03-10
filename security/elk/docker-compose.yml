@@ -1,0 +1,152 @@
+version: '3.8'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ELK Stack - Elasticsearch + Logstash + Kibana
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Centraliza logs de:
+#   - Aplicação (backend Node.js)
+#   - Nginx (access + error logs)
+#   - ModSecurity (audit logs)
+#   - Audit logs (PostgreSQL)
+#
+# Uso:
+#   docker-compose up -d
+#   Acessar Kibana: http://localhost:5601
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ═════════════════════════════════════════════════════════════════════════════
+  # ELASTICSEARCH - Armazenamento e busca de logs
+  # ═════════════════════════════════════════════════════════════════════════════
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    container_name: alya-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false  # Desabilitar security para desenvolvimento
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # Limitar memória
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - elk
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ═════════════════════════════════════════════════════════════════════════════
+  # LOGSTASH - Ingestão e processamento de logs
+  # ═════════════════════════════════════════════════════════════════════════════
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.3
+    container_name: alya-logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      # Montar logs do host (ajustar paths conforme necessário)
+      - /var/log/nginx:/var/log/nginx:ro
+      - ../../server/logs:/var/log/alya:ro
+    ports:
+      - "5044:5044"  # Beats input
+      - "9600:9600"  # Logstash monitoring
+      - "5000:5000/tcp"  # TCP input
+      - "5000:5000/udp"  # UDP input
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+
+  # ═════════════════════════════════════════════════════════════════════════════
+  # KIBANA - Visualização e dashboards
+  # ═════════════════════════════════════════════════════════════════════════════
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.3
+    container_name: alya-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=changeme  # Mudar em produção
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ═════════════════════════════════════════════════════════════════════════════
+  # FILEBEAT (Opcional) - Shipper leve de logs
+  # ═════════════════════════════════════════════════════════════════════════════
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.3
+    container_name: alya-filebeat
+    user: root
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/log/nginx:/var/log/nginx:ro
+      - ../../server/logs:/var/log/alya:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: filebeat -e -strict.perms=false
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+      - logstash
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  elasticsearch-data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOTAS
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# 1. REQUISITOS:
+#    - Docker + Docker Compose
+#    - Mínimo 4GB RAM (recomendado 8GB)
+#    - Mínimo 10GB disco
+#
+# 2. PRODUÇÃO:
+#    - Habilitar xpack.security.enabled=true
+#    - Configurar senhas fortes
+#    - Usar volumes externos (não local)
+#    - Configurar backup
+#    - Limitar memória apropriadamente
+#
+# 3. PERFORMANCE:
+#    - Ajustar ES_JAVA_OPTS conforme RAM disponível
+#    - Configurar índices com rollover (ILM)
+#    - Configurar retenção de dados (90 dias)
+#
+# 4. MONITORAMENTO:
+#    - Elasticsearch: http://localhost:9200/_cluster/health
+#    - Kibana: http://localhost:5601
+#    - Logstash: http://localhost:9600/_node/stats
+#
+# 5. PARAR/REMOVER:
+#    docker-compose down
+#    docker-compose down -v  # Remove volumes também
+#
+# ═══════════════════════════════════════════════════════════════════════════════

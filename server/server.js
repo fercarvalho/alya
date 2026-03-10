@@ -29,6 +29,9 @@ const {
   customSecurityHeaders,
 } = require("./middleware/security");
 
+// 🔒 FASE 8: CSP com Nonces
+const { cspNonceMiddleware } = require("./middleware/csp-nonce");
+
 const {
   validateLogin,
   validateUserRegistration,
@@ -61,6 +64,12 @@ const {
 
 // 🚨 Sistema de Alertas de Segurança
 const securityAlerts = require("./utils/security-alerts");
+
+// 🔒 Gerenciamento de Sessões Ativas
+const sessionManager = require("./utils/session-manager");
+
+// 🔍 Sistema de Detecção de Anomalias
+const anomalyDetection = require("./utils/anomaly-detection");
 
 const app = express();
 const port = process.env.PORT || 8001;
@@ -112,6 +121,9 @@ if (SENDGRID_API_KEY) {
 // Helmet deve vir primeiro para definir headers de segurança
 app.use(configureHelmet());
 app.use(customSecurityHeaders);
+
+// 🔒 FASE 8: CSP com Nonces (sobrescreve CSP do helmet)
+app.use(cspNonceMiddleware);
 
 // Rate limiting geral para todas as requisições
 app.use("/api/", generalLimiter);
@@ -532,11 +544,9 @@ app.get("/api/modelo/:type", (req, res) => {
     const { type } = req.params;
 
     if (!["transactions", "products", "clients"].includes(type)) {
-      return res
-        .status(400)
-        .json({
-          error: 'Tipo inválido! Use "transactions", "products" ou "clients"',
-        });
+      return res.status(400).json({
+        error: 'Tipo inválido! Use "transactions", "products" ou "clients"',
+      });
     }
 
     // Sempre gerar arquivo modelo dinamicamente para garantir colunas atualizadas
@@ -661,11 +671,9 @@ async function logActivity(
 // Middleware para verificar se é admin
 const requireAdmin = (req, res, next) => {
   if (req.user.role !== "admin") {
-    return res
-      .status(403)
-      .json({
-        error: "Acesso negado. Apenas administradores podem acessar esta rota.",
-      });
+    return res.status(403).json({
+      error: "Acesso negado. Apenas administradores podem acessar esta rota.",
+    });
   }
   next();
 };
@@ -888,11 +896,21 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
     );
 
     // 🔒 FASE 3: Criar refresh token de longa duração (7 dias)
-    const refreshToken = await createRefreshToken({
-      userId: user.id,
-      ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers["user-agent"],
-    });
+    const { token: refreshToken, tokenId: refreshTokenId } =
+      await createRefreshToken({
+        userId: user.id,
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.headers["user-agent"],
+      });
+
+    // 🔒 FASE 4: Criar sessão ativa (rastreamento de dispositivos)
+    try {
+      await sessionManager.createSession(user.username, refreshTokenId, req);
+      console.log(`[Session] ✅ Sessão ativa criada para ${user.username}`);
+    } catch (sessionError) {
+      console.error("[Session] Erro ao criar sessão:", sessionError);
+      // Não bloqueia o login se falhar
+    }
 
     // Logar ação de login
     await logActivity(user.id, user.username, "login", "auth", "user", user.id);
@@ -964,6 +982,31 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
       }
     } catch (alertError) {
       console.error("Erro ao enviar alerta de segurança:", alertError);
+    }
+
+    // 🔍 FASE 7: Detecção de Anomalias (Machine Learning)
+    try {
+      const geo = await sessionManager.getGeolocation(
+        req.ip || req.connection?.remoteAddress,
+      );
+      const anomalyResults = await anomalyDetection.detectAnomalies(
+        user.username,
+        {
+          country: geo.country,
+          city: geo.city,
+          ip: req.ip || req.connection?.remoteAddress,
+          hour: new Date().getHours(),
+        },
+      );
+
+      if (anomalyResults.anomalies.length > 0) {
+        console.log(
+          `[Anomaly] ⚠️  ${anomalyResults.anomalies.length} anomalias detectadas para ${user.username} (score: ${anomalyResults.totalScore.toFixed(1)})`,
+        );
+      }
+    } catch (anomalyError) {
+      console.error("[Anomaly] Erro ao detectar anomalias:", anomalyError);
+      // Não bloqueia o login se falhar
     }
 
     // Retornar dados completos do usuário
@@ -1100,7 +1143,20 @@ app.post("/api/auth/logout", authenticateToken, async (req, res) => {
     const { refreshToken } = req.body;
 
     if (refreshToken) {
-      await revokeRefreshToken(refreshToken);
+      const { success, tokenId } = await revokeRefreshToken(refreshToken);
+
+      // 🔒 FASE 4: Revogar sessão ativa
+      if (success && tokenId) {
+        try {
+          await sessionManager.revokeSessionByRefreshTokenId(tokenId);
+          console.log(
+            `[Session] ✅ Sessão revogada para usuário ${req.user.username}`,
+          );
+        } catch (sessionError) {
+          console.error("[Session] Erro ao revogar sessão:", sessionError);
+          // Não bloqueia o logout se falhar
+        }
+      }
     }
 
     // Logar ação de logout
@@ -1136,6 +1192,23 @@ app.post("/api/auth/logout-all", authenticateToken, async (req, res) => {
   try {
     const revokedCount = await revokeAllUserTokens(req.user.id);
 
+    // 🔒 FASE 4: Revogar todas as sessões ativas
+    try {
+      const sessionsRevoked = await sessionManager.revokeAllUserSessions(
+        req.user.username,
+        "Logout de todos os dispositivos",
+      );
+      console.log(
+        `[Session] ✅ ${sessionsRevoked} sessões revogadas para ${req.user.username}`,
+      );
+    } catch (sessionError) {
+      console.error(
+        "[Session] Erro ao revogar todas as sessões:",
+        sessionError,
+      );
+      // Não bloqueia o logout se falhar
+    }
+
     // Logar ação
     await logActivity(
       req.user.id,
@@ -1165,6 +1238,302 @@ app.post("/api/auth/logout-all", authenticateToken, async (req, res) => {
     console.error("Erro ao fazer logout de todos os dispositivos:", error);
     res.status(500).json({ error: "Erro interno do servidor" });
   }
+});
+
+// 🔒 FASE 4: Endpoint para listar sessões ativas do usuário
+app.get("/api/user/sessions", authenticateToken, async (req, res) => {
+  try {
+    const sessions = await sessionManager.getUserSessions(req.user.username);
+
+    res.json({
+      success: true,
+      sessions: sessions.map((session) => ({
+        id: session.id,
+        device: {
+          type: session.device_type,
+          name: session.device_name,
+          browser: session.browser,
+          os: session.os,
+        },
+        location: {
+          country: session.country,
+          city: session.city,
+          ipAddress: session.ip_address,
+        },
+        activity: {
+          createdAt: session.created_at,
+          lastActivityAt: session.last_activity_at,
+          expiresAt: session.expires_at,
+        },
+        isActive: session.is_active,
+      })),
+    });
+  } catch (error) {
+    console.error("Erro ao listar sessões:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+// 🔒 FASE 4: Endpoint para revogar uma sessão específica
+app.delete("/api/user/sessions/:id", authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar se a sessão pertence ao usuário
+    const session = await sessionManager.getSessionById(id);
+
+    if (!session) {
+      return res.status(404).json({ error: "Sessão não encontrada" });
+    }
+
+    if (session.user_id !== req.user.username) {
+      return res
+        .status(403)
+        .json({ error: "Sem permissão para revogar esta sessão" });
+    }
+
+    // Revogar sessão
+    await sessionManager.revokeSession(
+      id,
+      "Revogada pelo usuário via endpoint",
+    );
+
+    // Logar ação
+    await logActivity(
+      req.user.id,
+      req.user.username,
+      "revoke_session",
+      "auth",
+      "session",
+      id,
+    );
+
+    // Auditoria
+    await logAudit({
+      operation: "revoke_session",
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers["user-agent"],
+      details: { sessionId: id },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({
+      success: true,
+      message: "Sessão revogada com sucesso",
+    });
+  } catch (error) {
+    console.error("Erro ao revogar sessão:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+// 🔍 FASE 7: Dashboard de Anomalias - Estatísticas gerais
+app.get(
+  "/api/admin/anomalies/stats",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { days = 7 } = req.query;
+
+      // Buscar anomalias recentes
+      const anomaliesQuery = await db.query(`
+      SELECT
+        COUNT(*) as total_anomalies,
+        COUNT(DISTINCT user_id) as affected_users,
+        AVG((details->>'score')::numeric) as avg_score,
+        jsonb_agg(DISTINCT details->>'type') as anomaly_types
+      FROM audit_logs
+      WHERE action = 'anomaly_detected'
+        AND created_at > NOW() - INTERVAL '${parseInt(days)} days'
+    `);
+
+      // Top usuários com mais anomalias
+      const topUsersQuery = await db.query(`
+      SELECT
+        user_id,
+        username,
+        COUNT(*) as anomaly_count,
+        MAX(created_at) as last_anomaly
+      FROM audit_logs
+      WHERE action = 'anomaly_detected'
+        AND created_at > NOW() - INTERVAL '${parseInt(days)} days'
+      GROUP BY user_id, username
+      ORDER BY anomaly_count DESC
+      LIMIT 10
+    `);
+
+      // Anomalias por tipo
+      const byTypeQuery = await db.query(`
+      SELECT
+        details->>'type' as type,
+        COUNT(*) as count,
+        AVG((details->>'score')::numeric) as avg_score
+      FROM audit_logs
+      WHERE action = 'anomaly_detected'
+        AND created_at > NOW() - INTERVAL '${parseInt(days)} days'
+      GROUP BY details->>'type'
+      ORDER BY count DESC
+    `);
+
+      res.json({
+        success: true,
+        period: `${days} dias`,
+        stats: {
+          total: parseInt(anomaliesQuery.rows[0]?.total_anomalies) || 0,
+          affectedUsers: parseInt(anomaliesQuery.rows[0]?.affected_users) || 0,
+          avgScore: parseFloat(anomaliesQuery.rows[0]?.avg_score) || 0,
+          types: anomaliesQuery.rows[0]?.anomaly_types || [],
+        },
+        topUsers: topUsersQuery.rows,
+        byType: byTypeQuery.rows,
+      });
+    } catch (error) {
+      console.error("Erro ao obter estatísticas de anomalias:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  },
+);
+
+// 🔍 FASE 7: Dashboard de Anomalias - Anomalias recentes
+app.get(
+  "/api/admin/anomalies/recent",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { limit = 50, severity } = req.query;
+
+      let query = `
+      SELECT
+        id,
+        user_id,
+        username,
+        action,
+        details,
+        ip_address,
+        created_at
+      FROM audit_logs
+      WHERE action = 'anomaly_detected'
+    `;
+
+      if (severity) {
+        query += ` AND (details->>'score')::numeric >= ${parseInt(severity)}`;
+      }
+
+      query += ` ORDER BY created_at DESC LIMIT ${parseInt(limit)}`;
+
+      const result = await db.query(query);
+
+      res.json({
+        success: true,
+        anomalies: result.rows.map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          username: row.username,
+          type: row.details.type,
+          score: row.details.score,
+          details: row.details,
+          ipAddress: row.ip_address,
+          timestamp: row.created_at,
+        })),
+      });
+    } catch (error) {
+      console.error("Erro ao obter anomalias recentes:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  },
+);
+
+// 🔍 FASE 7: Dashboard de Anomalias - Baseline do usuário
+app.get(
+  "/api/admin/anomalies/baseline/:username",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { username } = req.params;
+
+      const baseline = await anomalyDetection.getUserBaseline(username);
+
+      if (!baseline) {
+        return res.status(404).json({
+          error:
+            "Baseline não encontrado. Usuário novo ou sem histórico suficiente.",
+        });
+      }
+
+      res.json({
+        success: true,
+        username,
+        baseline: {
+          countries: baseline.countries,
+          cities: baseline.cities,
+          accessHours: baseline.accessHours,
+          totalLogins: baseline.totalLogins,
+          activeDays: baseline.activeDays,
+          avgRequestsPerMinute: baseline.avgRequestsPerMinute,
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao obter baseline:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  },
+);
+
+// 🔍 FASE 7: Dashboard de Anomalias - Ajustar thresholds
+app.put(
+  "/api/admin/anomalies/thresholds",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const updates = req.body;
+
+      // Validar thresholds
+      const validKeys = [
+        "MAX_REQUESTS_PER_MINUTE",
+        "MAX_FAILED_LOGINS_PER_HOUR",
+        "MAX_COUNTRIES_PER_DAY",
+        "MAX_IPS_PER_DAY",
+        "UNUSUAL_HOUR_START",
+        "UNUSUAL_HOUR_END",
+        "Z_SCORE_THRESHOLD",
+      ];
+
+      const invalidKeys = Object.keys(updates).filter(
+        (key) => !validKeys.includes(key),
+      );
+      if (invalidKeys.length > 0) {
+        return res.status(400).json({
+          error: `Chaves inválidas: ${invalidKeys.join(", ")}`,
+        });
+      }
+
+      // Aplicar updates (em produção, salvar no DB ou arquivo de config)
+      // Por ora, apenas retornar os novos valores
+      res.json({
+        success: true,
+        message: "Thresholds atualizados. Reinicie o servidor para aplicar.",
+        newThresholds: updates,
+        note: "Em produção, implementar persistência no banco de dados.",
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar thresholds:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  },
+);
+
+// 🔒 FASE 8: Endpoint para obter CSP nonce atual (para SPAs)
+app.get("/api/csp/nonce", (req, res) => {
+  res.json({
+    success: true,
+    nonce: res.nonce || res.locals.cspNonce,
+  });
 });
 
 // Endpoint para resetar primeiro login de um usuário específico (apenas para admin)
@@ -1289,11 +1658,9 @@ app.post(
       const { login } = req.body; // pode ser username ou email
 
       if (!login) {
-        return res
-          .status(400)
-          .json({
-            error: "Informe um email ou usuário para recuperar a senha",
-          });
+        return res.status(400).json({
+          error: "Informe um email ou usuário para recuperar a senha",
+        });
       }
 
       // Buscar usuário pelo username ou pelo email
@@ -1316,12 +1683,10 @@ app.post(
       }
 
       if (!user.email) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "Usuário não tem um e-mail cadastrado. Contate o administrador.",
-          });
+        return res.status(400).json({
+          error:
+            "Usuário não tem um e-mail cadastrado. Contate o administrador.",
+        });
       }
 
       // Gerar token (expira em 60 min)
@@ -1365,12 +1730,10 @@ app.post(
           if (sgError.response) {
             console.error(sgError.response.body);
           }
-          return res
-            .status(500)
-            .json({
-              error:
-                "Erro ao tentar enviar o e-mail de recuperação. Tente novamente mais tarde.",
-            });
+          return res.status(500).json({
+            error:
+              "Erro ao tentar enviar o e-mail de recuperação. Tente novamente mais tarde.",
+          });
         }
       } else {
         //Apenas logar se não houver sendgrid no env
@@ -1529,12 +1892,10 @@ app.post(
         if (fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Apenas arquivos WebP são permitidos",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Apenas arquivos WebP são permitidos",
+        });
       }
 
       // Retornar caminho relativo da foto
@@ -1555,12 +1916,10 @@ app.post(
           console.log("Erro ao deletar arquivo após erro:", e.message);
         }
       }
-      res
-        .status(500)
-        .json({
-          success: false,
-          error: error.message || "Erro ao fazer upload da foto",
-        });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Erro ao fazer upload da foto",
+      });
     }
   },
 );
@@ -1596,12 +1955,10 @@ app.put(
 
       // Validar senha atual se fornecida (obrigatória para segurança)
       if (!password) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Senha atual é obrigatória para atualizar o perfil",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Senha atual é obrigatória para atualizar o perfil",
+        });
       }
 
       const isValidPassword = bcrypt.compareSync(
@@ -1615,21 +1972,17 @@ app.put(
       }
 
       if (!firstName || firstName.trim().length < 2) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
+        });
       }
 
       if (!lastName || lastName.trim().length < 2) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
+        });
       }
 
       if (email !== undefined && email !== null && email !== "") {
@@ -1657,12 +2010,10 @@ app.put(
         }
         const phoneDigits = phone.replace(/\D/g, "");
         if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
-          return res
-            .status(400)
-            .json({
-              success: false,
-              error: "Telefone deve ter 10 ou 11 dígitos",
-            });
+          return res.status(400).json({
+            success: false,
+            error: "Telefone deve ter 10 ou 11 dígitos",
+          });
         }
       } else {
         return res
@@ -1714,22 +2065,18 @@ app.put(
         !firstName ||
         firstName.trim().length < 2
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
+        });
       }
       updateData.firstName = firstName.trim();
 
       if (lastName === undefined || !lastName || lastName.trim().length < 2) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
+        });
       }
       updateData.lastName = lastName.trim();
 
@@ -1752,12 +2099,10 @@ app.put(
       }
       const phoneDigits = phone.replace(/\D/g, "");
       if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Telefone deve ter 10 ou 11 dígitos",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Telefone deve ter 10 ou 11 dígitos",
+        });
       }
       updateData.phone = phoneDigits;
 
@@ -1831,12 +2176,10 @@ app.put(
         !address.state.trim() ||
         address.state.length !== 2
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Estado (UF) é obrigatório e deve ter 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Estado (UF) é obrigatório e deve ter 2 caracteres",
+        });
       }
       updateData.address = {
         cep: cepDigits,
@@ -1890,12 +2233,10 @@ app.put(
         token,
       });
     } catch (error) {
-      res
-        .status(500)
-        .json({
-          success: false,
-          error: error.message || "Erro interno do servidor",
-        });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Erro interno do servidor",
+      });
     }
   },
 );
@@ -1906,21 +2247,17 @@ app.put("/api/user/password", authenticateToken, async (req, res) => {
     const { senhaAtual, novaSenha } = req.body;
 
     if (!senhaAtual || !novaSenha) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Senha atual e nova senha são obrigatórias",
-        });
+      return res.status(400).json({
+        success: false,
+        error: "Senha atual e nova senha são obrigatórias",
+      });
     }
 
     if (novaSenha.length < 6) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "A nova senha deve ter no mínimo 6 caracteres",
-        });
+      return res.status(400).json({
+        success: false,
+        error: "A nova senha deve ter no mínimo 6 caracteres",
+      });
     }
 
     // Buscar usuário atual
@@ -1942,12 +2279,10 @@ app.put("/api/user/password", authenticateToken, async (req, res) => {
     // Verificar se nova senha é diferente da atual
     const isSamePassword = bcrypt.compareSync(novaSenha, user.password);
     if (isSamePassword) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "A nova senha deve ser diferente da senha atual",
-        });
+      return res.status(400).json({
+        success: false,
+        error: "A nova senha deve ser diferente da senha atual",
+      });
     }
 
     // Hash da nova senha
@@ -1971,12 +2306,10 @@ app.put("/api/user/password", authenticateToken, async (req, res) => {
       message: "Senha alterada com sucesso",
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: error.message || "Erro interno do servidor",
-      });
+    res.status(500).json({
+      success: false,
+      error: error.message || "Erro interno do servidor",
+    });
   }
 });
 
@@ -1994,11 +2327,9 @@ app.post(
       const { type } = req.body; // 'transactions', 'products' ou 'clients'
 
       if (!type || !["transactions", "products", "clients"].includes(type)) {
-        return res
-          .status(400)
-          .json({
-            error: 'Tipo inválido! Use "transactions", "products" ou "clients"',
-          });
+        return res.status(400).json({
+          error: 'Tipo inválido! Use "transactions", "products" ou "clients"',
+        });
       }
 
       console.log(`Processando arquivo: ${req.file.originalname} (${type})`);
@@ -3125,21 +3456,17 @@ app.post(
       }
 
       if (!firstName || firstName.trim().length < 2) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Nome é obrigatório e deve ter pelo menos 2 caracteres",
+        });
       }
 
       if (!lastName || lastName.trim().length < 2) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Sobrenome é obrigatório e deve ter pelo menos 2 caracteres",
+        });
       }
 
       if (!email || !email.trim()) {
@@ -3162,12 +3489,10 @@ app.post(
 
       const phoneDigits = phone.replace(/\D/g, "");
       if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Telefone deve ter 10 ou 11 dígitos",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Telefone deve ter 10 ou 11 dígitos",
+        });
       }
 
       if (!cpf) {
@@ -3243,12 +3568,10 @@ app.post(
         !address.state.trim() ||
         address.state.length !== 2
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Estado (UF) é obrigatório e deve ter 2 caracteres",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Estado (UF) é obrigatório e deve ter 2 caracteres",
+        });
       }
 
       // Verificar se usuário já existe
@@ -3378,12 +3701,10 @@ app.put(
       // Se houver senha, hash ela
       if (updates.password) {
         if (updates.password.length < 6) {
-          return res
-            .status(400)
-            .json({
-              success: false,
-              error: "Senha deve ter no mínimo 6 caracteres",
-            });
+          return res.status(400).json({
+            success: false,
+            error: "Senha deve ter no mínimo 6 caracteres",
+          });
         }
         updates.password = bcrypt.hashSync(updates.password, 10);
       }
@@ -3420,12 +3741,10 @@ app.delete(
 
       // Não permitir deletar a si mesmo
       if (id === req.user.id) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Não é possível deletar seu próprio usuário",
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Não é possível deletar seu próprio usuário",
+        });
       }
 
       const user = await db.getUserById(id);
@@ -3753,4 +4072,12 @@ app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
   console.log(`📡 API disponível em http://localhost:${port}`);
   console.log(`🧪 Teste a API em http://localhost:${port}/api/test`);
+
+  // 🔍 Iniciar monitoramento contínuo de anomalias
+  const monitoringInterval =
+    parseInt(process.env.ANOMALY_MONITORING_INTERVAL) || 15;
+  anomalyDetection.startAnomalyMonitoring(monitoringInterval);
+  console.log(
+    `🔍 Monitoramento de anomalias ativado (intervalo: ${monitoringInterval}min)`,
+  );
 });

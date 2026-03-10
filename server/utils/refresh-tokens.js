@@ -3,17 +3,17 @@
  * Gerencia tokens de longa duração para renovação de access tokens
  */
 
-const { Pool } = require('pg');
-const crypto = require('crypto');
+const { Pool } = require("pg");
+const crypto = require("crypto");
 
 // Pool de conexões dedicado
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || "localhost",
   port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'alya_db',
-  user: process.env.DB_USER || 'alya_user',
+  database: process.env.DB_NAME || "alya_db",
+  user: process.env.DB_USER || "alya_user",
   password: process.env.DB_PASSWORD,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
 });
@@ -22,9 +22,9 @@ const pool = new Pool({
  * Duração dos tokens
  */
 const TOKEN_EXPIRY = {
-  ACCESS_TOKEN: '15m',           // 15 minutos
+  ACCESS_TOKEN: "15m", // 15 minutos
   ACCESS_TOKEN_MS: 15 * 60 * 1000,
-  REFRESH_TOKEN: '7d',           // 7 dias
+  REFRESH_TOKEN: "7d", // 7 dias
   REFRESH_TOKEN_MS: 7 * 24 * 60 * 60 * 1000,
 };
 
@@ -32,14 +32,14 @@ const TOKEN_EXPIRY = {
  * Gera um refresh token único e seguro
  */
 function generateRefreshToken() {
-  return crypto.randomBytes(64).toString('hex');
+  return crypto.randomBytes(64).toString("hex");
 }
 
 /**
  * Cria hash SHA-256 do token para armazenamento seguro
  */
 function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 /**
@@ -51,24 +51,33 @@ function hashToken(token) {
  * @param {string} params.userAgent - User-Agent do navegador
  * @returns {Promise<string>} - Refresh token em texto plano (enviar ao cliente)
  */
-async function createRefreshToken({ userId, ipAddress = null, userAgent = null }) {
+async function createRefreshToken({
+  userId,
+  ipAddress = null,
+  userAgent = null,
+}) {
   try {
     const token = generateRefreshToken();
     const hashedToken = hashToken(token);
     const expiresAt = new Date(Date.now() + TOKEN_EXPIRY.REFRESH_TOKEN_MS);
 
-    await pool.query(
+    const result = await pool.query(
       `INSERT INTO refresh_tokens (
         token, user_id, expires_at, ip_address, user_agent
-      ) VALUES ($1, $2, $3, $4, $5)`,
-      [hashedToken, userId, expiresAt, ipAddress, userAgent]
+      ) VALUES ($1, $2, $3, $4, $5)
+      RETURNING id`,
+      [hashedToken, userId, expiresAt, ipAddress, userAgent],
     );
 
-    console.log(`✅ Refresh token criado para user_id: ${userId}`);
-    return token; // Retorna token em texto plano (só é visível aqui)
+    const tokenId = result.rows[0].id;
+
+    console.log(
+      `✅ Refresh token criado para user_id: ${userId} (ID: ${tokenId})`,
+    );
+    return { token, tokenId }; // Retorna token em texto plano e ID
   } catch (error) {
-    console.error('❌ Erro ao criar refresh token:', error.message);
-    throw new Error('Erro ao criar refresh token');
+    console.error("❌ Erro ao criar refresh token:", error.message);
+    throw new Error("Erro ao criar refresh token");
   }
 }
 
@@ -96,11 +105,11 @@ async function verifyRefreshToken(token) {
       FROM refresh_tokens rt
       INNER JOIN users u ON rt.user_id = u.id
       WHERE rt.token = $1`,
-      [hashedToken]
+      [hashedToken],
     );
 
     if (result.rows.length === 0) {
-      console.warn('⚠️ Refresh token não encontrado');
+      console.warn("⚠️ Refresh token não encontrado");
       return null;
     }
 
@@ -108,20 +117,20 @@ async function verifyRefreshToken(token) {
 
     // Verificar se token foi revogado
     if (tokenData.revoked) {
-      console.warn('⚠️ Refresh token foi revogado');
+      console.warn("⚠️ Refresh token foi revogado");
       return null;
     }
 
     // Verificar se token expirou
     if (new Date(tokenData.expires_at) < new Date()) {
-      console.warn('⚠️ Refresh token expirado');
+      console.warn("⚠️ Refresh token expirado");
       await revokeRefreshToken(token);
       return null;
     }
 
     // Verificar se usuário está ativo
     if (!tokenData.is_active) {
-      console.warn('⚠️ Usuário desativado');
+      console.warn("⚠️ Usuário desativado");
       return null;
     }
 
@@ -135,7 +144,7 @@ async function verifyRefreshToken(token) {
       userAgent: tokenData.user_agent,
     };
   } catch (error) {
-    console.error('❌ Erro ao verificar refresh token:', error.message);
+    console.error("❌ Erro ao verificar refresh token:", error.message);
     return null;
   }
 }
@@ -155,18 +164,19 @@ async function revokeRefreshToken(token) {
        SET revoked = TRUE, revoked_at = NOW()
        WHERE token = $1 AND revoked = FALSE
        RETURNING id`,
-      [hashedToken]
+      [hashedToken],
     );
 
     if (result.rowCount > 0) {
-      console.log(`✅ Refresh token revogado: ID ${result.rows[0].id}`);
-      return true;
+      const tokenId = result.rows[0].id;
+      console.log(`✅ Refresh token revogado: ID ${tokenId}`);
+      return { success: true, tokenId };
     }
 
-    return false;
+    return { success: false, tokenId: null };
   } catch (error) {
-    console.error('❌ Erro ao revogar refresh token:', error.message);
-    return false;
+    console.error("❌ Erro ao revogar refresh token:", error.message);
+    return { success: false, tokenId: null };
   }
 }
 
@@ -183,13 +193,15 @@ async function revokeAllUserTokens(userId) {
        SET revoked = TRUE, revoked_at = NOW()
        WHERE user_id = $1 AND revoked = FALSE
        RETURNING id`,
-      [userId]
+      [userId],
     );
 
-    console.log(`✅ ${result.rowCount} refresh tokens revogados para user_id: ${userId}`);
+    console.log(
+      `✅ ${result.rowCount} refresh tokens revogados para user_id: ${userId}`,
+    );
     return result.rowCount;
   } catch (error) {
-    console.error('❌ Erro ao revogar tokens do usuário:', error.message);
+    console.error("❌ Erro ao revogar tokens do usuário:", error.message);
     return 0;
   }
 }
@@ -203,7 +215,11 @@ async function revokeAllUserTokens(userId) {
  * @param {string} userAgent - User-Agent do navegador
  * @returns {Promise<string|null>} - Novo refresh token ou null se erro
  */
-async function rotateRefreshToken(oldToken, ipAddress = null, userAgent = null) {
+async function rotateRefreshToken(
+  oldToken,
+  ipAddress = null,
+  userAgent = null,
+) {
   try {
     // Verificar token antigo
     const tokenData = await verifyRefreshToken(oldToken);
@@ -228,13 +244,15 @@ async function rotateRefreshToken(oldToken, ipAddress = null, userAgent = null) 
            revoked_at = NOW(),
            replaced_by_token = $1
        WHERE token = $2`,
-      [hashedNewToken, hashedOldToken]
+      [hashedNewToken, hashedOldToken],
     );
 
-    console.log(`✅ Refresh token rotacionado para user_id: ${tokenData.userId}`);
+    console.log(
+      `✅ Refresh token rotacionado para user_id: ${tokenData.userId}`,
+    );
     return newToken;
   } catch (error) {
-    console.error('❌ Erro ao rotacionar refresh token:', error.message);
+    console.error("❌ Erro ao rotacionar refresh token:", error.message);
     return null;
   }
 }
@@ -262,12 +280,12 @@ async function getUserActiveTokens(userId) {
       FROM refresh_tokens
       WHERE user_id = $1 AND revoked = FALSE
       ORDER BY created_at DESC`,
-      [userId]
+      [userId],
     );
 
     return result.rows;
   } catch (error) {
-    console.error('❌ Erro ao buscar tokens ativos:', error.message);
+    console.error("❌ Erro ao buscar tokens ativos:", error.message);
     return [];
   }
 }
@@ -284,13 +302,13 @@ async function cleanupExpiredTokens() {
       `DELETE FROM refresh_tokens
        WHERE expires_at < NOW()
           OR (revoked = TRUE AND revoked_at < NOW() - INTERVAL '30 days')
-       RETURNING id`
+       RETURNING id`,
     );
 
     console.log(`✅ ${result.rowCount} refresh tokens expirados removidos`);
     return result.rowCount;
   } catch (error) {
-    console.error('❌ Erro ao limpar tokens expirados:', error.message);
+    console.error("❌ Erro ao limpar tokens expirados:", error.message);
     return 0;
   }
 }
@@ -313,7 +331,7 @@ async function getTokenStats() {
 
     return result.rows[0];
   } catch (error) {
-    console.error('❌ Erro ao buscar estatísticas:', error.message);
+    console.error("❌ Erro ao buscar estatísticas:", error.message);
     return null;
   }
 }
