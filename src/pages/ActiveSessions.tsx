@@ -142,7 +142,13 @@ export default function ActiveSessions() {
   if (sessions.length === 0) {
     return (
       <div className="active-sessions">
-        <h2 className="page-title"><Lock size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Sessões Ativas</h2>
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Lock className="h-8 w-8 text-amber-600" />
+            <h1 className="text-3xl font-bold text-amber-900">Sessões Ativas</h1>
+          </div>
+          <p className="text-gray-600">Gerencie os dispositivos conectados à sua conta</p>
+        </div>
         <div className="empty-state">
           <p>Nenhuma sessão ativa encontrada.</p>
         </div>
@@ -152,11 +158,12 @@ export default function ActiveSessions() {
 
   return (
     <div className="active-sessions">
-      <div className="page-header">
-        <h2 className="page-title"><Lock size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Sessões Ativas</h2>
-        <p className="page-subtitle">
-          Gerencie os dispositivos conectados à sua conta
-        </p>
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Lock className="h-8 w-8 text-amber-600" />
+          <h1 className="text-3xl font-bold text-amber-900">Sessões Ativas</h1>
+        </div>
+        <p className="text-gray-600">Gerencie os dispositivos conectados à sua conta</p>
       </div>
 
       <div className="sessions-list">

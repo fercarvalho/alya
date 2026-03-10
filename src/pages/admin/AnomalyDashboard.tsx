@@ -160,9 +160,12 @@ export default function AnomalyDashboard() {
 
   return (
     <div className="anomaly-dashboard">
-      <div className="page-header">
-        <h2 className="page-title"><Activity size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} /> Dashboard de Anomalias</h2>
-        <p className="page-subtitle">Monitoramento de comportamentos suspeitos detectados por ML</p>
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Activity className="h-8 w-8 text-amber-600" />
+          <h1 className="text-3xl font-bold text-amber-900">Dashboard de Anomalias</h1>
+        </div>
+        <p className="text-gray-600">Monitoramento de comportamentos suspeitos detectados por ML</p>
       </div>
 
       {/* Filtros */}

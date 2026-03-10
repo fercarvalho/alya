@@ -134,9 +134,12 @@ export default function SecurityAlerts() {
 
   return (
     <div className="security-alerts">
-      <div className="page-header">
-        <h2 className="page-title"><Bell size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Portal de Alertas de Segurança</h2>
-        <p className="page-subtitle">Monitoramento de eventos de segurança em tempo real</p>
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Bell className="h-8 w-8 text-amber-600" />
+          <h1 className="text-3xl font-bold text-amber-900">Portal de Alertas de Segurança</h1>
+        </div>
+        <p className="text-gray-600">Monitoramento de eventos de segurança em tempo real</p>
       </div>
 
       {/* Estatísticas */}
