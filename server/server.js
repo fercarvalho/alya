@@ -743,7 +743,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
       // 🚨 ALERTA: Verificar tentativas de brute force para usuário inexistente
       try {
-        const recentFailures = await db.query(
+        const recentFailures = await pool.query(
           `SELECT COUNT(*) as count FROM audit_logs
            WHERE username = $1
            AND action = 'login_failure'
@@ -860,7 +860,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
         // 🚨 ALERTA: Verificar tentativas de brute force (senha incorreta)
         try {
-          const recentFailures = await db.query(
+          const recentFailures = await pool.query(
             `SELECT COUNT(*) as count FROM audit_logs
              WHERE user_id = $1
              AND action = 'login_failure'
@@ -931,7 +931,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
     // 🚨 ALERTA: Detectar múltiplos IPs (login bem-sucedido de IPs diferentes)
     try {
-      const recentIPs = await db.query(
+      const recentIPs = await pool.query(
         `SELECT DISTINCT ip_address FROM audit_logs
          WHERE user_id = $1
          AND action = 'login_success'
@@ -958,7 +958,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
     // 🚨 ALERTA: Detectar múltiplos dispositivos (User-Agents diferentes)
     try {
-      const recentDevices = await db.query(
+      const recentDevices = await pool.query(
         `SELECT DISTINCT user_agent FROM audit_logs
          WHERE user_id = $1
          AND action = 'login_success'
@@ -1339,7 +1339,7 @@ app.get(
       const { days = 7 } = req.query;
 
       // Buscar anomalias recentes
-      const anomaliesQuery = await db.query(`
+      const anomaliesQuery = await pool.query(`
       SELECT
         COUNT(*) as total_anomalies,
         COUNT(DISTINCT user_id) as affected_users,
@@ -1351,7 +1351,7 @@ app.get(
     `);
 
       // Top usuários com mais anomalias
-      const topUsersQuery = await db.query(`
+      const topUsersQuery = await pool.query(`
       SELECT
         user_id,
         username,
@@ -1366,7 +1366,7 @@ app.get(
     `);
 
       // Anomalias por tipo
-      const byTypeQuery = await db.query(`
+      const byTypeQuery = await pool.query(`
       SELECT
         details->>'type' as type,
         COUNT(*) as count,
@@ -1425,7 +1425,7 @@ app.get(
 
       query += ` ORDER BY created_at DESC LIMIT ${parseInt(limit)}`;
 
-      const result = await db.query(query);
+      const result = await pool.query(query);
 
       res.json({
         success: true,
