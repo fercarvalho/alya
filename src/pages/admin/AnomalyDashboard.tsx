@@ -156,9 +156,9 @@ export default function AnomalyDashboard() {
 
   return (
     <div className="anomaly-dashboard">
-      <div className="dashboard-header">
-        <h1>📊 Dashboard de Anomalias</h1>
-        <p className="dashboard-subtitle">Monitoramento de comportamentos suspeitos detectados por ML</p>
+      <div className="page-header">
+        <h2 className="page-title">📊 Dashboard de Anomalias</h2>
+        <p className="page-subtitle">Monitoramento de comportamentos suspeitos detectados por ML</p>
       </div>
 
       {/* Filtros */}
