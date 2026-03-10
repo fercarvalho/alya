@@ -1536,6 +1536,131 @@ app.get("/api/csp/nonce", (req, res) => {
   });
 });
 
+// 🚨 FASE 6: Portal de Alertas de Segurança
+
+// Listar alertas recentes (Admin)
+app.get("/api/admin/security-alerts", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    const type = req.query.type; // Filtro opcional por tipo
+
+    let query = `
+      SELECT
+        id,
+        user_id,
+        username,
+        action,
+        details,
+        ip_address,
+        created_at
+      FROM audit_logs
+      WHERE action IN (
+        'login_failed_suspicious',
+        'multiple_ips_detected',
+        'token_theft_detected',
+        'sql_injection_attempt',
+        'xss_attempt',
+        'brute_force_detected',
+        'new_country_login',
+        'multiple_devices_detected'
+      )
+    `;
+
+    const params = [];
+    let paramIndex = 1;
+
+    if (type) {
+      query += ` AND action = $${paramIndex}`;
+      params.push(type);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const result = await pool.query(query, params);
+
+    // Contar total de alertas
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM audit_logs
+      WHERE action IN (
+        'login_failed_suspicious',
+        'multiple_ips_detected',
+        'token_theft_detected',
+        'sql_injection_attempt',
+        'xss_attempt',
+        'brute_force_detected',
+        'new_country_login',
+        'multiple_devices_detected'
+      )
+    `;
+
+    const countParams = [];
+    if (type) {
+      countQuery += ` AND action = $1`;
+      countParams.push(type);
+    }
+
+    const countResult = await pool.query(countQuery, countParams);
+
+    res.json({
+      alerts: result.rows,
+      total: parseInt(countResult.rows[0].total),
+      limit,
+      offset,
+    });
+  } catch (error) {
+    console.error("Erro ao buscar alertas de segurança:", error);
+    res.status(500).json({ error: "Erro ao buscar alertas" });
+  }
+});
+
+// Estatísticas de alertas (Admin)
+app.get("/api/admin/security-alerts/stats", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const statsQuery = `
+      SELECT
+        action,
+        COUNT(*) as count,
+        COUNT(DISTINCT username) as affected_users
+      FROM audit_logs
+      WHERE action IN (
+        'login_failed_suspicious',
+        'multiple_ips_detected',
+        'token_theft_detected',
+        'sql_injection_attempt',
+        'xss_attempt',
+        'brute_force_detected',
+        'new_country_login',
+        'multiple_devices_detected'
+      )
+      AND created_at >= $1
+      GROUP BY action
+      ORDER BY count DESC
+    `;
+
+    const result = await pool.query(statsQuery, [since]);
+
+    const total = result.rows.reduce((sum, row) => sum + parseInt(row.count), 0);
+    const uniqueUsers = new Set(result.rows.map(row => row.affected_users));
+
+    res.json({
+      period: `${days} dias`,
+      total,
+      affectedUsers: uniqueUsers.size,
+      byType: result.rows,
+    });
+  } catch (error) {
+    console.error("Erro ao buscar estatísticas de alertas:", error);
+    res.status(500).json({ error: "Erro ao buscar estatísticas" });
+  }
+});
+
 // Endpoint para resetar primeiro login de um usuário específico (apenas para admin)
 app.post(
   "/api/auth/reset-first-login",

@@ -29,6 +29,7 @@ import {
   Map,
   Lock,
   Activity,
+  Bell,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -41,6 +42,7 @@ const Projection = lazy(() => import("./components/Projection"));
 // Lazy load páginas de segurança
 const ActiveSessions = lazy(() => import("./pages/ActiveSessions"));
 const AnomalyDashboard = lazy(() => import("./pages/admin/AnomalyDashboard"));
+const SecurityAlerts = lazy(() => import("./pages/admin/SecurityAlerts"));
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
@@ -125,7 +127,8 @@ type TabType =
   | "admin"
   | "dre"
   | "activeSessions"
-  | "anomalies";
+  | "anomalies"
+  | "securityAlerts";
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -6981,6 +6984,12 @@ const AppContent: React.FC = () => {
                       icon: Activity,
                       key: "anomalies",
                     });
+                    filteredTabs.push({
+                      id: "securityAlerts",
+                      name: "Alertas",
+                      icon: Bell,
+                      key: "securityAlerts",
+                    });
                   }
 
                   return filteredTabs.map((tab) => {
@@ -7067,6 +7076,19 @@ const AppContent: React.FC = () => {
             }
           >
             <AnomalyDashboard />
+          </Suspense>
+        )}
+        {activeTab === "securityAlerts" && (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">
+                  Carregando portal de alertas...
+                </div>
+              </div>
+            }
+          >
+            <SecurityAlerts />
           </Suspense>
         )}
       </main>
