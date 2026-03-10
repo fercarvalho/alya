@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Activity, Users, TrendingUp, AlertTriangle, Clock, RefreshCw, XCircle, Globe, BarChart3, User, MapPin, Hash } from 'lucide-react';
 import './AnomalyDashboard.css';
 
 interface AnomalyStats {
@@ -96,12 +97,12 @@ export default function AnomalyDashboard() {
 
   const getAnomalyTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
-      new_country: '🌍 Novo País',
-      unusual_hour: '🕐 Horário Incomum',
-      abnormal_volume: '📊 Volume Anormal',
-      multiple_ips: '🌐 Múltiplos IPs',
-      multiple_devices: '📱 Múltiplos Dispositivos',
-      brute_force: '🔨 Brute Force'
+      new_country: 'Novo País',
+      unusual_hour: 'Horário Incomum',
+      abnormal_volume: 'Volume Anormal',
+      multiple_ips: 'Múltiplos IPs',
+      multiple_devices: 'Múltiplos Dispositivos',
+      brute_force: 'Brute Force'
     };
     return labels[type] || type;
   };
@@ -140,9 +141,12 @@ export default function AnomalyDashboard() {
     return (
       <div className="anomaly-dashboard">
         <div className="error-message">
-          <h3>❌ Erro</h3>
+          <h3><XCircle size={20} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />Erro</h3>
           <p>{error}</p>
-          <button onClick={fetchData} className="btn-retry">🔄 Tentar novamente</button>
+          <button onClick={fetchData} className="btn-retry">
+            <RefreshCw size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+            Tentar novamente
+          </button>
         </div>
       </div>
     );
@@ -157,7 +161,7 @@ export default function AnomalyDashboard() {
   return (
     <div className="anomaly-dashboard">
       <div className="page-header">
-        <h2 className="page-title">📊 Dashboard de Anomalias</h2>
+        <h2 className="page-title"><Activity size={28} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} /> Dashboard de Anomalias</h2>
         <p className="page-subtitle">Monitoramento de comportamentos suspeitos detectados por ML</p>
       </div>
 
@@ -187,7 +191,7 @@ export default function AnomalyDashboard() {
       {/* Estatísticas Principais */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">🔢</div>
+          <div className="stat-icon"><BarChart3 size={40} color="#2196F3" /></div>
           <div className="stat-content">
             <div className="stat-value">{stats.stats.total}</div>
             <div className="stat-label">Total de Anomalias</div>
@@ -195,7 +199,7 @@ export default function AnomalyDashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">👥</div>
+          <div className="stat-icon"><Users size={40} color="#2196F3" /></div>
           <div className="stat-content">
             <div className="stat-value">{stats.stats.affectedUsers}</div>
             <div className="stat-label">Usuários Afetados</div>
@@ -203,7 +207,7 @@ export default function AnomalyDashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">📈</div>
+          <div className="stat-icon"><TrendingUp size={40} color="#2196F3" /></div>
           <div className="stat-content">
             <div className="stat-value">{stats.stats.avgScore.toFixed(1)}</div>
             <div className="stat-label">Score Médio</div>
@@ -211,7 +215,7 @@ export default function AnomalyDashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">🔴</div>
+          <div className="stat-icon"><AlertTriangle size={40} color="#F44336" /></div>
           <div className="stat-content">
             <div className="stat-value">{highSeverityCount}</div>
             <div className="stat-label">Alta Severidade</div>
@@ -287,23 +291,23 @@ export default function AnomalyDashboard() {
             </div>
             <div className="modal-body">
               <div className="baseline-section">
-                <h4>🌍 Países comuns:</h4>
+                <h4><Globe size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />Países comuns:</h4>
                 <p>{userBaseline.baseline.countries.join(', ')}</p>
               </div>
               <div className="baseline-section">
-                <h4>🕐 Horário médio de acesso:</h4>
+                <h4><Clock size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />Horário médio de acesso:</h4>
                 <p>{userBaseline.baseline.avgHour}:00h</p>
               </div>
               <div className="baseline-section">
-                <h4>📊 Requisições por minuto (média):</h4>
+                <h4><BarChart3 size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />Requisições por minuto (média):</h4>
                 <p>{userBaseline.baseline.avgRequestsPerMinute.toFixed(1)}</p>
               </div>
               <div className="baseline-section">
-                <h4>🌐 IPs comuns:</h4>
+                <h4><Globe size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />IPs comuns:</h4>
                 <p>{userBaseline.baseline.commonIPs.join(', ')}</p>
               </div>
               <div className="baseline-section">
-                <h4>📈 Estatísticas:</h4>
+                <h4><TrendingUp size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />Estatísticas:</h4>
                 <p>Total de logins: {userBaseline.stats.totalLogins}</p>
                 <p>Primeiro login: {new Date(userBaseline.stats.firstLogin).toLocaleString('pt-BR')}</p>
                 <p>Último login: {new Date(userBaseline.stats.lastLogin).toLocaleString('pt-BR')}</p>
@@ -339,19 +343,22 @@ export default function AnomalyDashboard() {
                   </div>
 
                   <div className="anomaly-user">
-                    👤 Usuário: <strong>{anomaly.username}</strong>
+                    <User size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                    Usuário: <strong>{anomaly.username}</strong>
                   </div>
 
                   <div className="anomaly-details">
                     {anomaly.type === 'new_country' && anomaly.details.baseline && (
                       <div>
-                        📍 Usual: {anomaly.details.baseline.join(', ')} →
+                        <MapPin size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                        Usual: {anomaly.details.baseline.join(', ')} →
                         Detectado: {anomaly.details.detected}
                       </div>
                     )}
                     {anomaly.type === 'unusual_hour' && anomaly.details.detected !== undefined && (
                       <div>
-                        🕐 Horário detectado: {anomaly.details.detected}:00h
+                        <Clock size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                        Horário detectado: {anomaly.details.detected}:00h
                         {anomaly.details.avgHour && ` (usual: ${anomaly.details.avgHour}:00h)`}
                       </div>
                     )}
@@ -362,13 +369,16 @@ export default function AnomalyDashboard() {
 
                   <div className="anomaly-footer">
                     <div className="anomaly-score">
-                      🔢 Score: {anomaly.score}
+                      <Hash size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                      Score: {anomaly.score}
                     </div>
                     <div className="anomaly-time">
-                      🕐 {getTimeAgo(anomaly.timestamp)}
+                      <Clock size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                      {getTimeAgo(anomaly.timestamp)}
                     </div>
                     <div className="anomaly-ip">
-                      🌐 {anomaly.ipAddress}
+                      <Globe size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                      {anomaly.ipAddress}
                     </div>
                   </div>
                 </div>
