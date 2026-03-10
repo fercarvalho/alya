@@ -248,7 +248,7 @@ async function detectAbnormalVolume(userId) {
       `
       SELECT COUNT(*) as count
       FROM audit_logs
-      WHERE data->>'user' = $1
+      WHERE user_id = $1
         AND timestamp > NOW() - INTERVAL '1 minute'
     `,
       [userId],
@@ -410,8 +410,8 @@ async function detectBruteForce(userId) {
       `
       SELECT COUNT(*) as failed_count
       FROM audit_logs
-      WHERE data->>'user' = $1
-        AND action = 'login:failed'
+      WHERE user_id = $1
+        AND operation = 'login_failure'
         AND timestamp > NOW() - INTERVAL '1 hour'
     `,
       [userId],
@@ -460,7 +460,7 @@ async function getHistoricalRequestCounts(userId, days = 30) {
         DATE_TRUNC('minute', timestamp) as minute,
         COUNT(*) as count
       FROM audit_logs
-      WHERE data->>'user' = $1
+      WHERE user_id = $1
         AND timestamp > NOW() - INTERVAL '${days} days'
       GROUP BY minute
       ORDER BY minute
