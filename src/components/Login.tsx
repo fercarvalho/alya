@@ -114,7 +114,7 @@ const Login: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
               Usuário
             </label>
             <div className="relative">
@@ -122,18 +122,21 @@ const Login: React.FC = () => {
                 <User className="h-5 w-5 text-gray-400" />
               </div>
               <input
+                id="username"
+                name="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
                 placeholder="Digite seu usuário"
+                autoComplete="username"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
               Senha
             </label>
             <div className="relative">
@@ -141,11 +144,14 @@ const Login: React.FC = () => {
                 <Lock className="h-5 w-5 text-gray-400" />
               </div>
               <input
+                id="password"
+                name="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
                 placeholder="Digite sua senha"
+                autoComplete="current-password"
                 required
               />
               <button
