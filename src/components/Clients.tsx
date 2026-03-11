@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Users, Plus, Download, Upload, Edit, Trash2, Filter, X } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import axios from 'axios'
 import { API_BASE_URL } from '../config/api'
 
 interface Client {
@@ -48,10 +49,11 @@ const Clients: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const r = await fetch(`${API_BASE_URL}/clients`)
-        const j = await r.json()
-        if (j.success) setClients(j.data)
-      } catch { }
+        const { data } = await axios.get(`${API_BASE_URL}/clients`)
+        if (data.success) setClients(data.data)
+      } catch (error) {
+        console.error('Erro ao carregar clientes:', error)
+      }
     }
     load()
   }, [])
@@ -167,11 +169,11 @@ const Clients: React.FC = () => {
     }
     try {
       if (editing) {
-        const r = await fetch(`${API_BASE_URL}/clients/${editing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        const j = await r.json(); if (j.success) setClients(prev => prev.map(c => c.id === editing.id ? j.data : c))
+        const { data } = await axios.put(`${API_BASE_URL}/clients/${editing.id}`, payload)
+        if (data.success) setClients(prev => prev.map(c => c.id === editing.id ? data.data : c))
       } else {
-        const r = await fetch(`${API_BASE_URL}/clients`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        const j = await r.json(); if (j.success) setClients(prev => [j.data, ...prev])
+        const { data } = await axios.post(`${API_BASE_URL}/clients`, payload)
+        if (data.success) setClients(prev => [data.data, ...prev])
       }
       setIsModalOpen(false); setEditing(null); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }); setFormErrors({})
     } catch (error) {
@@ -181,18 +183,22 @@ const Clients: React.FC = () => {
 
   const deleteOne = async (id: string) => {
     try {
-      const r = await fetch(`${API_BASE_URL}/clients/${id}`, { method: 'DELETE' })
-      const j = await r.json(); if (j.success) setClients(prev => prev.filter(c => c.id !== id))
-    } catch { }
+      const { data } = await axios.delete(`${API_BASE_URL}/clients/${id}`)
+      if (data.success) setClients(prev => prev.filter(c => c.id !== id))
+    } catch (error) {
+      console.error('Erro ao deletar cliente:', error)
+    }
   }
 
   const deleteSelected = async () => {
     try {
       const ids = Array.from(selectedClients)
-      await fetch(`${API_BASE_URL}/clients`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) })
+      await axios.delete(`${API_BASE_URL}/clients`, { data: { ids } })
       setClients(prev => prev.filter(c => !selectedClients.has(c.id)))
       setSelectedClients(new Set())
-    } catch { }
+    } catch (error) {
+      console.error('Erro ao deletar clientes selecionados:', error)
+    }
   }
 
   // Import/Export
@@ -207,21 +213,34 @@ const Clients: React.FC = () => {
     formData.append('file', file)
     formData.append('type', 'clients')
     try {
-      const r = await fetch(`${API_BASE_URL}/import`, { method: 'POST', body: formData })
-      const j = await r.json()
-      if (j.success) {
-        setClients(prev => [...j.data, ...prev])
+      const { data } = await axios.post(`${API_BASE_URL}/import`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      if (data.success) {
+        setClients(prev => [...data.data, ...prev])
         setIsImportExportOpen(false)
       }
-    } catch { }
+    } catch (error) {
+      console.error('Erro ao importar clientes:', error)
+    }
   }
 
   const handleExport = async () => {
     try {
-      const r = await fetch(`${API_BASE_URL}/export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'clients', data: clients }) })
-      const blob = await r.blob(); const url = URL.createObjectURL(blob)
-      const a = document.createElement('a'); a.href = url; a.download = `clients_${new Date().toISOString().split('T')[0]}.xlsx`; a.click(); URL.revokeObjectURL(url)
-    } catch { }
+      const response = await axios.post(`${API_BASE_URL}/export`,
+        { type: 'clients', data: clients },
+        { responseType: 'blob' }
+      )
+      const blob = new Blob([response.data])
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `clients_${new Date().toISOString().split('T')[0]}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Erro ao exportar clientes:', error)
+    }
   }
 
   // Função para exportar clientes em PDF
