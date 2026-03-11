@@ -1190,16 +1190,36 @@ app.post("/api/auth/logout", authenticateToken, async (req, res) => {
 // 🔒 FASE 3: Endpoint para logout de todos os dispositivos
 app.post("/api/auth/logout-all", authenticateToken, async (req, res) => {
   try {
+    // Obter o refresh token da requisição para manter a sessão atual ativa
+    const currentRefreshToken = req.body.refreshToken;
+
+    // Buscar o refresh_token_id da sessão atual
+    let currentRefreshTokenId = null;
+    if (currentRefreshToken) {
+      try {
+        const tokenResult = await db.pool.query(
+          'SELECT id FROM refresh_tokens WHERE token = $1 AND revoked = FALSE',
+          [currentRefreshToken]
+        );
+        if (tokenResult.rows.length > 0) {
+          currentRefreshTokenId = tokenResult.rows[0].id;
+        }
+      } catch (err) {
+        console.error('[Logout-All] Erro ao buscar refresh_token_id:', err);
+      }
+    }
+
     const revokedCount = await revokeAllUserTokens(req.user.id);
 
-    // 🔒 FASE 4: Revogar todas as sessões ativas
+    // 🔒 FASE 4: Revogar todas as sessões ativas EXCETO a atual
     try {
       const sessionsRevoked = await sessionManager.revokeAllUserSessions(
         req.user.username,
         "Logout de todos os dispositivos",
+        currentRefreshTokenId, // Passar o ID do refresh token atual para manter ativo
       );
       console.log(
-        `[Session] ✅ ${sessionsRevoked} sessões revogadas para ${req.user.username}`,
+        `[Session] ✅ ${sessionsRevoked} sessões revogadas para ${req.user.username}${currentRefreshTokenId ? ' (sessão atual mantida)' : ''}`,
       );
     } catch (sessionError) {
       console.error(

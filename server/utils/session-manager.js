@@ -302,37 +302,55 @@ async function revokeSession(sessionId, reason = "Revogada pelo usuário") {
 
 /**
  * Revoga todas as sessões de um usuário
+ * @param {string} userId - ID do usuário
+ * @param {string} reason - Razão da revogação
+ * @param {string} excludeRefreshTokenId - ID do refresh token da sessão atual para manter ativa
  */
 async function revokeAllUserSessions(
   userId,
   reason = "Todas as sessões revogadas pelo usuário",
+  excludeRefreshTokenId = null,
 ) {
   try {
-    const result = await pool.query(
-      `
+    let sessionsQuery = `
       UPDATE active_sessions
       SET is_active = FALSE,
           revoked_at = CURRENT_TIMESTAMP,
           revoked_reason = $2
       WHERE user_id = $1 AND is_active = TRUE
-      RETURNING id
-    `,
-      [userId, reason],
-    );
+    `;
 
-    // Também revogar todos os refresh tokens
-    await pool.query(
-      `
+    const sessionsParams = [userId, reason];
+
+    // Se houver um refresh token para excluir (manter sessão atual ativa)
+    if (excludeRefreshTokenId) {
+      sessionsQuery += ` AND refresh_token_id != $3`;
+      sessionsParams.push(excludeRefreshTokenId);
+    }
+
+    sessionsQuery += ` RETURNING id`;
+
+    const result = await pool.query(sessionsQuery, sessionsParams);
+
+    // Também revogar todos os refresh tokens EXCETO o atual
+    let tokensQuery = `
       UPDATE refresh_tokens
       SET revoked = TRUE,
           revoked_at = CURRENT_TIMESTAMP
       WHERE user_id = $1 AND revoked = FALSE
-    `,
-      [userId],
-    );
+    `;
+
+    const tokensParams = [userId];
+
+    if (excludeRefreshTokenId) {
+      tokensQuery += ` AND id != $2`;
+      tokensParams.push(excludeRefreshTokenId);
+    }
+
+    await pool.query(tokensQuery, tokensParams);
 
     console.log(
-      `[SessionManager] ✅ Todas as sessões revogadas: ${userId} (${result.rows.length} sessões)`,
+      `[SessionManager] ✅ ${result.rows.length} sessão(ões) revogada(s) para ${userId}${excludeRefreshTokenId ? ' (sessão atual mantida)' : ''}`,
     );
 
     return result.rows.length;
