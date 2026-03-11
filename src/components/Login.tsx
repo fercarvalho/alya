@@ -208,15 +208,18 @@ const Login: React.FC = () => {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="new-password-display" className="block text-sm font-semibold text-gray-700 mb-2">
                 Sua Nova Senha
               </label>
               <div className="relative">
                 <input
+                  id="new-password-display"
+                  name="new-password-display"
                   type="text"
                   value={newPassword}
                   readOnly
                   className="w-full px-4 py-3 border-2 border-amber-500 rounded-lg bg-amber-50 font-mono text-lg font-bold text-gray-900 pr-12"
+                  autoComplete="off"
                 />
                 <button
                   type="button"
