@@ -143,9 +143,11 @@ const ResetarSenhaModal: React.FC<ResetarSenhaModalProps> = ({ isOpen, token, on
                     {!isValidating && isTokenValid && !success ? (
                         <>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
+                                <label htmlFor="reset-new-password" className="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
                                 <div className="relative">
                                     <input
+                                        id="reset-new-password"
+                                        name="reset-new-password"
                                         type={showNewPassword ? 'text' : 'password'}
                                         value={newPassword}
                                         onChange={(event) => setNewPassword(event.target.value)}
@@ -165,9 +167,11 @@ const ResetarSenhaModal: React.FC<ResetarSenhaModalProps> = ({ isOpen, token, on
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar nova senha</label>
+                                <label htmlFor="reset-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">Confirmar nova senha</label>
                                 <div className="relative">
                                     <input
+                                        id="reset-confirm-password"
+                                        name="reset-confirm-password"
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         value={confirmPassword}
                                         onChange={(event) => setConfirmPassword(event.target.value)}
