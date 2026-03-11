@@ -4408,11 +4408,13 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Data Início */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="filter-date-from" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
                 Data Início
               </label>
               <div className="relative">
                 <input
+                  id="filter-date-from"
+                  name="filter-date-from"
                   type="text"
                   placeholder="Início"
                   value={
@@ -4431,11 +4433,13 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Data Fim */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="filter-date-to" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
                 Data Fim
               </label>
               <div className="relative">
                 <input
+                  id="filter-date-to"
+                  name="filter-date-to"
                   type="text"
                   placeholder="Fim"
                   value={
