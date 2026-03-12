@@ -4341,10 +4341,12 @@ const AppContent: React.FC = () => {
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             {/* Filtro Tipo */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="transaction-type-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
                 Tipo
               </label>
               <select
+                id="transaction-type-filter"
+                name="transaction-type-filter"
                 value={transactionFilters.type}
                 onChange={(e) =>
                   setTransactionFilters((prev) => ({
@@ -4363,10 +4365,12 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Categoria */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="transaction-category-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
                 Categoria
               </label>
               <select
+                id="transaction-category-filter"
+                name="transaction-category-filter"
                 value={transactionFilters.category}
                 onChange={(e) =>
                   setTransactionFilters((prev) => ({
