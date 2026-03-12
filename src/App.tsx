@@ -2071,6 +2071,8 @@ const AppContent: React.FC = () => {
               Dados do mês
             </h2>
             <select
+              id="month-selector"
+              name="month-selector"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
               className="text-lg font-semibold text-amber-800 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
