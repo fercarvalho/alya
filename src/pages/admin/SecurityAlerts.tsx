@@ -142,45 +142,8 @@ export default function SecurityAlerts() {
         <p className="text-gray-600">Monitoramento de eventos de segurança em tempo real</p>
       </div>
 
-      {/* Estatísticas */}
-      {stats && (
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon"><Shield size={40} color="#2196F3" /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.total}</div>
-              <div className="stat-label">Total de Alertas</div>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon"><User size={40} color="#2196F3" /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.affectedUsers}</div>
-              <div className="stat-label">Usuários Afetados</div>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon"><BarChart3 size={40} color="#2196F3" /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.byType.length}</div>
-              <div className="stat-label">Tipos Diferentes</div>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon"><Clock size={40} color="#2196F3" /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.period}</div>
-              <div className="stat-label">Período</div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
@@ -231,6 +194,43 @@ export default function SecurityAlerts() {
           </div>
         </div>
       </div>
+
+      {/* Estatísticas */}
+      {stats && (
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon"><Shield size={40} color="#2196F3" /></div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.total}</div>
+              <div className="stat-label">Total de Alertas</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon"><User size={40} color="#2196F3" /></div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.affectedUsers}</div>
+              <div className="stat-label">Usuários Afetados</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon"><BarChart3 size={40} color="#2196F3" /></div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.byType.length}</div>
+              <div className="stat-label">Tipos Diferentes</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon"><Clock size={40} color="#2196F3" /></div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.period}</div>
+              <div className="stat-label">Período</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Distribuição por Tipo */}
       {stats && stats.byType.length > 0 && (
