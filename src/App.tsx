@@ -6966,7 +6966,7 @@ const AppContent: React.FC = () => {
                     return user.modules.includes(tab.key);
                   });
 
-                  // Adicionar abas Admin se o usuário for admin
+                  // Adicionar aba Admin se o usuário for admin
                   if (user?.role === "admin") {
                     filteredTabs.push({
                       id: "admin",
@@ -6974,6 +6974,18 @@ const AppContent: React.FC = () => {
                       icon: Shield,
                       key: "admin",
                     });
+                  }
+
+                  // Adicionar aba de Sessões Ativas (todos os usuários)
+                  filteredTabs.push({
+                    id: "activeSessions",
+                    name: "Sessões",
+                    icon: Lock,
+                    key: "activeSessions",
+                  });
+
+                  // Adicionar abas de Segurança se o usuário for admin
+                  if (user?.role === "admin") {
                     filteredTabs.push({
                       id: "anomalies",
                       name: "Anomalias",
@@ -6987,14 +6999,6 @@ const AppContent: React.FC = () => {
                       key: "securityAlerts",
                     });
                   }
-
-                  // Adicionar aba de Sessões Ativas (todos os usuários)
-                  filteredTabs.push({
-                    id: "activeSessions",
-                    name: "Sessões",
-                    icon: Lock,
-                    key: "activeSessions",
-                  });
 
                   return filteredTabs.map((tab) => {
                     const Icon = tab.icon;
