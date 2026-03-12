@@ -500,8 +500,10 @@ const Clients: React.FC = () => {
           </div>
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Nome</label>
+              <label htmlFor="client-name-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Nome</label>
               <input
+                id="client-name-filter"
+                name="client-name-filter"
                 type="text"
                 placeholder="Nome..."
                 value={filters.name}
@@ -510,8 +512,10 @@ const Clients: React.FC = () => {
               />
             </div>
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Email</label>
+              <label htmlFor="client-email-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Email</label>
               <input
+                id="client-email-filter"
+                name="client-email-filter"
                 type="text"
                 placeholder="Email..."
                 value={filters.email}
@@ -520,8 +524,10 @@ const Clients: React.FC = () => {
               />
             </div>
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Telefone</label>
+              <label htmlFor="client-phone-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Telefone</label>
               <input
+                id="client-phone-filter"
+                name="client-phone-filter"
                 type="text"
                 placeholder="Telefone..."
                 value={filters.phone}
