@@ -5028,10 +5028,12 @@ const AppContent: React.FC = () => {
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             {/* Filtro Categoria */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-category-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Categoria
               </label>
               <input
+                id="product-category-filter"
+                name="product-category-filter"
                 type="text"
                 placeholder="Categoria..."
                 value={productFilters.category}
@@ -5047,11 +5049,13 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Estoque */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-stock-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Estoque
               </label>
 
               <select
+                id="product-stock-filter"
+                name="product-stock-filter"
                 value={productFilters.stockFilter}
                 onChange={(e) =>
                   setProductFilters((prev) => ({
@@ -5069,11 +5073,13 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Vendidos */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-sold-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Vendidos
               </label>
 
               <select
+                id="product-sold-filter"
+                name="product-sold-filter"
                 value={productFilters.soldFilter}
                 onChange={(e) =>
                   setProductFilters((prev) => ({
@@ -5091,11 +5097,13 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Preço de Custo */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-cost-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Preço de Custo
               </label>
 
               <select
+                id="product-cost-filter"
+                name="product-cost-filter"
                 value={productFilters.costFilter}
                 onChange={(e) =>
                   setProductFilters((prev) => ({
