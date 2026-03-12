@@ -180,61 +180,26 @@ export default function SecurityAlerts() {
       )}
 
       {/* Filtros */}
-      <div style={{
-        background: 'linear-gradient(to right, #fffbeb, #ffedd5)',
-        padding: '1rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #fcd34d',
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        marginBottom: '1.5rem'
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem'
-        }}>
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Filter size={20} color="#d97706" />
-            <h2 style={{
-              fontSize: '1.125rem',
-              fontWeight: 'bold',
-              color: '#1f2937',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-amber-600" />
+            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
               FILTRE SEUS ITENS:
             </h2>
           </div>
 
           {/* Campos de Filtro */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'end',
-            gap: '1rem',
-            flex: 1,
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minWidth: '150px' }}>
-              <label style={{
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.25rem'
-              }}>
+          <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Período
               </label>
               <select
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  border: '1px solid #fcd34d',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.875rem',
-                  backgroundColor: 'white',
-                  width: '100%'
-                }}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
               >
                 <option value={1}>Últimas 24 horas</option>
                 <option value={7}>Últimos 7 dias</option>
@@ -243,26 +208,14 @@ export default function SecurityAlerts() {
               </select>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minWidth: '200px' }}>
-              <label style={{
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.25rem'
-              }}>
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Tipo de Alerta
               </label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  border: '1px solid #fcd34d',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.875rem',
-                  backgroundColor: 'white',
-                  width: '100%'
-                }}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
               >
                 <option value="">Todos</option>
                 <option value="login_failed_suspicious">Login Suspeito</option>
