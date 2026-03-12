@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Activity, Users, TrendingUp, AlertTriangle, Clock, RefreshCw, XCircle, Globe, BarChart3, User, MapPin, Hash } from 'lucide-react';
+import { Activity, Users, TrendingUp, AlertTriangle, Clock, RefreshCw, XCircle, Globe, BarChart3, User, MapPin, Hash, Filter } from 'lucide-react';
 import './AnomalyDashboard.css';
 
 interface AnomalyStats {
@@ -169,25 +169,97 @@ export default function AnomalyDashboard() {
       </div>
 
       {/* Filtros */}
-      <div className="filters">
-        <div className="filter-group">
-          <label>Período:</label>
-          <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
-            <option value={1}>Últimas 24 horas</option>
-            <option value={7}>Últimos 7 dias</option>
-            <option value={30}>Últimos 30 dias</option>
-            <option value={90}>Últimos 90 dias</option>
-          </select>
-        </div>
+      <div style={{
+        background: 'linear-gradient(to right, #fffbeb, #ffedd5)',
+        padding: '1rem',
+        borderRadius: '0.5rem',
+        border: '1px solid #fcd34d',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        marginBottom: '1.5rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem'
+        }}>
+          {/* Título */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Filter size={20} color="#d97706" />
+            <h2 style={{
+              fontSize: '1.125rem',
+              fontWeight: 'bold',
+              color: '#1f2937',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              FILTRE SEUS ITENS:
+            </h2>
+          </div>
 
-        <div className="filter-group">
-          <label>Severidade mínima:</label>
-          <select value={severityFilter} onChange={(e) => setSeverityFilter(Number(e.target.value))}>
-            <option value={0}>Todas</option>
-            <option value={50}>Média ou superior</option>
-            <option value={70}>Alta ou superior</option>
-            <option value={90}>Apenas críticas</option>
-          </select>
+          {/* Campos de Filtro */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'end',
+            gap: '1rem',
+            flex: 1,
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minWidth: '150px' }}>
+              <label style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.25rem'
+              }}>
+                Período
+              </label>
+              <select
+                value={days}
+                onChange={(e) => setDays(Number(e.target.value))}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #fcd34d',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem',
+                  backgroundColor: 'white',
+                  width: '100%'
+                }}
+              >
+                <option value={1}>Últimas 24 horas</option>
+                <option value={7}>Últimos 7 dias</option>
+                <option value={30}>Últimos 30 dias</option>
+                <option value={90}>Últimos 90 dias</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minWidth: '150px' }}>
+              <label style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.25rem'
+              }}>
+                Severidade mínima
+              </label>
+              <select
+                value={severityFilter}
+                onChange={(e) => setSeverityFilter(Number(e.target.value))}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #fcd34d',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem',
+                  backgroundColor: 'white',
+                  width: '100%'
+                }}
+              >
+                <option value={0}>Todas</option>
+                <option value={50}>Média ou superior</option>
+                <option value={70}>Alta ou superior</option>
+                <option value={90}>Apenas críticas</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 

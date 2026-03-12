@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, Download, FileText } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Download, FileText, Filter } from 'lucide-react'
 import { parseLocalDate } from '../utils/dateUtils'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -432,54 +432,71 @@ const DRE: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Período</label>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value as 'mensal' | 'trimestral' | 'anual')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-            >
-              <option value="mensal">Mensal</option>
-              <option value="trimestral">Trimestral</option>
-              <option value="anual">Anual</option>
-            </select>
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+          {/* Título */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-amber-600" />
+            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
+              FILTRE SEUS ITENS:
+            </h2>
           </div>
 
-          {selectedPeriod !== 'anual' && (
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-gray-700">Mês</label>
+          {/* Campos de Filtro */}
+          <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+                Período
+              </label>
               <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value as 'mensal' | 'trimestral' | 'anual')}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
               >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {getMonthName(i)}
-                  </option>
-                ))}
+                <option value="mensal">Mensal</option>
+                <option value="trimestral">Trimestral</option>
+                <option value="anual">Anual</option>
               </select>
             </div>
-          )}
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Ano</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-            >
-              {Array.from({ length: 5 }, (_, i) => {
-                const year = new Date().getFullYear() - 2 + i
-                return (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                )
-              })}
-            </select>
+            {selectedPeriod !== 'anual' && (
+              <div className="flex flex-col flex-1 min-w-0">
+                <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+                  Mês
+                </label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i}>
+                      {getMonthName(i)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex flex-col flex-1 min-w-0">
+              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+                Ano
+              </label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+              >
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = new Date().getFullYear() - 2 + i
+                  return (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
           </div>
         </div>
       </div>

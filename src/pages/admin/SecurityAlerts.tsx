@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Bell, Shield, BarChart3, Clock, Globe, User, XCircle, RefreshCw } from 'lucide-react';
+import { Bell, Shield, BarChart3, Clock, Globe, User, XCircle, RefreshCw, Filter } from 'lucide-react';
 import './SecurityAlerts.css';
 
 interface Alert {
@@ -180,30 +180,102 @@ export default function SecurityAlerts() {
       )}
 
       {/* Filtros */}
-      <div className="filters">
-        <div className="filter-group">
-          <label>Período:</label>
-          <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
-            <option value={1}>Últimas 24 horas</option>
-            <option value={7}>Últimos 7 dias</option>
-            <option value={30}>Últimos 30 dias</option>
-            <option value={90}>Últimos 90 dias</option>
-          </select>
-        </div>
+      <div style={{
+        background: 'linear-gradient(to right, #fffbeb, #ffedd5)',
+        padding: '1rem',
+        borderRadius: '0.5rem',
+        border: '1px solid #fcd34d',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        marginBottom: '1.5rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem'
+        }}>
+          {/* Título */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Filter size={20} color="#d97706" />
+            <h2 style={{
+              fontSize: '1.125rem',
+              fontWeight: 'bold',
+              color: '#1f2937',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              FILTRE SEUS ITENS:
+            </h2>
+          </div>
 
-        <div className="filter-group">
-          <label>Tipo de Alerta:</label>
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            <option value="">Todos</option>
-            <option value="login_failed_suspicious">Login Suspeito</option>
-            <option value="multiple_ips_detected">Múltiplos IPs</option>
-            <option value="token_theft_detected">Roubo de Token</option>
-            <option value="sql_injection_attempt">SQL Injection</option>
-            <option value="xss_attempt">Tentativa XSS</option>
-            <option value="brute_force_detected">Brute Force</option>
-            <option value="new_country_login">Novo País</option>
-            <option value="multiple_devices_detected">Múltiplos Dispositivos</option>
-          </select>
+          {/* Campos de Filtro */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'end',
+            gap: '1rem',
+            flex: 1,
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minWidth: '150px' }}>
+              <label style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.25rem'
+              }}>
+                Período
+              </label>
+              <select
+                value={days}
+                onChange={(e) => setDays(Number(e.target.value))}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #fcd34d',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem',
+                  backgroundColor: 'white',
+                  width: '100%'
+                }}
+              >
+                <option value={1}>Últimas 24 horas</option>
+                <option value={7}>Últimos 7 dias</option>
+                <option value={30}>Últimos 30 dias</option>
+                <option value={90}>Últimos 90 dias</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minWidth: '200px' }}>
+              <label style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '0.25rem'
+              }}>
+                Tipo de Alerta
+              </label>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #fcd34d',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem',
+                  backgroundColor: 'white',
+                  width: '100%'
+                }}
+              >
+                <option value="">Todos</option>
+                <option value="login_failed_suspicious">Login Suspeito</option>
+                <option value="multiple_ips_detected">Múltiplos IPs</option>
+                <option value="token_theft_detected">Roubo de Token</option>
+                <option value="sql_injection_attempt">SQL Injection</option>
+                <option value="xss_attempt">Tentativa XSS</option>
+                <option value="brute_force_detected">Brute Force</option>
+                <option value="new_country_login">Novo País</option>
+                <option value="multiple_devices_detected">Múltiplos Dispositivos</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
