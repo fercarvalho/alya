@@ -6816,6 +6816,8 @@ const AppContent: React.FC = () => {
             {/* Dropdown do Mês Selecionado */}
             <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
               <select
+                id="metas-month-selector"
+                name="metas-month-selector"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 className="w-full text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
