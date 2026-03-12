@@ -537,7 +537,7 @@ async function detectAnomalies(userId, sessionData = {}) {
         try {
           await pool.query(
             `
-            INSERT INTO audit_logs (user_id, username, action, details, ip_address, status)
+            INSERT INTO audit_logs (user_id, username, operation, details, ip_address, status)
             VALUES ($1, $1, 'anomaly_detected', $2, $3, 'warning')
           `,
             [userId, JSON.stringify(anomaly), sessionData.ip || "Unknown"],

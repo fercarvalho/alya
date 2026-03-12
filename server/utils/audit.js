@@ -25,6 +25,7 @@ const AUDIT_OPERATIONS = {
   LOGIN_SUCCESS: 'login_success',
   LOGIN_FAILURE: 'login_failure',
   LOGOUT: 'logout',
+  LOGOUT_ALL_DEVICES: 'logout_all_devices',
   PASSWORD_CHANGE: 'password_change',
   PASSWORD_RESET_REQUEST: 'password_reset_request',
   PASSWORD_RESET_SUCCESS: 'password_reset_success',

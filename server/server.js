@@ -936,7 +936,6 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
          WHERE user_id = $1
          AND operation = 'login_success'
          AND created_at > NOW() - INTERVAL '1 hour'
-         ORDER BY created_at DESC
          LIMIT 5`,
         [user.id],
       );
@@ -963,7 +962,6 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
          WHERE user_id = $1
          AND operation = 'login_success'
          AND created_at > NOW() - INTERVAL '24 hours'
-         ORDER BY created_at DESC
          LIMIT 10`,
         [user.id],
       );
@@ -1241,7 +1239,7 @@ app.post("/api/auth/logout-all", authenticateToken, async (req, res) => {
 
     // 🔒 AUDITORIA: Logout de todos os dispositivos
     await logAudit({
-      operation: "logout_all_devices",
+      operation: AUDIT_OPERATIONS.LOGOUT_ALL_DEVICES,
       userId: req.user.id,
       username: req.user.username,
       ipAddress: req.ip || req.connection?.remoteAddress,
