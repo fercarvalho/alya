@@ -445,10 +445,12 @@ const DRE: React.FC = () => {
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="dre-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Período
               </label>
               <select
+                id="dre-period-filter"
+                name="dre-period-filter"
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as 'mensal' | 'trimestral' | 'anual')}
                 className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
@@ -461,10 +463,12 @@ const DRE: React.FC = () => {
 
             {selectedPeriod !== 'anual' && (
               <div className="flex flex-col flex-1 min-w-0">
-                <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+                <label htmlFor="dre-month-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                   Mês
                 </label>
                 <select
+                  id="dre-month-filter"
+                  name="dre-month-filter"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
                   className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
@@ -479,10 +483,12 @@ const DRE: React.FC = () => {
             )}
 
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="dre-year-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Ano
               </label>
               <select
+                id="dre-year-filter"
+                name="dre-year-filter"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                 className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
