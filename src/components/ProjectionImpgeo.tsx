@@ -193,9 +193,13 @@ const NumberCell: React.FC<{
   value: number
   onChange: (v: number) => void
   disabled?: boolean
-}> = ({ value, onChange, disabled }) => {
+  id?: string
+  name?: string
+}> = ({ value, onChange, disabled, id, name }) => {
   return (
     <input
+      id={id}
+      name={name}
       type="number"
       value={Number.isFinite(value) ? value : 0}
       disabled={disabled}
@@ -212,11 +216,15 @@ const OverrideCell: React.FC<{
   onSet: (v: number) => void
   onClear: () => void
   disabled?: boolean
-}> = ({ valueEffective, overrideValue, onSet, onClear, disabled }) => {
+  id?: string
+  name?: string
+}> = ({ valueEffective, overrideValue, onSet, onClear, disabled, id, name }) => {
   const hasOverride = overrideValue !== null && overrideValue !== undefined
   return (
     <div className="flex items-center gap-1">
       <input
+        id={id}
+        name={name}
         type="number"
         value={Number.isFinite(valueEffective) ? valueEffective : 0}
         disabled={disabled}
@@ -752,11 +760,15 @@ export default function Projection() {
                     {sortedStreams.map(s => (
                       <div key={s.id} className="flex items-center gap-2">
                         <input
+                          id={`revenue-stream-name-${s.id}`}
+                          name={`revenue-stream-name-${s.id}`}
                           value={s.name}
                           onChange={e => setConfig(prev => ({ ...prev, revenueStreams: (prev.revenueStreams || []).map(x => (x.id === s.id ? { ...x, name: e.target.value } : x)) }))}
                           className="flex-1 px-2 py-1 border rounded"
                         />
                         <input
+                          id={`revenue-stream-order-${s.id}`}
+                          name={`revenue-stream-order-${s.id}`}
                           type="number"
                           value={s.order}
                           onChange={e => setConfig(prev => ({ ...prev, revenueStreams: (prev.revenueStreams || []).map(x => (x.id === s.id ? { ...x, order: asNumber(e.target.value) } : x)) }))}
@@ -765,6 +777,8 @@ export default function Projection() {
                         />
                         <label className="text-sm flex items-center gap-1">
                           <input
+                            id={`revenue-stream-active-${s.id}`}
+                            name={`revenue-stream-active-${s.id}`}
                             type="checkbox"
                             checked={s.isActive !== false}
                             onChange={e => setConfig(prev => ({ ...prev, revenueStreams: (prev.revenueStreams || []).map(x => (x.id === s.id ? { ...x, isActive: e.target.checked } : x)) }))}
@@ -802,11 +816,15 @@ export default function Projection() {
                     {sortedComponents.map(c => (
                       <div key={c.id} className="flex items-center gap-2">
                         <input
+                          id={`mkt-component-name-${c.id}`}
+                          name={`mkt-component-name-${c.id}`}
                           value={c.name}
                           onChange={e => setConfig(prev => ({ ...prev, mktComponents: (prev.mktComponents || []).map(x => (x.id === c.id ? { ...x, name: e.target.value } : x)) }))}
                           className="flex-1 px-2 py-1 border rounded"
                         />
                         <input
+                          id={`mkt-component-order-${c.id}`}
+                          name={`mkt-component-order-${c.id}`}
                           type="number"
                           value={c.order}
                           onChange={e => setConfig(prev => ({ ...prev, mktComponents: (prev.mktComponents || []).map(x => (x.id === c.id ? { ...x, order: asNumber(e.target.value) } : x)) }))}
@@ -815,6 +833,8 @@ export default function Projection() {
                         />
                         <label className="text-sm flex items-center gap-1">
                           <input
+                            id={`mkt-component-active-${c.id}`}
+                            name={`mkt-component-active-${c.id}`}
                             type="checkbox"
                             checked={c.isActive !== false}
                             onChange={e => setConfig(prev => ({ ...prev, mktComponents: (prev.mktComponents || []).map(x => (x.id === c.id ? { ...x, isActive: e.target.checked } : x)) }))}
@@ -881,6 +901,8 @@ export default function Projection() {
                           col.kind === 'month' ? (
                             <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                               <NumberCell
+                                id={`prevyear-${row.key}-month-${col.monthIndex}`}
+                                name={`prevyear-${row.key}-month-${col.monthIndex}`}
                                 value={arr[col.monthIndex]}
                                 onChange={nv => {
                                   const next = [...arr]
@@ -932,6 +954,8 @@ export default function Projection() {
                           col.kind === 'month' ? (
                             <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                               <NumberCell
+                                id={`prevyear-revenue-${s.id}-month-${col.monthIndex}`}
+                                name={`prevyear-revenue-${s.id}-month-${col.monthIndex}`}
                                 value={arr[col.monthIndex]}
                                 onChange={nv =>
                                   setBase(b => {
@@ -967,6 +991,8 @@ export default function Projection() {
                           col.kind === 'month' ? (
                             <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                               <NumberCell
+                                id={`prevyear-mkt-${c.id}-month-${col.monthIndex}`}
+                                name={`prevyear-mkt-${c.id}-month-${col.monthIndex}`}
                                 value={arr[col.monthIndex]}
                                 onChange={nv =>
                                   setBase(b => {
@@ -1265,6 +1291,8 @@ export default function Projection() {
                             col.kind === 'month' ? (
                               <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                                 <OverrideCell
+                                  id={`revenue-${stream.id}-${row.key}-month-${col.monthIndex}`}
+                                  name={`revenue-${stream.id}-${row.key}-month-${col.monthIndex}`}
                                   valueEffective={ensure12(row.arr)[col.monthIndex]}
                                   overrideValue={row.ov[col.monthIndex] ?? null}
                                   onSet={nv => {
@@ -1402,6 +1430,8 @@ export default function Projection() {
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                             <OverrideCell
+                              id={`mkt-totals-${row.key}-month-${col.monthIndex}`}
+                              name={`mkt-totals-${row.key}-month-${col.monthIndex}`}
                               valueEffective={ensure12(row.arr)[col.monthIndex]}
                               overrideValue={row.ov[col.monthIndex] ?? null}
                               onSet={nv => {
@@ -1524,6 +1554,8 @@ export default function Projection() {
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                             <OverrideCell
+                              id={`fixed-expenses-${row.key}-month-${col.monthIndex}`}
+                              name={`fixed-expenses-${row.key}-month-${col.monthIndex}`}
                               valueEffective={ensure12(row.arr)[col.monthIndex]}
                               overrideValue={row.ov[col.monthIndex] ?? null}
                               onSet={nv => {
@@ -1634,6 +1666,8 @@ export default function Projection() {
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                             <OverrideCell
+                              id={`variable-expenses-${row.key}-month-${col.monthIndex}`}
+                              name={`variable-expenses-${row.key}-month-${col.monthIndex}`}
                               valueEffective={ensure12(row.arr)[col.monthIndex]}
                               overrideValue={row.ov[col.monthIndex] ?? null}
                               onSet={nv => {
@@ -1747,6 +1781,8 @@ export default function Projection() {
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                             <OverrideCell
+                              id={`investments-${row.key}-month-${col.monthIndex}`}
+                              name={`investments-${row.key}-month-${col.monthIndex}`}
                               valueEffective={ensure12(row.arr)[col.monthIndex]}
                               overrideValue={row.ov[col.monthIndex] ?? null}
                               onSet={nv => {
