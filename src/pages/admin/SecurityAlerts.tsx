@@ -156,10 +156,12 @@ export default function SecurityAlerts() {
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="alert-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Período
               </label>
               <select
+                id="alert-period-filter"
+                name="alert-period-filter"
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
                 className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
@@ -172,10 +174,12 @@ export default function SecurityAlerts() {
             </div>
 
             <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="alert-type-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
                 Tipo de Alerta
               </label>
               <select
+                id="alert-type-filter"
+                name="alert-type-filter"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
