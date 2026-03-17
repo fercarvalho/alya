@@ -313,6 +313,8 @@ const UserManagement: React.FC = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
+            id="user-search-filter"
+            name="user-search-filter"
             type="text"
             placeholder="Buscar por nome, username ou email..."
             value={searchTerm}
@@ -321,6 +323,8 @@ const UserManagement: React.FC = () => {
           />
         </div>
         <select
+          id="user-role-filter"
+          name="user-role-filter"
           value={filterRole}
           onChange={(e) => setFilterRole(e.target.value)}
           className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -331,6 +335,8 @@ const UserManagement: React.FC = () => {
           <option value="guest">Convidado</option>
         </select>
         <select
+          id="user-status-filter"
+          name="user-status-filter"
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -380,6 +386,8 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
+                      id={`user-role-${u.id}`}
+                      name={`user-role-${u.id}`}
                       value={u.role}
                       onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
                       className="text-sm border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
