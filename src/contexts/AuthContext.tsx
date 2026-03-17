@@ -42,6 +42,8 @@ interface LoginResponse {
   firstLogin?: boolean;
   newPassword?: string;
   error?: string;
+  errorCode?: string;
+  message?: string;
 }
 
 interface AuthContextType {
@@ -269,6 +271,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error("[AuthContext] Erro no login:", errorData);
         return {
           success: false,
+          error: errorData.error || 'Erro ao fazer login',
+          errorCode: errorData.errorCode,
+          message: errorData.message,
         };
       }
     } catch (error: any) {
@@ -282,6 +287,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return {
         success: false,
+        error: "Erro de conexão com o servidor",
       };
     }
   };

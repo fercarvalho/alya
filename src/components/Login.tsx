@@ -10,6 +10,8 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordCopied, setPasswordCopied] = useState(false);
@@ -48,11 +50,21 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setErrorCode('');
+    setErrorMessage('');
 
     const result = await login(username, password);
 
     if (!result.success) {
-      setError('Usuário ou senha incorretos');
+      // Se tem código de erro (erro do servidor), mostrar mensagem detalhada
+      if (result.errorCode) {
+        setError(result.error || 'Erro ao processar sua solicitação');
+        setErrorCode(result.errorCode);
+        setErrorMessage(result.message || '');
+      } else {
+        // Erro de autenticação normal
+        setError(result.error || 'Usuário ou senha incorretos');
+      }
       setIsLoading(false);
     } else {
       // Se for primeiro login, mostrar modal com nova senha ANTES de redirecionar
@@ -179,8 +191,18 @@ const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
+              <p className="text-red-600 text-sm font-medium">{error}</p>
+              {errorCode && (
+                <div className="text-xs space-y-1">
+                  <p className="text-red-500 font-mono">
+                    Código: {errorCode}
+                  </p>
+                  {errorMessage && (
+                    <p className="text-red-600">{errorMessage}</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

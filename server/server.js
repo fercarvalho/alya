@@ -1044,8 +1044,85 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error("Erro no login:", error);
-    res.status(500).json({ error: "Erro interno do servidor" });
+    // Gerar código de erro único para rastreamento
+    const errorCode = `AUTH-${Date.now().toString(36).toUpperCase()}`;
+
+    // Log detalhado no servidor
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error(`❌ [ERRO DE LOGIN] Código: ${errorCode}`);
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error(`📋 Detalhes do erro:`);
+    console.error(`   Tipo: ${error.name || 'Error'}`);
+    console.error(`   Mensagem: ${error.message}`);
+    console.error(`   Stack: ${error.stack}`);
+    console.error(`   Username: ${req.body?.username || 'N/A'}`);
+    console.error(`   IP: ${req.ip || req.connection?.remoteAddress || 'N/A'}`);
+    console.error(`   User-Agent: ${req.headers["user-agent"] || 'N/A'}`);
+    console.error(`   Timestamp: ${new Date().toISOString()}`);
+
+    // Identificar tipo de erro
+    let errorType = 'unknown';
+    let errorDetails = error.message;
+
+    if (error.code === '42P01') {
+      errorType = 'database_table_not_found';
+      errorDetails = `Tabela não encontrada: ${error.message}. Execute as migrações do banco de dados.`;
+    } else if (error.code === 'ECONNREFUSED') {
+      errorType = 'database_connection_refused';
+      errorDetails = 'Não foi possível conectar ao banco de dados PostgreSQL. Verifique se o serviço está rodando.';
+    } else if (error.code === '28P01') {
+      errorType = 'database_auth_failed';
+      errorDetails = 'Falha na autenticação com o banco de dados. Verifique as credenciais no .env';
+    } else if (error.code === '3D000') {
+      errorType = 'database_not_found';
+      errorDetails = 'Banco de dados não encontrado. Crie o banco de dados primeiro.';
+    } else if (error.message?.includes('refresh_tokens')) {
+      errorType = 'missing_migration_003';
+      errorDetails = 'Tabela refresh_tokens não existe. Execute a migração 003.';
+    } else if (error.message?.includes('active_sessions')) {
+      errorType = 'missing_migration_005';
+      errorDetails = 'Tabela active_sessions não existe. Execute a migração 005.';
+    }
+
+    console.error(`   Tipo de erro: ${errorType}`);
+    console.error(`   Detalhes: ${errorDetails}`);
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error(`💡 Possíveis soluções:`);
+
+    if (errorType.includes('migration')) {
+      console.error(`   1. Execute as migrações pendentes:`);
+      console.error(`      cd /var/www/alya/server/migrations`);
+      console.error(`      psql -U postgres -d alya -f 003-create-refresh-tokens.sql`);
+      console.error(`      psql -U postgres -d alya -f 004-add-encrypted-fields.sql`);
+      console.error(`      psql -U postgres -d alya -f 005-create-active-sessions.sql`);
+    } else if (errorType === 'database_connection_refused') {
+      console.error(`   1. Verifique se PostgreSQL está rodando:`);
+      console.error(`      sudo systemctl status postgresql`);
+      console.error(`   2. Inicie o PostgreSQL se necessário:`);
+      console.error(`      sudo systemctl start postgresql`);
+    } else if (errorType === 'database_auth_failed') {
+      console.error(`   1. Verifique o arquivo .env:`);
+      console.error(`      DB_USER, DB_PASSWORD, DB_NAME, DB_HOST`);
+      console.error(`   2. Teste a conexão manualmente:`);
+      console.error(`      psql -U postgres -d alya`);
+    } else if (errorType === 'database_not_found') {
+      console.error(`   1. Crie o banco de dados:`);
+      console.error(`      psql -U postgres -c "CREATE DATABASE alya;"`);
+      console.error(`   2. Execute as migrações iniciais`);
+    } else {
+      console.error(`   1. Verifique os logs acima para mais detalhes`);
+      console.error(`   2. Verifique se todas as dependências estão instaladas`);
+      console.error(`   3. Verifique se o arquivo .env está configurado`);
+    }
+
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    // Resposta genérica para o usuário (segurança)
+    res.status(500).json({
+      error: "Erro interno do servidor. Tente novamente mais tarde.",
+      errorCode: errorCode,
+      message: "Ocorreu um problema ao processar sua solicitação. Se o problema persistir, entre em contato com o suporte informando o código do erro."
+    });
   }
 });
 
