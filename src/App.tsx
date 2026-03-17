@@ -1951,8 +1951,8 @@ const AppContent: React.FC = () => {
               </Pie>
               {hasData && (
                 <Tooltip
-                  formatter={(value: number) => [
-                    `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+                  formatter={(value: any) => [
+                    `R$ ${(typeof value === 'number' ? value : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
                     "",
                   ]}
                   contentStyle={{
@@ -2026,8 +2026,8 @@ const AppContent: React.FC = () => {
               tick={{ fontSize: 12, fill: "#666" }}
             />
             <Tooltip
-              formatter={(value: number) =>
-                `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+              formatter={(value: any) =>
+                `R$ ${(typeof value === 'number' ? value : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
               }
               contentStyle={{
                 backgroundColor: "white",
