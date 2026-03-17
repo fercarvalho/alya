@@ -1116,6 +1116,8 @@ export default function Projection() {
                   <p className="text-xs font-semibold text-amber-800 uppercase">{k === 'minimo' ? 'Previsto' : k}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <input
+                      id={`growth-${k}`}
+                      name={`growth-${k}`}
                       type="number"
                       value={growth[k]}
                       onChange={e => setBase(b => (b ? { ...b, growth: { ...b.growth, [k]: asNumber(e.target.value) } } : b))}
