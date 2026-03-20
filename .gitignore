@@ -5,12 +5,9 @@ node_modules/
 dist/
 build/
 
-# Environment variables
-.env
-.env.local
-.env.production.local
-.env.development.local
-/server/.env
+# Env padrão
+.env.*
+!.env.example
 
 # Logs
 logs/
@@ -39,7 +36,7 @@ Thumbs.db
 .pm2/
 
 # Uploads
-/server/uploads/*
+/server/uploads/**
 !/server/uploads/.gitkeep
 
 # Database files (dados locais não devem ser commitados)
@@ -49,7 +46,7 @@ Thumbs.db
 # Database backups e schemas
 /server/database/*-backup.json
 /server/database/backup-*/
-server/backup-json-data.js
+/server/backup-json-data.js
 
 # Scripts de testes
 **/*.test.*
@@ -67,3 +64,18 @@ server/backup-json-data.js
 *.md
 !README.md
 
+# SQL Backups
+*.sql
+*.sql.gz
+
+# Cache
+.cache/
+.tmp/
+.temp/
+
+# Coverage
+coverage/
+
+# Frameworks
+.next/
+.nuxt/
