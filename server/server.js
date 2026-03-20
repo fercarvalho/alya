@@ -1,5 +1,5 @@
 // Carregar variáveis de ambiente
-require("dotenv").config();
+require("dotenv").config({ path: __dirname + "/.env" });
 
 const express = require("express");
 const multer = require("multer");
@@ -135,12 +135,12 @@ app.use(configureSanitization());
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
   : [
-      "https://alya.sistemas.viverdepj.com.br",
-      "http://localhost:8000",
-      "http://localhost:5173",
-      "http://127.0.0.1:8000",
-      "http://127.0.0.1:5173",
-    ];
+    "https://alya.sistemas.viverdepj.com.br",
+    "http://localhost:8000",
+    "http://localhost:5173",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:5173",
+  ];
 
 // Middleware
 app.use(
