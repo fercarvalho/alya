@@ -6974,7 +6974,7 @@ const AppContent: React.FC = () => {
                     if (
                       !user?.modules ||
                       user.modules.length === 0 ||
-                      user.role === "admin"
+                      user.role === "superadmin"
                     ) {
                       return true;
                     }
@@ -6983,7 +6983,7 @@ const AppContent: React.FC = () => {
                   });
 
                   // Adicionar aba Admin se o usuário for admin
-                  if (user?.role === "admin") {
+                  if (user?.role === "superadmin") {
                     filteredTabs.push({
                       id: "admin",
                       name: "Admin",
@@ -7001,7 +7001,7 @@ const AppContent: React.FC = () => {
                   });
 
                   // Adicionar abas de Segurança se o usuário for admin
-                  if (user?.role === "admin") {
+                  if (user?.role === "superadmin") {
                     filteredTabs.push({
                       id: "anomalies",
                       name: "Anomalias",
