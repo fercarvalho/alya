@@ -81,7 +81,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(
+    () => !!sessionStorage.getItem("originalAccessToken")
+  );
 
   // Alias para compatibilidade com código existente
   const token = accessToken;
