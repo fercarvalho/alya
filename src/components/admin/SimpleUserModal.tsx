@@ -31,7 +31,7 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
 
   const [formData, setFormData] = useState({
     username: '',
-    role: 'user' as 'admin' | 'user' | 'guest',
+    role: 'user' as 'superadmin' | 'user' | 'guest',
     isActive: true,
     modules: [] as string[]
   });
