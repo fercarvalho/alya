@@ -46,16 +46,16 @@ export const useModules = () => {
   };
 
   const getVisibleModules = (): SystemModule[] => {
-    if (!user || !user.modules || user.modules.length === 0) {
-      // Se não há módulos definidos, retornar todos os módulos ativos
+    if (!user) return [];
+
+    // superadmin vê todos os módulos ativos, independente do array de módulos
+    if (user.role === 'superadmin') {
       return modules.filter(m => m.isActive);
     }
-    
-    // Retornar apenas módulos visíveis para o usuário e que estão ativos
-    return modules.filter(m => 
-      m.isActive &&
-      (user.modules?.includes(m.key) || user.role === 'superadmin' || user.role === 'admin')
-    );
+
+    // Todos os outros (incluindo admin) são filtrados estritamente pelo array de módulos
+    if (!user.modules || user.modules.length === 0) return [];
+    return modules.filter(m => m.isActive && user.modules!.includes(m.key));
   };
 
   const getModuleByKey = (key: string): SystemModule | undefined => {
