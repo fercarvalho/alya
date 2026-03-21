@@ -57,20 +57,6 @@ const UserManagement: React.FC = () => {
     isActive: true
   });
 
-  // Função para obter módulos padrão por role
-  const getDefaultModulesForRole = (role: string): string[] => {
-    switch (role) {
-      case 'superadmin':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
-      case 'user':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
-      case 'guest':
-        return ['dashboard', 'metas', 'reports', 'dre'];
-      default:
-        return [];
-    }
-  };
-
   useEffect(() => {
     loadUsers();
   }, []);
