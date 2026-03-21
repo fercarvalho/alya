@@ -217,3 +217,18 @@ Ao identificar nova dívida técnica:
 ---
 
 **Revisão recomendada:** Trimestral (próxima em 2026-06-03)
+
+---
+
+## ✅ Resolvidos
+
+### jspdf 3.0.4 → 4.2.0
+
+**Resolvido em:** 2026-03-03
+**8 vulnerabilidades críticas corrigidas:** LFI, PDF Injection, DoS (BMP/GIF), XMP Injection, Race Condition, PDF Object Injection.
+
+```bash
+npm install jspdf@latest --save
+```
+
+Nenhum breaking change. API permanece compatível (`jsPDF()`, `.text()`, `.save()`, `.autoTable()`).

@@ -1,268 +1,199 @@
-# 💰 Alya - Sistema Financeiro
+# Alya - Sistema Financeiro
 
-Sistema completo de gestão financeira desenvolvido especificamente para o ecommerce de velas Alya. Uma aplicação web leve, responsiva e moderna para gerenciamento completo das finanças do negócio, incluindo controle de produtos, transações e relatórios detalhados.
+Sistema completo de gestão financeira desenvolvido para o ecommerce de velas Alya. Aplicação web moderna e responsiva para gerenciamento de produtos, transações, clientes, projeções financeiras e segurança.
 
-## 📖 Sobre o Projeto
+**Desenvolvido por Fernando Carvalho**
+- Email: contato@fercarvalho.com
+- Instagram: [@cadeofer](https://instagram.com/cadeofer)
 
-Este projeto foi desenvolvido especificamente para a empresa de velas **Alya**, focando em facilitar o controle financeiro e a gestão de produtos do ecommerce. O sistema oferece uma interface intuitiva para gerenciar receitas, despesas, produtos e gerar relatórios detalhados.
+---
 
-**Feito com ❤️ por Fernando Carvalho**
+## Funcionalidades
 
-- 📧 Email: contato@fercarvalho.com
-- 📱 Instagram: [@cadeofer](https://instagram.com/cadeofer)
+- **Dashboard** — métricas em tempo real, receitas, despesas, saldo
+- **Transações** — controle completo de receitas e despesas com categorização
+- **Produtos** — catálogo com controle de estoque, preço e margem de lucro
+- **Clientes** — cadastro com dados sensíveis criptografados (CPF, telefone, email)
+- **DRE** — Demonstração de Resultado do Exercício
+- **Projeção Financeira** — simulações de receita, despesas, investimentos e resultado
+- **Importação/Exportação** — planilhas Excel (.xlsx) para transações, produtos e clientes
+- **Exportação PDF** — relatórios e DRE exportáveis em PDF
+- **Perfil de Usuário** — edição de perfil, foto com recorte, alteração de senha e username
+- **Administração** — gerenciamento de usuários, módulos, permissões e logs de atividade
+- **Segurança** — sessões ativas, detecção de anomalias, alertas de segurança em tempo real
+- **Recuperação de Senha** — fluxo completo com e-mail via SendGrid e rate limiting
 
-## ✨ Funcionalidades Principais
+---
 
-### 📊 Dashboard
-- Visão geral das métricas principais em tempo real
-- Receita total, vendas do mês, produtos vendidos
-- Transações recentes com resumo financeiro
-- Cards com estatísticas atualizadas automaticamente
-- Indicadores de performance e tendências
-
-### 💳 Gestão de Transações
-- Gestão completa de receitas e despesas
-- Categorização automática de movimentações
-- Histórico detalhado de todas as transações
-- Resumo financeiro (receitas, despesas, saldo)
-- Filtros por data, tipo e categoria
-- Exportação e importação de dados em Excel
-
-### 📦 Gerenciamento de Produtos
-- Catálogo completo de velas e produtos
-- Controle de estoque em tempo real
-- Cálculo automático de margens de lucro
-- Histórico de vendas por produto
-- Gestão de categorias
-- Controle de preços e custos
-
-### 📈 Relatórios e Análises
-- Análise de desempenho mensal
-- Produtos mais vendidos
-- Margem de lucro por período
-- Gráficos interativos de receitas e despesas
-- Exportação de dados em múltiplos formatos
-- Visualizações de tendências financeiras
-
-### 📥 Importação e Exportação
-- Importação de dados via arquivos Excel (.xlsx)
-- Exportação de transações e produtos
-- Modelos de planilhas pré-formatados
-- Validação automática de dados
-- Processamento em lote
-
-## 🛠️ Stack Tecnológica
+## Stack Tecnológica
 
 ### Frontend
-- **React 18** com TypeScript
-- **Vite** para build e desenvolvimento (super rápido e leve)
-- **Tailwind CSS** para estilização
-- **Lucide React** para ícones
-- **Recharts** para gráficos e visualizações
-- **date-fns** para formatação de datas
+- **React 18** + TypeScript
+- **Vite 7** — build e desenvolvimento
+- **Tailwind CSS** — estilização
+- **Recharts** — gráficos e visualizações
+- **Lucide React** — ícones
+- **date-fns** — formatação de datas
+- **jsPDF** + **html2canvas** — exportação de PDFs
+- **axios** — cliente HTTP
+- **browser-image-compression** + **react-easy-crop** — upload e recorte de imagens
 
 ### Backend
-- **Node.js** com Express
-- **JSON** como banco de dados (arquivos locais)
-- **Multer** para upload de arquivos
-- **XLSX** para processamento de planilhas Excel
-- **CORS** habilitado para comunicação frontend/backend
+- **Node.js 18+** + Express
+- **PostgreSQL** — banco de dados relacional
+- **bcryptjs** — hash de senhas
+- **jsonwebtoken** — autenticação JWT com refresh tokens
+- **Multer** — upload de arquivos
+- **SendGrid** — envio de e-mails (alertas de segurança e recuperação de senha)
+- **express-validator** — validação de entradas
+- **geoip-lite** — geolocalização de IPs
+- **ua-parser-js** — identificação de dispositivos por user agent
+- **helmet** — headers de segurança HTTP
+- **express-mongo-sanitize** + **xss-clean** + **hpp** — sanitização e proteção contra injeções
 
 ### Infraestrutura
-- Arquitetura cliente-servidor
-- API RESTful
-- Armazenamento local de dados
-- Suporte a upload de arquivos
+- **Nginx** — servidor web e proxy reverso
+- **PM2** — gerenciamento de processos Node.js
+- **Let's Encrypt** — certificado SSL
+- **VPS Hostinger** — hospedagem
 
-## 📋 Pré-requisitos
+---
+
+## Segurança (Score 9.9/10)
+
+- Autenticação JWT com refresh tokens (access: 15min, refresh: 7 dias)
+- Criptografia AES-256-GCM para dados sensíveis (CPF, telefone, email, endereço)
+- Rate limiting por endpoint, CORS, Helmet, CSP com nonces
+- Validação de CPF/CNPJ e sanitização de todos os inputs
+- Sistema de auditoria completo com rotação automática de logs
+- Detecção de anomalias com ML em tempo real (comportamento suspeito por usuário)
+- Alertas automáticos via SendGrid (brute force, múltiplos IPs, roubo de token, etc.)
+- Sessões ativas com controle por dispositivo, geolocalização e logout remoto
+- Gerador de senhas seguras integrado
+
+---
+
+## Pré-requisitos
 
 - Node.js 18+
-- npm ou yarn
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
+- PostgreSQL 14+
+- npm
 
-## 🚀 Instalação
+---
 
-### 1. Clone o repositório
+## Instalação (Desenvolvimento)
 
 ```bash
+# 1. Clone o repositório
 git clone https://github.com/seu-usuario/alya.git
 cd alya
-```
 
-### 2. Instale as dependências
-
-```bash
-# Dependências do frontend
+# 2. Instale dependências
 npm install
+cd server && npm install && cd ..
 
-# Dependências do backend
-cd server
-npm install
-cd ..
-```
+# 3. Configure o banco de dados
+psql -U seuusuario -d alya -h localhost -f server/migrations/create-audit-logs-table.sql
+psql -U seuusuario -d alya -h localhost -f server/migrations/002-add-user-invites.sql
+psql -U seuusuario -d alya -h localhost -f server/migrations/add-password-reset-tokens.sql
+psql -U seuusuario -d alya -h localhost -f server/migrations/003-create-refresh-tokens.sql
+psql -U seuusuario -d alya -h localhost -f server/migrations/004-add-encrypted-fields.sql
+psql -U seuusuario -d alya -h localhost -f server/migrations/005-create-active-sessions.sql
 
-### 3. Configure o servidor backend
+# 4. Configure as variáveis de ambiente
+cp server/.env.example server/.env
+# Edite server/.env com suas credenciais
 
-O servidor backend está configurado para rodar na porta `8001` por padrão. Você pode alterar isso no arquivo `server/server.js` se necessário.
-
-### 4. Inicie o servidor
-
-**Desenvolvimento:**
-
-```bash
+# 5. Inicie os servidores
 # Terminal 1 - Backend
-cd server
-npm start
-# ou para desenvolvimento com auto-reload
-npm run dev
+cd server && npm start
 
 # Terminal 2 - Frontend
 npm run dev
 ```
 
-**Produção:**
+Frontend: `http://localhost:8000`
+Backend: `http://localhost:8001`
 
-```bash
-# Build do frontend
-npm run build
+Para detalhes completos de configuração, veja [docs/02 - CONFIGURACAO-AMBIENTE-DEV.md](docs/02%20-%20CONFIGURACAO-AMBIENTE-DEV.md).
 
-# Iniciar servidor backend
-cd server
-npm start
-```
+---
 
-O frontend estará rodando em `http://localhost:5173` (Vite padrão)
-O backend estará rodando em `http://localhost:8001`
-
-## 🏗️ Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 alya/
-├── src/                    # Aplicação React
-│   ├── components/         # Componentes React
-│   │   ├── Dashboard.tsx   # Dashboard principal
-│   │   ├── Transactions.tsx # Gestão de transações
-│   │   ├── Products.tsx    # Catálogo de produtos
-│   │   ├── Reports.tsx     # Relatórios e análises
-│   │   ├── modals/         # Modais de formulários
-│   │   └── CustomDatePicker.tsx # Seletor de datas
-│   ├── contexts/           # Contextos React
-│   │   ├── ProductContext.tsx
-│   │   └── TransactionContext.tsx
-│   ├── lib/                # Utilitários
-│   │   └── database.ts     # Funções de banco de dados
-│   ├── types/              # Tipos TypeScript
-│   │   └── index.ts
-│   ├── App.tsx             # Componente principal
-│   ├── main.tsx            # Entry point
-│   └── index.css           # Estilos globais
-├── server/                 # Backend API
-│   ├── database/           # Arquivos JSON de dados
-│   │   ├── products.json
-│   │   └── transactions.json
-│   ├── public/             # Modelos de planilhas
-│   │   ├── modelo-produtos.xlsx
-│   │   └── modelo-transacoes.xlsx
-│   ├── uploads/            # Arquivos enviados
-│   ├── database.js         # Classe de gerenciamento de dados
-│   ├── server.js           # Servidor Express principal
-│   └── package.json        # Dependências do backend
-├── public/                 # Arquivos estáticos
-│   ├── alya-logo.png
-│   └── favicon.ico
-├── package.json            # Dependências do frontend
-├── vite.config.ts          # Configuração do Vite
-├── tailwind.config.js      # Configuração do Tailwind
-└── tsconfig.json           # Configuração do TypeScript
+├── src/                        # Aplicação React (frontend)
+│   ├── components/             # Componentes por módulo
+│   │   ├── admin/              # Painel administrativo
+│   │   ├── modals/             # Modais (perfil, senha, usuários, etc.)
+│   │   ├── Dashboard.tsx
+│   │   ├── Transactions.tsx
+│   │   ├── Products.tsx
+│   │   ├── Clients.tsx
+│   │   ├── DRE.tsx
+│   │   ├── Projection.tsx
+│   │   └── ...
+│   ├── contexts/               # Contextos React (estado global)
+│   ├── config/                 # Configurações (API, etc.)
+│   └── types/                  # Tipos TypeScript
+├── server/                     # Backend Node.js
+│   ├── migrations/             # Scripts SQL de migração
+│   ├── scripts/                # Scripts utilitários (reset senha, criptografia, etc.)
+│   ├── utils/                  # Utilitários (anomaly detection, alerts, encryption)
+│   ├── middleware/             # Middlewares Express
+│   └── server.js               # Servidor principal
+├── security/                   # Módulos e documentação de segurança
+│   ├── alerts/
+│   ├── anomaly-detection/
+│   ├── csp-nonces/
+│   ├── encryption/
+│   ├── owasp-zap/
+│   ├── snyk-sonar/
+│   └── waf/
+├── docs/                       # Documentação completa
+│   ├── 00 - COMECE POR AQUI.md
+│   ├── 01 - GUIA-DE-DEPLOY-PRODUCAO.md
+│   └── ...
+└── openspec/                   # Especificações de funcionalidades
 ```
 
-## 🔌 API Endpoints Principais
+---
 
-### Transações
-- `GET /api/transactions` - Obter todas as transações
-- `POST /api/transactions` - Criar nova transação
-- `PUT /api/transactions/:id` - Atualizar transação
-- `DELETE /api/transactions/:id` - Deletar transação
-- `DELETE /api/transactions` - Deletar múltiplas transações
+## Scripts Úteis
 
-### Produtos
-- `GET /api/products` - Obter todos os produtos
-- `POST /api/products` - Criar novo produto
-- `PUT /api/products/:id` - Atualizar produto
-- `DELETE /api/products/:id` - Deletar produto
+```bash
+# Backend
+npm run archive-logs:90d      # Arquivar logs de auditoria > 90 dias
+npm run archive-logs:dry-run  # Simular arquivamento sem alterações
+node scripts/generate-encryption-key.js  # Gerar chaves de criptografia
+node scripts/reset-admin-password.js     # Resetar senha do admin
+```
 
-### Importação e Exportação
-- `POST /api/import` - Importar dados de arquivo Excel
-- `POST /api/export` - Exportar dados como Excel
-- `GET /api/test` - Testar se a API está funcionando
+---
 
-## 🎨 Design
+## Documentação
 
-- Interface moderna e limpa
-- Totalmente responsiva (mobile-first)
-- Paleta de cores profissional
-- UX otimizada para gestão financeira
-- Tema claro/escuro (se implementado)
-- Animações suaves e transições
+Toda a documentação está em [`docs/`](docs/). Comece por [`docs/00 - COMECE POR AQUI.md`](docs/00%20-%20COMECE%20POR%20AQUI.md).
 
-## 🔒 Segurança
+---
 
-- Validação de dados no frontend e backend
-- Sanitização de inputs
-- Validação de tipos de arquivo no upload
-- Limites de tamanho de arquivo (5MB)
-- CORS configurado adequadamente
-- Proteção contra injeção de dados maliciosos
+## Deploy em Produção
 
-## 📄 Licença
+Veja o guia completo em [`docs/01 - GUIA-DE-DEPLOY-PRODUCAO.md`](docs/01%20-%20GUIA-DE-DEPLOY-PRODUCAO.md).
 
-Este projeto está licenciado sob a **Licença MIT - Uso Educacional e Não Comercial**.
+---
 
-### ✅ O que você PODE fazer:
-- ✅ Usar para fins educacionais e de aprendizado
-- ✅ Estudar o código e arquitetura
-- ✅ Usar como referência ou inspiração para criar projetos **novos e originais**
-- ✅ Aplicar conceitos e padrões aprendidos em seus próprios projetos comerciais (desde que sejam criações originais)
+## Licença
 
-### ❌ O que você NÃO PODE fazer:
-- ❌ Reproduzir, copiar ou distribuir este software para fins comerciais
-- ❌ Fazer modificações mínimas e usar comercialmente
-- ❌ Vender ou licenciar este software ou partes dele
-- ❌ Criar produtos comerciais que sejam substancialmente similares
+Licença MIT — Uso Educacional e Não Comercial.
 
-**Para uso comercial deste código, entre em contato para licenciamento:**
-📧 Email: contato@fercarvalho.com
+- ✅ Uso educacional e de aprendizado
+- ✅ Referência e inspiração para projetos originais
+- ❌ Uso comercial sem autorização
+- ❌ Cópia ou distribuição comercial
 
-Veja o arquivo [LICENSE](LICENSE) para os termos completos da licença.
-
-## 🤝 Contribuindo
-
-Este é um projeto pessoal, mas sugestões e feedback são sempre bem-vindos!
-
-## 📝 Changelog
-
-### Versão Atual
-- ✅ Sistema completo de gestão de transações
-- ✅ Gerenciamento de produtos com controle de estoque
-- ✅ Dashboard com métricas em tempo real
-- ✅ Relatórios e análises com gráficos
-- ✅ Importação e exportação de dados Excel
-- ✅ Interface responsiva e moderna
-- ✅ API RESTful completa
-- ✅ Validação de dados e tratamento de erros
-- ✅ Sistema de categorias
-- ✅ Cálculo automático de margens
-
-### Próximas Funcionalidades
-- [ ] Integração com banco de dados relacional (PostgreSQL)
-- [ ] Autenticação de usuários
-- [ ] Exportação de relatórios em PDF
-- [ ] Gráficos mais interativos
-- [ ] Notificações de estoque baixo
-- [ ] API para integração com marketplaces
-- [ ] Sistema de backup automático
-- [ ] Histórico de alterações
-- [ ] Múltiplos usuários e permissões
+Para uso comercial: contato@fercarvalho.com
 
 ---
 
