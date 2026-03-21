@@ -31,15 +31,17 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
 
   const [formData, setFormData] = useState({
     username: '',
-    role: 'user' as 'superadmin' | 'user' | 'guest',
+    role: 'user' as 'superadmin' | 'admin' | 'user' | 'guest',
     isActive: true,
     modules: [] as string[]
   });
 
   // Definir módulos padrão baseado na role
-  const getDefaultModules = (role: 'superadmin' | 'user' | 'guest'): string[] => {
+  const getDefaultModules = (role: 'superadmin' | 'admin' | 'user' | 'guest'): string[] => {
     switch (role) {
       case 'superadmin':
+        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin', 'activeSessions', 'anomalies', 'securityAlerts'];
+      case 'admin':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin'];
       case 'user':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
@@ -173,6 +175,7 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
 
   const roleOptions = [
     { value: 'superadmin', label: 'Super Administrador', description: 'Acesso total ao sistema', color: 'red' },
+    { value: 'admin', label: 'Administrador', description: 'Acesso admin sem segurança avançada', color: 'orange' },
     { value: 'user', label: 'Usuário', description: 'Acesso completo sem admin', color: 'blue' },
     { value: 'guest', label: 'Convidado', description: 'Acesso somente leitura', color: 'gray' }
   ];

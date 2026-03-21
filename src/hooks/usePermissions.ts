@@ -37,6 +37,7 @@ export const usePermissions = (module?: string): Permissions => {
 
   switch (user.role) {
     case 'superadmin':
+    case 'admin':
       return {
         canCreate: true,
         canEdit: true,
@@ -45,7 +46,7 @@ export const usePermissions = (module?: string): Permissions => {
         canImport: true,
         canExport: true
       };
-    
+
     case 'user':
       return {
         canCreate: true,

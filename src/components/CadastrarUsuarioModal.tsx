@@ -769,6 +769,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
               >
                 <option value="user">Usuário</option>
                 <option value="superadmin">Super Administrador</option>
+                <option value="admin">Administrador</option>
                 <option value="guest">Convidado</option>
               </select>
             </div>

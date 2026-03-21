@@ -670,9 +670,18 @@ async function logActivity(
 
 // Middleware para verificar se é admin
 const requireAdmin = (req, res, next) => {
-  if (req.user.role !== "superadmin") {
+  if (req.user.role !== "superadmin" && req.user.role !== "admin") {
     return res.status(403).json({
       error: "Acesso negado. Apenas administradores podem acessar esta rota.",
+    });
+  }
+  next();
+};
+
+const requireSuperAdmin = (req, res, next) => {
+  if (req.user.role !== "superadmin") {
+    return res.status(403).json({
+      error: "Acesso negado. Apenas super administradores podem acessar esta rota.",
     });
   }
   next();
@@ -689,14 +698,14 @@ const getDefaultModulesForRole = (role) => {
   switch (role) {
     case "superadmin":
       return [
-        "dashboard",
-        "transactions",
-        "products",
-        "clients",
-        "reports",
-        "metas",
-        "dre",
-        "admin",
+        "dashboard", "transactions", "products", "clients",
+        "reports", "metas", "dre", "projecao",
+        "admin", "activeSessions", "anomalies", "securityAlerts",
+      ];
+    case "admin":
+      return [
+        "dashboard", "transactions", "products", "clients",
+        "reports", "metas", "dre", "projecao", "admin",
       ];
     case "user":
       return [
@@ -4000,7 +4009,7 @@ app.get("/api/modules", authenticateToken, async (req, res) => {
   try {
     const modules = await db.getAllSystemModules();
     // Retornar apenas módulos ativos para usuários não-admin
-    if (req.user.role !== "superadmin") {
+    if (req.user.role !== "superadmin" && req.user.role !== "admin") {
       const activeModules = modules.filter((m) => m.isActive);
       return res.json({ success: true, data: activeModules });
     }
@@ -4048,7 +4057,7 @@ app.get(
 app.post(
   "/api/admin/modules",
   authenticateToken,
-  requireAdmin,
+  requireSuperAdmin,
   async (req, res) => {
     try {
       const { name, key, icon, description, route, isActive } = req.body;
@@ -4090,7 +4099,7 @@ app.post(
 app.put(
   "/api/admin/modules/:id",
   authenticateToken,
-  requireAdmin,
+  requireSuperAdmin,
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -4120,7 +4129,7 @@ app.put(
 app.delete(
   "/api/admin/modules/:id",
   authenticateToken,
-  requireAdmin,
+  requireSuperAdmin,
   async (req, res) => {
     try {
       const { id } = req.params;

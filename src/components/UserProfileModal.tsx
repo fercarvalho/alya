@@ -111,6 +111,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
     switch (role) {
       case 'superadmin':
         return 'Super Administrador';
+      case 'admin':
+        return 'Administrador';
       case 'user':
         return 'Usuário';
       case 'guest':
