@@ -103,7 +103,27 @@ const UserManagement: React.FC = () => {
     return user.username;
   };
 
+  const getDefaultModulesForRole = (role: string): string[] => {
+    switch (role) {
+      case 'superadmin':
+        return modules.filter(m => m.isActive).map(m => m.key);
+      case 'admin':
+        return modules.filter(m => m.isActive && !['activeSessions', 'anomalies', 'securityAlerts'].includes(m.key)).map(m => m.key);
+      case 'user':
+        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
+      case 'guest':
+        return ['dashboard', 'metas', 'reports', 'dre'];
+      default:
+        return [];
+    }
+  };
+
   const handleUpdateUser = async (userId: string, updates: any) => {
+    // Ao trocar role, atualizar módulos automaticamente
+    if (updates.role) {
+      updates.modules = getDefaultModulesForRole(updates.role);
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         method: 'PUT',
@@ -401,23 +421,29 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-2 max-w-md">
-                      {modules.filter(m => m.isActive).map((mod) => (
-                        <button
-                          key={mod.id}
-                          onClick={() => toggleModuleForUser(u.id, mod.key)}
-                          className={`px-2 py-1 text-xs rounded transition-colors ${(u.modules || []).includes(mod.key)
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                        >
-                          {mod.name}
-                          {(u.modules || []).includes(mod.key) ? (
-                            <Eye className="inline ml-1 h-3 w-3" />
-                          ) : (
-                            <EyeOff className="inline ml-1 h-3 w-3" />
-                          )}
-                        </button>
-                      ))}
+                      {modules.filter(m => m.isActive).map((mod) => {
+                        const effectiveModules = u.role === 'superadmin'
+                          ? modules.filter(m => m.isActive).map(m => m.key)
+                          : (u.modules || []);
+                        const hasAccess = effectiveModules.includes(mod.key);
+                        return (
+                          <button
+                            key={mod.id}
+                            onClick={() => toggleModuleForUser(u.id, mod.key)}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${hasAccess
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                          >
+                            {mod.name}
+                            {hasAccess ? (
+                              <Eye className="inline ml-1 h-3 w-3" />
+                            ) : (
+                              <EyeOff className="inline ml-1 h-3 w-3" />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
