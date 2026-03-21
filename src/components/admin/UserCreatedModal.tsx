@@ -49,7 +49,7 @@ const UserCreatedModal: React.FC<UserCreatedModalProps> = ({
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'superadmin': return 'Administrador';
+      case 'superadmin': return 'Super Administrador';
       case 'user': return 'Usuário';
       case 'guest': return 'Convidado';
       default: return role;

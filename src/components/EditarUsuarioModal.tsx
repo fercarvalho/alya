@@ -438,7 +438,7 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                 disabled={isSubmitting}
               >
                 <option value="user">Usuário</option>
-                <option value="superadmin">Administrador</option>
+                <option value="superadmin">Super Administrador</option>
                 <option value="guest">Convidado</option>
               </select>
             </div>

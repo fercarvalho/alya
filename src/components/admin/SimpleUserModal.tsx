@@ -172,7 +172,7 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
   if (!isOpen) return null;
 
   const roleOptions = [
-    { value: 'superadmin', label: 'Administrador', description: 'Acesso total ao sistema', color: 'red' },
+    { value: 'superadmin', label: 'Super Administrador', description: 'Acesso total ao sistema', color: 'red' },
     { value: 'user', label: 'Usuário', description: 'Acesso completo sem admin', color: 'blue' },
     { value: 'guest', label: 'Convidado', description: 'Acesso somente leitura', color: 'gray' }
   ];
