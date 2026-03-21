@@ -6921,7 +6921,8 @@ const AppContent: React.FC = () => {
             <div className="flex items-center overflow-x-auto scrollbar-hide">
               <div className="flex items-center space-x-2 min-w-max">
                 {(() => {
-                  // const visibleModules = getVisibleModules(); // Reservado para uso futuro
+                  const visibleModules = getVisibleModules();
+                  const activeModuleKeys = new Set(visibleModules.map(m => m.key));
                   const allTabs = [
                     {
                       id: "dashboard",
@@ -6966,55 +6967,21 @@ const AppContent: React.FC = () => {
                       key: "clients",
                     },
                     { id: "dre", name: "DRE", icon: BarChart3, key: "dre" },
+                    { id: "activeSessions", name: "Sessões", icon: Lock, key: "activeSessions" },
+                    { id: "anomalies", name: "Anomalias", icon: Activity, key: "anomalies" },
+                    { id: "securityAlerts", name: "Alertas", icon: Bell, key: "securityAlerts" },
+                    { id: "admin", name: "Admin", icon: Shield, key: "admin" },
                   ];
 
-                  // Filtrar abas baseado nos módulos visíveis
+                  // Filtrar abas: módulo deve estar ativo no sistema E visível para o usuário
                   const filteredTabs = allTabs.filter((tab) => {
-                    // Se não há módulos definidos ou usuário é admin, mostrar todos
-                    if (
-                      !user?.modules ||
-                      user.modules.length === 0 ||
-                      user.role === "superadmin"
-                    ) {
-                      return true;
+                    // anomalias, alertas e admin: apenas superadmin, mas ainda respeita isActive
+                    if (["anomalies", "securityAlerts", "admin"].includes(tab.key)) {
+                      return user?.role === "superadmin" && activeModuleKeys.has(tab.key);
                     }
-                    // Caso contrário, mostrar apenas módulos na lista do usuário
-                    return user.modules.includes(tab.key);
+                    // Todos os outros: deve estar na lista de módulos ativos e visíveis
+                    return activeModuleKeys.has(tab.key);
                   });
-
-                  // Adicionar aba Admin se o usuário for admin
-                  if (user?.role === "superadmin") {
-                    filteredTabs.push({
-                      id: "admin",
-                      name: "Admin",
-                      icon: Shield,
-                      key: "admin",
-                    });
-                  }
-
-                  // Adicionar aba de Sessões Ativas (todos os usuários)
-                  filteredTabs.push({
-                    id: "activeSessions",
-                    name: "Sessões",
-                    icon: Lock,
-                    key: "activeSessions",
-                  });
-
-                  // Adicionar abas de Segurança se o usuário for admin
-                  if (user?.role === "superadmin") {
-                    filteredTabs.push({
-                      id: "anomalies",
-                      name: "Anomalias",
-                      icon: Activity,
-                      key: "anomalies",
-                    });
-                    filteredTabs.push({
-                      id: "securityAlerts",
-                      name: "Alertas",
-                      icon: Bell,
-                      key: "securityAlerts",
-                    });
-                  }
 
                   return filteredTabs.map((tab) => {
                     const Icon = tab.icon;

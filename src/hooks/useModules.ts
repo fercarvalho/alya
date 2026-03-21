@@ -29,8 +29,8 @@ export const useModules = () => {
       }
       
       // Usar rota pública para módulos (todos os usuários precisam ver módulos)
-      const endpoint = user?.role === 'admin' 
-        ? `${API_BASE_URL}/admin/modules` 
+      const endpoint = user?.role === 'superadmin'
+        ? `${API_BASE_URL}/admin/modules`
         : `${API_BASE_URL}/modules`;
       const response = await fetch(endpoint, { headers });
       const result = await response.json();
@@ -53,8 +53,8 @@ export const useModules = () => {
     
     // Retornar apenas módulos visíveis para o usuário e que estão ativos
     return modules.filter(m => 
-      m.isActive && 
-      (user.modules?.includes(m.key) || user.role === 'admin')
+      m.isActive &&
+      (user.modules?.includes(m.key) || user.role === 'superadmin')
     );
   };
 

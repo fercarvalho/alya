@@ -125,6 +125,9 @@ class Database extends FileDatabase {
           ['DRE', 'dre', 'BarChart3'],
           ['Projeção', 'projecao', 'Calculator'],
           ['Administração', 'admin', 'Shield'],
+          ['Sessões Ativas', 'activeSessions', 'Lock'],
+          ['Anomalias', 'anomalies', 'Activity'],
+          ['Alertas de Segurança', 'securityAlerts', 'Bell'],
         ];
         for (const [name, key, icon] of mods) {
           const id = this.generateId();
