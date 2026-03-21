@@ -4009,8 +4009,7 @@ app.post(
 
       // Criar sessão temporária para o usuário impersonado (visível na aba de sessões)
       try {
-        const tempTokenId = `impersonate-${Date.now()}`;
-        await sessionManager.createSession(targetUser.username, tempTokenId, req);
+        await sessionManager.createSession(targetUser.username, null, req);
       } catch (sessionError) {
         // Não bloqueia a impersonação se falhar
       }
