@@ -46,7 +46,7 @@ async function resetAdminPassword() {
         `INSERT INTO users (username, password, email, role, created_at)
          VALUES ($1, $2, $3, $4, NOW())
          RETURNING id, username, email, role`,
-        ['admin', hashedPassword, 'admin@alya.com', 'admin']
+        ['admin', hashedPassword, 'admin@alya.com', 'superadmin']
       );
 
       console.log('✅ Usuário admin criado com sucesso!');

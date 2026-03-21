@@ -72,7 +72,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
 
   const getDefaultModulesForRole = (role: string): string[] => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
       case 'user':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
@@ -768,7 +768,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
                 disabled={isSubmitting}
               >
                 <option value="user">Usuário</option>
-                <option value="admin">Administrador</option>
+                <option value="superadmin">Administrador</option>
                 <option value="guest">Convidado</option>
               </select>
             </div>

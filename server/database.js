@@ -70,7 +70,7 @@ class Database {
           id: this.generateId(),
           username: 'admin',
           password: placeholderPassword,
-          role: 'admin',
+          role: 'superadmin',
           modules: ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin'],
           isActive: true,
           lastLogin: null, // null indica que nunca fez login

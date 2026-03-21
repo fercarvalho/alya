@@ -100,7 +100,7 @@ class Database extends FileDatabase {
       if (parseInt(userRes.rows[0].count, 10) === 0) {
         const ph = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
         const defaults = [
-          ['admin', ph, 'admin', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin']],
+          ['admin', ph, 'superadmin', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin']],
           ['user', ph, 'user', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre']],
           ['guest', ph, 'guest', ['dashboard', 'metas', 'reports', 'dre']],
         ];

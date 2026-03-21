@@ -60,7 +60,7 @@ const UserManagement: React.FC = () => {
   // Função para obter módulos padrão por role
   const getDefaultModulesForRole = (role: string): string[] => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
       case 'user':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
@@ -330,7 +330,7 @@ const UserManagement: React.FC = () => {
           className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
           <option value="all">Todas as funções</option>
-          <option value="admin">Admin</option>
+          <option value="superadmin">Admin</option>
           <option value="user">Usuário</option>
           <option value="guest">Convidado</option>
         </select>
@@ -392,7 +392,7 @@ const UserManagement: React.FC = () => {
                       onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
                       className="text-sm border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
-                      <option value="admin">Admin</option>
+                      <option value="superadmin">Admin</option>
                       <option value="user">Usuário</option>
                       <option value="guest">Convidado</option>
                     </select>

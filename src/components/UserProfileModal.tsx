@@ -96,7 +96,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'user':
         return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -109,7 +109,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return 'Administrador';
       case 'user':
         return 'Usuário';

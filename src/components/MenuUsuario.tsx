@@ -83,7 +83,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return 'Administrador';
       case 'user':
         return 'Usuário';

@@ -88,7 +88,7 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
 
   const getDefaultModulesForRole = (role: string): string[] => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
       case 'user':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
@@ -438,7 +438,7 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                 disabled={isSubmitting}
               >
                 <option value="user">Usuário</option>
-                <option value="admin">Administrador</option>
+                <option value="superadmin">Administrador</option>
                 <option value="guest">Convidado</option>
               </select>
             </div>

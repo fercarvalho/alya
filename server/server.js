@@ -670,7 +670,7 @@ async function logActivity(
 
 // Middleware para verificar se é admin
 const requireAdmin = (req, res, next) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== "superadmin") {
     return res.status(403).json({
       error: "Acesso negado. Apenas administradores podem acessar esta rota.",
     });
@@ -687,7 +687,7 @@ const generateRandomPassword = () => {
 // Função auxiliar para obter módulos padrão por role
 const getDefaultModulesForRole = (role) => {
   switch (role) {
-    case "admin":
+    case "superadmin":
       return [
         "dashboard",
         "transactions",
@@ -4000,7 +4000,7 @@ app.get("/api/modules", authenticateToken, async (req, res) => {
   try {
     const modules = await db.getAllSystemModules();
     // Retornar apenas módulos ativos para usuários não-admin
-    if (req.user.role !== "admin") {
+    if (req.user.role !== "superadmin") {
       const activeModules = modules.filter((m) => m.isActive);
       return res.json({ success: true, data: activeModules });
     }

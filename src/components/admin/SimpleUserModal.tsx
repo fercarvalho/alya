@@ -37,9 +37,9 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
   });
 
   // Definir módulos padrão baseado na role
-  const getDefaultModules = (role: 'admin' | 'user' | 'guest'): string[] => {
+  const getDefaultModules = (role: 'superadmin' | 'user' | 'guest'): string[] => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin'];
       case 'user':
         return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
@@ -172,7 +172,7 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
   if (!isOpen) return null;
 
   const roleOptions = [
-    { value: 'admin', label: 'Administrador', description: 'Acesso total ao sistema', color: 'red' },
+    { value: 'superadmin', label: 'Administrador', description: 'Acesso total ao sistema', color: 'red' },
     { value: 'user', label: 'Usuário', description: 'Acesso completo sem admin', color: 'blue' },
     { value: 'guest', label: 'Convidado', description: 'Acesso somente leitura', color: 'gray' }
   ];

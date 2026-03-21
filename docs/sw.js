@@ -535,7 +535,7 @@ async function handleProjection(req) {
 
   // POST /api/projection/sync (admin-only no backend)
   if (path === '/api/projection/sync' && req.method === 'POST') {
-    if (DEMO_USER.role !== 'admin') {
+    if (DEMO_USER.role !== 'superadmin') {
       return jsonResponse({ success: false, error: 'Acesso negado. Apenas administradores podem acessar esta rota.' }, 403);
     }
     const snap = syncProjectionDataDemo();
@@ -570,7 +570,7 @@ async function handleProjection(req) {
   }
   if (path === '/api/projection/config' && req.method === 'PUT') {
     // admin-only no backend
-    if (DEMO_USER.role !== 'admin') {
+    if (DEMO_USER.role !== 'superadmin') {
       return jsonResponse({ success: false, error: 'Acesso negado. Apenas administradores podem acessar esta rota.' }, 403);
     }
     try {
@@ -871,7 +871,7 @@ async function handleAdmin(req) {
   }
 
   // Usuário demo não é admin, então retornar 403 para rotas admin
-  if (DEMO_USER.role !== 'admin') {
+  if (DEMO_USER.role !== 'superadmin') {
     return jsonResponse({ success: false, error: 'Acesso negado. Apenas administradores podem acessar esta rota.' }, 403);
   }
 
@@ -1068,7 +1068,7 @@ self.addEventListener('fetch', (event) => {
 
         // Limpar tudo da projeção (admin-only no backend)
         if (normalizedPath === '/api/clear-all-projection-data') {
-          if (DEMO_USER.role !== 'admin') {
+          if (DEMO_USER.role !== 'superadmin') {
             return jsonResponse({ success: false, error: 'Acesso negado. Apenas administradores podem acessar esta rota.' }, 403);
           }
           const cfg = MOCK_DB.projectionConfig || { revenueStreams: [], mktComponents: [] };
