@@ -3925,6 +3925,17 @@ app.put(
       const { id } = req.params;
       const updates = { ...req.body };
 
+      // Módulos exclusivos do superadmin — admin não pode conceder nem revogar
+      const superadminOnlyModules = ["activeSessions", "anomalies", "securityAlerts"];
+      if (req.user.role === "admin" && updates.modules) {
+        const targetUser = await db.getUserById(id);
+        const currentModules = targetUser?.modules || [];
+        // Preservar o estado atual dos módulos restritos, ignorando qualquer mudança
+        const restricted = currentModules.filter(m => superadminOnlyModules.includes(m));
+        const nonRestricted = updates.modules.filter(m => !superadminOnlyModules.includes(m));
+        updates.modules = [...nonRestricted, ...restricted];
+      }
+
       // Se houver senha, hash ela
       if (updates.password) {
         if (updates.password.length < 6) {

@@ -408,6 +408,8 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-2 max-w-md">
                       {modules.filter(m => m.isActive).map((mod) => {
+                        const superadminOnly = ['activeSessions', 'anomalies', 'securityAlerts'].includes(mod.key);
+                        const isRestricted = superadminOnly && currentUser?.role !== 'superadmin';
                         const effectiveModules = u.role === 'superadmin'
                           ? modules.filter(m => m.isActive).map(m => m.key)
                           : (u.modules || []);
@@ -415,11 +417,15 @@ const UserManagement: React.FC = () => {
                         return (
                           <button
                             key={mod.id}
-                            onClick={() => toggleModuleForUser(u.id, mod.key)}
-                            className={`px-2 py-1 text-xs rounded transition-colors ${hasAccess
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
+                            onClick={() => !isRestricted && toggleModuleForUser(u.id, mod.key)}
+                            title={isRestricted ? 'Apenas o super administrador pode gerenciar este módulo' : undefined}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              isRestricted
+                                ? 'opacity-40 cursor-not-allowed ' + (hasAccess ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-700')
+                                : hasAccess
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
                           >
                             {mod.name}
                             {hasAccess ? (

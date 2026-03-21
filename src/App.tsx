@@ -6975,15 +6975,11 @@ const AppContent: React.FC = () => {
 
                   // Filtrar abas: módulo deve estar ativo no sistema E visível para o usuário
                   const filteredTabs = allTabs.filter((tab) => {
-                    // anomalias, alertas e sessões: apenas superadmin
-                    if (["anomalies", "securityAlerts", "activeSessions"].includes(tab.key)) {
-                      return user?.role === "superadmin" && activeModuleKeys.has(tab.key);
-                    }
-                    // painel admin: superadmin e admin
+                    // painel admin: requer role admin ou superadmin além do módulo
                     if (tab.key === "admin") {
                       return (user?.role === "superadmin" || user?.role === "admin") && activeModuleKeys.has(tab.key);
                     }
-                    // Todos os outros: deve estar na lista de módulos ativos e visíveis
+                    // Todos os outros (incluindo sessões, anomalias, alertas): basta ter o módulo ativo
                     return activeModuleKeys.has(tab.key);
                   });
 
