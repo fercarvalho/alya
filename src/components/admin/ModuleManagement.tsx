@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Plus, Edit, Trash2, Save, X, Shield, Package
+  Plus, Edit, Trash2, Save, X, Shield, Package, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { SystemModule, useModules } from '../../hooks/useModules';
@@ -12,6 +12,8 @@ const ModuleManagement: React.FC = () => {
   // const [isLoading, setIsLoading] = useState(false); // Reservado para uso futuro
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [editingModule, setEditingModule] = useState<SystemModule | null>(null);
+
+  const [showAdminBlockModal, setShowAdminBlockModal] = useState(false);
 
   const [newModule, setNewModule] = useState({
     name: '',
@@ -215,7 +217,13 @@ const ModuleManagement: React.FC = () => {
 
             <div className="flex gap-2">
               <button
-                onClick={() => handleUpdateModule(module.id, { isActive: !module.isActive })}
+                onClick={() => {
+                  if (module.key === 'admin' && module.isActive) {
+                    setShowAdminBlockModal(true);
+                    return;
+                  }
+                  handleUpdateModule(module.id, { isActive: !module.isActive });
+                }}
                 className="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
               >
                 {module.isActive ? 'Desativar' : 'Ativar'}
@@ -240,6 +248,37 @@ const ModuleManagement: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Modal de bloqueio: módulo admin não pode ser desativado */}
+      {showAdminBlockModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-red-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Ação bloqueada</h3>
+                <p className="text-sm text-gray-500">Módulo protegido pelo sistema</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 mb-2">
+              O módulo <span className="font-semibold">Administração</span> não pode ser desativado.
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              Desativá-lo removeria o acesso ao painel de administração para todos os administradores, impedindo o gerenciamento do sistema.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowAdminBlockModal(false)}
+                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium transition-colors"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Criar/Editar Módulo */}
       {showModuleModal && (
