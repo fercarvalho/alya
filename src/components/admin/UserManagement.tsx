@@ -399,7 +399,7 @@ const UserManagement: React.FC = () => {
                       onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
                       className="text-sm border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     >
-                      <option value="superadmin">Super Admin</option>
+                      {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
                       <option value="admin">Admin</option>
                       <option value="user">Usuário</option>
                       <option value="guest">Convidado</option>

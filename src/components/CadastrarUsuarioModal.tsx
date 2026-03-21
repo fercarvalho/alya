@@ -22,7 +22,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
   onSuccess,
   onUserCreated
 }) => {
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -768,7 +768,7 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
                 disabled={isSubmitting}
               >
                 <option value="user">Usuário</option>
-                <option value="superadmin">Super Administrador</option>
+                {currentUser?.role === 'superadmin' && <option value="superadmin">Super Administrador</option>}
                 <option value="admin">Administrador</option>
                 <option value="guest">Convidado</option>
               </select>

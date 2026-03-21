@@ -3925,6 +3925,14 @@ app.put(
       const { id } = req.params;
       const updates = { ...req.body };
 
+      // Admin não pode atribuir role superadmin
+      if (req.user.role === "admin" && updates.role === "superadmin") {
+        return res.status(403).json({
+          success: false,
+          error: "Você não tem permissão para atribuir a role de super administrador.",
+        });
+      }
+
       // Módulos exclusivos do superadmin — admin não pode conceder nem revogar
       const superadminOnlyModules = ["activeSessions", "anomalies", "securityAlerts"];
       if (req.user.role === "admin" && updates.modules) {

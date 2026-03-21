@@ -24,7 +24,7 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
   onSuccess,
   availableModules
 }) => {
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -174,7 +174,7 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
   if (!isOpen) return null;
 
   const roleOptions = [
-    { value: 'superadmin', label: 'Super Administrador', description: 'Acesso total ao sistema', color: 'red' },
+    ...(currentUser?.role === 'superadmin' ? [{ value: 'superadmin', label: 'Super Administrador', description: 'Acesso total ao sistema', color: 'red' }] : []),
     { value: 'admin', label: 'Administrador', description: 'Acesso admin sem segurança avançada', color: 'orange' },
     { value: 'user', label: 'Usuário', description: 'Acesso completo sem admin', color: 'blue' },
     { value: 'guest', label: 'Convidado', description: 'Acesso somente leitura', color: 'gray' }
