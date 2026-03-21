@@ -42,9 +42,8 @@ jobs:
       - name: Setup database
         run: |
           cd server
-          psql -U alya_user -d alya_db -f migrations/001-create-users-table.sql
-          psql -U alya_user -d alya_db -f migrations/002-create-audit-logs.sql
-          psql -U alya_user -d alya_db -f migrations/003-create-refresh-tokens.sql
+          psql -U alya_user -d alya_db -f "migrations/001 - SCHEMA.sql"
+          psql -U alya_user -d alya_db -f "migrations/003 - SEGURANCA.sql"
         env:
           PGHOST: localhost
           PGPORT: 5432

@@ -89,17 +89,17 @@ ALERT_EMAIL_FROM=noreply@alya.com
 ### 4. Testar Alertas
 
 ```bash
-cd server
+cd /caminho/do/projeto/alya
 
 # Teste simples
-node scripts/test-alerts.js test
+node "scripts/server/03 - TESTAR-ALERTAS.js" suspicious-login
 
 # Todos os alertas
-node scripts/test-alerts.js all
+node "scripts/server/03 - TESTAR-ALERTAS.js" all
 
 # Alerta específico
-node scripts/test-alerts.js failed-logins
-node scripts/test-alerts.js token-theft
+node "scripts/server/03 - TESTAR-ALERTAS.js" brute-force
+node "scripts/server/03 - TESTAR-ALERTAS.js" token-theft
 ```
 
 **Output esperado:**
@@ -478,7 +478,7 @@ app.get('/api/admin/security/alerts', authenticateAdmin, async (req, res) => {
 - [ ] Configurar Slack webhook
 - [ ] Configurar SMTP email
 - [ ] Adicionar variáveis ao .env
-- [ ] Executar teste: `node scripts/test-alerts.js`
+- [ ] Executar teste: `node "scripts/server/03 - TESTAR-ALERTAS.js" all`
 - [ ] Integrar aos endpoints críticos
 - [ ] Iniciar monitoramento automático
 - [ ] Configurar dashboard de métricas (opcional)

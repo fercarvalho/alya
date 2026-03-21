@@ -92,13 +92,10 @@ cd alya
 npm install
 cd server && npm install && cd ..
 
-# 3. Configure o banco de dados
-psql -U seuusuario -d alya -h localhost -f server/migrations/create-audit-logs-table.sql
-psql -U seuusuario -d alya -h localhost -f server/migrations/002-add-user-invites.sql
-psql -U seuusuario -d alya -h localhost -f server/migrations/add-password-reset-tokens.sql
-psql -U seuusuario -d alya -h localhost -f server/migrations/003-create-refresh-tokens.sql
-psql -U seuusuario -d alya -h localhost -f server/migrations/004-add-encrypted-fields.sql
-psql -U seuusuario -d alya -h localhost -f server/migrations/005-create-active-sessions.sql
+# 3. Configure o banco de dados (execute na ordem)
+psql -U seuusuario -d alya -h localhost -f "server/migrations/001 - SCHEMA.sql"
+psql -U seuusuario -d alya -h localhost -f "server/migrations/002 - SCHEMA-PROJECAO.sql"
+psql -U seuusuario -d alya -h localhost -f "server/migrations/003 - SEGURANCA.sql"
 
 # 4. Configure as variáveis de ambiente
 cp server/.env.example server/.env
@@ -138,11 +135,17 @@ alya/
 │   ├── config/                 # Configurações (API, etc.)
 │   └── types/                  # Tipos TypeScript
 ├── server/                     # Backend Node.js
-│   ├── migrations/             # Scripts SQL de migração
-│   ├── scripts/                # Scripts utilitários (reset senha, criptografia, etc.)
+│   ├── migrations/             # Migrações SQL (001 a 003, executar em ordem)
 │   ├── utils/                  # Utilitários (anomaly detection, alerts, encryption)
 │   ├── middleware/             # Middlewares Express
 │   └── server.js               # Servidor principal
+├── scripts/                    # Scripts de administração e deploy
+│   ├── deploy/
+│   │   └── 01 - DEPLOY.sh      # Build de produção ou demo (--demo)
+│   └── server/
+│       ├── 01 - ADMIN.js       # Gera chaves e migra dados criptografados
+│       ├── 02 - RESET-SENHA-ADMIN.js
+│       └── 03 - TESTAR-ALERTAS.js
 ├── security/                   # Módulos e documentação de segurança
 │   ├── alerts/
 │   ├── anomaly-detection/
@@ -163,12 +166,23 @@ alya/
 ## Scripts Úteis
 
 ```bash
-# Backend
-npm run archive-logs:90d      # Arquivar logs de auditoria > 90 dias
-npm run archive-logs:dry-run  # Simular arquivamento sem alterações
-node scripts/generate-encryption-key.js  # Gerar chaves de criptografia
-node scripts/reset-admin-password.js     # Resetar senha do admin
+# Arquivamento de logs (rodar na pasta server/)
+npm run archive-logs:90d
+npm run archive-logs:dry-run
+
+# Administração (rodar na raiz do projeto)
+node "scripts/server/01 - ADMIN.js" --gen-key
+node "scripts/server/01 - ADMIN.js" --migrate-fields --dry-run
+node "scripts/server/01 - ADMIN.js" --migrate-fields
+node "scripts/server/02 - RESET-SENHA-ADMIN.js"
+node "scripts/server/03 - TESTAR-ALERTAS.js" all
+
+# Deploy
+bash "scripts/deploy/01 - DEPLOY.sh"          # produção
+bash "scripts/deploy/01 - DEPLOY.sh" --demo   # GitHub Pages
 ```
+
+Veja [scripts/server/README.md](scripts/server/README.md) para detalhes de cada script.
 
 ---
 

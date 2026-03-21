@@ -1092,9 +1092,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
     if (errorType.includes('migration')) {
       console.error(`   1. Execute as migrações pendentes:`);
       console.error(`      cd /var/www/alya/server/migrations`);
-      console.error(`      psql -U postgres -d alya -f 003-create-refresh-tokens.sql`);
-      console.error(`      psql -U postgres -d alya -f 004-add-encrypted-fields.sql`);
-      console.error(`      psql -U postgres -d alya -f 005-create-active-sessions.sql`);
+      console.error(`      psql -U seuusuario -d alya -h localhost -f "003 - SEGURANCA.sql"`);
     } else if (errorType === 'database_connection_refused') {
       console.error(`   1. Verifique se PostgreSQL está rodando:`);
       console.error(`      sudo systemctl status postgresql`);
@@ -1104,10 +1102,10 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
       console.error(`   1. Verifique o arquivo .env:`);
       console.error(`      DB_USER, DB_PASSWORD, DB_NAME, DB_HOST`);
       console.error(`   2. Teste a conexão manualmente:`);
-      console.error(`      psql -U postgres -d alya`);
+      console.error(`      psql -U seuusuario -d alya -h localhost`);
     } else if (errorType === 'database_not_found') {
       console.error(`   1. Crie o banco de dados:`);
-      console.error(`      psql -U postgres -c "CREATE DATABASE alya;"`);
+      console.error(`      psql -U seuusuario -h localhost -c "CREATE DATABASE alya;"`);
       console.error(`   2. Execute as migrações iniciais`);
     } else {
       console.error(`   1. Verifique os logs acima para mais detalhes`);

@@ -72,8 +72,8 @@ Formato criptografado: IV:AuthTag:Encrypted
 ### 1. Gerar Chave de Criptografia
 
 ```bash
-cd server
-node scripts/generate-encryption-key.js
+cd /caminho/do/projeto/alya
+node "scripts/server/01 - ADMIN.js" --gen-key
 ```
 
 **Output:**
@@ -112,17 +112,17 @@ ENCRYPTION_SALT=SEU_SALT_AQUI
 cd server
 
 # Adicionar campos criptografados
-psql -U alya_user -d alya_db -f migrations/004-add-encrypted-fields.sql
+psql -U seuusuario -d alya -h localhost -f "migrations/003 - SEGURANCA.sql"
 ```
 
 ### 4. Migrar Dados Existentes
 
 ```bash
 # Dry-run (apenas visualizar)
-node scripts/migrate-encrypted-fields.js --dry-run
+node "scripts/server/01 - ADMIN.js" --migrate-fields --dry-run
 
 # Migração real
-node scripts/migrate-encrypted-fields.js
+node "scripts/server/01 - ADMIN.js" --migrate-fields
 ```
 
 **Output:**
@@ -364,7 +364,7 @@ module.exports = router;
 const { reEncrypt } = require('./utils/encryption');
 
 // 1. Gerar nova chave
-// node scripts/generate-encryption-key.js
+// node "scripts/server/01 - ADMIN.js" --gen-key
 
 // 2. Re-criptografar dados
 const oldKey = process.env.ENCRYPTION_KEY;
