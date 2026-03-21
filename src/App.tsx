@@ -35,6 +35,7 @@ import Clients from "./components/Clients";
 import DRE from "./components/DRE";
 import Login from "./components/Login";
 import MenuUsuario from "./components/MenuUsuario";
+import ImpersonationBanner from "./components/ImpersonationBanner";
 // Lazy load AdminPanel (só carrega quando necessário)
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 // Lazy load Projeção (componente grande)
@@ -6879,6 +6880,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+      <ImpersonationBanner />
       {/* Container fixo para Header e Navigation */}
       <div className="fixed top-0 left-0 right-0 z-[60]">
         {/* Header */}

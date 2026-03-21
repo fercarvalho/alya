@@ -3969,6 +3969,54 @@ app.put(
   },
 );
 
+// Impersonação: superadmin loga como outro usuário
+app.post(
+  "/api/admin/impersonate/:userId",
+  authenticateToken,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      // Não pode impersonar a si mesmo
+      if (userId === req.user.id) {
+        return res.status(400).json({ success: false, error: "Você não pode impersonar a si mesmo." });
+      }
+
+      const targetUser = await db.getUserById(userId);
+      if (!targetUser) {
+        return res.status(404).json({ success: false, error: "Usuário não encontrado." });
+      }
+
+      // Não pode impersonar outro superadmin
+      if (targetUser.role === "superadmin") {
+        return res.status(403).json({ success: false, error: "Não é possível impersonar outro super administrador." });
+      }
+
+      const impersonationToken = jwt.sign(
+        { id: targetUser.id, username: targetUser.username, role: targetUser.role, impersonatedBy: req.user.id },
+        JWT_SECRET,
+        { expiresIn: "2h" }
+      );
+
+      await logActivity(
+        req.user.id,
+        req.user.username,
+        "impersonate",
+        "admin",
+        "user",
+        targetUser.id,
+        { targetUsername: targetUser.username }
+      );
+
+      const { password: _, ...safeTarget } = targetUser;
+      res.json({ success: true, token: impersonationToken, user: safeTarget });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
 app.delete(
   "/api/admin/users/:id",
   authenticateToken,

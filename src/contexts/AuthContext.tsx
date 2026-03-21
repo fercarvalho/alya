@@ -57,6 +57,9 @@ interface AuthContextType {
   completeFirstLogin: () => void;
   updateUser: (userData: Partial<User>, newToken?: string) => void;
   refreshUser: () => Promise<void>;
+  isImpersonating: boolean;
+  impersonate: (userId: string) => Promise<void>;
+  stopImpersonating: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,6 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   // Alias para compatibilidade com código existente
   const token = accessToken;
@@ -350,6 +354,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const impersonate = async (userId: string) => {
+    if (!accessToken) return;
+    const response = await fetch(`${API_BASE_URL}/admin/impersonate/${userId}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || "Erro ao impersonar usuário");
+
+    // Salvar token original antes de trocar
+    sessionStorage.setItem("originalAccessToken", accessToken);
+    if (refreshToken) sessionStorage.setItem("originalRefreshToken", refreshToken);
+
+    setUser(data.user);
+    setAccessToken(data.token);
+    setRefreshToken(null);
+    setIsImpersonating(true);
+    const storage = getStorage();
+    storage.setItem("accessToken", data.token);
+    storage.removeItem("refreshToken");
+  };
+
+  const stopImpersonating = () => {
+    const originalToken = sessionStorage.getItem("originalAccessToken");
+    const originalRefresh = sessionStorage.getItem("originalRefreshToken");
+    if (!originalToken) return;
+
+    sessionStorage.removeItem("originalAccessToken");
+    sessionStorage.removeItem("originalRefreshToken");
+    setIsImpersonating(false);
+
+    const storage = getStorage();
+    storage.setItem("accessToken", originalToken);
+    if (originalRefresh) storage.setItem("refreshToken", originalRefresh);
+    else storage.removeItem("refreshToken");
+
+    setAccessToken(originalToken);
+    setRefreshToken(originalRefresh);
+    verifyToken(originalToken);
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -361,6 +406,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     completeFirstLogin,
     updateUser,
     refreshUser,
+    isImpersonating,
+    impersonate,
+    stopImpersonating,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

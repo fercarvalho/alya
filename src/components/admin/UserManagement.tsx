@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle, Edit
+  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle, Edit, LogIn
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -29,7 +29,7 @@ interface User {
 }
 
 const UserManagement: React.FC = () => {
-  const { user: currentUser, token } = useAuth();
+  const { user: currentUser, token, impersonate } = useAuth();
   const { modules } = useModules();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -473,6 +473,15 @@ const UserManagement: React.FC = () => {
                       >
                         {u.isActive !== false ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
                       </button>
+                      {u.id !== currentUser?.id && currentUser?.role === 'superadmin' && u.role !== 'superadmin' && (
+                        <button
+                          onClick={() => impersonate(u.id)}
+                          className="text-purple-600 hover:text-purple-800"
+                          title={`Logar como ${u.username}`}
+                        >
+                          <LogIn className="h-5 w-5" />
+                        </button>
+                      )}
                       {u.id !== currentUser?.id && (
                         <button
                           onClick={() => handleDeleteUser(u.id)}
