@@ -369,13 +369,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     sessionStorage.setItem("originalAccessToken", accessToken);
     if (refreshToken) sessionStorage.setItem("originalRefreshToken", refreshToken);
 
+    const storage = getStorage();
+    storage.setItem("accessToken", data.token);
+    storage.removeItem("refreshToken");
+
     setUser(data.user);
     setAccessToken(data.token);
     setRefreshToken(null);
     setIsImpersonating(true);
-    const storage = getStorage();
-    storage.setItem("accessToken", data.token);
-    storage.removeItem("refreshToken");
+
+    // Sinalizar para App.tsx resetar a aba ativa
+    window.dispatchEvent(new CustomEvent("auth:impersonation-changed"));
   };
 
   const stopImpersonating = () => {
@@ -385,7 +389,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     sessionStorage.removeItem("originalAccessToken");
     sessionStorage.removeItem("originalRefreshToken");
-    setIsImpersonating(false);
 
     const storage = getStorage();
     storage.setItem("accessToken", originalToken);
@@ -394,7 +397,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     setAccessToken(originalToken);
     setRefreshToken(originalRefresh);
+    setIsImpersonating(false);
     verifyToken(originalToken);
+
+    // Sinalizar para App.tsx resetar a aba ativa
+    window.dispatchEvent(new CustomEvent("auth:impersonation-changed"));
   };
 
   const value: AuthContextType = {

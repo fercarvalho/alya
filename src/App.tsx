@@ -720,6 +720,13 @@ const AppContent: React.FC = () => {
     }
   }, [activeTab]);
 
+  // Resetar aba ao mudar de usuário (impersonação)
+  useEffect(() => {
+    const handler = () => setActiveTab("dashboard");
+    window.addEventListener("auth:impersonation-changed", handler);
+    return () => window.removeEventListener("auth:impersonation-changed", handler);
+  }, []);
+
   // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
   if (isLoading) {
     return (
