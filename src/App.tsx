@@ -30,6 +30,7 @@ import {
   Lock,
   Activity,
   Bell,
+  Globe,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -8665,7 +8666,7 @@ const AppContent: React.FC = () => {
                 ecosistema completo de gestão e educação para Empreeendedores.
                 <br />
                 <br />
-                Autor: Fernando Carvalho Gomes dos Santos 39063242816.
+                Autor: 41.748.511 Fernando Carvalho Gomes dos Santos.
               </p>
             </div>
 
@@ -8674,11 +8675,34 @@ const AppContent: React.FC = () => {
               <div className="space-y-2 text-amber-100">
                 <div className="flex items-center">
                   <Phone className="h-4 w-4 mr-2" />
-                  <span>(11) 91611-1900</span>
+                  <a
+                    href="https://wa.me/5511971039181?text=Oi%20Sofia%2C%20tudo%20bem%3F%20Vim%20pelo%20site%20da%20Alya%20e%20fiquei%20interessado%20pelo%20trabalho%20da%20Viver%20de%20PJ%20e%20gostaria%20de%20saber%20mais%20informa%C3%A7%C3%B5es"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    (11) 97103-9181
+                  </a>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-4 w-4 mr-2" />
-                  <span>vem@viverdepj.com.br</span>
+                  <a
+                    href="mailto:vem@viverdepj.com.br"
+                    className="hover:text-white transition-colors"
+                  >
+                    vem@viverdepj.com.br
+                  </a>
+                </div>
+                <div className="flex items-center">
+                  <Globe className="h-4 w-4 mr-2" />
+                  <a
+                    href="https://viverdepj.com.br"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    viverdepj.com.br
+                  </a>
                 </div>
                 <div className="flex items-center">
                   <Map className="h-4 w-4 mr-2" />
