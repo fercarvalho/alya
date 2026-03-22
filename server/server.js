@@ -311,30 +311,32 @@ const avatarStorage = multer.diskStorage({
     cb(null, avatarsDir);
   },
   filename: function (req, file, cb) {
-    // Gerar nome único: {userId ou uuid}-{timestamp}.webp
-    // Se for admin criando usuário novo, usar UUID temporário
-    // Se for usuário atualizando própria foto, usar userId
     const userId = req.user?.id || crypto.randomUUID();
-    const timestamp = Date.now();
-    cb(null, `${userId}-${timestamp}.webp`);
+    let ext = path.extname(file.originalname).toLowerCase();
+    if (!ext) {
+      if (file.mimetype === 'image/jpeg') ext = '.jpg';
+      else if (file.mimetype === 'image/png') ext = '.png';
+      else ext = '.webp';
+    }
+    cb(null, `${userId}-${Date.now()}${ext}`);
   },
 });
 
 const uploadAvatar = multer({
   storage: avatarStorage,
   fileFilter: (req, file, cb) => {
-    // Aceitar apenas arquivos WebP (já processados no frontend)
+    const validMimetypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const ext = path.extname(file.originalname).toLowerCase();
-    const mimeType = file.mimetype;
+    const validExts = ['.jpeg', '.jpg', '.png', '.webp', ''];
 
-    if (ext === ".webp" && mimeType === "image/webp") {
+    if (validMimetypes.includes(file.mimetype) && validExts.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error("Apenas arquivos WebP são permitidos!"), false);
+      cb(new Error('Apenas arquivos JPG, PNG ou WebP são permitidos!'), false);
     }
   },
   limits: {
-    fileSize: 2 * 1024 * 1024, // Limite de 2MB após processamento
+    fileSize: 10 * 1024 * 1024, // 10MB (frontend comprime antes do upload)
   },
 });
 
@@ -2108,21 +2110,6 @@ app.post(
         return res
           .status(400)
           .json({ success: false, error: "Nenhum arquivo enviado" });
-      }
-
-      // Validar que é WebP
-      if (
-        req.file.mimetype !== "image/webp" ||
-        !req.file.filename.endsWith(".webp")
-      ) {
-        // Deletar arquivo inválido
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        return res.status(400).json({
-          success: false,
-          error: "Apenas arquivos WebP são permitidos",
-        });
       }
 
       // Retornar caminho relativo da foto

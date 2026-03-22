@@ -35,14 +35,14 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
       return;
     }
 
-    // Validar tamanho (2MB antes do processamento)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('A imagem deve ter no máximo 2MB');
+    // Validar tamanho (10MB antes do processamento)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 10MB (será otimizada automaticamente).');
       return;
     }
 
     setSelectedFile(file);
-    
+
     // Criar preview da imagem original
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -50,8 +50,17 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
     };
     reader.readAsDataURL(file);
 
-    // Preparar para crop (usuário pode escolher recortar ou não)
+    // Preparar para crop caso o usuário queira recortar
     setImageToCrop(file);
+
+    // UX: processa automaticamente o arquivo original imediatamente.
+    // Se o usuário optar por recortar depois, o arquivo será atualizado.
+    try {
+      const processedFile = await processImage(file);
+      onPhotoProcessed?.(processedFile);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleCropComplete = async (croppedFile: File) => {
@@ -130,7 +139,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
                 Clique para selecionar uma foto
               </span>
               <span className="text-xs text-gray-500">
-                JPG, PNG ou WebP (máx. 2MB)
+                JPG, PNG ou WebP (máx. 10MB)
               </span>
             </div>
           </div>
