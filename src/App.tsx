@@ -8715,7 +8715,6 @@ const AppContent: React.FC = () => {
               <h3 className="text-lg font-semibold mb-3">Serviços</h3>
               <div className="space-y-2 text-amber-100">
                 <p>Consultoria Estratégica de Negócios</p>
-                <p>Consultoria em Negócios</p>
                 <p>Sistema de Gestão</p>
                 <p>Sistema Financeiro</p>
                 <p>CRM</p>
