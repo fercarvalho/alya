@@ -190,6 +190,14 @@ class Database extends FileDatabase {
     return t;
   }
 
+  async getTransactionById(id) {
+    const r = await this.pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
+    if (r.rows.length === 0) return null;
+    const t = toCamelCase(r.rows[0]);
+    t.date = formatDateForApi(t.date);
+    return t;
+  }
+
   async deleteTransaction(id) {
     const r = await this.pool.query('DELETE FROM transactions WHERE id = $1', [id]);
     return r.rowCount > 0;
@@ -235,6 +243,12 @@ class Database extends FileDatabase {
       [id, data.name, data.category, data.price != null ? parseFloat(data.price) : null, data.cost != null ? parseFloat(data.cost) : null, data.stock != null ? parseInt(data.stock, 10) : null, data.sold != null ? parseInt(data.sold, 10) : null]
     );
     if (r.rows.length === 0) throw new Error('Produto não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async getProductById(id) {
+    const r = await this.pool.query('SELECT * FROM products WHERE id = $1', [id]);
+    if (r.rows.length === 0) return null;
     return toCamelCase(r.rows[0]);
   }
 
@@ -285,6 +299,12 @@ class Database extends FileDatabase {
       [id, data.name, data.email, data.phone, addr, data.cpf, data.cnpj]
     );
     if (r.rows.length === 0) throw new Error('Cliente não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async getClientById(id) {
+    const r = await this.pool.query('SELECT * FROM clients WHERE id = $1', [id]);
+    if (r.rows.length === 0) return null;
     return toCamelCase(r.rows[0]);
   }
 

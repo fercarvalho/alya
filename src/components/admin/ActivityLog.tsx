@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Download, Filter
+import {
+  Download, Filter, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -18,11 +18,112 @@ interface ActivityLog {
   timestamp: string;
 }
 
+// Fields to hide from diff view (internal/noisy fields)
+const HIDDEN_FIELDS = new Set(['createdAt', 'updatedAt', 'created_at', 'updated_at', 'id']);
+
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Nome',
+  description: 'Descrição',
+  value: 'Valor',
+  type: 'Tipo',
+  category: 'Categoria',
+  date: 'Data',
+  email: 'Email',
+  phone: 'Telefone',
+  cpf: 'CPF',
+  cnpj: 'CNPJ',
+  address: 'Endereço',
+  role: 'Cargo',
+  modules: 'Módulos',
+  isActive: 'Ativo',
+  firstName: 'Nome',
+  lastName: 'Sobrenome',
+  username: 'Usuário',
+  price: 'Preço',
+  cost: 'Custo',
+  stock: 'Estoque',
+  sold: 'Vendidos',
+};
+
+function formatValue(val: any): string {
+  if (val === null || val === undefined) return '—';
+  if (Array.isArray(val)) return val.join(', ') || '—';
+  if (typeof val === 'boolean') return val ? 'Sim' : 'Não';
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
+
+interface DiffViewProps {
+  before: Record<string, any> | null;
+  after: Record<string, any> | null;
+}
+
+const DiffView: React.FC<DiffViewProps> = ({ before, after }) => {
+  // Collect all keys from both objects, excluding hidden fields
+  const allKeys = Array.from(
+    new Set([
+      ...Object.keys(before || {}),
+      ...Object.keys(after || {}),
+    ])
+  ).filter(k => !HIDDEN_FIELDS.has(k));
+
+  if (allKeys.length === 0) return null;
+
+  // For creates: show all after fields
+  // For deletes: show all before fields
+  // For edits: show only changed fields
+  const isCreate = before === null;
+  const isDelete = after === null;
+
+  const rows = allKeys.filter(key => {
+    if (isCreate || isDelete) return true;
+    const bVal = formatValue(before?.[key]);
+    const aVal = formatValue(after?.[key]);
+    return bVal !== aVal;
+  });
+
+  if (rows.length === 0) return <p className="text-xs text-gray-400 italic">Nenhuma alteração detectada.</p>;
+
+  return (
+    <div className="mt-2 rounded-md overflow-hidden border border-gray-200 text-xs">
+      <table className="w-full">
+        <thead>
+          <tr className="bg-gray-100 text-gray-600">
+            <th className="px-3 py-1.5 text-left font-medium w-1/4">Campo</th>
+            {!isCreate && <th className="px-3 py-1.5 text-left font-medium w-[37.5%] text-red-700">Antes</th>}
+            {!isDelete && <th className="px-3 py-1.5 text-left font-medium w-[37.5%] text-green-700">Depois</th>}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {rows.map(key => (
+            <tr key={key}>
+              <td className="px-3 py-1.5 text-gray-600 font-medium">
+                {FIELD_LABELS[key] || key}
+              </td>
+              {!isCreate && (
+                <td className="px-3 py-1.5 bg-red-50 text-red-800 font-mono break-all">
+                  {formatValue(before?.[key])}
+                </td>
+              )}
+              {!isDelete && (
+                <td className="px-3 py-1.5 bg-green-50 text-green-800 font-mono break-all">
+                  {formatValue(after?.[key])}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const ActivityLog: React.FC = () => {
   const { token } = useAuth();
   const { modules } = useModules();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState({
     userId: '',
     module: '',
@@ -66,6 +167,18 @@ const ActivityLog: React.FC = () => {
     }
   };
 
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const hasDiff = (log: ActivityLog) =>
+    log.details && (log.details.before !== undefined || log.details.after !== undefined);
+
   const handleExport = (format: 'csv' | 'json') => {
     const data = logs.map(log => ({
       Usuário: log.username,
@@ -82,7 +195,7 @@ const ActivityLog: React.FC = () => {
         headers.join(','),
         ...data.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
       ].join('\n');
-      
+
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -116,7 +229,8 @@ const ActivityLog: React.FC = () => {
     'edit': 'Editar',
     'delete': 'Deletar',
     'login': 'Login',
-    'permission_change': 'Mudança de Permissão'
+    'permission_change': 'Mudança de Permissão',
+    'impersonate': 'Impersonar',
   };
 
   const uniqueUsers = Array.from(new Set(logs.map(log => log.username)));
@@ -242,6 +356,7 @@ const ActivityLog: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-amber-50">
               <tr>
+                <th className="w-8 px-3 py-3" />
                 <th className="px-6 py-3 text-left text-xs font-medium text-amber-900 uppercase tracking-wider">Usuário</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-amber-900 uppercase tracking-wider">Ação</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-amber-900 uppercase tracking-wider">Módulo</th>
@@ -250,33 +365,60 @@ const ActivityLog: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {log.username}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      log.action === 'create' ? 'bg-green-100 text-green-800' :
-                      log.action === 'edit' ? 'bg-blue-100 text-blue-800' :
-                      log.action === 'delete' ? 'bg-red-100 text-red-800' :
-                      log.action === 'login' ? 'bg-purple-100 text-purple-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {actionLabels[log.action] || log.action}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {log.module}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {log.entityType || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(log.timestamp).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
+              {logs.map((log) => {
+                const expanded = expandedRows.has(log.id);
+                const hasDetails = hasDiff(log);
+                return (
+                  <React.Fragment key={log.id}>
+                    <tr
+                      className={`${hasDetails ? 'cursor-pointer hover:bg-amber-50' : 'hover:bg-gray-50'}`}
+                      onClick={() => hasDetails && toggleRow(log.id)}
+                    >
+                      <td className="px-3 py-4 text-gray-400">
+                        {hasDetails && (
+                          expanded
+                            ? <ChevronDown className="h-4 w-4" />
+                            : <ChevronRight className="h-4 w-4" />
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {log.username}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          log.action === 'create' ? 'bg-green-100 text-green-800' :
+                          log.action === 'edit' ? 'bg-blue-100 text-blue-800' :
+                          log.action === 'delete' ? 'bg-red-100 text-red-800' :
+                          log.action === 'login' ? 'bg-purple-100 text-purple-800' :
+                          log.action === 'impersonate' ? 'bg-orange-100 text-orange-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {actionLabels[log.action] || log.action}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.module}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.entityType || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </td>
+                    </tr>
+                    {hasDetails && expanded && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={6} className="px-8 py-3">
+                          <DiffView
+                            before={log.details?.before ?? null}
+                            after={log.details?.after ?? null}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -313,4 +455,3 @@ const ActivityLog: React.FC = () => {
 };
 
 export default ActivityLog;
-

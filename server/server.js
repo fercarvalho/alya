@@ -2710,6 +2710,7 @@ app.post(
         "transactions",
         "transaction",
         transaction.id,
+        { before: null, after: transaction },
       );
       res.json({ success: true, data: transaction });
     } catch (error) {
@@ -2721,6 +2722,7 @@ app.post(
 app.put("/api/transactions/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const before = await db.getTransactionById(id);
     const transaction = await db.updateTransaction(id, req.body);
     await logActivity(
       req.user.id,
@@ -2729,6 +2731,7 @@ app.put("/api/transactions/:id", authenticateToken, async (req, res) => {
       "transactions",
       "transaction",
       id,
+      { before, after: transaction },
     );
     res.json({ success: true, data: transaction });
   } catch (error) {
@@ -2739,6 +2742,7 @@ app.put("/api/transactions/:id", authenticateToken, async (req, res) => {
 app.delete("/api/transactions/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const before = await db.getTransactionById(id);
     await db.deleteTransaction(id);
     await logActivity(
       req.user.id,
@@ -2747,6 +2751,7 @@ app.delete("/api/transactions/:id", authenticateToken, async (req, res) => {
       "transactions",
       "transaction",
       id,
+      { before, after: null },
     );
     res.json({ success: true, message: "Transação deletada com sucesso" });
   } catch (error) {
@@ -2802,6 +2807,7 @@ app.post("/api/products", authenticateToken, async (req, res) => {
       "products",
       "product",
       product.id,
+      { before: null, after: product },
     );
     res.json({ success: true, data: product });
   } catch (error) {
@@ -2812,6 +2818,7 @@ app.post("/api/products", authenticateToken, async (req, res) => {
 app.put("/api/products/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const before = await db.getProductById(id);
     const product = await db.updateProduct(id, req.body);
     await logActivity(
       req.user.id,
@@ -2820,6 +2827,7 @@ app.put("/api/products/:id", authenticateToken, async (req, res) => {
       "products",
       "product",
       id,
+      { before, after: product },
     );
     res.json({ success: true, data: product });
   } catch (error) {
@@ -2830,6 +2838,7 @@ app.put("/api/products/:id", authenticateToken, async (req, res) => {
 app.delete("/api/products/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const before = await db.getProductById(id);
     await db.deleteProduct(id);
     await logActivity(
       req.user.id,
@@ -2838,6 +2847,7 @@ app.delete("/api/products/:id", authenticateToken, async (req, res) => {
       "products",
       "product",
       id,
+      { before, after: null },
     );
     res.json({ success: true, message: "Produto deletado com sucesso" });
   } catch (error) {
@@ -2898,6 +2908,7 @@ app.post(
         "clients",
         "client",
         client.id,
+        { before: null, after: client },
       );
       res.json({ success: true, data: client });
     } catch (error) {
@@ -2909,6 +2920,7 @@ app.post(
 app.put("/api/clients/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const before = await db.getClientById(id);
     const client = await db.updateClient(id, req.body);
     await logActivity(
       req.user.id,
@@ -2917,6 +2929,7 @@ app.put("/api/clients/:id", authenticateToken, async (req, res) => {
       "clients",
       "client",
       id,
+      { before, after: client },
     );
     res.json({ success: true, data: client });
   } catch (error) {
@@ -2927,6 +2940,7 @@ app.put("/api/clients/:id", authenticateToken, async (req, res) => {
 app.delete("/api/clients/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const before = await db.getClientById(id);
     await db.deleteClient(id);
     await logActivity(
       req.user.id,
@@ -2935,6 +2949,7 @@ app.delete("/api/clients/:id", authenticateToken, async (req, res) => {
       "clients",
       "client",
       id,
+      { before, after: null },
     );
     res.json({ success: true, message: "Cliente deletado com sucesso" });
   } catch (error) {
@@ -3958,7 +3973,10 @@ app.put(
       // Não permitir mudar role para admin de outro usuário (apenas o próprio admin pode ser admin)
       // Isso pode ser ajustado conforme necessário
 
+      const beforeUser = await db.getUserById(id);
       const updatedUser = await db.updateUser(id, updates);
+      const { password: _bp, ...safeBefore } = beforeUser || {};
+      const { password: _ap, ...safeAfter } = updatedUser;
       await logActivity(
         req.user.id,
         req.user.username,
@@ -3966,7 +3984,7 @@ app.put(
         "admin",
         "user",
         id,
-        { changes: Object.keys(updates) },
+        { before: safeBefore, after: safeAfter },
       );
 
       const { password: _, ...safeUser } = updatedUser;
@@ -4060,6 +4078,7 @@ app.delete(
         deleteAvatarFile(user.photoUrl);
       }
 
+      const { password: _dp, ...safeDeletedUser } = user;
       await db.deleteUser(id);
       await logActivity(
         req.user.id,
@@ -4068,7 +4087,7 @@ app.delete(
         "admin",
         "user",
         id,
-        { username: user.username },
+        { before: safeDeletedUser, after: null },
       );
 
       res.json({ success: true, message: "Usuário deletado com sucesso" });
