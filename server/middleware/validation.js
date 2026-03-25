@@ -304,8 +304,8 @@ const validateTransaction = [
   body("date").isISO8601().withMessage("Data inválida"),
 
   body("type")
-    .isIn(["income", "expense"])
-    .withMessage("Tipo deve ser income ou expense"),
+    .isIn(["income", "expense", "Receita", "Despesa"])
+    .withMessage("Tipo deve ser Receita ou Despesa"),
 
   body("category")
     .optional()

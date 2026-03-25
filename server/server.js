@@ -412,21 +412,34 @@ function processTransactions(worksheet) {
         "Category",
       ]);
 
-      let typeFormatted = (rawType || "Receita").toString().trim();
-      const typeLower = typeFormatted.toLowerCase();
-      if (
+      const typeLower = (rawType || "").toString().trim().toLowerCase();
+      const typeFormatted =
         typeLower === "despesa" ||
         typeLower === "saida" ||
-        typeLower === "saída"
-      ) {
-        typeFormatted = "Despesa";
+        typeLower === "saída" ||
+        typeLower === "expense"
+          ? "Despesa"
+          : "Receita";
+
+      // Tratar datas do Excel (podem ser serial numbers, Date objects ou strings)
+      let dateFormatted;
+      if (rawDate instanceof Date) {
+        dateFormatted = rawDate.toISOString().split("T")[0];
+      } else if (typeof rawDate === "number") {
+        // Serial number do Excel
+        const d = XLSX.SSF.parse_date_code(rawDate);
+        dateFormatted = `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
+      } else if (rawDate) {
+        const d = new Date(rawDate);
+        dateFormatted = isNaN(d.getTime())
+          ? new Date().toISOString().split("T")[0]
+          : d.toISOString().split("T")[0];
       } else {
-        typeFormatted = "Receita";
+        dateFormatted = new Date().toISOString().split("T")[0];
       }
 
       const transaction = {
-        id: Date.now() + index,
-        date: rawDate || new Date().toISOString().split("T")[0],
+        date: dateFormatted,
         description: (rawDescription || "").toString().trim(),
         value: parseFloat(rawValue || 0),
         type: typeFormatted,
@@ -2557,16 +2570,53 @@ app.post(
       let message = "";
 
       if (type === "transactions") {
-        processedData = processTransactions(worksheet);
-        message = `${processedData.length} transações importadas com sucesso!`;
+        const parsed = processTransactions(worksheet);
+        const saved = [];
+        for (const t of parsed) {
+          try {
+            const savedT = await db.saveTransaction(t);
+            await logActivity(
+              req.user.id,
+              req.user.username,
+              "create",
+              "transactions",
+              "transaction",
+              savedT.id,
+              { before: null, after: savedT },
+            );
+            saved.push(savedT);
+          } catch (error) {
+            console.error("Erro ao salvar transação importada:", error);
+          }
+        }
+        processedData = saved;
+        message = `${saved.length} transações importadas com sucesso!`;
       } else if (type === "products") {
-        processedData = processProducts(worksheet);
-        message = `${processedData.length} produtos importados com sucesso!`;
+        const parsed = processProducts(worksheet);
+        const saved = [];
+        for (const p of parsed) {
+          try {
+            const savedP = await db.saveProduct(p);
+            await logActivity(
+              req.user.id,
+              req.user.username,
+              "create",
+              "products",
+              "product",
+              savedP.id,
+              { before: null, after: savedP },
+            );
+            saved.push(savedP);
+          } catch (error) {
+            console.error("Erro ao salvar produto importado:", error);
+          }
+        }
+        processedData = saved;
+        message = `${saved.length} produtos importados com sucesso!`;
       } else if (type === "clients") {
         processedData = processClients(worksheet);
         message = `${processedData.length} clientes importados com sucesso!`;
 
-        // Salvar clientes processados no banco de dados
         for (const client of processedData) {
           try {
             await db.saveClient(client);

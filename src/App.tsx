@@ -8082,59 +8082,20 @@ const AppContent: React.FC = () => {
                           const result = await response.json();
                           console.log("Resposta do servidor:", result);
 
-                          // Atualizar os dados no frontend baseado na resposta
+                          // Backend já salvou — apenas atualizar estado local
                           if (
                             importExportType === "transactions" &&
-                            result.data
+                            result.data?.length
                           ) {
-                            // Salvar cada transação no banco de dados
-                            for (const transactionData of result.data) {
-                              try {
-                                const savedTransaction = await saveTransaction({
-                                  date: transactionData.date,
-                                  description: transactionData.description,
-                                  value: transactionData.value,
-                                  type: transactionData.type,
-                                  category: transactionData.category,
-                                });
-                                if (savedTransaction) {
-                                  setTransactions((prev) => [
-                                    ...prev,
-                                    savedTransaction,
-                                  ]);
-                                }
-                              } catch (error) {
-                                console.error(
-                                  "Erro ao salvar transação:",
-                                  error,
-                                );
-                              }
-                            }
+                            setTransactions((prev) => [
+                              ...prev,
+                              ...result.data,
+                            ]);
                           } else if (
                             importExportType === "products" &&
-                            result.data
+                            result.data?.length
                           ) {
-                            // Salvar cada produto no banco de dados
-                            for (const productData of result.data) {
-                              try {
-                                const savedProduct = await saveProduct({
-                                  name: productData.name,
-                                  category: productData.category,
-                                  price: productData.price,
-                                  cost: productData.cost,
-                                  stock: productData.stock,
-                                  sold: productData.sold,
-                                });
-                                if (savedProduct) {
-                                  setProducts((prev) => [
-                                    ...prev,
-                                    savedProduct,
-                                  ]);
-                                }
-                              } catch (error) {
-                                console.error("Erro ao salvar produto:", error);
-                              }
-                            }
+                            setProducts((prev) => [...prev, ...result.data]);
                           }
 
                           alert(
