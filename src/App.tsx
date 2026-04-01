@@ -3073,7 +3073,7 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Faturamento TOTAL */}
-            <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-emerald-400 to-green-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Faturamento TOTAL</h3>
                 {badgeReceita(reais.totalReceitas, proj.faturamentoTotal)}
@@ -3092,7 +3092,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Faturamento Varejo */}
-            <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-green-400 to-green-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Faturamento Varejo</h3>
                 {badgeReceita(reais.receitasVarejo, proj.faturamentoVarejo)}
@@ -3111,7 +3111,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Faturamento Atacado */}
-            <div className="bg-gradient-to-br from-teal-500 to-teal-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-teal-400 to-teal-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Faturamento Atacado</h3>
                 {badgeReceita(reais.receitasAtacado, proj.faturamentoAtacado)}
@@ -3140,7 +3140,7 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Despesas TOTAL */}
-            <div className="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-red-400 to-red-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Despesas TOTAL</h3>
                 {badgeDespesa(reais.totalDespesas, proj.despesasTotal)}
@@ -3159,7 +3159,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Despesas Variáveis */}
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-orange-400 to-orange-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Despesas Variáveis</h3>
                 {badgeDespesa(reais.despesasVariável, proj.despesasVariável)}
@@ -3178,7 +3178,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Despesas Fixas */}
-            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-amber-400 to-amber-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Despesas Fixas</h3>
                 {badgeDespesa(reais.despesasFixo, proj.despesasFixo)}
@@ -3207,7 +3207,7 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Investimentos Gerais */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-blue-400 to-blue-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Investimentos Gerais</h3>
                 {badgeReceita(reais.investimentos, proj.investimentosGerais)}
@@ -3226,7 +3226,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Investimentos em MKT */}
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl shadow-lg text-white">
+            <div className="bg-gradient-to-br from-purple-400 to-purple-500 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-white">Investimentos em MKT</h3>
                 {badgeReceita(reais.mkt, proj.investimentosMkt)}
