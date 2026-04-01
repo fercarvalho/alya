@@ -72,6 +72,7 @@ import {
   LineChart,
   Line,
   LabelList,
+  ReferenceLine,
 } from "recharts";
 
 interface NewTransaction {
@@ -1767,7 +1768,8 @@ const AppContent: React.FC = () => {
     // Obter o mês selecionado nas metas
     const mesSelecionadoMetas =
       mesesMetas.find((mes) => mes.indice === selectedMonth) ||
-      mesesMetas[new Date().getMonth()];
+      mesesMetas.find((mes) => mes.indice === new Date().getMonth()) ||
+      mesesMetas[0];
 
     // Dados reais das transações do mês selecionado
     const totalReceitasMes = receitas;
@@ -2135,6 +2137,7 @@ const AppContent: React.FC = () => {
               contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
             />
             <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: "16px", fontSize: 13, fontWeight: 600 }} />
+            <ReferenceLine x={mesesNomes[selectedMonth]} stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" label={{ value: mesesNomes[selectedMonth], position: "top", fill: "#f59e0b", fontSize: 11, fontWeight: 700 }} />
             <Line type="monotone" dataKey="Receitas" stroke="#22c55e" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             <Line type="monotone" dataKey="Despesas" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             <Line type="monotone" dataKey="Saldo" stroke="#f59e0b" strokeWidth={2.5} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
@@ -2158,8 +2161,8 @@ const AppContent: React.FC = () => {
                 data={displayData}
                 cx="50%"
                 cy="50%"
-                innerRadius={70}
-                outerRadius={130}
+                innerRadius={80}
+                outerRadius={140}
                 paddingAngle={hasData ? 5 : 0}
                 dataKey="value"
                 cornerRadius={hasData ? 8 : 0}
@@ -2235,6 +2238,33 @@ const AppContent: React.FC = () => {
             </select>
           </div>
 
+          {/* Resumo rápido do mês */}
+          {(() => {
+            const pctMeta = metaFaturamentoMes > 0 ? (totalReceitasMes / metaFaturamentoMes) * 100 : 0;
+            const variacaoMes = totalReceitasMes - metaFaturamentoMes;
+            const emDia = pctMeta >= (new Date().getDate() / 31) * 100;
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">% da Meta</p>
+                  <p className={`text-2xl font-black ${pctMeta >= 100 ? "text-emerald-600" : pctMeta >= 75 ? "text-amber-600" : "text-red-600"}`}>{pctMeta.toFixed(0)}%</p>
+                </div>
+                <div className={`rounded-xl border shadow-sm p-4 text-center ${variacaoMes >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Variação</p>
+                  <p className={`text-lg font-black ${variacaoMes >= 0 ? "text-emerald-700" : "text-red-700"}`}>{variacaoMes >= 0 ? "+" : ""}R$ {Math.abs(variacaoMes).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Lucro Líquido</p>
+                  <p className={`text-lg font-black ${lucroLiquidoMes >= 0 ? "text-emerald-600" : "text-red-600"}`}>R$ {lucroLiquidoMes.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                </div>
+                <div className={`rounded-xl border shadow-sm p-4 text-center ${emDia ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ritmo</p>
+                  <p className={`text-sm font-black ${emDia ? "text-emerald-700" : "text-amber-700"}`}>{emDia ? "✓ No ritmo" : "⚡ Atenção"}</p>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card Receitas */}
@@ -2257,6 +2287,12 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      {(() => {
+                        const pct = metaFaturamentoMes > 0 ? (totalReceitasMes / metaFaturamentoMes) * 100 : 0;
+                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Meta atingida</span>;
+                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Em andamento ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Abaixo ({pct.toFixed(0)}%)</span>;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -2287,6 +2323,13 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      {(() => {
+                        const metaDesp = getProjectionMetasForMonth(selectedMonth).despesasTotal;
+                        const pct = metaDesp > 0 ? (totalDespesasMes / metaDesp) * 100 : 0;
+                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Limite ultrapassado</span>;
+                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Próximo do limite ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Dentro do limite ({pct.toFixed(0)}%)</span>;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -2301,7 +2344,7 @@ const AppContent: React.FC = () => {
               <div className="space-y-4">
                 <div
                   className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
-                    lucroLiquidoMes >= 0 ? "bg-yellow-500" : "bg-yellow-500"
+                    lucroLiquidoMes >= 0 ? "bg-gradient-to-br from-emerald-400 to-green-500" : "bg-gradient-to-br from-red-400 to-red-500"
                   }`}
                   onClick={() => toggleChart("saldo-mensal")}
                 >
@@ -2313,18 +2356,15 @@ const AppContent: React.FC = () => {
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">
                         Saldo
                       </p>
-                      <p
-                        className={`text-2xl font-bold mt-1 ${
-                          lucroLiquidoMes >= 0
-                            ? "text-green-900"
-                            : "text-red-900"
-                        }`}
-                      >
+                      <p className="text-2xl font-bold mt-1 text-white">
                         R${" "}
                         {lucroLiquidoMes.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${lucroLiquidoMes >= 0 ? "bg-white/20 text-white" : "bg-black/20 text-white/90"}`}>
+                        {lucroLiquidoMes >= 0 ? "✓ Positivo" : "⚠ Negativo"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2413,7 +2453,7 @@ const AppContent: React.FC = () => {
               {/* Card Saldo Trimestral */}
               <div className="space-y-4">
                 <div
-                  className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${lucroLiquidoTrimestre >= 0 ? "bg-gradient-to-br from-emerald-400 to-green-500" : "bg-gradient-to-br from-red-400 to-red-500"}`}
                   onClick={() => toggleChart("saldo-trimestre")}
                 >
                   <div className="flex items-center gap-4">
@@ -2424,13 +2464,7 @@ const AppContent: React.FC = () => {
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">
                         Saldo
                       </p>
-                      <p
-                        className={`text-2xl font-bold mt-1 ${
-                          lucroLiquidoTrimestre >= 0
-                            ? "text-green-900"
-                            : "text-red-900"
-                        }`}
-                      >
+                      <p className="text-2xl font-bold mt-1 text-white">
                         R${" "}
                         {lucroLiquidoTrimestre.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
@@ -2522,7 +2556,7 @@ const AppContent: React.FC = () => {
               <div className="space-y-4">
                 <div
                   className={`p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
-                    lucroLiquidoAno >= 0 ? "bg-yellow-600" : "bg-yellow-600"
+                    lucroLiquidoAno >= 0 ? "bg-gradient-to-br from-emerald-400 to-green-500" : "bg-gradient-to-br from-red-400 to-red-500"
                   }`}
                   onClick={() => toggleChart("saldo-anual")}
                 >
@@ -2534,13 +2568,7 @@ const AppContent: React.FC = () => {
                       <p className="text-sm font-bold text-white text-opacity-80 uppercase tracking-wide">
                         Saldo Anual
                       </p>
-                      <p
-                        className={`text-2xl font-bold mt-1 ${
-                          lucroLiquidoAno >= 0
-                            ? "text-green-900"
-                            : "text-red-900"
-                        }`}
-                      >
+                      <p className="text-2xl font-bold mt-1 text-white">
                         R${" "}
                         {lucroLiquidoAno.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
@@ -2567,7 +2595,7 @@ const AppContent: React.FC = () => {
           </h2>
           {renderLineChart()}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {renderPieChart(pieChartData, `Receitas vs Despesas — ${mesSelecionadoMetas.nome}`)}
+            {renderPieChart(pieChartDataAnual, `Receitas vs Despesas — Ano ${new Date().getFullYear()}`)}
             {renderPieChartCategorias()}
           </div>
         </div>
@@ -2579,6 +2607,27 @@ const AppContent: React.FC = () => {
             Transações Recentes
           </h2>
 
+          {transacoesRecentes.length > 0 && (() => {
+            const rec = transacoesRecentes.filter((t) => isReceita(t.type));
+            const desp = transacoesRecentes.filter((t) => !isReceita(t.type));
+            const totalRec = rec.reduce((s, t) => s + t.value, 0);
+            const totalDesp = desp.reduce((s, t) => s + t.value, 0);
+            return (
+              <div className="flex flex-wrap gap-3 mb-2">
+                <span className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold px-3 py-1.5 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                  {rec.length} receita{rec.length !== 1 ? "s" : ""} · +R$ {totalRec.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </span>
+                <span className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm font-bold px-3 py-1.5 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                  {desp.length} despesa{desp.length !== 1 ? "s" : ""} · -R$ {totalDesp.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </span>
+                <span className={`flex items-center gap-2 border text-sm font-bold px-3 py-1.5 rounded-full ${(totalRec - totalDesp) >= 0 ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-orange-50 border-orange-200 text-orange-700"}`}>
+                  Saldo: {(totalRec - totalDesp) >= 0 ? "+" : ""}R$ {(totalRec - totalDesp).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            );
+          })()}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {transacoesRecentes.length === 0 ? (
               <div className="p-8 text-center">
