@@ -2926,7 +2926,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="space-y-6">
         {/* DONUT CENTRAL — percentual geral de faturamento */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow-lg border border-slate-200 p-6">
           <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Donut */}
             <div className="flex-shrink-0 relative" style={{ width: 220, height: 220 }}>
@@ -2955,15 +2955,15 @@ const AppContent: React.FC = () => {
 
             {/* Resumo ao lado do donut */}
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-              <div className="bg-gray-50 rounded-xl p-4 text-center">
+              <div className="bg-white rounded-xl p-4 text-center shadow-sm">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
                 <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
-              <div className="bg-emerald-50 rounded-xl p-4 text-center">
+              <div className="bg-white rounded-xl p-4 text-center shadow-sm">
                 <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
                 <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
-              <div className={`rounded-xl p-4 text-center ${resultado >= 0 ? "bg-blue-50" : "bg-red-50"}`}>
+              <div className="bg-white rounded-xl p-4 text-center shadow-sm">
                 <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
                 <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
                   {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -2982,7 +2982,7 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro */}
-            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8 rounded-2xl shadow-lg border border-slate-200">
               <div className="space-y-3">
                 {/* RECEITA */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
@@ -3019,7 +3019,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quadrante META DO MÊS */}
-            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8 rounded-2xl shadow-lg border border-slate-200">
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-gray-300">
                   <div></div>
