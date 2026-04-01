@@ -503,9 +503,6 @@ const AppContent: React.FC = () => {
   );
   const [expandedCharts, setExpandedCharts] = useState<string[]>([]);
   const [metasMonthDropdownOpen, setMetasMonthDropdownOpen] = useState(false);
-  const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>(
-    [],
-  );
   const [periodoRelatorio, setPeriodoRelatorio] = useState<"semana" | "mes" | "trimestre" | "ano">("mes");
 
   // ⚠️ TODOS OS useEffect DEVEM ESTAR AQUI, ANTES DOS RETURNS CONDICIONAIS
@@ -1721,14 +1718,6 @@ const AppContent: React.FC = () => {
     );
   };
 
-  // Função para alternar gráficos dos relatórios
-  const toggleReportChart = (chartId: string) => {
-    setExpandedReportCharts((prev) =>
-      prev.includes(chartId)
-        ? prev.filter((id) => id !== chartId)
-        : [...prev, chartId],
-    );
-  };
 
   // Calcular resumo financeiro (mantendo para compatibilidade)
   // Removido: totais fictícios (usar calculateTotals())
@@ -5297,7 +5286,7 @@ const AppContent: React.FC = () => {
       // Calcular dados reais das transações (mesma lógica de renderReports)
       const agora = new Date();
       const inicioSemana = new Date(agora);
-      inicioSemana.setDate(agora.getDate() - agora.getDay());
+      inicioSemana.setDate(agora.getDate() - ((agora.getDay() + 6) % 7));
       inicioSemana.setHours(0, 0, 0, 0);
 
       const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
@@ -5644,7 +5633,7 @@ const AppContent: React.FC = () => {
 
     // Período atual
     const inicioSemana = new Date(agora);
-    inicioSemana.setDate(agora.getDate() - agora.getDay());
+    inicioSemana.setDate(agora.getDate() - ((agora.getDay() + 6) % 7));
     inicioSemana.setHours(0, 0, 0, 0);
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
     const inicioTrimestre = new Date(agora.getFullYear(), Math.floor(agora.getMonth() / 3) * 3, 1);
@@ -5690,7 +5679,8 @@ const AppContent: React.FC = () => {
       const acc: { [k: string]: number } = {};
       ts.forEach((t) => {
         if (tipo === "receita" ? isReceita(t.type) : isDespesa(t.type)) {
-          acc[t.category] = (acc[t.category] || 0) + Number(t.value);
+          const cat = t.category || "Sem categoria";
+          acc[cat] = (acc[cat] || 0) + Number(t.value);
         }
       });
       const cores = tipo === "receita"
@@ -5714,17 +5704,34 @@ const AppContent: React.FC = () => {
         .map(([nome, valor], i) => ({ nome, valor, cor: cores[i % cores.length] }));
     };
 
-    const calcTendencia = (ts: any[]) => {
-      // Agrupar por semana/mês
-      const porSemana: { [k: string]: { rec: number; desp: number } } = {};
+    const calcTendencia = (ts: any[], periodo: "semana" | "mes" | "trimestre" | "ano") => {
+      const diasSemana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+      const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const grupos: { [k: string]: { rec: number; desp: number; ordem: number } } = {};
       ts.forEach((t) => {
         const d = parseLocalDate(t.date);
-        const chave = `Sem ${Math.ceil(d.getDate() / 7)}`;
-        if (!porSemana[chave]) porSemana[chave] = { rec: 0, desp: 0 };
-        if (isReceita(t.type)) porSemana[chave].rec += Number(t.value);
-        if (isDespesa(t.type)) porSemana[chave].desp += Number(t.value);
+        let chave: string;
+        let ordem: number;
+        if (periodo === "semana") {
+          const diaSemana = (d.getDay() + 6) % 7; // 0=Seg ... 6=Dom
+          chave = diasSemana[diaSemana];
+          ordem = diaSemana;
+        } else if (periodo === "mes") {
+          const sem = Math.ceil(d.getDate() / 7);
+          chave = `Sem ${sem}`;
+          ordem = sem;
+        } else {
+          // trimestre e ano: agrupar por mês
+          chave = mesesNomes[d.getMonth()];
+          ordem = d.getMonth();
+        }
+        if (!grupos[chave]) grupos[chave] = { rec: 0, desp: 0, ordem };
+        if (isReceita(t.type)) grupos[chave].rec += Number(t.value);
+        if (isDespesa(t.type)) grupos[chave].desp += Number(t.value);
       });
-      return Object.entries(porSemana).map(([nome, v]) => ({ nome, receitas: v.rec, despesas: v.desp, saldo: v.rec - v.desp }));
+      return Object.entries(grupos)
+        .sort(([, a], [, b]) => a.ordem - b.ordem)
+        .map(([nome, v]) => ({ nome, receitas: v.rec, despesas: v.desp, saldo: v.rec - v.desp }));
     };
 
     const p = periodoRelatorio;
@@ -5747,7 +5754,7 @@ const AppContent: React.FC = () => {
     const catReceitas = calcPorCategoria(tsAtual, "receita");
     const catDespesas = calcPorCategoria(tsAtual, "despesa");
     const produtos = calcProdutos(tsAtual);
-    const tendencia = calcTendencia(tsAtual);
+    const tendencia = calcTendencia(tsAtual, p);
 
     const totalCatRec = catReceitas.reduce((s, i) => s + i.valor, 0);
     const totalCatDesp = catDespesas.reduce((s, i) => s + i.valor, 0);
@@ -5805,27 +5812,37 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Cards de resumo com comparação */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "Receitas", valor: recAtual, vari: varRec, cor: "green", invertido: false },
-            { label: "Despesas", valor: despAtual, vari: varDesp, cor: "red", invertido: true },
-            { label: "Lucro Líquido", valor: lucroAtual, vari: varLucro, cor: lucroAtual >= 0 ? "green" : "red", invertido: false },
-            { label: "Margem", valor: null, margem: margemAtual, cor: margemAtual >= 0 ? "green" : "red", invertido: false, vari: 0 },
-          ].map((card, i) => (
-            <div key={i} className="bg-white rounded-2xl shadow border border-gray-200 p-5">
-              <p className="text-xs text-gray-500 font-medium mb-1">{card.label}</p>
-              <p className={`text-xl font-black ${card.cor === "green" ? "text-green-600" : "text-red-600"}`}>
-                {card.valor !== null
-                  ? `R$ ${card.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                  : `${card.margem!.toFixed(1)}%`}
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                {i < 3 ? varBadge(card.vari, card.invertido) : null}
-                <span className="text-xs text-gray-400">vs período ant.</span>
-              </div>
+        {(() => {
+          const margemAnt = recAnt > 0 ? (lucroAnt / recAnt) * 100 : 0;
+          const varMargem = margemAnt !== 0 ? margemAtual - margemAnt : 0;
+          const temAnt = (vari: number, base: number) => base !== 0;
+          const cards = [
+            { label: "Receitas", valor: recAtual as number | null, margem: null as number | null, vari: varRec, temBase: recAnt > 0, cor: "green", invertido: false },
+            { label: "Despesas", valor: despAtual, margem: null, vari: varDesp, temBase: despAnt > 0, cor: "red", invertido: true },
+            { label: "Lucro Líquido", valor: lucroAtual, margem: null, vari: varLucro, temBase: lucroAnt !== 0, cor: lucroAtual >= 0 ? "green" : "red", invertido: false },
+            { label: "Margem", valor: null, margem: margemAtual, vari: varMargem, temBase: recAnt > 0, cor: margemAtual >= 0 ? "green" : "red", invertido: false },
+          ];
+          return (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {cards.map((card, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow border border-gray-200 p-5">
+                  <p className="text-xs text-gray-500 font-medium mb-1">{card.label}</p>
+                  <p className={`text-xl font-black ${card.cor === "green" ? "text-green-600" : "text-red-600"}`}>
+                    {card.valor !== null
+                      ? `R$ ${card.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                      : `${card.margem!.toFixed(1)}%`}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    {card.temBase
+                      ? varBadge(card.vari, card.invertido)
+                      : <span className="text-xs text-gray-400 italic">sem histórico</span>}
+                    {card.temBase && <span className="text-xs text-gray-400">vs período ant.</span>}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         {/* Gráfico de tendência */}
         {tendencia.length > 0 && (
