@@ -6321,44 +6321,58 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Renderizar Mês Selecionado com Dropdown Integrado */}
+        {/* Seletor de mês estilo Relatórios */}
+        {(() => {
+          const mesesNomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+          const tabWidth = 72;
+          const activeIdx = selectedMonth; // 0–11
+          return (
+            <div className="flex flex-col gap-3">
+              {/* Tabs de mês */}
+              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 overflow-x-auto w-full">
+                <span
+                  className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
+                  style={{ width: tabWidth, left: activeIdx * tabWidth + 4 }}
+                />
+                {mesesNomes.map((nome, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedMonth(idx)}
+                    style={{ width: tabWidth, minWidth: tabWidth }}
+                    className={`relative z-10 py-2 px-0 rounded-xl text-sm font-bold flex items-center justify-center transition-colors duration-200 ${
+                      selectedMonth === idx ? "text-white" : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    {nome}
+                  </button>
+                ))}
+              </div>
+
+              {/* Navegador de ano */}
+              <div className="flex items-center gap-2 bg-white rounded-xl shadow border border-gray-200 px-2 py-1 w-fit">
+                <button
+                  onClick={() => setSelectedMonth((m) => (m - 1 + 12) % 12)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold"
+                >
+                  ‹
+                </button>
+                <span className="min-w-[180px] text-center text-sm font-bold text-gray-700 px-2">
+                  {["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"][selectedMonth]} {new Date().getFullYear()}
+                </span>
+                <button
+                  onClick={() => setSelectedMonth((m) => (m + 1) % 12)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Conteúdo do mês selecionado */}
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
-            {/* Dropdown do Mês Selecionado */}
-            <div id="metas-month-dropdown" className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg relative">
-              <button
-                type="button"
-                onClick={() => setMetasMonthDropdownOpen((v) => !v)}
-                className="w-full flex items-center justify-center gap-3 text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
-              >
-                <span>{mesSelecionado?.nome} - {new Date().getFullYear()}</span>
-                <ChevronRight className={`w-7 h-7 transition-transform duration-200 ${metasMonthDropdownOpen ? "rotate-90" : "rotate-90 opacity-70"}`} style={{ transform: metasMonthDropdownOpen ? "rotate(-90deg)" : "rotate(90deg)" }} />
-              </button>
-
-              {metasMonthDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-amber-100 z-50 overflow-hidden">
-                  {mesesMetas.map((mes) => (
-                    <button
-                      key={mes.indice}
-                      type="button"
-                      onClick={() => {
-                        setSelectedMonth(mes.indice);
-                        setMetasMonthDropdownOpen(false);
-                      }}
-                      className={`w-full text-center px-5 py-3 text-lg font-bold transition-colors duration-150 ${
-                        mes.indice === selectedMonth
-                          ? "bg-amber-50 text-amber-800"
-                          : "text-gray-700 hover:bg-amber-50 hover:text-amber-800"
-                      }`}
-                    >
-                      {mes.nome} - {new Date().getFullYear()}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Conteúdo do Mês */}
             {renderMonthContent(
               mesSelecionado.nome,
               mesSelecionado.indice,
@@ -6367,11 +6381,6 @@ const AppContent: React.FC = () => {
             )}
           </div>
         )}
-
-        {/* Renderizar todos os 12 meses em ordem normal (exceto o já exibido no topo) */}
-        {mesesMetas
-          .filter((mes) => mes.indice !== selectedMonth)
-          .map((mes) => renderMonth(mes.nome, mes.indice, mes.meta, 0))}
 
         {/* Renderizar Total do Ano — sempre por último */}
         {renderTotalAno()}
