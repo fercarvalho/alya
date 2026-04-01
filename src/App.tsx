@@ -2887,7 +2887,7 @@ const AppContent: React.FC = () => {
         barColor = acimaDe100 ? "from-blue-600 to-blue-800" : "from-blue-500 to-blue-600";
       }
       return (
-        <div className="w-full bg-white/25 rounded-full h-3 relative overflow-hidden">
+        <div className="w-full bg-white/30 rounded-full h-3 relative overflow-hidden">
           <div
             className={`bg-gradient-to-r ${barColor} h-3 rounded-full transition-all duration-500`}
             style={{ width: `${Math.min(100, pct)}%` }}
@@ -2926,7 +2926,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="space-y-6">
         {/* DONUT CENTRAL — percentual geral de faturamento */}
-        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl shadow-lg p-6 text-white">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
           <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Donut */}
             <div className="flex-shrink-0 relative" style={{ width: 220, height: 220 }}>
@@ -2955,17 +2955,17 @@ const AppContent: React.FC = () => {
 
             {/* Resumo ao lado do donut */}
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-              <div className="bg-white/10 rounded-xl p-4 text-center">
-                <div className="text-xs font-bold text-white/60 uppercase tracking-wide mb-1">Meta</div>
-                <div className="text-xl font-black text-white">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              <div className="bg-gray-50 rounded-xl p-4 text-center">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
+                <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
-              <div className="bg-white/10 rounded-xl p-4 text-center">
-                <div className="text-xs font-bold text-white/60 uppercase tracking-wide mb-1">Realizado</div>
-                <div className="text-xl font-black text-white">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              <div className="bg-emerald-50 rounded-xl p-4 text-center">
+                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
+                <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
-              <div className="bg-white/10 rounded-xl p-4 text-center">
+              <div className={`rounded-xl p-4 text-center ${resultado >= 0 ? "bg-blue-50" : "bg-red-50"}`}>
                 <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
-                <div className="text-xl font-black text-white">
+                <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
                   {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
               </div>
@@ -2982,36 +2982,36 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro */}
-            <div className="bg-gradient-to-br from-slate-700 to-slate-800 p-8 rounded-2xl shadow-lg text-white">
+            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
               <div className="space-y-3">
                 {/* RECEITA */}
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="font-semibold text-emerald-300">RECEITA</span>
-                  <span className="font-bold text-emerald-200">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-emerald-700">RECEITA</span>
+                  <span className="font-bold text-emerald-800">
                     R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* DESPESA */}
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="font-semibold text-red-300">DESPESA</span>
-                  <span className="font-bold text-red-200">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-red-700">DESPESA</span>
+                  <span className="font-bold text-red-800">
                     -R$ {totalDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* SALDO INICIAL */}
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="font-semibold text-blue-300">SALDO INICIAL</span>
-                  <span className="font-bold text-blue-200">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-semibold text-blue-700">SALDO INICIAL</span>
+                  <span className="font-bold text-blue-800">
                     R$ {saldoInicial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* TOTAL GERAL */}
-                <div className={`flex justify-between items-center py-4 px-4 rounded-lg border-2 mt-4 ${resultado >= 0 ? "bg-emerald-500/30 border-emerald-400" : "bg-red-500/30 border-red-400"}`}>
-                  <span className="font-bold text-white text-lg">Total geral</span>
-                  <span className={`font-bold text-xl ${resultado >= 0 ? "text-emerald-200" : "text-red-200"}`}>
+                <div className={`flex justify-between items-center py-4 px-4 rounded-lg border-2 mt-4 ${resultado >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
+                  <span className="font-bold text-gray-900 text-lg">Total geral</span>
+                  <span className={`font-bold text-xl ${resultado >= 0 ? "text-emerald-800" : "text-red-800"}`}>
                     R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -3019,41 +3019,41 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quadrante META DO MÊS */}
-            <div className="bg-gradient-to-br from-slate-700 to-slate-800 p-8 rounded-2xl shadow-lg text-white">
+            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-white/20">
+                <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-gray-300">
                   <div></div>
-                  <div className="text-center font-bold text-white text-xl">R$</div>
-                  <div className="text-center font-bold text-white text-xl">%</div>
+                  <div className="text-center font-bold text-gray-800 text-xl">R$</div>
+                  <div className="text-center font-bold text-gray-800 text-xl">%</div>
                 </div>
 
                 {/* META */}
-                <div className="grid grid-cols-3 gap-4 py-3 border-b border-white/20">
-                  <div className="font-bold text-white italic">META</div>
-                  <div className="text-center font-bold text-white">
+                <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
+                  <div className="font-bold text-gray-800 italic">META</div>
+                  <div className="text-center font-bold text-gray-800">
                     R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-center font-bold text-white">100%</div>
+                  <div className="text-center font-bold text-gray-800">100%</div>
                 </div>
 
                 {/* ALCANÇADO */}
-                <div className="grid grid-cols-3 gap-4 py-3 border-b border-white/20">
-                  <div className="font-bold text-emerald-300 italic">ALCANÇADO</div>
-                  <div className="text-center font-bold text-emerald-200">
+                <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
+                  <div className="font-bold text-emerald-700 italic">ALCANÇADO</div>
+                  <div className="text-center font-bold text-emerald-800">
                     R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-center font-bold text-emerald-200">
+                  <div className="text-center font-bold text-emerald-800">
                     {metaValue > 0 ? ((totalReceitas / metaValue) * 100).toFixed(0) : 0}%
                   </div>
                 </div>
 
                 {/* RESTANTE */}
                 <div className="grid grid-cols-3 gap-4 py-3">
-                  <div className="font-bold text-red-300 italic">RESTANTE</div>
-                  <div className="text-center font-bold text-red-200">
+                  <div className="font-bold text-red-700 italic">RESTANTE</div>
+                  <div className="text-center font-bold text-red-800">
                     {totalReceitas >= metaValue ? "—" : `-R$ ${Math.max(0, metaValue - totalReceitas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
                   </div>
-                  <div className="text-center font-bold text-red-200">
+                  <div className="text-center font-bold text-red-800">
                     {totalReceitas >= metaValue ? "—" : `${Math.max(0, 100 - (metaValue > 0 ? (totalReceitas / metaValue) * 100 : 0)).toFixed(0)}%`}
                   </div>
                 </div>
