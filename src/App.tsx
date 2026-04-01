@@ -66,6 +66,9 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  LineChart,
+  Line,
+  LabelList,
 } from "recharts";
 
 interface NewTransaction {
@@ -1930,6 +1933,46 @@ const AppContent: React.FC = () => {
       },
     ];
 
+    // Dados para gráfico de saldo (3 barras: receitas, despesas, saldo)
+    const barChartDataSaldo = [
+      { name: "Receitas", value: totalReceitasMes, color: "#22c55e" },
+      { name: "Despesas", value: totalDespesasMes, color: "#ef4444" },
+      { name: "Saldo", value: lucroLiquidoMes, color: lucroLiquidoMes >= 0 ? "#f59e0b" : "#dc2626" },
+    ];
+    const barChartDataSaldoTrimestre = [
+      { name: "Receitas", value: totalReceitasTrimestre, color: "#22c55e" },
+      { name: "Despesas", value: totalDespesasTrimestre, color: "#ef4444" },
+      { name: "Saldo", value: lucroLiquidoTrimestre, color: lucroLiquidoTrimestre >= 0 ? "#f59e0b" : "#dc2626" },
+    ];
+    const barChartDataSaldoAnual = [
+      { name: "Receitas", value: totalReceitasAno, color: "#22c55e" },
+      { name: "Despesas", value: totalDespesasAno, color: "#ef4444" },
+      { name: "Saldo", value: lucroLiquidoAno, color: lucroLiquidoAno >= 0 ? "#f59e0b" : "#dc2626" },
+    ];
+
+    // Dados para LineChart de evolução mensal (12 meses do ano)
+    const mesesNomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    const lineChartData = mesesNomes.map((nome, idx) => {
+      const { receitas: rec, despesas: desp, resultado: saldo } = calculateTotalsForMonth(idx, currentYear);
+      return { mes: nome, Receitas: rec, Despesas: desp, Saldo: saldo };
+    });
+
+    // Dados para PieChart de categorias de despesas do mês selecionado
+    const despesasMes = transactions.filter((t) => {
+      if (!t.date || !isDespesa(t.type)) return false;
+      const { month, year } = getMonthYearFromDate(t.date);
+      return month === selectedMonth && year === currentYear;
+    });
+    const categoriasDespesas: Record<string, number> = {};
+    despesasMes.forEach((t) => {
+      const cat = t.category || "Outros";
+      categoriasDespesas[cat] = (categoriasDespesas[cat] || 0) + (Number(t.value) || 0);
+    });
+    const CORES_CATEGORIAS = ["#ef4444","#f97316","#f59e0b","#8b5cf6","#06b6d4","#ec4899","#10b981","#3b82f6","#84cc16","#6366f1"];
+    const pieChartDataCategorias = Object.entries(categoriasDespesas)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value], i) => ({ name, value, color: CORES_CATEGORIAS[i % CORES_CATEGORIAS.length] }));
+
     // Componente de gráfico de rosca (donut chart)
     const renderPieChart = (data: any[], title: string) => {
       // Se não houver dados ou todos os valores forem 0, exibir rosca cinza
@@ -2049,11 +2092,101 @@ const AppContent: React.FC = () => {
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
+              <LabelList
+                dataKey="value"
+                position="top"
+                formatter={(v: any) =>
+                  `R$ ${(Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                }
+                style={{ fontSize: 11, fontWeight: 600, fill: "#374151" }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
     );
+
+    // Componente de gráfico de linha (evolução mensal)
+    const renderLineChart = () => (
+      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-6">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Evolução Mensal — {currentYear}</h3>
+        <ResponsiveContainer width="100%" height={350}>
+          <LineChart data={lineChartData} margin={{ top: 20, right: 30, left: 20, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#666" }} />
+            <YAxis
+              tickFormatter={(v: number) => `R$ ${(v / 1000).toFixed(0)}k`}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: "#666" }}
+            />
+            <Tooltip
+              formatter={(value: any) =>
+                `R$ ${(typeof value === "number" ? value : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+              }
+              contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
+            />
+            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: "16px", fontSize: 13, fontWeight: 600 }} />
+            <Line type="monotone" dataKey="Receitas" stroke="#22c55e" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+            <Line type="monotone" dataKey="Despesas" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+            <Line type="monotone" dataKey="Saldo" stroke="#f59e0b" strokeWidth={2.5} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+
+    // Componente de PieChart de categorias de despesas
+    const renderPieChartCategorias = () => {
+      const hasData = pieChartDataCategorias.length > 0;
+      const displayData = hasData ? pieChartDataCategorias : [{ name: "Sem dados", value: 100, color: "#e5e7eb" }];
+      return (
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">
+            Despesas por Categoria — {mesesNomes[selectedMonth]}
+          </h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <RechartsPieChart>
+              <Pie
+                data={displayData}
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={130}
+                paddingAngle={hasData ? 5 : 0}
+                dataKey="value"
+                cornerRadius={hasData ? 8 : 0}
+                stroke="none"
+              >
+                {displayData.map((entry, index) => (
+                  <Cell key={`cat-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              {hasData && (
+                <Tooltip
+                  formatter={(value: any) => [
+                    `R$ ${(typeof value === "number" ? value : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+                    "",
+                  ]}
+                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
+                />
+              )}
+              {hasData && (
+                <Legend
+                  verticalAlign="bottom"
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: "16px", fontSize: 12, fontWeight: 600 }}
+                />
+              )}
+              {!hasData && (
+                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-gray-400 text-sm">
+                  Sem despesas neste mês
+                </text>
+              )}
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    };
 
     return (
       <div className="space-y-8">
@@ -2189,8 +2322,8 @@ const AppContent: React.FC = () => {
                 </div>
                 {expandedCharts.includes("saldo-mensal") &&
                   renderBarChart(
-                    barChartData,
-                    `Comparação: Meta vs Real (${mesSelecionadoMetas.nome})`,
+                    barChartDataSaldo,
+                    `Receitas vs Despesas vs Saldo (${mesSelecionadoMetas.nome})`,
                   )}
               </div>
             </div>
@@ -2300,8 +2433,8 @@ const AppContent: React.FC = () => {
                 </div>
                 {expandedCharts.includes("saldo-trimestre") &&
                   renderBarChart(
-                    barChartDataTrimestre,
-                    `Comparação Trimestral: Meta vs Real (${nomesTrimestres[trimestreAtual]})`,
+                    barChartDataSaldoTrimestre,
+                    `Receitas vs Despesas vs Saldo (${nomesTrimestres[trimestreAtual]})`,
                   )}
               </div>
             </div>
@@ -2410,11 +2543,24 @@ const AppContent: React.FC = () => {
                 </div>
                 {expandedCharts.includes("saldo-anual") &&
                   renderBarChart(
-                    barChartDataAnual,
-                    "Comparação Anual: Meta vs Real",
+                    barChartDataSaldoAnual,
+                    "Receitas vs Despesas vs Saldo Anual",
                   )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Evolução Mensal e Categorias de Despesas */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <BarChart3 className="w-6 h-6 text-gray-600" />
+            Análise do Ano
+          </h2>
+          {renderLineChart()}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            {renderPieChart(pieChartData, `Receitas vs Despesas — ${mesSelecionadoMetas.nome}`)}
+            {renderPieChartCategorias()}
           </div>
         </div>
 
