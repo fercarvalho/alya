@@ -6786,7 +6786,7 @@ const AppContent: React.FC = () => {
                         setSelectedMonth(mes.indice);
                         setMetasMonthDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-5 py-3 text-base font-semibold transition-colors duration-150 ${
+                      className={`w-full text-center px-5 py-3 text-lg font-bold transition-colors duration-150 ${
                         mes.indice === selectedMonth
                           ? "bg-amber-50 text-amber-800"
                           : "text-gray-700 hover:bg-amber-50 hover:text-amber-800"
