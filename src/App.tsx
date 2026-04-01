@@ -2223,27 +2223,28 @@ const AppContent: React.FC = () => {
 
         {/* Seção do Mês (com seletor para comparar metas vs real) */}
         <div className="bg-gradient-to-br from-emerald-50/60 to-green-50/40 rounded-2xl p-5 border border-emerald-100 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
               <PieChart className="w-6 h-6 text-emerald-600" />
               Dados do mês
-              <span className="text-sm font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-lg border border-emerald-200">
+            </h2>
+            <div className="flex items-center gap-1 bg-emerald-100 border border-emerald-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setSelectedMonth((m) => (m - 1 + 12) % 12)}
+                className="px-2 py-1.5 text-emerald-700 hover:bg-emerald-200 transition-colors duration-150"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-semibold text-emerald-700 px-2 min-w-[130px] text-center">
                 {mesSelecionadoMetas.nome} {new Date().getFullYear()}
               </span>
-            </h2>
-            <select
-              id="month-selector"
-              name="month-selector"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="text-lg font-semibold text-amber-800 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-            >
-              {mesesMetas.map((mes) => (
-                <option key={mes.indice} value={mes.indice}>
-                  {mes.nome} {new Date().getFullYear()}
-                </option>
-              ))}
-            </select>
+              <button
+                onClick={() => setSelectedMonth((m) => (m + 1) % 12)}
+                className="px-2 py-1.5 text-emerald-700 hover:bg-emerald-200 transition-colors duration-150"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Resumo rápido do mês */}
