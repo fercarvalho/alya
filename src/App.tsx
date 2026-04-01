@@ -504,6 +504,7 @@ const AppContent: React.FC = () => {
   const [expandedCharts, setExpandedCharts] = useState<string[]>([]);
   const [metasMonthDropdownOpen, setMetasMonthDropdownOpen] = useState(false);
   const [periodoRelatorio, setPeriodoRelatorio] = useState<"semana" | "mes" | "trimestre" | "ano">("mes");
+  const [periodoOffset, setPeriodoOffset] = useState(0);
 
   // ⚠️ TODOS OS useEffect DEVEM ESTAR AQUI, ANTES DOS RETURNS CONDICIONAIS
 
@@ -5630,46 +5631,75 @@ const AppContent: React.FC = () => {
   // Render Reports
   const renderReports = () => {
     const agora = new Date();
+    const off = periodoOffset;
 
-    // Período atual
-    const inicioSemana = new Date(agora);
-    inicioSemana.setDate(agora.getDate() - ((agora.getDay() + 6) % 7));
-    inicioSemana.setHours(0, 0, 0, 0);
-    const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-    const inicioTrimestre = new Date(agora.getFullYear(), Math.floor(agora.getMonth() / 3) * 3, 1);
-    const inicioAno = new Date(agora.getFullYear(), 0, 1);
+    // ── Helpers para calcular início/fim de cada período com offset ──────────
+    const calcRangeAtual = (tipo: "semana" | "mes" | "trimestre" | "ano", offset: number): [Date, Date] => {
+      if (tipo === "semana") {
+        const ini = new Date(agora);
+        ini.setDate(agora.getDate() - ((agora.getDay() + 6) % 7) + offset * 7);
+        ini.setHours(0, 0, 0, 0);
+        const fim = new Date(ini);
+        fim.setDate(ini.getDate() + 6);
+        fim.setHours(23, 59, 59, 999);
+        return [ini, fim];
+      }
+      if (tipo === "mes") {
+        const ano = agora.getFullYear();
+        const mesBase = agora.getMonth() + offset;
+        const ini = new Date(ano, mesBase, 1);
+        const fim = new Date(ano, mesBase + 1, 0, 23, 59, 59, 999);
+        return [ini, fim];
+      }
+      if (tipo === "trimestre") {
+        const trimBase = Math.floor(agora.getMonth() / 3) + offset;
+        const ano = agora.getFullYear() + Math.floor(trimBase / 4);
+        const trimNorm = ((trimBase % 4) + 4) % 4;
+        const ini = new Date(ano, trimNorm * 3, 1);
+        const fim = new Date(ano, trimNorm * 3 + 3, 0, 23, 59, 59, 999);
+        return [ini, fim];
+      }
+      // ano
+      const anoSel = agora.getFullYear() + offset;
+      return [new Date(anoSel, 0, 1), new Date(anoSel, 11, 31, 23, 59, 59, 999)];
+    };
 
-    // Período anterior (para comparação)
-    const fimSemanaAnt = new Date(inicioSemana);
-    fimSemanaAnt.setMilliseconds(-1);
-    const inicioSemanaAnt = new Date(fimSemanaAnt);
-    inicioSemanaAnt.setDate(fimSemanaAnt.getDate() - fimSemanaAnt.getDay());
-    inicioSemanaAnt.setHours(0, 0, 0, 0);
+    const labelPeriodo = (tipo: "semana" | "mes" | "trimestre" | "ano", offset: number): string => {
+      const mesesNomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+      if (tipo === "semana") {
+        const [ini, fim] = calcRangeAtual(tipo, offset);
+        const fmt = (d: Date) => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+        return `${fmt(ini)} – ${fmt(fim)}/${fim.getFullYear()}`;
+      }
+      if (tipo === "mes") {
+        const mesBase = agora.getMonth() + offset;
+        const ano = agora.getFullYear() + Math.floor(mesBase / 12);
+        const mesNorm = ((mesBase % 12) + 12) % 12;
+        return `${mesesNomes[mesNorm]} ${ano}`;
+      }
+      if (tipo === "trimestre") {
+        const trimBase = Math.floor(agora.getMonth() / 3) + offset;
+        const ano = agora.getFullYear() + Math.floor(trimBase / 4);
+        const trimNorm = ((trimBase % 4) + 4) % 4;
+        return `T${trimNorm + 1} ${ano}`;
+      }
+      return String(agora.getFullYear() + offset);
+    };
 
-    const fimMesAnt = new Date(inicioMes);
-    fimMesAnt.setMilliseconds(-1);
-    const inicioMesAnt = new Date(fimMesAnt.getFullYear(), fimMesAnt.getMonth(), 1);
-
-    const fimTrimestreAnt = new Date(inicioTrimestre);
-    fimTrimestreAnt.setMilliseconds(-1);
-    const inicioTrimestreAnt = new Date(fimTrimestreAnt.getFullYear(), Math.floor(fimTrimestreAnt.getMonth() / 3) * 3, 1);
-
-    const inicioAnoAnt = new Date(agora.getFullYear() - 1, 0, 1);
-    const fimAnoAnt = new Date(agora.getFullYear(), 0, 1);
-    fimAnoAnt.setMilliseconds(-1);
-
-    // Filtros por período atual e anterior
-    const filtrar = (ini: Date, fim?: Date) =>
+    const filtrar = (ini: Date, fim: Date) =>
       transactions.filter((t) => {
         const d = parseLocalDate(t.date);
-        return fim ? d >= ini && d <= fim : d >= ini;
+        return d >= ini && d <= fim;
       });
 
+    const [iniAtual, fimAtual] = calcRangeAtual(periodoRelatorio, off);
+    const [iniAnt, fimAnt] = calcRangeAtual(periodoRelatorio, off - 1);
+
     const transacoesPorPeriodo = {
-      semana: { atual: filtrar(inicioSemana), anterior: filtrar(inicioSemanaAnt, fimSemanaAnt) },
-      mes: { atual: filtrar(inicioMes), anterior: filtrar(inicioMesAnt, fimMesAnt) },
-      trimestre: { atual: filtrar(inicioTrimestre), anterior: filtrar(inicioTrimestreAnt, fimTrimestreAnt) },
-      ano: { atual: filtrar(inicioAno), anterior: filtrar(inicioAnoAnt, fimAnoAnt) },
+      semana: { atual: filtrar(...calcRangeAtual("semana", off)), anterior: filtrar(...calcRangeAtual("semana", off - 1)) },
+      mes: { atual: filtrar(...calcRangeAtual("mes", off)), anterior: filtrar(...calcRangeAtual("mes", off - 1)) },
+      trimestre: { atual: filtrar(...calcRangeAtual("trimestre", off)), anterior: filtrar(...calcRangeAtual("trimestre", off - 1)) },
+      ano: { atual: filtrar(...calcRangeAtual("ano", off)), anterior: filtrar(...calcRangeAtual("ano", off - 1)) },
     };
 
     const somarReceitas = (ts: any[]) => ts.filter((t) => isReceita(t.type)).reduce((s, t) => s + Number(t.value), 0);
@@ -5800,26 +5830,48 @@ const AppContent: React.FC = () => {
           const labels: Record<string, string> = { semana: "Semana", mes: "Mês", trimestre: "Trimestre", ano: "Ano" };
           const activeIdx = periodos.indexOf(periodoRelatorio);
           return (
-            <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 w-fit overflow-hidden">
-              {/* Pill deslizante */}
-              <span
-                className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
-                style={{
-                  width: `calc((100% - 8px) / ${periodos.length})`,
-                  left: `calc(${activeIdx} * (100% - 8px) / ${periodos.length} + 4px)`,
-                }}
-              />
-              {periodos.map((per) => (
+            <div className="flex flex-col gap-3">
+              {/* Tabs de tipo */}
+              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 w-fit overflow-hidden">
+                <span
+                  className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
+                  style={{
+                    width: `calc((100% - 8px) / ${periodos.length})`,
+                    left: `calc(${activeIdx} * (100% - 8px) / ${periodos.length} + 4px)`,
+                  }}
+                />
+                {periodos.map((per) => (
+                  <button
+                    key={per}
+                    onClick={() => { setPeriodoRelatorio(per); setPeriodoOffset(0); }}
+                    className={`relative z-10 px-5 py-2 rounded-xl text-sm font-bold transition-colors duration-200 ${
+                      periodoRelatorio === per ? "text-white" : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    {labels[per]}
+                  </button>
+                ))}
+              </div>
+
+              {/* Navegação ← período → */}
+              <div className="flex items-center gap-2 bg-white rounded-xl shadow border border-gray-200 px-2 py-1 w-fit">
                 <button
-                  key={per}
-                  onClick={() => setPeriodoRelatorio(per)}
-                  className={`relative z-10 px-5 py-2 rounded-xl text-sm font-bold transition-colors duration-200 ${
-                    periodoRelatorio === per ? "text-white" : "text-gray-500 hover:text-gray-800"
-                  }`}
+                  onClick={() => setPeriodoOffset((o) => o - 1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold"
                 >
-                  {labels[per]}
+                  ‹
                 </button>
-              ))}
+                <span className="min-w-[160px] text-center text-sm font-bold text-gray-700 px-2">
+                  {labelPeriodo(periodoRelatorio, periodoOffset)}
+                </span>
+                <button
+                  onClick={() => setPeriodoOffset((o) => o + 1)}
+                  disabled={periodoOffset >= 0}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ›
+                </button>
+              </div>
             </div>
           );
         })()}
