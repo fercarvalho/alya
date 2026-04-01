@@ -2887,7 +2887,7 @@ const AppContent: React.FC = () => {
         barColor = acimaDe100 ? "from-blue-600 to-blue-800" : "from-blue-500 to-blue-600";
       }
       return (
-        <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden">
+        <div className="w-full bg-white/25 rounded-full h-3 relative overflow-hidden">
           <div
             className={`bg-gradient-to-r ${barColor} h-3 rounded-full transition-all duration-500`}
             style={{ width: `${Math.min(100, pct)}%` }}
@@ -2902,21 +2902,21 @@ const AppContent: React.FC = () => {
       if (tipo === "receita" || tipo === "investimento") {
         const falta = Math.max(0, meta - real);
         return (
-          <div className="text-xs text-gray-500 font-medium flex justify-between">
-            <span>Realizado: <span className="font-bold text-gray-700">R$ {fmt(real)}</span></span>
-            {falta > 0 && <span>Falta: <span className="font-bold text-red-600">R$ {fmt(falta)}</span></span>}
-            {falta === 0 && real > 0 && <span className="text-emerald-600 font-bold">✓ Meta superada</span>}
+          <div className="text-xs text-white/70 font-medium flex justify-between">
+            <span>Realizado: <span className="font-bold text-white">R$ {fmt(real)}</span></span>
+            {falta > 0 && <span>Falta: <span className="font-bold text-yellow-200">R$ {fmt(falta)}</span></span>}
+            {falta === 0 && real > 0 && <span className="text-yellow-200 font-bold">✓ Meta superada</span>}
           </div>
         );
       } else {
         const excesso = Math.max(0, real - meta);
         const disponivel = Math.max(0, meta - real);
         return (
-          <div className="text-xs text-gray-500 font-medium flex justify-between">
-            <span>Realizado: <span className="font-bold text-gray-700">R$ {fmt(real)}</span></span>
+          <div className="text-xs text-white/70 font-medium flex justify-between">
+            <span>Realizado: <span className="font-bold text-white">R$ {fmt(real)}</span></span>
             {excesso > 0
-              ? <span className="text-red-600 font-bold">Excesso: R$ {fmt(excesso)}</span>
-              : <span>Disponível: <span className="font-bold text-emerald-600">R$ {fmt(disponivel)}</span></span>
+              ? <span className="text-yellow-200 font-bold">Excesso: R$ {fmt(excesso)}</span>
+              : <span>Disponível: <span className="font-bold text-yellow-200">R$ {fmt(disponivel)}</span></span>
             }
           </div>
         );
@@ -2926,7 +2926,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="space-y-6">
         {/* DONUT CENTRAL — percentual geral de faturamento */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl shadow-lg p-6 text-white">
           <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Donut */}
             <div className="flex-shrink-0 relative" style={{ width: 220, height: 220 }}>
@@ -2955,17 +2955,17 @@ const AppContent: React.FC = () => {
 
             {/* Resumo ao lado do donut */}
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-              <div className="bg-gray-50 rounded-xl p-4 text-center">
-                <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
-                <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              <div className="bg-white/10 rounded-xl p-4 text-center">
+                <div className="text-xs font-bold text-white/60 uppercase tracking-wide mb-1">Meta</div>
+                <div className="text-xl font-black text-white">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
-              <div className="bg-emerald-50 rounded-xl p-4 text-center">
-                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
-                <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              <div className="bg-white/10 rounded-xl p-4 text-center">
+                <div className="text-xs font-bold text-white/60 uppercase tracking-wide mb-1">Realizado</div>
+                <div className="text-xl font-black text-white">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
-              <div className={`rounded-xl p-4 text-center ${resultado >= 0 ? "bg-blue-50" : "bg-red-50"}`}>
+              <div className="bg-white/10 rounded-xl p-4 text-center">
                 <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
-                <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
+                <div className="text-xl font-black text-white">
                   {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
               </div>
@@ -2982,36 +2982,36 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro */}
-            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
+            <div className="bg-gradient-to-br from-slate-700 to-slate-800 p-8 rounded-2xl shadow-lg text-white">
               <div className="space-y-3">
                 {/* RECEITA */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-emerald-700">RECEITA</span>
-                  <span className="font-bold text-emerald-800">
+                <div className="flex justify-between items-center py-2 border-b border-white/20">
+                  <span className="font-semibold text-emerald-300">RECEITA</span>
+                  <span className="font-bold text-emerald-200">
                     R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* DESPESA */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-red-700">DESPESA</span>
-                  <span className="font-bold text-red-800">
+                <div className="flex justify-between items-center py-2 border-b border-white/20">
+                  <span className="font-semibold text-red-300">DESPESA</span>
+                  <span className="font-bold text-red-200">
                     -R$ {totalDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* SALDO INICIAL */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-blue-700">SALDO INICIAL</span>
-                  <span className="font-bold text-blue-800">
+                <div className="flex justify-between items-center py-2 border-b border-white/20">
+                  <span className="font-semibold text-blue-300">SALDO INICIAL</span>
+                  <span className="font-bold text-blue-200">
                     R$ {saldoInicial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* TOTAL GERAL */}
-                <div className={`flex justify-between items-center py-4 px-4 rounded-lg border-2 mt-4 ${resultado >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
-                  <span className="font-bold text-gray-900 text-lg">Total geral</span>
-                  <span className={`font-bold text-xl ${resultado >= 0 ? "text-emerald-800" : "text-red-800"}`}>
+                <div className={`flex justify-between items-center py-4 px-4 rounded-lg border-2 mt-4 ${resultado >= 0 ? "bg-emerald-500/30 border-emerald-400" : "bg-red-500/30 border-red-400"}`}>
+                  <span className="font-bold text-white text-lg">Total geral</span>
+                  <span className={`font-bold text-xl ${resultado >= 0 ? "text-emerald-200" : "text-red-200"}`}>
                     R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -3019,41 +3019,41 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quadrante META DO MÊS */}
-            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
+            <div className="bg-gradient-to-br from-slate-700 to-slate-800 p-8 rounded-2xl shadow-lg text-white">
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-gray-300">
+                <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-white/20">
                   <div></div>
-                  <div className="text-center font-bold text-gray-800 text-xl">R$</div>
-                  <div className="text-center font-bold text-gray-800 text-xl">%</div>
+                  <div className="text-center font-bold text-white text-xl">R$</div>
+                  <div className="text-center font-bold text-white text-xl">%</div>
                 </div>
 
                 {/* META */}
-                <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
-                  <div className="font-bold text-gray-800 italic">META</div>
-                  <div className="text-center font-bold text-gray-800">
+                <div className="grid grid-cols-3 gap-4 py-3 border-b border-white/20">
+                  <div className="font-bold text-white italic">META</div>
+                  <div className="text-center font-bold text-white">
                     R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-center font-bold text-gray-800">100%</div>
+                  <div className="text-center font-bold text-white">100%</div>
                 </div>
 
                 {/* ALCANÇADO */}
-                <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
-                  <div className="font-bold text-emerald-700 italic">ALCANÇADO</div>
-                  <div className="text-center font-bold text-emerald-800">
+                <div className="grid grid-cols-3 gap-4 py-3 border-b border-white/20">
+                  <div className="font-bold text-emerald-300 italic">ALCANÇADO</div>
+                  <div className="text-center font-bold text-emerald-200">
                     R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-center font-bold text-emerald-800">
+                  <div className="text-center font-bold text-emerald-200">
                     {metaValue > 0 ? ((totalReceitas / metaValue) * 100).toFixed(0) : 0}%
                   </div>
                 </div>
 
                 {/* RESTANTE */}
                 <div className="grid grid-cols-3 gap-4 py-3">
-                  <div className="font-bold text-red-700 italic">RESTANTE</div>
-                  <div className="text-center font-bold text-red-800">
+                  <div className="font-bold text-red-300 italic">RESTANTE</div>
+                  <div className="text-center font-bold text-red-200">
                     {totalReceitas >= metaValue ? "—" : `-R$ ${Math.max(0, metaValue - totalReceitas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
                   </div>
-                  <div className="text-center font-bold text-red-800">
+                  <div className="text-center font-bold text-red-200">
                     {totalReceitas >= metaValue ? "—" : `${Math.max(0, 100 - (metaValue > 0 ? (totalReceitas / metaValue) * 100 : 0)).toFixed(0)}%`}
                   </div>
                 </div>
@@ -3071,16 +3071,16 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Faturamento TOTAL */}
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200 shadow-lg">
+            <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-emerald-800">Faturamento TOTAL</h3>
+                <h3 className="text-lg font-bold text-white">Faturamento TOTAL</h3>
                 {badgeReceita(reais.totalReceitas, proj.faturamentoTotal)}
               </div>
-              <div className="text-2xl font-bold text-emerald-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-emerald-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Progresso</span>
                   <span>{proj.faturamentoTotal > 0 ? ((reais.totalReceitas / proj.faturamentoTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -3090,16 +3090,16 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Faturamento Varejo */}
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-lg">
+            <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-green-800">Faturamento Varejo</h3>
+                <h3 className="text-lg font-bold text-white">Faturamento Varejo</h3>
                 {badgeReceita(reais.receitasVarejo, proj.faturamentoVarejo)}
               </div>
-              <div className="text-2xl font-bold text-green-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.receitasVarejo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-green-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Progresso</span>
                   <span>{proj.faturamentoVarejo > 0 ? ((reais.receitasVarejo / proj.faturamentoVarejo) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -3109,16 +3109,16 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Faturamento Atacado */}
-            <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-2xl border border-teal-200 shadow-lg">
+            <div className="bg-gradient-to-br from-teal-500 to-teal-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-teal-800">Faturamento Atacado</h3>
+                <h3 className="text-lg font-bold text-white">Faturamento Atacado</h3>
                 {badgeReceita(reais.receitasAtacado, proj.faturamentoAtacado)}
               </div>
-              <div className="text-2xl font-bold text-teal-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.receitasAtacado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-teal-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Progresso</span>
                   <span>{proj.faturamentoAtacado > 0 ? ((reais.receitasAtacado / proj.faturamentoAtacado) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -3138,16 +3138,16 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Despesas TOTAL */}
-            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
+            <div className="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-red-800">Despesas TOTAL</h3>
+                <h3 className="text-lg font-bold text-white">Despesas TOTAL</h3>
                 {badgeDespesa(reais.totalDespesas, proj.despesasTotal)}
               </div>
-              <div className="text-2xl font-bold text-red-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.totalDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-red-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Limite</span>
                   <span>{proj.despesasTotal > 0 ? ((reais.totalDespesas / proj.despesasTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -3157,16 +3157,16 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Despesas Variáveis */}
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-lg">
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-orange-800">Despesas Variáveis</h3>
+                <h3 className="text-lg font-bold text-white">Despesas Variáveis</h3>
                 {badgeDespesa(reais.despesasVariável, proj.despesasVariável)}
               </div>
-              <div className="text-2xl font-bold text-orange-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.despesasVariável.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-orange-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Limite</span>
                   <span>{proj.despesasVariável > 0 ? ((reais.despesasVariável / proj.despesasVariável) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -3176,16 +3176,16 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Despesas Fixas */}
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border border-amber-200 shadow-lg">
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-amber-800">Despesas Fixas</h3>
+                <h3 className="text-lg font-bold text-white">Despesas Fixas</h3>
                 {badgeDespesa(reais.despesasFixo, proj.despesasFixo)}
               </div>
-              <div className="text-2xl font-bold text-amber-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.despesasFixo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-amber-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Limite</span>
                   <span>{proj.despesasFixo > 0 ? ((reais.despesasFixo / proj.despesasFixo) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -3205,16 +3205,16 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Investimentos Gerais */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-lg">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-blue-800">Investimentos Gerais</h3>
+                <h3 className="text-lg font-bold text-white">Investimentos Gerais</h3>
                 {badgeReceita(reais.investimentos, proj.investimentosGerais)}
               </div>
-              <div className="text-2xl font-bold text-blue-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.investimentos.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-blue-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Meta</span>
                   <span>{proj.investimentosGerais > 0 ? ((reais.investimentos / proj.investimentosGerais) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -3224,16 +3224,16 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Investimentos em MKT */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200 shadow-lg">
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-purple-800">Investimentos em MKT</h3>
+                <h3 className="text-lg font-bold text-white">Investimentos em MKT</h3>
                 {badgeReceita(reais.mkt, proj.investimentosMkt)}
               </div>
-              <div className="text-2xl font-bold text-purple-900 mb-4">
+              <div className="text-2xl font-bold text-white mb-4">
                 R$ {reais.mkt.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-purple-700 mb-1">
+                <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
                   <span>Meta</span>
                   <span>{proj.investimentosMkt > 0 ? ((reais.mkt / proj.investimentosMkt) * 100).toFixed(0) : 0}%</span>
                 </div>
@@ -6321,58 +6321,44 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Seletor de mês estilo Relatórios */}
-        {(() => {
-          const mesesNomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-          const tabWidth = 72;
-          const activeIdx = selectedMonth; // 0–11
-          return (
-            <div className="flex flex-col gap-3">
-              {/* Tabs de mês */}
-              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 overflow-x-auto w-full">
-                <span
-                  className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
-                  style={{ width: tabWidth, left: activeIdx * tabWidth + 4 }}
-                />
-                {mesesNomes.map((nome, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedMonth(idx)}
-                    style={{ width: tabWidth, minWidth: tabWidth }}
-                    className={`relative z-10 py-2 px-0 rounded-xl text-sm font-bold flex items-center justify-center transition-colors duration-200 ${
-                      selectedMonth === idx ? "text-white" : "text-gray-500 hover:text-gray-800"
-                    }`}
-                  >
-                    {nome}
-                  </button>
-                ))}
-              </div>
-
-              {/* Navegador de ano */}
-              <div className="flex items-center gap-2 bg-white rounded-xl shadow border border-gray-200 px-2 py-1 w-fit">
-                <button
-                  onClick={() => setSelectedMonth((m) => (m - 1 + 12) % 12)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold"
-                >
-                  ‹
-                </button>
-                <span className="min-w-[180px] text-center text-sm font-bold text-gray-700 px-2">
-                  {["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"][selectedMonth]} {new Date().getFullYear()}
-                </span>
-                <button
-                  onClick={() => setSelectedMonth((m) => (m + 1) % 12)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold"
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Conteúdo do mês selecionado */}
+        {/* Renderizar Mês Selecionado com Dropdown Integrado */}
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
+            {/* Dropdown do Mês Selecionado */}
+            <div id="metas-month-dropdown" className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg relative">
+              <button
+                type="button"
+                onClick={() => setMetasMonthDropdownOpen((v) => !v)}
+                className="w-full flex items-center justify-center gap-3 text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
+              >
+                <span>{mesSelecionado?.nome} - {new Date().getFullYear()}</span>
+                <ChevronRight className={`w-7 h-7 transition-transform duration-200 ${metasMonthDropdownOpen ? "rotate-90" : "rotate-90 opacity-70"}`} style={{ transform: metasMonthDropdownOpen ? "rotate(-90deg)" : "rotate(90deg)" }} />
+              </button>
+
+              {metasMonthDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-amber-100 z-50 overflow-hidden">
+                  {mesesMetas.map((mes) => (
+                    <button
+                      key={mes.indice}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonth(mes.indice);
+                        setMetasMonthDropdownOpen(false);
+                      }}
+                      className={`w-full text-center px-5 py-3 text-lg font-bold transition-colors duration-150 ${
+                        mes.indice === selectedMonth
+                          ? "bg-amber-50 text-amber-800"
+                          : "text-gray-700 hover:bg-amber-50 hover:text-amber-800"
+                      }`}
+                    >
+                      {mes.nome} - {new Date().getFullYear()}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Conteúdo do Mês */}
             {renderMonthContent(
               mesSelecionado.nome,
               mesSelecionado.indice,
@@ -6381,6 +6367,11 @@ const AppContent: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Renderizar todos os 12 meses em ordem normal (exceto o já exibido no topo) */}
+        {mesesMetas
+          .filter((mes) => mes.indice !== selectedMonth)
+          .map((mes) => renderMonth(mes.nome, mes.indice, mes.meta, 0))}
 
         {/* Renderizar Total do Ano — sempre por último */}
         {renderTotalAno()}
