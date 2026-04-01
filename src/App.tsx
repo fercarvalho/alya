@@ -31,6 +31,9 @@ import {
   Activity,
   Bell,
   Globe,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -2822,8 +2825,153 @@ const AppContent: React.FC = () => {
     const proj = getProjectionMetasForMonth(monthIndex);
     const reais = getReaisByCategoryForMonth(monthIndex);
 
+    // Percentual geral de faturamento (para o donut central)
+    const pctFaturamento = metaValue > 0 ? Math.min(150, (totalReceitas / metaValue) * 100) : 0;
+    const pctFatDisplay = metaValue > 0 ? ((totalReceitas / metaValue) * 100).toFixed(0) : "0";
+
+    // Helper: badge de status para cards de receita (atingiu = verde, andamento = amarelo)
+    const badgeReceita = (real: number, meta: number) => {
+      if (meta <= 0) return null;
+      const pct = (real / meta) * 100;
+      if (pct >= 100) return (
+        <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+          <CheckCircle2 className="w-3 h-3" /> Atingido
+        </span>
+      );
+      if (pct >= 75) return (
+        <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+          <AlertTriangle className="w-3 h-3" /> Em andamento
+        </span>
+      );
+      return (
+        <span className="flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+          <XCircle className="w-3 h-3" /> Abaixo
+        </span>
+      );
+    };
+
+    // Helper: badge de status para cards de despesa (dentro = verde, estourado = vermelho)
+    const badgeDespesa = (real: number, limite: number) => {
+      if (limite <= 0) return null;
+      const pct = (real / limite) * 100;
+      if (pct > 100) return (
+        <span className="flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+          <XCircle className="w-3 h-3" /> Estourado
+        </span>
+      );
+      if (pct >= 85) return (
+        <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+          <AlertTriangle className="w-3 h-3" /> Próximo do limite
+        </span>
+      );
+      return (
+        <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+          <CheckCircle2 className="w-3 h-3" /> Dentro do limite
+        </span>
+      );
+    };
+
+    // Helper: barra de progresso com cor dinâmica
+    const renderBar = (real: number, meta: number, tipo: "receita" | "despesa" | "investimento") => {
+      const pct = meta > 0 ? (real / meta) * 100 : 0;
+      const acimaDe100 = pct > 100;
+      let barColor = "";
+      if (tipo === "receita") {
+        barColor = acimaDe100 ? "from-emerald-600 to-emerald-700" : pct >= 75 ? "from-emerald-500 to-emerald-600" : "from-amber-400 to-amber-500";
+      } else if (tipo === "despesa") {
+        barColor = acimaDe100 ? "from-red-600 to-red-800" : pct >= 85 ? "from-orange-500 to-orange-600" : "from-emerald-500 to-emerald-600";
+      } else {
+        barColor = acimaDe100 ? "from-blue-600 to-blue-800" : "from-blue-500 to-blue-600";
+      }
+      return (
+        <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden">
+          <div
+            className={`bg-gradient-to-r ${barColor} h-3 rounded-full transition-all duration-500`}
+            style={{ width: `${Math.min(100, pct)}%` }}
+          />
+        </div>
+      );
+    };
+
+    // Helper: rodapé dos cards com texto claro
+    const cardFooter = (real: number, meta: number, tipo: "receita" | "despesa" | "investimento") => {
+      const fmt = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      if (tipo === "receita" || tipo === "investimento") {
+        const falta = Math.max(0, meta - real);
+        return (
+          <div className="text-xs text-gray-500 font-medium flex justify-between">
+            <span>Realizado: <span className="font-bold text-gray-700">R$ {fmt(real)}</span></span>
+            {falta > 0 && <span>Falta: <span className="font-bold text-red-600">R$ {fmt(falta)}</span></span>}
+            {falta === 0 && real > 0 && <span className="text-emerald-600 font-bold">✓ Meta superada</span>}
+          </div>
+        );
+      } else {
+        const excesso = Math.max(0, real - meta);
+        const disponivel = Math.max(0, meta - real);
+        return (
+          <div className="text-xs text-gray-500 font-medium flex justify-between">
+            <span>Realizado: <span className="font-bold text-gray-700">R$ {fmt(real)}</span></span>
+            {excesso > 0
+              ? <span className="text-red-600 font-bold">Excesso: R$ {fmt(excesso)}</span>
+              : <span>Disponível: <span className="font-bold text-emerald-600">R$ {fmt(disponivel)}</span></span>
+            }
+          </div>
+        );
+      }
+    };
+
     return (
       <div className="space-y-6">
+        {/* DONUT CENTRAL — percentual geral de faturamento */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            {/* Donut */}
+            <div className="flex-shrink-0">
+              <ResponsiveContainer width={200} height={200}>
+                <RechartsPieChart>
+                  <Pie
+                    data={[
+                      { name: "Realizado", value: Math.min(100, pctFaturamento), color: pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444" },
+                      { name: "Restante", value: Math.max(0, 100 - pctFaturamento), color: "#f3f4f6" },
+                    ]}
+                    cx="50%" cy="50%"
+                    innerRadius={65} outerRadius={90}
+                    startAngle={90} endAngle={-270}
+                    dataKey="value" stroke="none" paddingAngle={0}
+                  >
+                    <Cell fill={pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444"} />
+                    <Cell fill="#f3f4f6" />
+                  </Pie>
+                </RechartsPieChart>
+              </ResponsiveContainer>
+              <div className="relative" style={{ marginTop: -115, textAlign: "center" }}>
+                <div className={`text-3xl font-black ${pctFaturamento >= 100 ? "text-emerald-600" : pctFaturamento >= 75 ? "text-amber-600" : "text-red-600"}`}>
+                  {pctFatDisplay}%
+                </div>
+                <div className="text-xs text-gray-500 font-medium">da meta</div>
+              </div>
+            </div>
+
+            {/* Resumo ao lado do donut */}
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+              <div className="bg-gray-50 rounded-xl p-4 text-center">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
+                <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              </div>
+              <div className="bg-emerald-50 rounded-xl p-4 text-center">
+                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
+                <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              </div>
+              <div className={`rounded-xl p-4 text-center ${resultado >= 0 ? "bg-blue-50" : "bg-red-50"}`}>
+                <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
+                <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
+                  {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 1. RESULTADO */}
         <div className="space-y-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
@@ -2835,32 +2983,11 @@ const AppContent: React.FC = () => {
             {/* Quadrante Financeiro */}
             <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
               <div className="space-y-3">
-                {/* REFORÇO DE CAIXA */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-gray-700">
-                    REFORÇO DE CAIXA
-                  </span>
-                  <span className="font-bold text-gray-800">R$ 0,00</span>
-                </div>
-
-                {/* SAÍDA DE CAIXA */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-gray-700">
-                    SAÍDA DE CAIXA
-                  </span>
-                  <span className="font-bold text-gray-800">R$ 0,00</span>
-                </div>
-
                 {/* RECEITA */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-emerald-700">
-                    RECEITA
-                  </span>
+                  <span className="font-semibold text-emerald-700">RECEITA</span>
                   <span className="font-bold text-emerald-800">
-                    R${" "}
-                    {totalReceitas.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
+                    R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
@@ -2868,44 +2995,23 @@ const AppContent: React.FC = () => {
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="font-semibold text-red-700">DESPESA</span>
                   <span className="font-bold text-red-800">
-                    -R${" "}
-                    {totalDespesas.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
+                    -R$ {totalDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* SALDO INICIAL */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-blue-700">
-                    SALDO INICIAL
-                  </span>
+                  <span className="font-semibold text-blue-700">SALDO INICIAL</span>
                   <span className="font-bold text-blue-800">
-                    R${" "}
-                    {saldoInicial.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
+                    R$ {saldoInicial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* TOTAL GERAL */}
-                <div className="flex justify-between items-center py-4 bg-gray-50 px-4 rounded-lg border-2 border-gray-300 mt-4">
-                  <span className="font-bold text-gray-900 text-lg">
-                    Total geral
-                  </span>
-                  <span
-                    className={`font-bold text-xl ${
-                      saldoInicial + totalReceitas - totalDespesas >= 0
-                        ? "text-emerald-800"
-                        : "text-red-800"
-                    }`}
-                  >
-                    R${" "}
-                    {(
-                      saldoInicial +
-                      totalReceitas -
-                      totalDespesas
-                    ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                <div className={`flex justify-between items-center py-4 px-4 rounded-lg border-2 mt-4 ${resultado >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
+                  <span className="font-bold text-gray-900 text-lg">Total geral</span>
+                  <span className={`font-bold text-xl ${resultado >= 0 ? "text-emerald-800" : "text-red-800"}`}>
+                    R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -2914,49 +3020,29 @@ const AppContent: React.FC = () => {
             {/* Quadrante META DO MÊS */}
             <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-200">
               <div className="space-y-4">
-                {/* Cabeçalho com colunas R$ e % */}
                 <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-gray-300">
-                  <div className="text-center">
-                    <span className="font-bold text-gray-600 text-lg"></span>
-                  </div>
-                  <div className="text-center">
-                    <span className="font-bold text-gray-800 text-xl">R$</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="font-bold text-gray-800 text-xl">%</span>
-                  </div>
+                  <div></div>
+                  <div className="text-center font-bold text-gray-800 text-xl">R$</div>
+                  <div className="text-center font-bold text-gray-800 text-xl">%</div>
                 </div>
 
                 {/* META */}
                 <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
                   <div className="font-bold text-gray-800 italic">META</div>
                   <div className="text-center font-bold text-gray-800">
-                    R${" "}
-                    {metaValue.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
+                    R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-center font-bold text-gray-800">
-                    100%
-                  </div>
+                  <div className="text-center font-bold text-gray-800">100%</div>
                 </div>
 
                 {/* ALCANÇADO */}
                 <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-200">
-                  <div className="font-bold text-emerald-700 italic">
-                    ALCANÇADO
+                  <div className="font-bold text-emerald-700 italic">ALCANÇADO</div>
+                  <div className="text-center font-bold text-emerald-800">
+                    R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-center font-bold text-emerald-800">
-                    R${" "}
-                    {totalReceitas.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </div>
-                  <div className="text-center font-bold text-emerald-800">
-                    {metaValue > 0
-                      ? ((totalReceitas / metaValue) * 100).toFixed(0)
-                      : 0}
-                    %
+                    {metaValue > 0 ? ((totalReceitas / metaValue) * 100).toFixed(0) : 0}%
                   </div>
                 </div>
 
@@ -2964,20 +3050,10 @@ const AppContent: React.FC = () => {
                 <div className="grid grid-cols-3 gap-4 py-3">
                   <div className="font-bold text-red-700 italic">RESTANTE</div>
                   <div className="text-center font-bold text-red-800">
-                    -R${" "}
-                    {Math.max(0, metaValue - totalReceitas).toLocaleString(
-                      "pt-BR",
-                      { minimumFractionDigits: 2 },
-                    )}
+                    {totalReceitas >= metaValue ? "—" : `-R$ ${Math.max(0, metaValue - totalReceitas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
                   </div>
                   <div className="text-center font-bold text-red-800">
-                    {metaValue > 0
-                      ? Math.max(
-                          0,
-                          100 - (totalReceitas / metaValue) * 100,
-                        ).toFixed(0)
-                      : 100}
-                    %
+                    {totalReceitas >= metaValue ? "—" : `${Math.max(0, 100 - (metaValue > 0 ? (totalReceitas / metaValue) * 100 : 0)).toFixed(0)}%`}
                   </div>
                 </div>
               </div>
@@ -2993,176 +3069,61 @@ const AppContent: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Faturamento TOTAL */}
             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200 shadow-lg">
-              <h3 className="text-lg font-bold text-emerald-800 mb-4">
-                Faturamento TOTAL
-              </h3>
-              <div className="text-2xl font-bold text-emerald-900 mb-4">
-                R${" "}
-                {reais.totalReceitas.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-emerald-800">Faturamento TOTAL</h3>
+                {badgeReceita(reais.totalReceitas, proj.faturamentoTotal)}
               </div>
-
-              {/* Barra de Progresso */}
+              <div className="text-2xl font-bold text-emerald-900 mb-4">
+                R$ {reais.totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-emerald-700 mb-1">
                   <span>Progresso</span>
-                  <span>
-                    {proj.faturamentoTotal > 0
-                      ? (
-                          (reais.totalReceitas / proj.faturamentoTotal) *
-                          100
-                        ).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.faturamentoTotal > 0 ? ((reais.totalReceitas / proj.faturamentoTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-emerald-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.faturamentoTotal > 0 ? (reais.totalReceitas / proj.faturamentoTotal) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.faturamentoTotal > 0 &&
-                    (reais.totalReceitas / proj.faturamentoTotal) * 100 >
-                      100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-emerald-700 to-emerald-800 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.totalReceitas / proj.faturamentoTotal) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.totalReceitas, proj.faturamentoTotal, "receita")}
               </div>
-
-              <div className="text-sm text-emerald-700 font-medium">
-                R${" "}
-                {reais.totalReceitas.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(
-                  0,
-                  proj.faturamentoTotal - reais.totalReceitas,
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              {cardFooter(reais.totalReceitas, proj.faturamentoTotal, "receita")}
             </div>
 
+            {/* Faturamento Varejo */}
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-lg">
-              <h3 className="text-lg font-bold text-green-800 mb-4">
-                Faturamento Varejo
-              </h3>
-              <div className="text-2xl font-bold text-green-900 mb-4">
-                R${" "}
-                {reais.receitasVarejo.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-green-800">Faturamento Varejo</h3>
+                {badgeReceita(reais.receitasVarejo, proj.faturamentoVarejo)}
               </div>
-
+              <div className="text-2xl font-bold text-green-900 mb-4">
+                R$ {reais.receitasVarejo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-green-700 mb-1">
                   <span>Progresso</span>
-                  <span>
-                    {proj.faturamentoVarejo > 0
-                      ? (
-                          (reais.receitasVarejo / proj.faturamentoVarejo) *
-                          100
-                        ).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.faturamentoVarejo > 0 ? ((reais.receitasVarejo / proj.faturamentoVarejo) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-green-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.faturamentoVarejo > 0 ? (reais.receitasVarejo / proj.faturamentoVarejo) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.faturamentoVarejo > 0 &&
-                    (reais.receitasVarejo / proj.faturamentoVarejo) * 100 >
-                      100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-green-700 to-green-800 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.receitasVarejo / proj.faturamentoVarejo) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.receitasVarejo, proj.faturamentoVarejo, "receita")}
               </div>
-
-              <div className="text-sm text-green-700 font-medium">
-                R${" "}
-                {reais.receitasVarejo.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(
-                  0,
-                  proj.faturamentoVarejo - reais.receitasVarejo,
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              {cardFooter(reais.receitasVarejo, proj.faturamentoVarejo, "receita")}
             </div>
 
+            {/* Faturamento Atacado */}
             <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-2xl border border-teal-200 shadow-lg">
-              <h3 className="text-lg font-bold text-teal-800 mb-4">
-                Faturamento Atacado
-              </h3>
-              <div className="text-2xl font-bold text-teal-900 mb-4">
-                R${" "}
-                {reais.receitasAtacado.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-teal-800">Faturamento Atacado</h3>
+                {badgeReceita(reais.receitasAtacado, proj.faturamentoAtacado)}
               </div>
-
+              <div className="text-2xl font-bold text-teal-900 mb-4">
+                R$ {reais.receitasAtacado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-teal-700 mb-1">
                   <span>Progresso</span>
-                  <span>
-                    {proj.faturamentoAtacado > 0
-                      ? (
-                          (reais.receitasAtacado / proj.faturamentoAtacado) *
-                          100
-                        ).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.faturamentoAtacado > 0 ? ((reais.receitasAtacado / proj.faturamentoAtacado) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-teal-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.faturamentoAtacado > 0 ? (reais.receitasAtacado / proj.faturamentoAtacado) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.faturamentoAtacado > 0 &&
-                    (reais.receitasAtacado / proj.faturamentoAtacado) * 100 >
-                      100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-teal-700 to-teal-800 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.receitasAtacado / proj.faturamentoAtacado) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.receitasAtacado, proj.faturamentoAtacado, "receita")}
               </div>
-
-              <div className="text-sm text-teal-700 font-medium">
-                R${" "}
-                {reais.receitasAtacado.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(
-                  0,
-                  proj.faturamentoAtacado - reais.receitasAtacado,
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              {cardFooter(reais.receitasAtacado, proj.faturamentoAtacado, "receita")}
             </div>
           </div>
         </div>
@@ -3175,173 +3136,61 @@ const AppContent: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Despesas TOTAL */}
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
-              <h3 className="text-lg font-bold text-red-800 mb-4">
-                Despesas TOTAL
-              </h3>
-              <div className="text-2xl font-bold text-red-900 mb-4">
-                R${" "}
-                {reais.totalDespesas.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-red-800">Despesas TOTAL</h3>
+                {badgeDespesa(reais.totalDespesas, proj.despesasTotal)}
               </div>
-
+              <div className="text-2xl font-bold text-red-900 mb-4">
+                R$ {reais.totalDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-red-700 mb-1">
                   <span>Limite</span>
-                  <span>
-                    {proj.despesasTotal > 0
-                      ? (
-                          (reais.totalDespesas / proj.despesasTotal) *
-                          100
-                        ).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.despesasTotal > 0 ? ((reais.totalDespesas / proj.despesasTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-red-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.despesasTotal > 0 ? (reais.totalDespesas / proj.despesasTotal) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.despesasTotal > 0 &&
-                    (reais.totalDespesas / proj.despesasTotal) * 100 > 100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-red-700 to-red-900 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.totalDespesas / proj.despesasTotal) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.totalDespesas, proj.despesasTotal, "despesa")}
               </div>
-
-              <div className="text-sm text-red-700 font-medium">
-                R${" "}
-                {reais.totalDespesas.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(
-                  0,
-                  proj.despesasTotal - reais.totalDespesas,
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              {cardFooter(reais.totalDespesas, proj.despesasTotal, "despesa")}
             </div>
 
+            {/* Despesas Variáveis */}
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-lg">
-              <h3 className="text-lg font-bold text-orange-800 mb-4">
-                Despesas Variáveis
-              </h3>
-              <div className="text-2xl font-bold text-orange-900 mb-4">
-                R${" "}
-                {reais.despesasVariável.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-orange-800">Despesas Variáveis</h3>
+                {badgeDespesa(reais.despesasVariável, proj.despesasVariável)}
               </div>
-
+              <div className="text-2xl font-bold text-orange-900 mb-4">
+                R$ {reais.despesasVariável.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-orange-700 mb-1">
                   <span>Limite</span>
-                  <span>
-                    {proj.despesasVariável > 0
-                      ? (
-                          (reais.despesasVariável / proj.despesasVariável) *
-                          100
-                        ).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.despesasVariável > 0 ? ((reais.despesasVariável / proj.despesasVariável) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-orange-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.despesasVariável > 0 ? (reais.despesasVariável / proj.despesasVariável) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.despesasVariável > 0 &&
-                    (reais.despesasVariável / proj.despesasVariável) * 100 >
-                      100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-orange-700 to-orange-900 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.despesasVariável / proj.despesasVariável) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.despesasVariável, proj.despesasVariável, "despesa")}
               </div>
-
-              <div className="text-sm text-orange-700 font-medium">
-                R${" "}
-                {reais.despesasVariável.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(
-                  0,
-                  proj.despesasVariável - reais.despesasVariável,
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              {cardFooter(reais.despesasVariável, proj.despesasVariável, "despesa")}
             </div>
 
+            {/* Despesas Fixas */}
             <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border border-amber-200 shadow-lg">
-              <h3 className="text-lg font-bold text-amber-800 mb-4">
-                Despesas Fixas
-              </h3>
-              <div className="text-2xl font-bold text-amber-900 mb-4">
-                R${" "}
-                {reais.despesasFixo.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-amber-800">Despesas Fixas</h3>
+                {badgeDespesa(reais.despesasFixo, proj.despesasFixo)}
               </div>
-
+              <div className="text-2xl font-bold text-amber-900 mb-4">
+                R$ {reais.despesasFixo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-amber-700 mb-1">
                   <span>Limite</span>
-                  <span>
-                    {proj.despesasFixo > 0
-                      ? (
-                          (reais.despesasFixo / proj.despesasFixo) *
-                          100
-                        ).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.despesasFixo > 0 ? ((reais.despesasFixo / proj.despesasFixo) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-amber-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.despesasFixo > 0 ? (reais.despesasFixo / proj.despesasFixo) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.despesasFixo > 0 &&
-                    (reais.despesasFixo / proj.despesasFixo) * 100 > 100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-amber-700 to-amber-900 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.despesasFixo / proj.despesasFixo) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.despesasFixo, proj.despesasFixo, "despesa")}
               </div>
-
-              <div className="text-sm text-amber-700 font-medium">
-                R${" "}
-                {reais.despesasFixo.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(
-                  0,
-                  proj.despesasFixo - reais.despesasFixo,
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              {cardFooter(reais.despesasFixo, proj.despesasFixo, "despesa")}
             </div>
           </div>
         </div>
@@ -3354,114 +3203,42 @@ const AppContent: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Investimentos Gerais */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-lg">
-              <h3 className="text-lg font-bold text-blue-800 mb-4">
-                Investimentos Gerais
-              </h3>
-              <div className="text-2xl font-bold text-blue-900 mb-4">
-                R${" "}
-                {reais.investimentos.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-blue-800">Investimentos Gerais</h3>
+                {badgeReceita(reais.investimentos, proj.investimentosGerais)}
               </div>
-
+              <div className="text-2xl font-bold text-blue-900 mb-4">
+                R$ {reais.investimentos.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-blue-700 mb-1">
                   <span>Meta</span>
-                  <span>
-                    {proj.investimentosGerais > 0
-                      ? (
-                          (reais.investimentos / proj.investimentosGerais) *
-                          100
-                        ).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.investimentosGerais > 0 ? ((reais.investimentos / proj.investimentosGerais) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-blue-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.investimentosGerais > 0 ? (reais.investimentos / proj.investimentosGerais) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.investimentosGerais > 0 &&
-                    (reais.investimentos / proj.investimentosGerais) * 100 >
-                      100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-blue-700 to-blue-900 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.investimentos / proj.investimentosGerais) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.investimentos, proj.investimentosGerais, "investimento")}
               </div>
-
-              <div className="text-sm text-blue-700 font-medium">
-                R${" "}
-                {reais.investimentos.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(
-                  0,
-                  proj.investimentosGerais - reais.investimentos,
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              {cardFooter(reais.investimentos, proj.investimentosGerais, "investimento")}
             </div>
 
+            {/* Investimentos em MKT */}
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200 shadow-lg">
-              <h3 className="text-lg font-bold text-purple-800 mb-4">
-                Investimentos em MKT
-              </h3>
-              <div className="text-2xl font-bold text-purple-900 mb-4">
-                R${" "}
-                {reais.mkt.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-purple-800">Investimentos em MKT</h3>
+                {badgeReceita(reais.mkt, proj.investimentosMkt)}
               </div>
-
+              <div className="text-2xl font-bold text-purple-900 mb-4">
+                R$ {reais.mkt.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-purple-700 mb-1">
                   <span>Meta</span>
-                  <span>
-                    {proj.investimentosMkt > 0
-                      ? ((reais.mkt / proj.investimentosMkt) * 100).toFixed(0)
-                      : 0}
-                    %
-                  </span>
+                  <span>{proj.investimentosMkt > 0 ? ((reais.mkt / proj.investimentosMkt) * 100).toFixed(0) : 0}%</span>
                 </div>
-                <div className="w-full bg-purple-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, proj.investimentosMkt > 0 ? (reais.mkt / proj.investimentosMkt) * 100 : 0)}%`,
-                    }}
-                  ></div>
-                  {proj.investimentosMkt > 0 &&
-                    (reais.mkt / proj.investimentosMkt) * 100 > 100 && (
-                      <div
-                        className="absolute top-0 left-0 bg-gradient-to-r from-purple-700 to-purple-900 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, (reais.mkt / proj.investimentosMkt) * 100 - 100)}%`,
-                        }}
-                      ></div>
-                    )}
-                </div>
+                {renderBar(reais.mkt, proj.investimentosMkt, "investimento")}
               </div>
-
-              <div className="text-sm text-purple-700 font-medium">
-                R${" "}
-                {reais.mkt.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                / R${" "}
-                {Math.max(0, proj.investimentosMkt - reais.mkt).toLocaleString(
-                  "pt-BR",
-                  { minimumFractionDigits: 2 },
-                )}
-              </div>
+              {cardFooter(reais.mkt, proj.investimentosMkt, "investimento")}
             </div>
           </div>
         </div>
@@ -7023,13 +6800,13 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Renderizar Total do Ano */}
-        {renderTotalAno()}
+        {/* Renderizar todos os 12 meses em ordem normal (exceto o já exibido no topo) */}
+        {mesesMetas
+          .filter((mes) => mes.indice !== selectedMonth)
+          .map((mes) => renderMonth(mes.nome, mes.indice, mes.meta, 0))}
 
-        {/* Renderizar todos os 12 meses em ordem normal */}
-        {mesesMetas.map((mes) =>
-          renderMonth(mes.nome, mes.indice, mes.meta, 0),
-        )}
+        {/* Renderizar Total do Ano — sempre por último */}
+        {renderTotalAno()}
       </div>
     );
   };
