@@ -1933,21 +1933,23 @@ const AppContent: React.FC = () => {
       },
     ];
 
-    // Dados para gráfico de saldo (3 barras: receitas, despesas, saldo)
+    // Resultado projetado = faturamento projetado - despesas projetadas
+    const resultadoProjetadoMes = metaFaturamentoMes - metaDespesasMes;
+    const resultadoProjetadoTrimestre = metaTrimestre - metaDespesasTrimestre;
+    const resultadoProjetadoAnual = metaAnual - projAnualDesp.despesasTotal;
+
+    // Dados para gráfico de saldo: Resultado Projetado vs Resultado Real
     const barChartDataSaldo = [
-      { name: "Receitas", value: totalReceitasMes, color: "#22c55e" },
-      { name: "Despesas", value: totalDespesasMes, color: "#ef4444" },
-      { name: "Saldo", value: lucroLiquidoMes, color: lucroLiquidoMes >= 0 ? "#f59e0b" : "#dc2626" },
+      { name: "Resultado Projetado", value: resultadoProjetadoMes, color: "#6366f1" },
+      { name: "Resultado Real", value: lucroLiquidoMes, color: lucroLiquidoMes >= resultadoProjetadoMes ? "#22c55e" : "#ef4444" },
     ];
     const barChartDataSaldoTrimestre = [
-      { name: "Receitas", value: totalReceitasTrimestre, color: "#22c55e" },
-      { name: "Despesas", value: totalDespesasTrimestre, color: "#ef4444" },
-      { name: "Saldo", value: lucroLiquidoTrimestre, color: lucroLiquidoTrimestre >= 0 ? "#f59e0b" : "#dc2626" },
+      { name: "Resultado Projetado", value: resultadoProjetadoTrimestre, color: "#6366f1" },
+      { name: "Resultado Real", value: lucroLiquidoTrimestre, color: lucroLiquidoTrimestre >= resultadoProjetadoTrimestre ? "#22c55e" : "#ef4444" },
     ];
     const barChartDataSaldoAnual = [
-      { name: "Receitas", value: totalReceitasAno, color: "#22c55e" },
-      { name: "Despesas", value: totalDespesasAno, color: "#ef4444" },
-      { name: "Saldo", value: lucroLiquidoAno, color: lucroLiquidoAno >= 0 ? "#f59e0b" : "#dc2626" },
+      { name: "Resultado Projetado", value: resultadoProjetadoAnual, color: "#6366f1" },
+      { name: "Resultado Real", value: lucroLiquidoAno, color: lucroLiquidoAno >= resultadoProjetadoAnual ? "#22c55e" : "#ef4444" },
     ];
 
     // Dados para LineChart de evolução mensal (12 meses do ano)
@@ -2323,7 +2325,7 @@ const AppContent: React.FC = () => {
                 {expandedCharts.includes("saldo-mensal") &&
                   renderBarChart(
                     barChartDataSaldo,
-                    `Receitas vs Despesas vs Saldo (${mesSelecionadoMetas.nome})`,
+                    `Resultado: Projetado vs Real (${mesSelecionadoMetas.nome})`,
                   )}
               </div>
             </div>
@@ -2434,7 +2436,7 @@ const AppContent: React.FC = () => {
                 {expandedCharts.includes("saldo-trimestre") &&
                   renderBarChart(
                     barChartDataSaldoTrimestre,
-                    `Receitas vs Despesas vs Saldo (${nomesTrimestres[trimestreAtual]})`,
+                    `Resultado: Projetado vs Real (${nomesTrimestres[trimestreAtual]})`,
                   )}
               </div>
             </div>
@@ -2544,7 +2546,7 @@ const AppContent: React.FC = () => {
                 {expandedCharts.includes("saldo-anual") &&
                   renderBarChart(
                     barChartDataSaldoAnual,
-                    "Receitas vs Despesas vs Saldo Anual",
+                    "Resultado Anual: Projetado vs Real",
                   )}
               </div>
             </div>
