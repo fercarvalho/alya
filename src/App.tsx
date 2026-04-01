@@ -2929,31 +2929,31 @@ const AppContent: React.FC = () => {
         <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow-lg border border-slate-200 p-6">
           <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Donut */}
-            <div className="flex-shrink-0" style={{ width: 220, height: 220, position: "relative" }}>
-              <div style={{ position: "absolute", top: 0, left: 0 }}>
-                <RechartsPieChart width={220} height={220}>
-                  <Pie
-                    data={[
-                      { name: "Realizado", value: Math.min(100, pctFaturamento) },
-                      { name: "Restante", value: Math.max(0, 100 - pctFaturamento) },
-                    ]}
-                    cx={110} cy={110}
-                    innerRadius={75} outerRadius={100}
-                    startAngle={90} endAngle={-270}
-                    dataKey="value" stroke="none" paddingAngle={0}
-                  >
-                    <Cell fill={pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444"} />
-                    <Cell fill="#f3f4f6" />
-                  </Pie>
-                </RechartsPieChart>
-              </div>
-              <div style={{ position: "absolute", top: 0, left: 0, width: 220, height: 220, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                <span className={`text-3xl font-black ${pctFaturamento >= 100 ? "text-emerald-600" : pctFaturamento >= 75 ? "text-amber-600" : "text-red-600"}`}>
-                  {pctFatDisplay}%
-                </span>
-                <span className="text-xs text-gray-500 font-medium">da meta</span>
-              </div>
-            </div>
+            {(() => {
+              const color = pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444";
+              const pct = Math.min(100, pctFaturamento);
+              const deg = (pct / 100) * 360;
+              return (
+                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: 220, height: 220 }}>
+                  <div style={{
+                    width: 200, height: 200, borderRadius: "50%",
+                    background: `conic-gradient(${color} ${deg}deg, #e5e7eb ${deg}deg)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <div style={{
+                      width: 148, height: 148, borderRadius: "50%",
+                      background: "white",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span className={`text-3xl font-black`} style={{ color }}>
+                        {pctFatDisplay}%
+                      </span>
+                      <span className="text-xs text-gray-500 font-medium">da meta</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Resumo ao lado do donut */}
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
