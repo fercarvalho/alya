@@ -6758,14 +6758,13 @@ const AppContent: React.FC = () => {
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
             {/* Dropdown do Mês Selecionado */}
-            <div className="flex items-center gap-3">
-              <Target className="w-6 h-6 text-amber-600 flex-shrink-0" />
+            <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg flex items-center justify-center">
               <select
                 id="metas-month-selector"
                 name="metas-month-selector"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="text-lg font-semibold text-amber-800 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="text-lg font-semibold text-amber-900 bg-white/90 px-5 py-2.5 rounded-xl border-0 shadow focus:outline-none focus:ring-2 focus:ring-white cursor-pointer"
               >
                 {mesesMetas.map((mes) => (
                   <option key={mes.indice} value={mes.indice}>
