@@ -5826,25 +5826,27 @@ const AppContent: React.FC = () => {
 
         {/* Seletor de período */}
         {(() => {
-          const periodos = ["semana", "mes", "trimestre", "ano"] as const;
+          const periodos = ["ano", "trimestre", "mes", "semana"] as const;
           const labels: Record<string, string> = { semana: "Semana", mes: "Mês", trimestre: "Trimestre", ano: "Ano" };
+          const tabWidth = 100;
           const activeIdx = periodos.indexOf(periodoRelatorio);
           return (
             <div className="flex flex-col gap-3">
               {/* Tabs de tipo */}
-              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 w-fit overflow-hidden">
+              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 overflow-hidden w-fit">
                 <span
                   className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
                   style={{
-                    width: `calc((100% - 8px) / ${periodos.length})`,
-                    left: `calc(${activeIdx} * (100% - 8px) / ${periodos.length} + 4px)`,
+                    width: tabWidth,
+                    left: activeIdx * tabWidth + 4,
                   }}
                 />
                 {periodos.map((per) => (
                   <button
                     key={per}
                     onClick={() => { setPeriodoRelatorio(per); setPeriodoOffset(0); }}
-                    className={`relative z-10 px-5 py-2 rounded-xl text-sm font-bold transition-colors duration-200 ${
+                    style={{ width: tabWidth }}
+                    className={`relative z-10 py-2 rounded-xl text-sm font-bold text-center transition-colors duration-200 ${
                       periodoRelatorio === per ? "text-white" : "text-gray-500 hover:text-gray-800"
                     }`}
                   >
