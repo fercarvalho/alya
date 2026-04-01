@@ -5846,7 +5846,7 @@ const AppContent: React.FC = () => {
                     key={per}
                     onClick={() => { setPeriodoRelatorio(per); setPeriodoOffset(0); }}
                     style={{ width: tabWidth }}
-                    className={`relative z-10 py-2 rounded-xl text-sm font-bold text-center transition-colors duration-200 ${
+                    className={`relative z-10 py-2 px-0 rounded-xl text-sm font-bold flex items-center justify-center transition-colors duration-200 ${
                       periodoRelatorio === per ? "text-white" : "text-gray-500 hover:text-gray-800"
                     }`}
                   >
