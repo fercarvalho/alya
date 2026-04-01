@@ -5795,21 +5795,34 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Seletor de período */}
-        <div className="flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-1 w-fit">
-          {(["semana", "mes", "trimestre", "ano"] as const).map((per) => (
-            <button
-              key={per}
-              onClick={() => setPeriodoRelatorio(per)}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
-                periodoRelatorio === per
-                  ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              {per === "semana" ? "Semana" : per === "mes" ? "Mês" : per === "trimestre" ? "Trimestre" : "Ano"}
-            </button>
-          ))}
-        </div>
+        {(() => {
+          const periodos = ["semana", "mes", "trimestre", "ano"] as const;
+          const labels: Record<string, string> = { semana: "Semana", mes: "Mês", trimestre: "Trimestre", ano: "Ano" };
+          const activeIdx = periodos.indexOf(periodoRelatorio);
+          return (
+            <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 w-fit overflow-hidden">
+              {/* Pill deslizante */}
+              <span
+                className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
+                style={{
+                  width: `calc((100% - 8px) / ${periodos.length})`,
+                  left: `calc(${activeIdx} * (100% - 8px) / ${periodos.length} + 4px)`,
+                }}
+              />
+              {periodos.map((per) => (
+                <button
+                  key={per}
+                  onClick={() => setPeriodoRelatorio(per)}
+                  className={`relative z-10 px-5 py-2 rounded-xl text-sm font-bold transition-colors duration-200 ${
+                    periodoRelatorio === per ? "text-white" : "text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  {labels[per]}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Cards de resumo com comparação */}
         {(() => {
@@ -5817,26 +5830,40 @@ const AppContent: React.FC = () => {
           const varMargem = margemAnt !== 0 ? margemAtual - margemAnt : 0;
           const temAnt = (vari: number, base: number) => base !== 0;
           const cards = [
-            { label: "Receitas", valor: recAtual as number | null, margem: null as number | null, vari: varRec, temBase: recAnt > 0, cor: "green", invertido: false },
-            { label: "Despesas", valor: despAtual, margem: null, vari: varDesp, temBase: despAnt > 0, cor: "red", invertido: true },
-            { label: "Lucro Líquido", valor: lucroAtual, margem: null, vari: varLucro, temBase: lucroAnt !== 0, cor: lucroAtual >= 0 ? "green" : "red", invertido: false },
-            { label: "Margem", valor: null, margem: margemAtual, vari: varMargem, temBase: recAnt > 0, cor: margemAtual >= 0 ? "green" : "red", invertido: false },
+            { label: "Receitas", valor: recAtual as number | null, margem: null as number | null, vari: varRec, temBase: recAnt > 0, invertido: false,
+              gradFrom: "from-emerald-500", gradTo: "to-green-400", icon: "📈" },
+            { label: "Despesas", valor: despAtual, margem: null, vari: varDesp, temBase: despAnt > 0, invertido: true,
+              gradFrom: "from-rose-500", gradTo: "to-red-400", icon: "💸" },
+            { label: "Lucro Líquido", valor: lucroAtual, margem: null, vari: varLucro, temBase: lucroAnt !== 0, invertido: false,
+              gradFrom: lucroAtual >= 0 ? "from-teal-500" : "from-orange-500", gradTo: lucroAtual >= 0 ? "to-emerald-400" : "to-red-400", icon: lucroAtual >= 0 ? "✨" : "⚠️" },
+            { label: "Margem", valor: null, margem: margemAtual, vari: varMargem, temBase: recAnt > 0, invertido: false,
+              gradFrom: margemAtual >= 0 ? "from-violet-500" : "from-orange-500", gradTo: margemAtual >= 0 ? "to-purple-400" : "to-red-400", icon: "📊" },
           ];
           return (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {cards.map((card, i) => (
-                <div key={i} className="bg-white rounded-2xl shadow border border-gray-200 p-5">
-                  <p className="text-xs text-gray-500 font-medium mb-1">{card.label}</p>
-                  <p className={`text-xl font-black ${card.cor === "green" ? "text-green-600" : "text-red-600"}`}>
+                <div key={i} className={`bg-gradient-to-br ${card.gradFrom} ${card.gradTo} rounded-2xl shadow-lg p-5 text-white`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-white/80 uppercase tracking-wide">{card.label}</p>
+                    <span className="text-xl">{card.icon}</span>
+                  </div>
+                  <p className="text-2xl font-black text-white drop-shadow">
                     {card.valor !== null
                       ? `R$ ${card.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                       : `${card.margem!.toFixed(1)}%`}
                   </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    {card.temBase
-                      ? varBadge(card.vari, card.invertido)
-                      : <span className="text-xs text-gray-400 italic">sem histórico</span>}
-                    {card.temBase && <span className="text-xs text-gray-400">vs período ant.</span>}
+                  <div className="mt-3 flex items-center gap-2">
+                    {card.temBase ? (
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+                        (card.invertido ? card.vari < 0 : card.vari >= 0)
+                          ? "bg-white/25 text-white"
+                          : "bg-black/20 text-white/90"
+                      }`}>
+                        {card.vari >= 0 ? "▲" : "▼"} {Math.abs(card.vari).toFixed(1)}% vs ant.
+                      </span>
+                    ) : (
+                      <span className="text-xs text-white/60 italic">sem histórico</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -5846,7 +5873,7 @@ const AppContent: React.FC = () => {
 
         {/* Gráfico de tendência */}
         {tendencia.length > 0 && (
-          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-2xl shadow border border-blue-100 p-6">
             <h3 className="text-base font-bold text-gray-800 mb-4">Evolução — {periodoLabels[p]}</h3>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={tendencia} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -5866,7 +5893,7 @@ const AppContent: React.FC = () => {
         {/* Grid: Receitas por categoria + Despesas por categoria */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Receitas por categoria */}
-          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow border border-green-100 p-6">
             <div className="flex items-center gap-2 mb-5">
               <span className="text-green-500 text-lg">📈</span>
               <h3 className="text-base font-bold text-gray-800">Receitas por Categoria</h3>
@@ -5908,7 +5935,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Despesas por categoria */}
-          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl shadow border border-red-100 p-6">
             <div className="flex items-center gap-2 mb-5">
               <span className="text-red-500 text-lg">💸</span>
               <h3 className="text-base font-bold text-gray-800">Despesas por Categoria</h3>
@@ -5952,7 +5979,7 @@ const AppContent: React.FC = () => {
 
         {/* Top produtos */}
         {produtos.length > 0 && (
-          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl shadow border border-violet-100 p-6">
             <div className="flex items-center gap-2 mb-5">
               <span className="text-purple-500 text-lg">🏆</span>
               <h3 className="text-base font-bold text-gray-800">Top Produtos / Serviços</h3>
