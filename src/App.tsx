@@ -6758,31 +6758,18 @@ const AppContent: React.FC = () => {
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
             {/* Dropdown do Mês Selecionado */}
-            <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
+            <div className="flex items-center gap-3">
+              <Target className="w-6 h-6 text-amber-600 flex-shrink-0" />
               <select
                 id="metas-month-selector"
                 name="metas-month-selector"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="w-full text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
-                style={{
-                  appearance: "none",
-                  WebkitAppearance: "none",
-                  MozAppearance: "none",
-                  backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
-                  backgroundPosition: "right 1rem center",
-                  backgroundRepeat: "no-repeat",
-                  backgroundSize: "1.2em 1.2em",
-                  paddingRight: "3rem",
-                }}
+                className="text-lg font-semibold text-amber-800 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               >
                 {mesesMetas.map((mes) => (
-                  <option
-                    key={mes.indice}
-                    value={mes.indice}
-                    className="text-gray-800 bg-white normal-case text-lg font-normal"
-                  >
-                    {mes.nome} - {new Date().getFullYear()}
+                  <option key={mes.indice} value={mes.indice}>
+                    {mes.nome} {new Date().getFullYear()}
                   </option>
                 ))}
               </select>
