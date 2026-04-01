@@ -2926,25 +2926,23 @@ const AppContent: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
           <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Donut */}
-            <div className="flex-shrink-0">
-              <ResponsiveContainer width={200} height={200}>
-                <RechartsPieChart>
-                  <Pie
-                    data={[
-                      { name: "Realizado", value: Math.min(100, pctFaturamento), color: pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444" },
-                      { name: "Restante", value: Math.max(0, 100 - pctFaturamento), color: "#f3f4f6" },
-                    ]}
-                    cx="50%" cy="50%"
-                    innerRadius={65} outerRadius={90}
-                    startAngle={90} endAngle={-270}
-                    dataKey="value" stroke="none" paddingAngle={0}
-                  >
-                    <Cell fill={pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444"} />
-                    <Cell fill="#f3f4f6" />
-                  </Pie>
-                </RechartsPieChart>
-              </ResponsiveContainer>
-              <div className="relative" style={{ marginTop: -115, textAlign: "center" }}>
+            <div className="flex-shrink-0 relative" style={{ width: 220, height: 220 }}>
+              <RechartsPieChart width={220} height={220}>
+                <Pie
+                  data={[
+                    { name: "Realizado", value: Math.min(100, pctFaturamento) },
+                    { name: "Restante", value: Math.max(0, 100 - pctFaturamento) },
+                  ]}
+                  cx={110} cy={110}
+                  innerRadius={75} outerRadius={100}
+                  startAngle={90} endAngle={-270}
+                  dataKey="value" stroke="none" paddingAngle={0}
+                >
+                  <Cell fill={pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444"} />
+                  <Cell fill="#f3f4f6" />
+                </Pie>
+              </RechartsPieChart>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <div className={`text-3xl font-black ${pctFaturamento >= 100 ? "text-emerald-600" : pctFaturamento >= 75 ? "text-amber-600" : "text-red-600"}`}>
                   {pctFatDisplay}%
                 </div>
