@@ -736,7 +736,11 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (!metasMonthDropdownOpen) return;
-    const close = () => setMetasMonthDropdownOpen(false);
+    const close = (e: MouseEvent) => {
+      const dropdown = document.getElementById("metas-month-dropdown");
+      if (dropdown && dropdown.contains(e.target as Node)) return;
+      setMetasMonthDropdownOpen(false);
+    };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [metasMonthDropdownOpen]);
@@ -6321,7 +6325,7 @@ const AppContent: React.FC = () => {
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
             {/* Dropdown do Mês Selecionado */}
-            <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg relative">
+            <div id="metas-month-dropdown" className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg relative">
               <button
                 type="button"
                 onClick={() => setMetasMonthDropdownOpen((v) => !v)}
