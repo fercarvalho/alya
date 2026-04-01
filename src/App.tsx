@@ -2217,11 +2217,14 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Seção do Mês (com seletor para comparar metas vs real) */}
-        <div className="space-y-4">
+        <div className="bg-gradient-to-br from-emerald-50/60 to-green-50/40 rounded-2xl p-5 border border-emerald-100 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-              <PieChart className="w-6 h-6 text-gray-600" />
+              <PieChart className="w-6 h-6 text-emerald-600" />
               Dados do mês
+              <span className="text-sm font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-lg border border-emerald-200">
+                {mesSelecionadoMetas.nome} {new Date().getFullYear()}
+              </span>
             </h2>
             <select
               id="month-selector"
@@ -2245,21 +2248,41 @@ const AppContent: React.FC = () => {
             const emDia = pctMeta >= (new Date().getDate() / 31) * 100;
             return (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">% da Meta</p>
-                  <p className={`text-2xl font-black ${pctMeta >= 100 ? "text-emerald-600" : pctMeta >= 75 ? "text-amber-600" : "text-red-600"}`}>{pctMeta.toFixed(0)}%</p>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${pctMeta >= 100 ? "bg-emerald-100" : pctMeta >= 75 ? "bg-amber-100" : "bg-red-100"}`}>
+                    <span className="text-lg">🎯</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">% da Meta</p>
+                    <p className={`text-xl font-black ${pctMeta >= 100 ? "text-emerald-600" : pctMeta >= 75 ? "text-amber-600" : "text-red-600"}`}>{pctMeta.toFixed(0)}%</p>
+                  </div>
                 </div>
-                <div className={`rounded-xl border shadow-sm p-4 text-center ${variacaoMes >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Variação</p>
-                  <p className={`text-lg font-black ${variacaoMes >= 0 ? "text-emerald-700" : "text-red-700"}`}>{variacaoMes >= 0 ? "+" : ""}R$ {Math.abs(variacaoMes).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <div className={`rounded-xl border shadow-sm p-4 flex items-center gap-3 ${variacaoMes >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${variacaoMes >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
+                    <span className="text-lg">{variacaoMes >= 0 ? "📈" : "📉"}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Variação</p>
+                    <p className={`text-base font-black ${variacaoMes >= 0 ? "text-emerald-700" : "text-red-700"}`}>{variacaoMes >= 0 ? "+" : ""}R$ {Math.abs(variacaoMes).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                  </div>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Lucro Líquido</p>
-                  <p className={`text-lg font-black ${lucroLiquidoMes >= 0 ? "text-emerald-600" : "text-red-600"}`}>R$ {lucroLiquidoMes.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${lucroLiquidoMes >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
+                    <span className="text-lg">💰</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lucro Líquido</p>
+                    <p className={`text-base font-black ${lucroLiquidoMes >= 0 ? "text-emerald-600" : "text-red-600"}`}>R$ {lucroLiquidoMes.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                  </div>
                 </div>
-                <div className={`rounded-xl border shadow-sm p-4 text-center ${emDia ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ritmo</p>
-                  <p className={`text-sm font-black ${emDia ? "text-emerald-700" : "text-amber-700"}`}>{emDia ? "✓ No ritmo" : "⚡ Atenção"}</p>
+                <div className={`rounded-xl border shadow-sm p-4 flex items-center gap-3 ${emDia ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${emDia ? "bg-emerald-100" : "bg-amber-100"}`}>
+                    <span className="text-lg">{emDia ? "🚀" : "⏱️"}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ritmo</p>
+                    <p className={`text-sm font-black ${emDia ? "text-emerald-700" : "text-amber-700"}`}>{emDia ? "No ritmo" : "Atenção"}</p>
+                  </div>
                 </div>
               </div>
             );
@@ -2270,7 +2293,7 @@ const AppContent: React.FC = () => {
               {/* Card Receitas */}
               <div className="space-y-4">
                 <div
-                  className="bg-green-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  className="bg-gradient-to-br from-green-400 to-emerald-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart("receitas-mensal")}
                 >
                   <div className="flex items-center gap-4">
@@ -2306,7 +2329,7 @@ const AppContent: React.FC = () => {
               {/* Card Despesas */}
               <div className="space-y-4">
                 <div
-                  className="bg-red-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  className="bg-gradient-to-br from-red-400 to-rose-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart("despesas-mensal")}
                 >
                   <div className="flex items-center gap-4">
@@ -2379,7 +2402,7 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Seção Trimestre */}
-        <div className="space-y-4">
+        <div className="bg-gradient-to-br from-cyan-50/60 to-sky-50/40 rounded-2xl p-5 border border-cyan-100 space-y-4">
           <h2 className="text-2xl font-bold text-cyan-800 flex items-center gap-3">
             <PieChart className="w-6 h-6 text-cyan-600" />
             Trimestre Atual
@@ -2393,7 +2416,7 @@ const AppContent: React.FC = () => {
               {/* Card Receitas Trimestrais */}
               <div className="space-y-4">
                 <div
-                  className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  className="bg-gradient-to-br from-green-400 to-emerald-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart("receitas-trimestre")}
                 >
                   <div className="flex items-center gap-4">
@@ -2410,6 +2433,13 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      {(() => {
+                        const metaTrim = mesesMetas.filter((_, i) => Math.floor(i / 3) === trimestreAtual).reduce((s, m) => s + m.meta, 0);
+                        const pct = metaTrim > 0 ? (totalReceitasTrimestre / metaTrim) * 100 : 0;
+                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Meta atingida</span>;
+                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Em andamento ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Abaixo ({pct.toFixed(0)}%)</span>;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -2423,7 +2453,7 @@ const AppContent: React.FC = () => {
               {/* Card Despesas Trimestrais */}
               <div className="space-y-4">
                 <div
-                  className="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  className="bg-gradient-to-br from-red-400 to-rose-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart("despesas-trimestre")}
                 >
                   <div className="flex items-center gap-4">
@@ -2440,6 +2470,13 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      {(() => {
+                        const metaDespTrim = mesesMetas.filter((_, i) => Math.floor(i / 3) === trimestreAtual).reduce((s, m) => s + getProjectionMetasForMonth(m.indice).despesasTotal, 0);
+                        const pct = metaDespTrim > 0 ? (totalDespesasTrimestre / metaDespTrim) * 100 : 0;
+                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Limite ultrapassado</span>;
+                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Próximo do limite ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Dentro do limite ({pct.toFixed(0)}%)</span>;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -2470,6 +2507,9 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${lucroLiquidoTrimestre >= 0 ? "bg-white/20 text-white" : "bg-black/20 text-white/90"}`}>
+                        {lucroLiquidoTrimestre >= 0 ? "✓ Positivo" : "⚠ Negativo"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2484,10 +2524,13 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Seção Ano */}
-        <div className="space-y-4">
+        <div className="bg-gradient-to-br from-purple-50/60 to-indigo-50/40 rounded-2xl p-5 border border-purple-100 space-y-4">
           <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-3">
             <PieChart className="w-6 h-6 text-purple-600" />
             Ano
+            <span className="text-sm font-semibold text-purple-700 bg-purple-100 px-3 py-1 rounded-lg border border-purple-200">
+              {new Date().getFullYear()}
+            </span>
           </h2>
 
           <div className="space-y-4">
@@ -2495,7 +2538,7 @@ const AppContent: React.FC = () => {
               {/* Card Receitas Anuais */}
               <div className="space-y-4">
                 <div
-                  className="bg-green-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  className="bg-gradient-to-br from-green-400 to-emerald-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart("receitas-anual")}
                 >
                   <div className="flex items-center gap-4">
@@ -2512,6 +2555,13 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      {(() => {
+                        const metaAno = mesesMetas.reduce((s, m) => s + m.meta, 0);
+                        const pct = metaAno > 0 ? (totalReceitasAno / metaAno) * 100 : 0;
+                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Meta atingida</span>;
+                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Em andamento ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Abaixo ({pct.toFixed(0)}%)</span>;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -2525,7 +2575,7 @@ const AppContent: React.FC = () => {
               {/* Card Despesas Anuais */}
               <div className="space-y-4">
                 <div
-                  className="bg-red-600 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
+                  className="bg-gradient-to-br from-red-400 to-rose-500 p-6 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all duration-200 hover:-translate-y-1"
                   onClick={() => toggleChart("despesas-anual")}
                 >
                   <div className="flex items-center gap-4">
@@ -2542,6 +2592,13 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      {(() => {
+                        const metaDespAno = mesesMetas.reduce((s, m) => s + getProjectionMetasForMonth(m.indice).despesasTotal, 0);
+                        const pct = metaDespAno > 0 ? (totalDespesasAno / metaDespAno) * 100 : 0;
+                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Limite ultrapassado</span>;
+                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Próximo do limite ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Dentro do limite ({pct.toFixed(0)}%)</span>;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -2574,6 +2631,9 @@ const AppContent: React.FC = () => {
                           minimumFractionDigits: 2,
                         })}
                       </p>
+                      <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${lucroLiquidoAno >= 0 ? "bg-white/20 text-white" : "bg-black/20 text-white/90"}`}>
+                        {lucroLiquidoAno >= 0 ? "✓ Positivo" : "⚠ Negativo"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2588,10 +2648,13 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Evolução Mensal e Categorias de Despesas */}
-        <div className="space-y-4">
+        <div className="bg-gradient-to-br from-slate-50/80 to-gray-50/60 rounded-2xl p-5 border border-gray-100 space-y-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
             <BarChart3 className="w-6 h-6 text-gray-600" />
             Análise do Ano
+            <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-lg border border-gray-200">
+              {new Date().getFullYear()}
+            </span>
           </h2>
           {renderLineChart()}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
