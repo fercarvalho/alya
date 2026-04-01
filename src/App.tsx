@@ -2957,12 +2957,12 @@ const AppContent: React.FC = () => {
       const pct = (real / meta) * 100;
       if (pct >= 100) return (
         <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-          <CheckCircle2 className="w-3 h-3" /><CheckCircle2 className="w-3 h-3" /> Atingido
+          <CheckCircle2 className="w-3 h-3" /> Atingido
         </span>
       );
       if (pct >= 75) return (
         <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-          <AlertTriangle className="w-3 h-3" /><Zap className="w-3 h-3" /> Em andamento
+          <Zap className="w-3 h-3" /> Em andamento
         </span>
       );
       return (
@@ -2978,7 +2978,7 @@ const AppContent: React.FC = () => {
       const pct = (real / limite) * 100;
       if (pct > 100) return (
         <span className="flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-          <XCircle className="w-3 h-3" /><AlertTriangle className="w-3 h-3" /> Estourado
+          <AlertTriangle className="w-3 h-3" /> Estourado
         </span>
       );
       if (pct >= 85) return (
@@ -2988,7 +2988,7 @@ const AppContent: React.FC = () => {
       );
       return (
         <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-          <CheckCircle2 className="w-3 h-3" /><CheckCircle2 className="w-3 h-3" /> Dentro do limite
+          <CheckCircle2 className="w-3 h-3" /> Dentro do limite
         </span>
       );
     };
@@ -3006,7 +3006,7 @@ const AppContent: React.FC = () => {
         barColor = acimaDe100 ? "from-blue-600 to-blue-800" : "from-blue-500 to-blue-600";
       }
       return (
-        <div className="w-full bg-white/30 rounded-full h-3 relative overflow-hidden">
+        <div className="w-full bg-white/40 rounded-full h-3 relative overflow-hidden">
           <div
             className={`bg-gradient-to-r ${barColor} h-3 rounded-full transition-all duration-500`}
             style={{ width: `${Math.min(100, pct)}%` }}
@@ -3081,21 +3081,21 @@ const AppContent: React.FC = () => {
               const margem = totalReceitas > 0 ? ((totalReceitas - totalDespesas) / totalReceitas) * 100 : 0;
               return (
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
-                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
                     <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
                     <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
                     <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
                     <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
                     <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
                       {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
                     <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${margem >= 0 ? "text-violet-600" : "text-red-600"}`}>Margem</div>
                     <div className={`text-xl font-black ${margem >= 0 ? "text-violet-800" : "text-red-800"}`}>{margem.toFixed(1)}%</div>
                   </div>
@@ -3114,7 +3114,7 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8 rounded-2xl shadow-lg border border-slate-200">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-2xl shadow-lg border border-slate-200">
               <div className="space-y-3">
                 {/* RECEITA */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
@@ -3151,7 +3151,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quadrante META DO MÊS */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8 rounded-2xl shadow-lg border border-slate-200">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-2xl shadow-lg border border-slate-200">
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-gray-300">
                   <div></div>
@@ -3439,8 +3439,8 @@ const AppContent: React.FC = () => {
     return (
       <div className="space-y-6 mb-12">
         {/* Título Principal do Ano */}
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-8 rounded-2xl shadow-xl">
-          <h2 className="text-4xl font-bold text-white text-center uppercase tracking-wider">
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-6 rounded-2xl shadow-xl">
+          <h2 className="text-3xl font-bold text-white text-center uppercase tracking-wider">
             TOTAL DO ANO - {currentYear}
           </h2>
         </div>
@@ -3454,7 +3454,7 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro Anual */}
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl shadow-lg border-2 border-purple-200">
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-100 p-6 rounded-2xl shadow-lg border border-purple-200">
               <div className="space-y-4">
                 {/* REFORÇO DE CAIXA */}
                 <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
@@ -3539,7 +3539,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quadrante META ANUAL */}
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl shadow-lg border-2 border-purple-200">
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-100 p-6 rounded-2xl shadow-lg border border-purple-200">
               <div className="space-y-6">
                 {/* Cabeçalho com colunas R$ e % */}
                 <div className="grid grid-cols-3 gap-4 pb-3 border-b-3 border-purple-400">
@@ -3628,7 +3628,7 @@ const AppContent: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 p-8 rounded-2xl border-2 border-emerald-300 shadow-xl">
+            <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 p-6 rounded-2xl border border-emerald-200 shadow-lg">
               <h3 className="text-xl font-bold text-emerald-900 mb-6">
                 Faturamento TOTAL ANUAL
               </h3>
@@ -3689,7 +3689,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-100 to-green-200 p-8 rounded-2xl border-2 border-green-300 shadow-xl">
+            <div className="bg-gradient-to-br from-green-100 to-green-200 p-6 rounded-2xl border border-green-200 shadow-lg">
               <h3 className="text-xl font-bold text-green-900 mb-6">
                 Faturamento Varejo Anual
               </h3>
@@ -3752,7 +3752,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-teal-100 to-teal-200 p-8 rounded-2xl border-2 border-teal-300 shadow-xl">
+            <div className="bg-gradient-to-br from-teal-100 to-teal-200 p-6 rounded-2xl border border-teal-200 shadow-lg">
               <h3 className="text-xl font-bold text-teal-900 mb-6">
                 Faturamento Atacado Anual
               </h3>
@@ -3826,7 +3826,7 @@ const AppContent: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-red-100 to-red-200 p-8 rounded-2xl border-2 border-red-300 shadow-xl">
+            <div className="bg-gradient-to-br from-red-100 to-red-200 p-6 rounded-2xl border border-red-200 shadow-lg">
               <h3 className="text-xl font-bold text-red-900 mb-6">
                 Despesas TOTAL Anuais
               </h3>
@@ -3887,7 +3887,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-100 to-orange-200 p-8 rounded-2xl border-2 border-orange-300 shadow-xl">
+            <div className="bg-gradient-to-br from-orange-100 to-orange-200 p-6 rounded-2xl border border-orange-200 shadow-lg">
               <h3 className="text-xl font-bold text-orange-900 mb-6">
                 Despesas Variáveis Anuais
               </h3>
@@ -3950,7 +3950,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-amber-100 to-amber-200 p-8 rounded-2xl border-2 border-amber-300 shadow-xl">
+            <div className="bg-gradient-to-br from-amber-100 to-amber-200 p-6 rounded-2xl border border-amber-200 shadow-lg">
               <h3 className="text-xl font-bold text-amber-900 mb-6">
                 Despesas Fixas Anuais
               </h3>
@@ -4021,7 +4021,7 @@ const AppContent: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-8 rounded-2xl border-2 border-blue-300 shadow-xl">
+            <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-6 rounded-2xl border border-blue-200 shadow-lg">
               <h3 className="text-xl font-bold text-blue-900 mb-6">
                 Investimentos Gerais Anuais
               </h3>
@@ -4084,7 +4084,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-8 rounded-2xl border-2 border-purple-300 shadow-xl">
+            <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-6 rounded-2xl border border-purple-200 shadow-lg">
               <h3 className="text-xl font-bold text-purple-900 mb-6">
                 Investimentos MKT Anuais
               </h3>
@@ -6430,7 +6430,7 @@ const AppContent: React.FC = () => {
         {/* Metas derivadas da Projeção */}
         {Array.isArray(projectionSnapshot?.revenueTotals?.previsto) &&
         projectionSnapshot.revenueTotals.previsto.length >= 12 ? (
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-2xl">
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-5 w-5 text-amber-600" />
@@ -6448,7 +6448,7 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-r-lg">
+          <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-2xl">
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-5 w-5 text-gray-500" />
@@ -6470,7 +6470,7 @@ const AppContent: React.FC = () => {
         {(() => {
           const mesesNomesAbrev = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
           return (
-            <div className="bg-white rounded-2xl shadow border border-gray-200 p-5">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow-lg border border-slate-200 p-5">
               <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-4">Visão Anual — % da Meta por Mês</h3>
               <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
                 {mesesMetas.map((mes) => {
