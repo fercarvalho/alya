@@ -2610,8 +2610,8 @@ const AppContent: React.FC = () => {
           {transacoesRecentes.length > 0 && (() => {
             const rec = transacoesRecentes.filter((t) => isReceita(t.type));
             const desp = transacoesRecentes.filter((t) => !isReceita(t.type));
-            const totalRec = rec.reduce((s, t) => s + t.value, 0);
-            const totalDesp = desp.reduce((s, t) => s + t.value, 0);
+            const totalRec = rec.reduce((s, t) => s + (Number(t.value) || 0), 0);
+            const totalDesp = desp.reduce((s, t) => s + (Number(t.value) || 0), 0);
             return (
               <div className="flex flex-wrap gap-3 mb-2">
                 <span className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold px-3 py-1.5 rounded-full">
