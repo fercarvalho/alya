@@ -34,6 +34,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  Zap,
+  Clock,
+  Award,
+  Wallet,
+  Sparkles,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -2250,7 +2255,7 @@ const AppContent: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${pctMeta >= 100 ? "bg-emerald-100" : pctMeta >= 75 ? "bg-amber-100" : "bg-red-100"}`}>
-                    <span className="text-lg">🎯</span>
+                    <Target className="w-5 h-5" />
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">% da Meta</p>
@@ -2259,7 +2264,7 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className={`rounded-xl border shadow-sm p-4 flex items-center gap-3 ${variacaoMes >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${variacaoMes >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
-                    <span className="text-lg">{variacaoMes >= 0 ? "📈" : "📉"}</span>
+                    {variacaoMes >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Variação</p>
@@ -2268,7 +2273,7 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${lucroLiquidoMes >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
-                    <span className="text-lg">💰</span>
+                    <Wallet className="w-5 h-5" />
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lucro Líquido</p>
@@ -2277,7 +2282,7 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className={`rounded-xl border shadow-sm p-4 flex items-center gap-3 ${emDia ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${emDia ? "bg-emerald-100" : "bg-amber-100"}`}>
-                    <span className="text-lg">{emDia ? "🚀" : "⏱️"}</span>
+                    {emDia ? <Zap className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ritmo</p>
@@ -2312,9 +2317,9 @@ const AppContent: React.FC = () => {
                       </p>
                       {(() => {
                         const pct = metaFaturamentoMes > 0 ? (totalReceitasMes / metaFaturamentoMes) * 100 : 0;
-                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Meta atingida</span>;
-                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Em andamento ({pct.toFixed(0)}%)</span>;
-                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Abaixo ({pct.toFixed(0)}%)</span>;
+                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> Meta atingida</span>;
+                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><Zap className="w-3 h-3" /> Em andamento ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" /> Abaixo ({pct.toFixed(0)}%)</span>;
                       })()}
                     </div>
                   </div>
@@ -2349,9 +2354,9 @@ const AppContent: React.FC = () => {
                       {(() => {
                         const metaDesp = getProjectionMetasForMonth(selectedMonth).despesasTotal;
                         const pct = metaDesp > 0 ? (totalDespesasMes / metaDesp) * 100 : 0;
-                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Limite ultrapassado</span>;
-                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Próximo do limite ({pct.toFixed(0)}%)</span>;
-                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Dentro do limite ({pct.toFixed(0)}%)</span>;
+                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" /> Limite ultrapassado</span>;
+                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><Zap className="w-3 h-3" /> Próximo do limite ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> Dentro do limite ({pct.toFixed(0)}%)</span>;
                       })()}
                     </div>
                   </div>
@@ -2386,7 +2391,7 @@ const AppContent: React.FC = () => {
                         })}
                       </p>
                       <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${lucroLiquidoMes >= 0 ? "bg-white/20 text-white" : "bg-black/20 text-white/90"}`}>
-                        {lucroLiquidoMes >= 0 ? "✓ Positivo" : "⚠ Negativo"}
+                        {lucroLiquidoMes >= 0 ? <><CheckCircle2 className="w-3 h-3" /> Positivo</> : <><AlertTriangle className="w-3 h-3" /> Negativo</>}
                       </span>
                     </div>
                   </div>
@@ -2436,9 +2441,9 @@ const AppContent: React.FC = () => {
                       {(() => {
                         const metaTrim = mesesMetas.filter((_, i) => Math.floor(i / 3) === trimestreAtual).reduce((s, m) => s + m.meta, 0);
                         const pct = metaTrim > 0 ? (totalReceitasTrimestre / metaTrim) * 100 : 0;
-                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Meta atingida</span>;
-                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Em andamento ({pct.toFixed(0)}%)</span>;
-                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Abaixo ({pct.toFixed(0)}%)</span>;
+                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> Meta atingida</span>;
+                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><Zap className="w-3 h-3" /> Em andamento ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" /> Abaixo ({pct.toFixed(0)}%)</span>;
                       })()}
                     </div>
                   </div>
@@ -2473,9 +2478,9 @@ const AppContent: React.FC = () => {
                       {(() => {
                         const metaDespTrim = mesesMetas.filter((_, i) => Math.floor(i / 3) === trimestreAtual).reduce((s, m) => s + getProjectionMetasForMonth(m.indice).despesasTotal, 0);
                         const pct = metaDespTrim > 0 ? (totalDespesasTrimestre / metaDespTrim) * 100 : 0;
-                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Limite ultrapassado</span>;
-                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Próximo do limite ({pct.toFixed(0)}%)</span>;
-                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Dentro do limite ({pct.toFixed(0)}%)</span>;
+                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" /> Limite ultrapassado</span>;
+                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><Zap className="w-3 h-3" /> Próximo do limite ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> Dentro do limite ({pct.toFixed(0)}%)</span>;
                       })()}
                     </div>
                   </div>
@@ -2508,7 +2513,7 @@ const AppContent: React.FC = () => {
                         })}
                       </p>
                       <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${lucroLiquidoTrimestre >= 0 ? "bg-white/20 text-white" : "bg-black/20 text-white/90"}`}>
-                        {lucroLiquidoTrimestre >= 0 ? "✓ Positivo" : "⚠ Negativo"}
+                        {lucroLiquidoTrimestre >= 0 ? <><CheckCircle2 className="w-3 h-3" /> Positivo</> : <><AlertTriangle className="w-3 h-3" /> Negativo</>}
                       </span>
                     </div>
                   </div>
@@ -2558,9 +2563,9 @@ const AppContent: React.FC = () => {
                       {(() => {
                         const metaAno = mesesMetas.reduce((s, m) => s + m.meta, 0);
                         const pct = metaAno > 0 ? (totalReceitasAno / metaAno) * 100 : 0;
-                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Meta atingida</span>;
-                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Em andamento ({pct.toFixed(0)}%)</span>;
-                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Abaixo ({pct.toFixed(0)}%)</span>;
+                        if (pct >= 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> Meta atingida</span>;
+                        if (pct >= 75) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><Zap className="w-3 h-3" /> Em andamento ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" /> Abaixo ({pct.toFixed(0)}%)</span>;
                       })()}
                     </div>
                   </div>
@@ -2595,9 +2600,9 @@ const AppContent: React.FC = () => {
                       {(() => {
                         const metaDespAno = mesesMetas.reduce((s, m) => s + getProjectionMetasForMonth(m.indice).despesasTotal, 0);
                         const pct = metaDespAno > 0 ? (totalDespesasAno / metaDespAno) * 100 : 0;
-                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full">⚠ Limite ultrapassado</span>;
-                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">⚡ Próximo do limite ({pct.toFixed(0)}%)</span>;
-                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">✓ Dentro do limite ({pct.toFixed(0)}%)</span>;
+                        if (pct > 100) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-black/20 text-white/90 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" /> Limite ultrapassado</span>;
+                        if (pct >= 85) return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><Zap className="w-3 h-3" /> Próximo do limite ({pct.toFixed(0)}%)</span>;
+                        return <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> Dentro do limite ({pct.toFixed(0)}%)</span>;
                       })()}
                     </div>
                   </div>
@@ -2632,7 +2637,7 @@ const AppContent: React.FC = () => {
                         })}
                       </p>
                       <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${lucroLiquidoAno >= 0 ? "bg-white/20 text-white" : "bg-black/20 text-white/90"}`}>
-                        {lucroLiquidoAno >= 0 ? "✓ Positivo" : "⚠ Negativo"}
+                        {lucroLiquidoAno >= 0 ? <><CheckCircle2 className="w-3 h-3" /> Positivo</> : <><AlertTriangle className="w-3 h-3" /> Negativo</>}
                       </span>
                     </div>
                   </div>
@@ -2950,12 +2955,12 @@ const AppContent: React.FC = () => {
       const pct = (real / meta) * 100;
       if (pct >= 100) return (
         <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-          <CheckCircle2 className="w-3 h-3" /> Atingido
+          <CheckCircle2 className="w-3 h-3" /><CheckCircle2 className="w-3 h-3" /> Atingido
         </span>
       );
       if (pct >= 75) return (
         <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-          <AlertTriangle className="w-3 h-3" /> Em andamento
+          <AlertTriangle className="w-3 h-3" /><Zap className="w-3 h-3" /> Em andamento
         </span>
       );
       return (
@@ -2971,17 +2976,17 @@ const AppContent: React.FC = () => {
       const pct = (real / limite) * 100;
       if (pct > 100) return (
         <span className="flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-          <XCircle className="w-3 h-3" /> Estourado
+          <XCircle className="w-3 h-3" /><AlertTriangle className="w-3 h-3" /> Estourado
         </span>
       );
       if (pct >= 85) return (
         <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-          <AlertTriangle className="w-3 h-3" /> Próximo do limite
+          <AlertTriangle className="w-3 h-3" /><Zap className="w-3 h-3" /> Próximo do limite
         </span>
       );
       return (
         <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-          <CheckCircle2 className="w-3 h-3" /> Dentro do limite
+          <CheckCircle2 className="w-3 h-3" /><CheckCircle2 className="w-3 h-3" /> Dentro do limite
         </span>
       );
     };
@@ -3017,7 +3022,7 @@ const AppContent: React.FC = () => {
           <div className="text-xs text-white/70 font-medium flex justify-between">
             <span>Realizado: <span className="font-bold text-white">R$ {fmt(real)}</span></span>
             {falta > 0 && <span>Falta: <span className="font-bold text-yellow-200">R$ {fmt(falta)}</span></span>}
-            {falta === 0 && real > 0 && <span className="text-yellow-200 font-bold">✓ Meta superada</span>}
+            {falta === 0 && real > 0 && <span className="text-yellow-200 font-bold"><CheckCircle2 className="w-3 h-3" /> Meta superada</span>}
           </div>
         );
       } else {
@@ -6003,13 +6008,13 @@ const AppContent: React.FC = () => {
           const temAnt = (vari: number, base: number) => base !== 0;
           const cards = [
             { label: "Receitas", valor: recAtual as number | null, margem: null as number | null, vari: varRec, temBase: recAnt > 0, invertido: false,
-              gradFrom: "from-emerald-500", gradTo: "to-green-400", icon: "📈" },
+              gradFrom: "from-emerald-500", gradTo: "to-green-400", icon: "trending-up" },
             { label: "Despesas", valor: despAtual, margem: null, vari: varDesp, temBase: despAnt > 0, invertido: true,
-              gradFrom: "from-rose-500", gradTo: "to-red-400", icon: "💸" },
+              gradFrom: "from-rose-500", gradTo: "to-red-400", icon: "trending-down" },
             { label: "Lucro Líquido", valor: lucroAtual, margem: null, vari: varLucro, temBase: lucroAnt !== 0, invertido: false,
-              gradFrom: lucroAtual >= 0 ? "from-teal-500" : "from-orange-500", gradTo: lucroAtual >= 0 ? "to-emerald-400" : "to-red-400", icon: lucroAtual >= 0 ? "✨" : "⚠️" },
+              gradFrom: lucroAtual >= 0 ? "from-teal-500" : "from-orange-500", gradTo: lucroAtual >= 0 ? "to-emerald-400" : "to-red-400", icon: lucroAtual >= 0 ? "sparkles" : "alert" },
             { label: "Margem", valor: null, margem: margemAtual, vari: varMargem, temBase: recAnt > 0, invertido: false,
-              gradFrom: margemAtual >= 0 ? "from-violet-500" : "from-orange-500", gradTo: margemAtual >= 0 ? "to-purple-400" : "to-red-400", icon: "📊" },
+              gradFrom: margemAtual >= 0 ? "from-violet-500" : "from-orange-500", gradTo: margemAtual >= 0 ? "to-purple-400" : "to-red-400", icon: "chart" },
           ];
           return (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -6017,7 +6022,11 @@ const AppContent: React.FC = () => {
                 <div key={i} className={`bg-gradient-to-br ${card.gradFrom} ${card.gradTo} rounded-2xl shadow-lg p-5 text-white`}>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-white/80 uppercase tracking-wide">{card.label}</p>
-                    <span className="text-xl">{card.icon}</span>
+                    {card.icon === "trending-up" ? <TrendingUp className="w-5 h-5" /> :
+                    card.icon === "trending-down" ? <TrendingDown className="w-5 h-5" /> :
+                    card.icon === "sparkles" ? <Sparkles className="w-5 h-5" /> :
+                    card.icon === "alert" ? <AlertTriangle className="w-5 h-5" /> :
+                    card.icon === "chart" ? <BarChart3 className="w-5 h-5" /> : null}
                   </div>
                   <p className="text-2xl font-black text-white drop-shadow">
                     {card.valor !== null
@@ -6067,7 +6076,7 @@ const AppContent: React.FC = () => {
           {/* Receitas por categoria */}
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow border border-green-100 p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="text-green-500 text-lg">📈</span>
+              <TrendingUp className="w-5 h-5 text-green-500" />
               <h3 className="text-base font-bold text-gray-800">Receitas por Categoria</h3>
             </div>
             {catReceitas.length === 0 ? (
@@ -6109,7 +6118,7 @@ const AppContent: React.FC = () => {
           {/* Despesas por categoria */}
           <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl shadow border border-red-100 p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="text-red-500 text-lg">💸</span>
+              <TrendingDown className="w-5 h-5 text-red-500" />
               <h3 className="text-base font-bold text-gray-800">Despesas por Categoria</h3>
             </div>
             {catDespesas.length === 0 ? (
@@ -6153,7 +6162,7 @@ const AppContent: React.FC = () => {
         {produtos.length > 0 && (
           <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl shadow border border-violet-100 p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="text-purple-500 text-lg">🏆</span>
+              <Award className="w-5 h-5 text-purple-500" />
               <h3 className="text-base font-bold text-gray-800">Top Produtos / Serviços</h3>
             </div>
             <ResponsiveContainer width="100%" height={220}>
