@@ -502,6 +502,7 @@ const AppContent: React.FC = () => {
     new Date().getMonth(),
   );
   const [expandedCharts, setExpandedCharts] = useState<string[]>([]);
+  const [metasMonthDropdownOpen, setMetasMonthDropdownOpen] = useState(false);
   const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>(
     [],
   );
@@ -733,6 +734,13 @@ const AppContent: React.FC = () => {
     window.addEventListener("auth:impersonation-changed", handler);
     return () => window.removeEventListener("auth:impersonation-changed", handler);
   }, []);
+
+  useEffect(() => {
+    if (!metasMonthDropdownOpen) return;
+    const close = () => setMetasMonthDropdownOpen(false);
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [metasMonthDropdownOpen]);
 
   // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
   if (isLoading) {
@@ -6758,34 +6766,37 @@ const AppContent: React.FC = () => {
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
             {/* Dropdown do Mês Selecionado */}
-            <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg">
-              <select
-                id="metas-month-selector"
-                name="metas-month-selector"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="w-full text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
-                style={{
-                  appearance: "none",
-                  WebkitAppearance: "none",
-                  MozAppearance: "none",
-                  backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
-                  backgroundPosition: "right 1rem center",
-                  backgroundRepeat: "no-repeat",
-                  backgroundSize: "1.2em 1.2em",
-                  paddingRight: "3rem",
-                }}
+            <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg relative">
+              <button
+                type="button"
+                onClick={() => setMetasMonthDropdownOpen((v) => !v)}
+                className="w-full flex items-center justify-center gap-3 text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
               >
-                {mesesMetas.map((mes) => (
-                  <option
-                    key={mes.indice}
-                    value={mes.indice}
-                    className="text-gray-800 bg-white normal-case text-lg font-normal"
-                  >
-                    {mes.nome} - {new Date().getFullYear()}
-                  </option>
-                ))}
-              </select>
+                <span>{mesSelecionado?.nome} - {new Date().getFullYear()}</span>
+                <ChevronRight className={`w-7 h-7 transition-transform duration-200 ${metasMonthDropdownOpen ? "rotate-90" : "rotate-90 opacity-70"}`} style={{ transform: metasMonthDropdownOpen ? "rotate(-90deg)" : "rotate(90deg)" }} />
+              </button>
+
+              {metasMonthDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-amber-100 z-50 overflow-hidden">
+                  {mesesMetas.map((mes) => (
+                    <button
+                      key={mes.indice}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonth(mes.indice);
+                        setMetasMonthDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-5 py-3 text-base font-semibold transition-colors duration-150 ${
+                        mes.indice === selectedMonth
+                          ? "bg-amber-50 text-amber-800"
+                          : "text-gray-700 hover:bg-amber-50 hover:text-amber-800"
+                      }`}
+                    >
+                      {mes.nome} - {new Date().getFullYear()}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Conteúdo do Mês */}
