@@ -2947,8 +2947,9 @@ const AppContent: React.FC = () => {
     const reais = getReaisByCategoryForMonth(monthIndex);
 
     // Percentual geral de faturamento (para o donut central)
-    const pctFaturamento = metaValue > 0 ? Math.min(150, (totalReceitas / metaValue) * 100) : 0;
-    const pctFatDisplay = metaValue > 0 ? ((totalReceitas / metaValue) * 100).toFixed(0) : "0";
+    const pctFatReal = metaValue > 0 ? (totalReceitas / metaValue) * 100 : 0;
+    const pctFaturamento = pctFatReal;
+    const pctFatDisplay = pctFatReal.toFixed(0);
 
     // Helper: badge de status para cards de receita (atingiu = verde, andamento = amarelo)
     const badgeReceita = (real: number, meta: number) => {
@@ -3018,12 +3019,14 @@ const AppContent: React.FC = () => {
     const cardFooter = (real: number, meta: number, tipo: "receita" | "despesa" | "investimento") => {
       const fmt = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
       if (tipo === "receita" || tipo === "investimento") {
-        const falta = Math.max(0, meta - real);
+        const pctCard = meta > 0 ? (real / meta) * 100 : 0;
         return (
-          <div className="text-xs text-white/70 font-medium flex justify-between">
-            <span>Realizado: <span className="font-bold text-white">R$ {fmt(real)}</span></span>
-            {falta > 0 && <span>Falta: <span className="font-bold text-yellow-200">R$ {fmt(falta)}</span></span>}
-            {falta === 0 && real > 0 && <span className="text-yellow-200 font-bold"><CheckCircle2 className="w-3 h-3" /> Meta superada</span>}
+          <div className="text-xs text-white/70 font-medium flex justify-between items-center">
+            <span>Meta: <span className="font-bold text-white">R$ {fmt(meta)}</span></span>
+            {pctCard >= 100
+              ? <span className="text-yellow-200 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Superada</span>
+              : <span className="font-bold text-white/90">{pctCard.toFixed(0)}% atingido</span>
+            }
           </div>
         );
       } else {
@@ -3049,7 +3052,7 @@ const AppContent: React.FC = () => {
             {/* Donut */}
             {(() => {
               const color = pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444";
-              const pct = Math.min(100, pctFaturamento);
+              const pct = pctFaturamento >= 100 ? 100 : pctFaturamento;
               const deg = (pct / 100) * 360;
               return (
                 <div className="flex-shrink-0 flex items-center justify-center" style={{ width: 220, height: 220 }}>
@@ -3074,22 +3077,31 @@ const AppContent: React.FC = () => {
             })()}
 
             {/* Resumo ao lado do donut */}
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-              <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-                <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
-                <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-              </div>
-              <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
-                <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-              </div>
-              <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-                <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
-                <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
-                  {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            {(() => {
+              const margem = totalReceitas > 0 ? ((totalReceitas - totalDespesas) / totalReceitas) * 100 : 0;
+              return (
+                <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
+                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
+                    <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                    <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
+                    <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                    <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
+                    <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
+                      {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                    <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${margem >= 0 ? "text-violet-600" : "text-red-600"}`}>Margem</div>
+                    <div className={`text-xl font-black ${margem >= 0 ? "text-violet-800" : "text-red-800"}`}>{margem.toFixed(1)}%</div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -3120,11 +3132,11 @@ const AppContent: React.FC = () => {
                   </span>
                 </div>
 
-                {/* SALDO INICIAL */}
+                {/* MARGEM LÍQUIDA */}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-semibold text-blue-700">SALDO INICIAL</span>
-                  <span className="font-bold text-blue-800">
-                    R$ {saldoInicial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  <span className="font-semibold text-violet-700">MARGEM LÍQUIDA</span>
+                  <span className="font-bold text-violet-800">
+                    {totalReceitas > 0 ? (((totalReceitas - totalDespesas) / totalReceitas) * 100).toFixed(1) : "0.0"}%
                   </span>
                 </div>
 
@@ -3187,6 +3199,15 @@ const AppContent: React.FC = () => {
           <h2 className="text-2xl font-bold text-emerald-800 flex items-center gap-3">
             <TrendingUp className="w-6 h-6 text-emerald-600" />
             Faturamento
+            {(() => {
+              const diff = totalReceitas - reais.totalReceitas;
+              if (diff > 0.01) return (
+                <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-1 rounded-lg">
+                  <AlertTriangle className="w-3 h-3" /> R$ {diff.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} sem categoria
+                </span>
+              );
+              return null;
+            })()}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -3268,7 +3289,7 @@ const AppContent: React.FC = () => {
               </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
-                  <span>Limite</span>
+                  <span>Meta</span>
                   <span>{proj.despesasTotal > 0 ? ((reais.totalDespesas / proj.despesasTotal) * 100).toFixed(0) : 0}%</span>
                 </div>
                 {renderBar(reais.totalDespesas, proj.despesasTotal, "despesa")}
@@ -3287,7 +3308,7 @@ const AppContent: React.FC = () => {
               </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
-                  <span>Limite</span>
+                  <span>Meta</span>
                   <span>{proj.despesasVariável > 0 ? ((reais.despesasVariável / proj.despesasVariável) * 100).toFixed(0) : 0}%</span>
                 </div>
                 {renderBar(reais.despesasVariável, proj.despesasVariável, "despesa")}
@@ -3306,7 +3327,7 @@ const AppContent: React.FC = () => {
               </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm font-medium text-white/80 mb-1">
-                  <span>Limite</span>
+                  <span>Meta</span>
                   <span>{proj.despesasFixo > 0 ? ((reais.despesasFixo / proj.despesasFixo) * 100).toFixed(0) : 0}%</span>
                 </div>
                 {renderBar(reais.despesasFixo, proj.despesasFixo, "despesa")}
@@ -6444,6 +6465,37 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Mini visão anual — barra de progresso por mês */}
+        {(() => {
+          const mesesNomesAbrev = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+          return (
+            <div className="bg-white rounded-2xl shadow border border-gray-200 p-5">
+              <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-4">Visão Anual — % da Meta por Mês</h3>
+              <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
+                {mesesMetas.map((mes) => {
+                  const { receitas } = calculateTotalsForMonth(mes.indice, new Date().getFullYear());
+                  const pct = mes.meta > 0 ? Math.min(100, (receitas / mes.meta) * 100) : 0;
+                  const color = pct >= 100 ? "bg-emerald-500" : pct >= 75 ? "bg-amber-400" : pct > 0 ? "bg-red-400" : "bg-gray-200";
+                  const isSelected = mes.indice === selectedMonth;
+                  return (
+                    <button
+                      key={mes.indice}
+                      onClick={() => setSelectedMonth(mes.indice)}
+                      className={`flex flex-col items-center gap-1 p-1 rounded-lg transition-all ${isSelected ? "ring-2 ring-amber-400 bg-amber-50" : "hover:bg-gray-50"}`}
+                    >
+                      <div className="w-full bg-gray-100 rounded-full h-16 flex flex-col justify-end overflow-hidden">
+                        <div className={`${color} rounded-full transition-all duration-500`} style={{ height: `${Math.max(4, pct)}%` }} />
+                      </div>
+                      <span className={`text-xs font-bold ${isSelected ? "text-amber-700" : "text-gray-500"}`}>{mesesNomesAbrev[mes.indice]}</span>
+                      <span className={`text-xs font-black ${pct >= 100 ? "text-emerald-600" : pct >= 75 ? "text-amber-600" : pct > 0 ? "text-red-500" : "text-gray-400"}`}>{pct.toFixed(0)}%</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Renderizar Mês Selecionado com Dropdown Integrado */}
         {mesSelecionado && (
