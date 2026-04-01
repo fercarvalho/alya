@@ -506,6 +506,7 @@ const AppContent: React.FC = () => {
   const [expandedReportCharts, setExpandedReportCharts] = useState<string[]>(
     [],
   );
+  const [periodoRelatorio, setPeriodoRelatorio] = useState<"semana" | "mes" | "trimestre" | "ano">("mes");
 
   // ⚠️ TODOS OS useEffect DEVEM ESTAR AQUI, ANTES DOS RETURNS CONDICIONAIS
 
@@ -5639,829 +5640,137 @@ const AppContent: React.FC = () => {
 
   // Render Reports
   const renderReports = () => {
-    // Calcular dados reais das transações
     const agora = new Date();
+
+    // Período atual
     const inicioSemana = new Date(agora);
     inicioSemana.setDate(agora.getDate() - agora.getDay());
     inicioSemana.setHours(0, 0, 0, 0);
-
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-    const inicioTrimestre = new Date(
-      agora.getFullYear(),
-      Math.floor(agora.getMonth() / 3) * 3,
-      1,
-    );
+    const inicioTrimestre = new Date(agora.getFullYear(), Math.floor(agora.getMonth() / 3) * 3, 1);
     const inicioAno = new Date(agora.getFullYear(), 0, 1);
 
-    // Filtrar transações por período
-    const transacoesSemana = transactions.filter((t) => {
-      const dataTransacao = parseLocalDate(t.date);
-      return dataTransacao >= inicioSemana;
-    });
+    // Período anterior (para comparação)
+    const fimSemanaAnt = new Date(inicioSemana);
+    fimSemanaAnt.setMilliseconds(-1);
+    const inicioSemanaAnt = new Date(fimSemanaAnt);
+    inicioSemanaAnt.setDate(fimSemanaAnt.getDate() - fimSemanaAnt.getDay());
+    inicioSemanaAnt.setHours(0, 0, 0, 0);
 
-    const transacoesMes = transactions.filter((t) => {
-      const dataTransacao = parseLocalDate(t.date);
-      return dataTransacao >= inicioMes;
-    });
+    const fimMesAnt = new Date(inicioMes);
+    fimMesAnt.setMilliseconds(-1);
+    const inicioMesAnt = new Date(fimMesAnt.getFullYear(), fimMesAnt.getMonth(), 1);
 
-    const transacoesTrimestre = transactions.filter((t) => {
-      const dataTransacao = parseLocalDate(t.date);
-      return dataTransacao >= inicioTrimestre;
-    });
+    const fimTrimestreAnt = new Date(inicioTrimestre);
+    fimTrimestreAnt.setMilliseconds(-1);
+    const inicioTrimestreAnt = new Date(fimTrimestreAnt.getFullYear(), Math.floor(fimTrimestreAnt.getMonth() / 3) * 3, 1);
 
-    const transacoesAno = transactions.filter((t) => {
-      const dataTransacao = parseLocalDate(t.date);
-      return dataTransacao >= inicioAno;
-    });
+    const inicioAnoAnt = new Date(agora.getFullYear() - 1, 0, 1);
+    const fimAnoAnt = new Date(agora.getFullYear(), 0, 1);
+    fimAnoAnt.setMilliseconds(-1);
 
-    // Função para calcular vendas por categoria
-    const calcularVendasPorCategoria = (transacoes: any[]) => {
-      const vendasPorCategoria: { [key: string]: number } = {};
-
-      transacoes.forEach((t) => {
-        if (isReceita(t.type)) {
-          vendasPorCategoria[t.category] =
-            (vendasPorCategoria[t.category] || 0) + Number(t.value);
-        }
+    // Filtros por período atual e anterior
+    const filtrar = (ini: Date, fim?: Date) =>
+      transactions.filter((t) => {
+        const d = parseLocalDate(t.date);
+        return fim ? d >= ini && d <= fim : d >= ini;
       });
 
-      const cores = [
-        "#22c55e",
-        "#3b82f6",
-        "#f59e0b",
-        "#8b5cf6",
-        "#ec4899",
-        "#06b6d4",
-      ];
-      return Object.entries(vendasPorCategoria).map(([nome, valor], index) => ({
-        nome,
-        valor,
-        cor: cores[index % cores.length],
-      }));
+    const transacoesPorPeriodo = {
+      semana: { atual: filtrar(inicioSemana), anterior: filtrar(inicioSemanaAnt, fimSemanaAnt) },
+      mes: { atual: filtrar(inicioMes), anterior: filtrar(inicioMesAnt, fimMesAnt) },
+      trimestre: { atual: filtrar(inicioTrimestre), anterior: filtrar(inicioTrimestreAnt, fimTrimestreAnt) },
+      ano: { atual: filtrar(inicioAno), anterior: filtrar(inicioAnoAnt, fimAnoAnt) },
     };
 
-    // Função para calcular despesas por categoria
-    const calcularDespesasPorCategoria = (transacoes: any[]) => {
-      const despesasPorCategoria: { [key: string]: number } = {};
+    const somarReceitas = (ts: any[]) => ts.filter((t) => isReceita(t.type)).reduce((s, t) => s + Number(t.value), 0);
+    const somarDespesas = (ts: any[]) => ts.filter((t) => isDespesa(t.type)).reduce((s, t) => s + Number(t.value), 0);
 
-      transacoes.forEach((t) => {
-        if (isDespesa(t.type)) {
-          despesasPorCategoria[t.category] =
-            (despesasPorCategoria[t.category] || 0) + Number(t.value);
+    const calcPorCategoria = (ts: any[], tipo: "receita" | "despesa") => {
+      const acc: { [k: string]: number } = {};
+      ts.forEach((t) => {
+        if (tipo === "receita" ? isReceita(t.type) : isDespesa(t.type)) {
+          acc[t.category] = (acc[t.category] || 0) + Number(t.value);
         }
       });
-
-      const cores = ["#ef4444", "#f97316", "#84cc16", "#f59e0b", "#8b5cf6"];
-      return Object.entries(despesasPorCategoria).map(
-        ([nome, valor], index) => ({
-          nome,
-          valor,
-          cor: cores[index % cores.length],
-        }),
-      );
+      const cores = tipo === "receita"
+        ? ["#22c55e", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"]
+        : ["#ef4444", "#f97316", "#84cc16", "#f59e0b", "#8b5cf6"];
+      return Object.entries(acc)
+        .sort(([, a], [, b]) => b - a)
+        .map(([nome, valor], i) => ({ nome, valor, cor: cores[i % cores.length] }));
     };
 
-    // Função para calcular vendas por produto (baseado nas transações)
-    const calcularVendasPorProduto = (transacoes: any[]) => {
-      const vendasPorProduto: { [key: string]: number } = {};
-
-      transacoes.forEach((t) => {
-        if (isReceita(t.type)) {
-          // Usar a descrição como nome do produto
-          const nomeProduto = t.description || "Produto sem nome";
-          vendasPorProduto[nomeProduto] =
-            (vendasPorProduto[nomeProduto] || 0) + Number(t.value);
-        }
+    const calcProdutos = (ts: any[]) => {
+      const acc: { [k: string]: number } = {};
+      ts.filter((t) => isReceita(t.type)).forEach((t) => {
+        const nome = t.description || "Sem descrição";
+        acc[nome] = (acc[nome] || 0) + Number(t.value);
       });
-
       const cores = ["#8b5cf6", "#ec4899", "#06b6d4", "#22c55e", "#3b82f6"];
-      return Object.entries(vendasPorProduto)
-        .sort(([, a], [, b]) => b - a) // Ordenar por valor decrescente
-        .slice(0, 5) // Pegar apenas os 5 primeiros
-        .map(([nome, valor], index) => ({
-          nome,
-          valor,
-          cor: cores[index % cores.length],
-        }));
+      return Object.entries(acc)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([nome, valor], i) => ({ nome, valor, cor: cores[i % cores.length] }));
     };
 
-    // Função para calcular produtos vendidos por período
-    const calcularProdutosPorPeriodo = (
-      transacoes: any[],
-      tipo: "dia" | "semana",
-    ) => {
-      const produtosPorPeriodo: { [key: string]: { [key: string]: number } } =
-        {};
-
-      transacoes.forEach((t) => {
-        if (isReceita(t.type)) {
-          const dataTransacao = parseLocalDate(t.date);
-          let chavePeriodo: string;
-
-          if (tipo === "dia") {
-            const diasSemana = [
-              "Dom",
-              "Seg",
-              "Ter",
-              "Qua",
-              "Qui",
-              "Sex",
-              "Sáb",
-            ];
-            chavePeriodo = diasSemana[dataTransacao.getDay()];
-          } else {
-            const semanaDoMes = Math.ceil(dataTransacao.getDate() / 7);
-            chavePeriodo = `Sem ${semanaDoMes}`;
-          }
-
-          if (!produtosPorPeriodo[chavePeriodo]) {
-            produtosPorPeriodo[chavePeriodo] = {};
-          }
-
-          const nomeProduto = t.description || "Produto sem nome";
-          produtosPorPeriodo[chavePeriodo][nomeProduto] =
-            (produtosPorPeriodo[chavePeriodo][nomeProduto] || 0) + 1;
-        }
+    const calcTendencia = (ts: any[]) => {
+      // Agrupar por semana/mês
+      const porSemana: { [k: string]: { rec: number; desp: number } } = {};
+      ts.forEach((t) => {
+        const d = parseLocalDate(t.date);
+        const chave = `Sem ${Math.ceil(d.getDate() / 7)}`;
+        if (!porSemana[chave]) porSemana[chave] = { rec: 0, desp: 0 };
+        if (isReceita(t.type)) porSemana[chave].rec += Number(t.value);
+        if (isDespesa(t.type)) porSemana[chave].desp += Number(t.value);
       });
-
-      return Object.entries(produtosPorPeriodo).map(([nome, produtos]) => ({
-        nome,
-        ...produtos,
-      }));
+      return Object.entries(porSemana).map(([nome, v]) => ({ nome, receitas: v.rec, despesas: v.desp, saldo: v.rec - v.desp }));
     };
 
-    // Calcular dados reais
-    const dadosReais = {
-      semana: {
-        vendasPorCategoria: calcularVendasPorCategoria(transacoesSemana),
-        vendasPorProduto: calcularVendasPorProduto(transacoesSemana),
-        despesasPorCategoria: calcularDespesasPorCategoria(transacoesSemana),
-        produtosPorDia: calcularProdutosPorPeriodo(transacoesSemana, "dia"),
-      },
-      mes: {
-        vendasPorCategoria: calcularVendasPorCategoria(transacoesMes),
-        vendasPorProduto: calcularVendasPorProduto(transacoesMes),
-        despesasPorCategoria: calcularDespesasPorCategoria(transacoesMes),
-        produtosPorSemana: calcularProdutosPorPeriodo(transacoesMes, "semana"),
-      },
-      trimestre: {
-        vendasPorCategoria: calcularVendasPorCategoria(transacoesTrimestre),
-        vendasPorProduto: calcularVendasPorProduto(transacoesTrimestre),
-        despesasPorCategoria: calcularDespesasPorCategoria(transacoesTrimestre),
-        produtosPorMes: calcularProdutosPorPeriodo(
-          transacoesTrimestre,
-          "semana",
-        ),
-      },
-      ano: {
-        vendasPorCategoria: calcularVendasPorCategoria(transacoesAno),
-        vendasPorProduto: calcularVendasPorProduto(transacoesAno),
-        despesasPorCategoria: calcularDespesasPorCategoria(transacoesAno),
-        produtosPorTrimestre: calcularProdutosPorPeriodo(
-          transacoesAno,
-          "semana",
-        ),
-      },
-    };
+    const p = periodoRelatorio;
+    const tsAtual = transacoesPorPeriodo[p].atual;
+    const tsAnt = transacoesPorPeriodo[p].anterior;
 
-    const renderSecaoRelatorio = (
-      titulo: string,
-      dados: any,
-      periodo: string,
-    ) => {
-      const totalVendasCategoria = dados.vendasPorCategoria.reduce(
-        (sum: number, item: any) => sum + item.valor,
-        0,
-      );
-      const totalVendasProduto = dados.vendasPorProduto.reduce(
-        (sum: number, item: any) => sum + item.valor,
-        0,
-      );
-      const totalDespesas = dados.despesasPorCategoria.reduce(
-        (sum: number, item: any) => sum + item.valor,
-        0,
-      );
-      const lucroLiquido = totalVendasCategoria - totalDespesas;
+    const recAtual = somarReceitas(tsAtual);
+    const despAtual = somarDespesas(tsAtual);
+    const lucroAtual = recAtual - despAtual;
 
+    const recAnt = somarReceitas(tsAnt);
+    const despAnt = somarDespesas(tsAnt);
+    const lucroAnt = recAnt - despAnt;
+
+    const varRec = recAnt > 0 ? ((recAtual - recAnt) / recAnt) * 100 : 0;
+    const varDesp = despAnt > 0 ? ((despAtual - despAnt) / despAnt) * 100 : 0;
+    const varLucro = lucroAnt !== 0 ? ((lucroAtual - lucroAnt) / Math.abs(lucroAnt)) * 100 : 0;
+    const margemAtual = recAtual > 0 ? (lucroAtual / recAtual) * 100 : 0;
+
+    const catReceitas = calcPorCategoria(tsAtual, "receita");
+    const catDespesas = calcPorCategoria(tsAtual, "despesa");
+    const produtos = calcProdutos(tsAtual);
+    const tendencia = calcTendencia(tsAtual);
+
+    const totalCatRec = catReceitas.reduce((s, i) => s + i.valor, 0);
+    const totalCatDesp = catDespesas.reduce((s, i) => s + i.valor, 0);
+
+    const varBadge = (vari: number, invertido = false) => {
+      const positivo = invertido ? vari < 0 : vari >= 0;
       return (
-        <div className="space-y-6 mb-12">
-          <h2 className="text-2xl font-bold text-gray-800">{titulo}</h2>
-
-          {/* Cards principais lado a lado */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Card Vendas por Categoria */}
-            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-              {/* Seção Vendas por Categoria */}
-              <div className="mb-8">
-                <div className="flex items-center mb-6">
-                  <span className="text-gray-400 text-lg mr-3">📈</span>
-                  <h3 className="text-lg font-bold text-gray-800">
-                    Vendas por Categoria
-                  </h3>
-                </div>
-
-                <div className="space-y-3">
-                  {dados.vendasPorCategoria.map((item: any, index: number) => {
-                    // Cores baseadas na imagem - tons de verde claro para categorias vazias
-                    const backgroundColors = [
-                      "bg-green-100",
-                      "bg-green-100",
-                      "bg-green-100",
-                    ];
-                    const labelBgColors = [
-                      "bg-green-200",
-                      "bg-green-200",
-                      "bg-green-200",
-                    ];
-                    const textColors = [
-                      "text-green-800",
-                      "text-green-800",
-                      "text-green-800",
-                    ];
-                    const chartId = `vendas-categoria-${periodo}-${index}`;
-
-                    return (
-                      <div key={index} className="space-y-3">
-                        <div
-                          className={`${backgroundColors[index]} p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity`}
-                          onClick={() => toggleReportChart(chartId)}
-                        >
-                          <span
-                            className={`${labelBgColors[index]} ${textColors[index]} font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0`}
-                          >
-                            {item.nome}
-                          </span>
-                          <span className="font-bold text-gray-500 ml-4 text-right">
-                            R${" "}
-                            {item.valor.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-
-                        {/* Gráfico expandido: categoria vs Total Vendas */}
-                        {expandedReportCharts.includes(chartId) &&
-                          (() => {
-                            const chartData = [
-                              {
-                                nome: item.nome,
-                                valor: item.valor,
-                                cor: item.cor,
-                              },
-                              {
-                                nome: "Total Vendas",
-                                valor: totalVendasCategoria,
-                                cor: "#22c55e",
-                              },
-                            ];
-                            return (
-                              <div
-                                className="bg-gray-50 p-4 rounded-lg"
-                                style={{ minHeight: 280 }}
-                              >
-                                <ResponsiveContainer width="100%" height={250}>
-                                  <BarChart
-                                    data={chartData}
-                                    margin={{
-                                      top: 10,
-                                      right: 20,
-                                      left: 20,
-                                      bottom: 10,
-                                    }}
-                                    barCategoryGap="25%"
-                                  >
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="nome" />
-                                    <YAxis
-                                      tickFormatter={(v: number) =>
-                                        `R$ ${Number(v).toLocaleString("pt-BR")}`
-                                      }
-                                    />
-                                    <Tooltip
-                                      formatter={(value: any) => [
-                                        `R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                                        "Valor",
-                                      ]}
-                                    />
-                                    <Bar
-                                      dataKey="valor"
-                                      radius={[8, 8, 0, 0]}
-                                      minPointSize={8}
-                                      barSize={60}
-                                    >
-                                      {chartData.map((entry, i) => (
-                                        <Cell key={i} fill={entry.cor} />
-                                      ))}
-                                    </Bar>
-                                  </BarChart>
-                                </ResponsiveContainer>
-                              </div>
-                            );
-                          })()}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Total Vendas por Categoria */}
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="space-y-3">
-                    <div
-                      className="bg-green-200 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() =>
-                        toggleReportChart(`total-vendas-categoria-${periodo}`)
-                      }
-                    >
-                      <span className="bg-green-300 text-green-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
-                        Total Vendas por Categoria
-                      </span>
-                      <span className="font-bold text-green-800 text-lg ml-4 text-right">
-                        R${" "}
-                        {totalVendasCategoria.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-
-                    {/* Gráfico expandido do Total */}
-                    {expandedReportCharts.includes(
-                      `total-vendas-categoria-${periodo}`,
-                    ) && (
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={dados.vendasPorCategoria}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="nome" />
-                            <YAxis />
-                            <Tooltip
-                              formatter={(value: any) => [
-                                `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                                "Valor",
-                              ]}
-                            />
-                            <Bar dataKey="valor" fill="#22c55e" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção Vendas por Tipo de Produto */}
-              <div>
-                <div className="mb-4">
-                  <h4 className="text-md font-bold text-gray-700">
-                    Vendas por Tipo de Produto
-                  </h4>
-                </div>
-
-                <div className="space-y-3">
-                  {dados.vendasPorProduto.map((item: any, index: number) => {
-                    // Cores baseadas na imagem - tons de azul para produtos
-                    const backgroundColors = [
-                      "bg-blue-100",
-                      "bg-blue-100",
-                      "bg-blue-100",
-                    ];
-                    const labelBgColors = [
-                      "bg-blue-200",
-                      "bg-blue-200",
-                      "bg-blue-200",
-                    ];
-                    const textColors = [
-                      "text-blue-800",
-                      "text-blue-800",
-                      "text-blue-800",
-                    ];
-                    const chartId = `vendas-produto-${periodo}-${index}`;
-
-                    return (
-                      <div key={index} className="space-y-3">
-                        <div
-                          className={`${backgroundColors[index]} p-3 rounded-lg flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity`}
-                          onClick={() => toggleReportChart(chartId)}
-                        >
-                          <span
-                            className={`${labelBgColors[index]} ${textColors[index]} font-medium text-sm px-3 py-2 rounded min-w-0 flex-shrink-0`}
-                          >
-                            {item.nome}
-                          </span>
-                          <span className="font-bold text-blue-900 text-sm ml-3 text-right">
-                            R${" "}
-                            {item.valor.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-
-                        {/* Gráfico expandido: produto vs Total por Produto */}
-                        {expandedReportCharts.includes(chartId) &&
-                          (() => {
-                            const chartData = [
-                              {
-                                nome: item.nome,
-                                valor: item.valor,
-                                cor: item.cor,
-                              },
-                              {
-                                nome: "Total por Produto",
-                                valor: totalVendasProduto,
-                                cor: "#3b82f6",
-                              },
-                            ];
-                            return (
-                              <div
-                                className="bg-gray-50 p-4 rounded-lg"
-                                style={{ minHeight: 280 }}
-                              >
-                                <ResponsiveContainer width="100%" height={250}>
-                                  <BarChart
-                                    data={chartData}
-                                    margin={{
-                                      top: 10,
-                                      right: 20,
-                                      left: 20,
-                                      bottom: 10,
-                                    }}
-                                    barCategoryGap="25%"
-                                  >
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="nome" />
-                                    <YAxis
-                                      tickFormatter={(v: number) =>
-                                        `R$ ${Number(v).toLocaleString("pt-BR")}`
-                                      }
-                                    />
-                                    <Tooltip
-                                      formatter={(value: any) => [
-                                        `R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                                        "Valor",
-                                      ]}
-                                    />
-                                    <Bar
-                                      dataKey="valor"
-                                      radius={[8, 8, 0, 0]}
-                                      minPointSize={8}
-                                      barSize={60}
-                                    >
-                                      {chartData.map((entry, i) => (
-                                        <Cell key={i} fill={entry.cor} />
-                                      ))}
-                                    </Bar>
-                                  </BarChart>
-                                </ResponsiveContainer>
-                              </div>
-                            );
-                          })()}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Total Vendas por Produto */}
-                <div className="mt-4 pt-3 border-t border-gray-200">
-                  <div className="space-y-3">
-                    <div
-                      className="bg-blue-200 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() =>
-                        toggleReportChart(`total-vendas-produto-${periodo}`)
-                      }
-                    >
-                      <span className="bg-blue-300 text-blue-800 font-bold text-sm px-3 py-2 rounded min-w-0 flex-shrink-0">
-                        Total por Produto
-                      </span>
-                      <span className="font-bold text-blue-800 text-sm ml-3 text-right">
-                        R${" "}
-                        {totalVendasProduto.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-
-                    {/* Gráfico expandido do Total */}
-                    {expandedReportCharts.includes(
-                      `total-vendas-produto-${periodo}`,
-                    ) && (
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={dados.vendasPorProduto}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="nome" />
-                            <YAxis />
-                            <Tooltip
-                              formatter={(value: any) => [
-                                `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                                "Valor",
-                              ]}
-                            />
-                            <Bar dataKey="valor" fill="#3b82f6" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Despesas por Categoria */}
-            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-              <div className="flex items-center mb-6">
-                <span className="text-gray-400 text-lg mr-3">💸</span>
-                <h3 className="text-lg font-bold text-gray-800">
-                  Despesas por Categoria
-                </h3>
-              </div>
-
-              <div className="space-y-3">
-                {dados.despesasPorCategoria.map((item: any, index: number) => {
-                  const chartId = `despesas-categoria-${periodo}-${index}`;
-
-                  return (
-                    <div key={index} className="space-y-3">
-                      <div
-                        className="bg-orange-50 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => toggleReportChart(chartId)}
-                      >
-                        <span className="bg-orange-100 text-orange-700 font-medium px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
-                          {item.nome}
-                        </span>
-                        <span className="font-bold text-gray-500 ml-4 text-right">
-                          R${" "}
-                          {item.valor.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-
-                      {/* Gráfico expandido: categoria vs Total Despesas */}
-                      {expandedReportCharts.includes(chartId) &&
-                        (() => {
-                          const chartData = [
-                            {
-                              nome: item.nome,
-                              valor: item.valor,
-                              cor: item.cor,
-                            },
-                            {
-                              nome: "Total Despesas",
-                              valor: totalDespesas,
-                              cor: "#f97316",
-                            },
-                          ];
-                          return (
-                            <div
-                              className="bg-gray-50 p-4 rounded-lg"
-                              style={{ minHeight: 280 }}
-                            >
-                              <ResponsiveContainer width="100%" height={250}>
-                                <BarChart
-                                  data={chartData}
-                                  margin={{
-                                    top: 10,
-                                    right: 20,
-                                    left: 20,
-                                    bottom: 10,
-                                  }}
-                                  barCategoryGap="25%"
-                                >
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="nome" />
-                                  <YAxis
-                                    tickFormatter={(v: number) =>
-                                      `R$ ${Number(v).toLocaleString("pt-BR")}`
-                                    }
-                                  />
-                                  <Tooltip
-                                    formatter={(value: any) => [
-                                      `R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                                      "Valor",
-                                    ]}
-                                  />
-                                  <Bar
-                                    dataKey="valor"
-                                    radius={[8, 8, 0, 0]}
-                                    minPointSize={8}
-                                    barSize={60}
-                                  >
-                                    {chartData.map((entry, i) => (
-                                      <Cell key={i} fill={entry.cor} />
-                                    ))}
-                                  </Bar>
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                          );
-                        })()}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Total de Despesas - Mais escuro */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="space-y-3">
-                  <div
-                    className="bg-orange-200 p-4 rounded-xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() =>
-                      toggleReportChart(`total-despesas-${periodo}`)
-                    }
-                  >
-                    <span className="bg-orange-300 text-orange-800 font-bold px-4 py-2 rounded-lg min-w-0 flex-shrink-0">
-                      Total de Despesas
-                    </span>
-                    <span className="font-bold text-orange-800 text-lg ml-4 text-right">
-                      R${" "}
-                      {totalDespesas.toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-
-                  {/* Gráfico expandido do Total */}
-                  {expandedReportCharts.includes(
-                    `total-despesas-${periodo}`,
-                  ) && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={dados.despesasPorCategoria}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="nome" />
-                          <YAxis />
-                          <Tooltip
-                            formatter={(value: any) => [
-                              `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                              "Valor",
-                            ]}
-                          />
-                          <Bar dataKey="valor" fill="#f97316" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card Produtos por Período */}
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <span className="text-gray-400 text-lg mr-3">📦</span>
-                <h3 className="text-lg font-bold text-gray-800">
-                  Produtos Vendidos por{" "}
-                  {periodo === "Semana"
-                    ? "Dia"
-                    : periodo === "Mês"
-                      ? "Semana"
-                      : periodo === "Trimestre"
-                        ? "Mês"
-                        : "Trimestre"}
-                </h3>
-              </div>
-              <button
-                className="text-blue-600 hover:text-blue-800 font-medium"
-                onClick={() => toggleReportChart(`produtos-${periodo}`)}
-              >
-                {expandedReportCharts.includes(`produtos-${periodo}`)
-                  ? "Ocultar Gráfico"
-                  : "Ver Gráfico"}
-              </button>
-            </div>
-
-            {expandedReportCharts.includes(`produtos-${periodo}`) && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={
-                      periodo === "Semana"
-                        ? dados.produtosPorDia
-                        : periodo === "Mês"
-                          ? dados.produtosPorSemana
-                          : periodo === "Trimestre"
-                            ? dados.produtosPorMes
-                            : dados.produtosPorTrimestre
-                    }
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="nome" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar
-                      dataKey="vela_lavanda"
-                      fill="#8b5cf6"
-                      name="Vela Lavanda"
-                    />
-                    <Bar
-                      dataKey="vela_vanilla"
-                      fill="#ec4899"
-                      name="Vela Vanilla"
-                    />
-                    <Bar
-                      dataKey="kit_romance"
-                      fill="#06b6d4"
-                      name="Kit Romance"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          {/* Card Resumo da Seção - Layout único com 4 colunas */}
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-800 mb-6">
-              Resumo do {periodo}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Total Vendas */}
-              <div className="text-center p-4 bg-green-50 rounded-xl">
-                <p className="text-sm font-bold text-green-600 mb-2">
-                  Total Vendas
-                </p>
-                <p className="text-xl font-bold text-green-600">
-                  R${" "}
-                  {totalVendasCategoria.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-              </div>
-
-              {/* Total Despesas */}
-              <div className="text-center p-4 bg-red-50 rounded-xl">
-                <p className="text-sm font-bold text-red-600 mb-2">
-                  Total Despesas
-                </p>
-                <p className="text-xl font-bold text-red-600">
-                  R${" "}
-                  {totalDespesas.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-              </div>
-
-              {/* Lucro Líquido */}
-              <div
-                className={`text-center p-4 rounded-xl ${lucroLiquido >= 0 ? "bg-green-50" : "bg-red-50"}`}
-              >
-                <p
-                  className={`text-sm font-bold mb-2 ${lucroLiquido >= 0 ? "text-green-600" : "text-red-600"}`}
-                >
-                  Lucro Líquido
-                </p>
-                <p
-                  className={`text-xl font-bold ${lucroLiquido >= 0 ? "text-green-600" : "text-red-600"}`}
-                >
-                  R${" "}
-                  {lucroLiquido.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-                <div
-                  className={`mt-2 p-2 rounded-lg ${lucroLiquido >= 0 ? "bg-green-100" : "bg-red-100"}`}
-                >
-                  <p
-                    className={`text-xs font-bold ${lucroLiquido >= 0 ? "text-green-600" : "text-red-600"}`}
-                  >
-                    Margem:{" "}
-                    {totalVendasCategoria > 0
-                      ? ((lucroLiquido / totalVendasCategoria) * 100).toFixed(1)
-                      : "0.0"}
-                    %
-                  </p>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div
-                className={`text-center p-4 rounded-xl ${lucroLiquido >= 0 ? "bg-green-50" : "bg-red-50"}`}
-              >
-                <p
-                  className={`text-sm font-bold mb-2 ${lucroLiquido >= 0 ? "text-green-600" : "text-red-600"}`}
-                >
-                  Status
-                </p>
-                <div
-                  className={`inline-flex items-center px-3 py-2 rounded-lg ${lucroLiquido >= 0 ? "bg-green-100" : "bg-red-100"}`}
-                >
-                  <span
-                    className={`text-sm font-bold ${lucroLiquido >= 0 ? "text-green-600" : "text-red-600"}`}
-                  >
-                    {lucroLiquido >= 0 ? "📈 Positivo" : "📉 Negativo"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${positivo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+          {vari >= 0 ? "▲" : "▼"} {Math.abs(vari).toFixed(1)}%
+        </span>
       );
+    };
+
+    const periodoLabels: Record<string, string> = {
+      semana: "Esta Semana",
+      mes: "Este Mês",
+      trimestre: "Este Trimestre",
+      ano: "Este Ano",
     };
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
+        {/* Header + Botões */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <BarChart3 className="w-8 h-8 text-blue-600" />
@@ -6475,34 +5784,182 @@ const AppContent: React.FC = () => {
               <Download className="h-5 w-5" />
               Exportar PDF
             </button>
-            <button
-              onClick={() => alert("Ferramenta em construção")}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-            >
-              <Plus className="h-5 w-5" />
-              Novo Relatório
-            </button>
           </div>
         </div>
 
-        {/* Seção Semana */}
-        {renderSecaoRelatorio("Relatório Semanal", dadosReais.semana, "Semana")}
+        {/* Seletor de período */}
+        <div className="flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-1 w-fit">
+          {(["semana", "mes", "trimestre", "ano"] as const).map((per) => (
+            <button
+              key={per}
+              onClick={() => setPeriodoRelatorio(per)}
+              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                periodoRelatorio === per
+                  ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              {per === "semana" ? "Semana" : per === "mes" ? "Mês" : per === "trimestre" ? "Trimestre" : "Ano"}
+            </button>
+          ))}
+        </div>
 
-        {/* Seção Mês */}
-        {renderSecaoRelatorio("Relatório Mensal", dadosReais.mes, "Mês")}
+        {/* Cards de resumo com comparação */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: "Receitas", valor: recAtual, vari: varRec, cor: "green", invertido: false },
+            { label: "Despesas", valor: despAtual, vari: varDesp, cor: "red", invertido: true },
+            { label: "Lucro Líquido", valor: lucroAtual, vari: varLucro, cor: lucroAtual >= 0 ? "green" : "red", invertido: false },
+            { label: "Margem", valor: null, margem: margemAtual, cor: margemAtual >= 0 ? "green" : "red", invertido: false, vari: 0 },
+          ].map((card, i) => (
+            <div key={i} className="bg-white rounded-2xl shadow border border-gray-200 p-5">
+              <p className="text-xs text-gray-500 font-medium mb-1">{card.label}</p>
+              <p className={`text-xl font-black ${card.cor === "green" ? "text-green-600" : "text-red-600"}`}>
+                {card.valor !== null
+                  ? `R$ ${card.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                  : `${card.margem!.toFixed(1)}%`}
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                {i < 3 ? varBadge(card.vari, card.invertido) : null}
+                <span className="text-xs text-gray-400">vs período ant.</span>
+              </div>
+            </div>
+          ))}
+        </div>
 
-        {/* Seção Trimestre */}
-        {renderSecaoRelatorio(
-          "Relatório Trimestral",
-          dadosReais.trimestre,
-          "Trimestre",
+        {/* Gráfico de tendência */}
+        {tendencia.length > 0 && (
+          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+            <h3 className="text-base font-bold text-gray-800 mb-4">Evolução — {periodoLabels[p]}</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={tendencia} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="nome" tick={{ fontSize: 12 }} />
+                <YAxis tickFormatter={(v: any) => `R$${Number(v).toLocaleString("pt-BR")}`} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: any) => [`R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]} />
+                <Legend />
+                <Line type="monotone" dataKey="receitas" stroke="#22c55e" strokeWidth={2} dot={false} name="Receitas" />
+                <Line type="monotone" dataKey="despesas" stroke="#ef4444" strokeWidth={2} dot={false} name="Despesas" />
+                <Line type="monotone" dataKey="saldo" stroke="#f59e0b" strokeWidth={2} dot={false} name="Saldo" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         )}
 
-        {/* Seção Ano */}
-        {renderSecaoRelatorio("Relatório Anual", dadosReais.ano, "Ano")}
+        {/* Grid: Receitas por categoria + Despesas por categoria */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Receitas por categoria */}
+          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="text-green-500 text-lg">📈</span>
+              <h3 className="text-base font-bold text-gray-800">Receitas por Categoria</h3>
+            </div>
+            {catReceitas.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-8">Nenhuma receita no período</p>
+            ) : (
+              <div className="space-y-3">
+                {catReceitas.map((item, i) => {
+                  const pct = totalCatRec > 0 ? (item.valor / totalCatRec) * 100 : 0;
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-700">{item.nome}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
+                          <span className="text-sm font-bold text-gray-800">
+                            R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: item.cor }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-3 border-t border-gray-100 flex justify-between">
+                  <span className="text-sm font-bold text-gray-600">Total</span>
+                  <span className="text-sm font-bold text-green-600">
+                    R$ {totalCatRec.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Despesas por categoria */}
+          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="text-red-500 text-lg">💸</span>
+              <h3 className="text-base font-bold text-gray-800">Despesas por Categoria</h3>
+            </div>
+            {catDespesas.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-8">Nenhuma despesa no período</p>
+            ) : (
+              <div className="space-y-3">
+                {catDespesas.map((item, i) => {
+                  const pct = totalCatDesp > 0 ? (item.valor / totalCatDesp) * 100 : 0;
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-700">{item.nome}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
+                          <span className="text-sm font-bold text-gray-800">
+                            R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: item.cor }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-3 border-t border-gray-100 flex justify-between">
+                  <span className="text-sm font-bold text-gray-600">Total</span>
+                  <span className="text-sm font-bold text-red-600">
+                    R$ {totalCatDesp.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Top produtos */}
+        {produtos.length > 0 && (
+          <div className="bg-white rounded-2xl shadow border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="text-purple-500 text-lg">🏆</span>
+              <h3 className="text-base font-bold text-gray-800">Top Produtos / Serviços</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={produtos} layout="vertical" margin={{ top: 0, right: 60, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tickFormatter={(v: any) => `R$${Number(v).toLocaleString("pt-BR")}`} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="nome" width={140} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v: any) => [`R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Valor"]} />
+                <Bar dataKey="valor" radius={[0, 6, 6, 0]} minPointSize={4}>
+                  {produtos.map((entry, i) => (
+                    <Cell key={i} fill={entry.cor} />
+                  ))}
+                  <LabelList dataKey="valor" position="right" formatter={(v: any) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} style={{ fontSize: 11, fill: "#374151" }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     );
   };
+
 
   // Função para exportar dados do mês selecionado em PDF
   const exportarMetasPDF = async () => {
