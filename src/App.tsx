@@ -5940,19 +5940,19 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Seletor de período + navegador na mesma linha */}
+        {/* Controle de período unificado */}
         {(() => {
           const periodos = ["ano", "trimestre", "mes", "semana"] as const;
           const labels: Record<string, string> = { semana: "Semana", mes: "Mês", trimestre: "Trimestre", ano: "Ano" };
           const tabWidth = 100;
           const activeIdx = periodos.indexOf(periodoRelatorio);
           return (
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="bg-white rounded-2xl shadow border border-gray-200 p-2 flex flex-wrap items-center gap-2">
               {/* Tabs de tipo */}
-              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 overflow-hidden w-fit">
+              <div className="relative flex p-0 gap-0 overflow-hidden w-fit">
                 <span
-                  className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
-                  style={{ width: tabWidth, left: activeIdx * tabWidth + 4 }}
+                  className="absolute top-0 bottom-0 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
+                  style={{ width: tabWidth, left: activeIdx * tabWidth }}
                 />
                 {periodos.map((per) => (
                   <button
@@ -5968,15 +5968,18 @@ const AppContent: React.FC = () => {
                 ))}
               </div>
 
+              {/* Divisor */}
+              <div className="hidden sm:block w-px h-8 bg-gray-200 mx-1" />
+
               {/* Navegação ← período → */}
-              <div className="flex items-center gap-2 bg-white rounded-xl shadow border border-gray-200 px-2 py-1">
+              <div className="flex items-center gap-1 flex-1 justify-end sm:justify-start">
                 <button
                   onClick={() => setPeriodoOffset((o) => o - 1)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <span className="min-w-[160px] text-center text-sm font-bold text-gray-700 px-2">
+                <span className="min-w-[160px] text-center text-sm font-bold text-gray-700 px-1">
                   {labelPeriodo(periodoRelatorio, periodoOffset)}
                 </span>
                 <button
@@ -6009,9 +6012,9 @@ const AppContent: React.FC = () => {
           return (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {cards.map((card, i) => (
-                <div key={i} className={`bg-gradient-to-br ${card.gradFrom} ${card.gradTo} rounded-2xl shadow-lg p-5 text-white`}>
+                <div key={i} className={`bg-gradient-to-br ${card.gradFrom} ${card.gradTo} rounded-2xl shadow-lg p-6 text-white`}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-white/80 uppercase tracking-wide">{card.label}</p>
+                    <p className="text-xs font-bold text-white/80 uppercase tracking-wide">{card.label}</p>
                     {card.icon}
                   </div>
                   <p className="text-2xl font-black text-white drop-shadow">
@@ -6019,7 +6022,7 @@ const AppContent: React.FC = () => {
                       ? `R$ ${card.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                       : `${card.margem!.toFixed(1)}%`}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
                     {semTransacoes ? (
                       <span className="text-xs text-white/60 italic">sem dados no período</span>
                     ) : card.temBase ? (
@@ -6040,128 +6043,140 @@ const AppContent: React.FC = () => {
           );
         })()}
 
-        {/* Gráfico de tendência */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow border border-slate-200 p-6">
-          <h3 className="text-base font-bold text-gray-800 mb-4">Evolução — {periodoLabels[p]}</h3>
-          {tendencia.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-              <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm font-medium">Nenhuma transação neste período</p>
-              <p className="text-xs mt-1 opacity-70">Navegue para outro período ou adicione transações</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={tendencia} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="nome" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v: any) => `R$${Number(v).toLocaleString("pt-BR")}`} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: any) => [`R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]} />
-                <Legend />
-                <Line type="monotone" dataKey="receitas" stroke="#22c55e" strokeWidth={2} dot={tendencia.length <= 5} name="Receitas" />
-                <Line type="monotone" dataKey="despesas" stroke="#ef4444" strokeWidth={2} dot={tendencia.length <= 5} name="Despesas" />
-                <Line type="monotone" dataKey="saldo" stroke="#f59e0b" strokeWidth={2} dot={tendencia.length <= 5} name="Saldo" />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Grid: Receitas por categoria + Despesas por categoria */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Receitas por categoria */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow border border-green-100 p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <TrendingUp className="w-5 h-5 text-green-500" />
-              <h3 className="text-base font-bold text-gray-800">Receitas por Categoria</h3>
-            </div>
-            {catReceitas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                <TrendingUp className="w-10 h-10 mb-2 opacity-25" />
-                <p className="text-sm font-medium">Nenhuma receita no período</p>
+        {/* Gráfico de evolução + categorias lado a lado em telas largas */}
+        {(() => {
+          const fmt = (d: Date) => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+          const subtitulo = `${fmt(iniAtual)} – ${fmt(fimAtual)}`;
+          return (
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+              {/* Gráfico — ocupa 3/5 em xl */}
+              <div className="xl:col-span-3 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow border border-slate-200 p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">Evolução — {periodoLabels[p]}</h3>
+                  <p className="text-xs text-gray-400 font-medium mt-0.5">{subtitulo}</p>
+                </div>
+                {tendencia.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                    <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
+                    <p className="text-sm font-medium">Nenhuma transação neste período</p>
+                    <p className="text-xs mt-1 opacity-70">Navegue para outro período ou adicione transações</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <LineChart data={tendencia} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="nome" tick={{ fontSize: 12 }} />
+                      <YAxis tickFormatter={(v: any) => `R$${Number(v).toLocaleString("pt-BR")}`} tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(v: any) => [`R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]} />
+                      <Legend />
+                      <Line type="monotone" dataKey="receitas" stroke="#22c55e" strokeWidth={2} dot={tendencia.length <= 5} name="Receitas" />
+                      <Line type="monotone" dataKey="despesas" stroke="#ef4444" strokeWidth={2} dot={tendencia.length <= 5} name="Despesas" />
+                      <Line type="monotone" dataKey="saldo" stroke="#f59e0b" strokeWidth={2} dot={tendencia.length <= 5} name="Saldo" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {catReceitas.map((item, i) => {
-                  const pct = totalCatRec > 0 ? (item.valor / totalCatRec) * 100 : 0;
-                  return (
-                    <div key={i}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-700">{item.nome}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
-                          <span className="text-sm font-bold text-gray-800">
-                            R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: item.cor }}
-                        />
+
+              {/* Categorias — ocupa 2/5 em xl, empilhadas */}
+              <div className="xl:col-span-2 grid grid-cols-1 gap-6">
+                {/* Receitas por categoria */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow border border-green-100 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-5 h-5 text-green-500" />
+                    <h3 className="text-base font-bold text-gray-800">Receitas por Categoria</h3>
+                  </div>
+                  {catReceitas.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                      <TrendingUp className="w-10 h-10 mb-2 opacity-25" />
+                      <p className="text-sm font-medium">Nenhuma receita no período</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {catReceitas.map((item, i) => {
+                        const pct = totalCatRec > 0 ? (item.valor / totalCatRec) * 100 : 0;
+                        const qtd = tsAtual.filter((t) => isReceita(t.type) && (t.category || "Sem categoria") === item.nome).length;
+                        return (
+                          <div key={i}>
+                            <div className="flex justify-between items-center mb-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.cor }} />
+                                <span className="text-sm font-medium text-gray-700 truncate">{item.nome}</span>
+                                <span className="text-xs text-gray-400 flex-shrink-0">({qtd})</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                                <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
+                                <span className="text-sm font-bold text-gray-800">
+                                  R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: item.cor }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="pt-3 border-t border-gray-100 flex justify-between">
+                        <span className="text-sm font-bold text-gray-600">Total</span>
+                        <span className="text-sm font-bold text-green-600">R$ {totalCatRec.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                       </div>
                     </div>
-                  );
-                })}
-                <div className="pt-3 border-t border-gray-100 flex justify-between">
-                  <span className="text-sm font-bold text-gray-600">Total</span>
-                  <span className="text-sm font-bold text-green-600">
-                    R$ {totalCatRec.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
+                  )}
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* Despesas por categoria */}
-          <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl shadow border border-red-100 p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <TrendingDown className="w-5 h-5 text-red-500" />
-              <h3 className="text-base font-bold text-gray-800">Despesas por Categoria</h3>
-            </div>
-            {catDespesas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                <TrendingDown className="w-10 h-10 mb-2 opacity-25" />
-                <p className="text-sm font-medium">Nenhuma despesa no período</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {catDespesas.map((item, i) => {
-                  const pct = totalCatDesp > 0 ? (item.valor / totalCatDesp) * 100 : 0;
-                  return (
-                    <div key={i}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-700">{item.nome}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
-                          <span className="text-sm font-bold text-gray-800">
-                            R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: item.cor }}
-                        />
+                {/* Despesas por categoria */}
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl shadow border border-red-100 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingDown className="w-5 h-5 text-red-500" />
+                    <h3 className="text-base font-bold text-gray-800">Despesas por Categoria</h3>
+                  </div>
+                  {catDespesas.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                      <TrendingDown className="w-10 h-10 mb-2 opacity-25" />
+                      <p className="text-sm font-medium">Nenhuma despesa no período</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {catDespesas.map((item, i) => {
+                        const pct = totalCatDesp > 0 ? (item.valor / totalCatDesp) * 100 : 0;
+                        const qtd = tsAtual.filter((t) => isDespesa(t.type) && (t.category || "Sem categoria") === item.nome).length;
+                        return (
+                          <div key={i}>
+                            <div className="flex justify-between items-center mb-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.cor }} />
+                                <span className="text-sm font-medium text-gray-700 truncate">{item.nome}</span>
+                                <span className="text-xs text-gray-400 flex-shrink-0">({qtd})</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                                <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
+                                <span className="text-sm font-bold text-gray-800">
+                                  R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: item.cor }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="pt-3 border-t border-gray-100 flex justify-between">
+                        <span className="text-sm font-bold text-gray-600">Total</span>
+                        <span className="text-sm font-bold text-red-600">R$ {totalCatDesp.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                       </div>
                     </div>
-                  );
-                })}
-                <div className="pt-3 border-t border-gray-100 flex justify-between">
-                  <span className="text-sm font-bold text-gray-600">Total</span>
-                  <span className="text-sm font-bold text-red-600">
-                    R$ {totalCatDesp.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })()}
 
         {/* Top produtos */}
-        <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl shadow border border-violet-100 p-6">
+        <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-2xl shadow border border-sky-100 p-6">
           <div className="flex items-center gap-2 mb-5">
-            <Award className="w-5 h-5 text-purple-500" />
+            <Award className="w-5 h-5 text-blue-500" />
             <h3 className="text-base font-bold text-gray-800">Top Produtos / Serviços</h3>
           </div>
           {produtos.length === 0 ? (
@@ -6170,11 +6185,11 @@ const AppContent: React.FC = () => {
               <p className="text-sm font-medium">Nenhum produto/serviço no período</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={produtos} layout="vertical" margin={{ top: 0, right: 60, left: 10, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={produtos.length * 52}>
+              <BarChart data={produtos} layout="vertical" margin={{ top: 0, right: 80, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tickFormatter={(v: any) => `R$${Number(v).toLocaleString("pt-BR")}`} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="nome" width={140} tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="nome" width={150} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(v: any) => [`R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Valor"]} />
                 <Bar dataKey="valor" radius={[0, 6, 6, 0]} minPointSize={4}>
                   {produtos.map((entry, i) => (
