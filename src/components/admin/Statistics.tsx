@@ -173,9 +173,9 @@ const Statistics: React.FC = () => {
         <h2 className="text-2xl font-bold text-amber-900">Estatísticas do Sistema</h2>
         <button
           onClick={handleExport}
-          className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
         >
-          <Download className="h-5 w-5 mr-2" />
+          <Download className="h-5 w-5" />
           Exportar Relatório
         </button>
       </div>
@@ -299,7 +299,7 @@ const Statistics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Timeline de Uso */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Timeline de Uso</h3>
+          <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Timeline de Uso</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={timeline}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -320,7 +320,7 @@ const Statistics: React.FC = () => {
 
         {/* Uso por Módulo */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Uso por Módulo</h3>
+          <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Uso por Módulo</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={moduleData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -335,7 +335,7 @@ const Statistics: React.FC = () => {
 
         {/* Distribuição de Usuários por Função */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Usuários por Função</h3>
+          <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Usuários por Função</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -362,7 +362,7 @@ const Statistics: React.FC = () => {
 
         {/* Top Usuários */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Top 5 Usuários Mais Ativos</h3>
+          <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Top 5 Usuários Mais Ativos</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={statistics.activity.topUsers}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -379,7 +379,7 @@ const Statistics: React.FC = () => {
       {/* Tabelas de Detalhes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Módulos Mais Usados</h3>
+          <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Módulos Mais Usados</h3>
           <div className="space-y-2">
             {statistics.activity.topModules.map((module, _index) => (
               <div key={module.key} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
@@ -391,7 +391,7 @@ const Statistics: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Resumo de Dados</h3>
+          <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Resumo de Dados</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
               <span className="text-sm font-medium">Transações</span>

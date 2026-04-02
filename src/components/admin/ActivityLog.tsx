@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Download, Filter, ChevronDown, ChevronRight, Activity
+  Download, Filter, ChevronDown, ChevronRight, Activity, Plus, Pencil, Trash2, LogIn, UserCheck, ChevronLeft
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -389,14 +389,19 @@ const ActivityLog: React.FC = () => {
                         {log.username}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          log.action === 'create' ? 'bg-green-100 text-green-800' :
-                          log.action === 'edit' ? 'bg-blue-100 text-blue-800' :
-                          log.action === 'delete' ? 'bg-red-100 text-red-800' :
-                          log.action === 'login' ? 'bg-purple-100 text-purple-800' :
-                          log.action === 'impersonate' ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-800'
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full ${
+                          log.action === 'create' ? 'bg-green-100 text-green-700' :
+                          log.action === 'edit' ? 'bg-blue-100 text-blue-700' :
+                          log.action === 'delete' ? 'bg-red-100 text-red-700' :
+                          log.action === 'login' ? 'bg-purple-100 text-purple-700' :
+                          log.action === 'impersonate' ? 'bg-orange-100 text-orange-700' :
+                          'bg-gray-100 text-gray-700'
                         }`}>
+                          {log.action === 'create' && <Plus className="w-3 h-3" />}
+                          {log.action === 'edit' && <Pencil className="w-3 h-3" />}
+                          {log.action === 'delete' && <Trash2 className="w-3 h-3" />}
+                          {log.action === 'login' && <LogIn className="w-3 h-3" />}
+                          {log.action === 'impersonate' && <UserCheck className="w-3 h-3" />}
                           {actionLabels[log.action] || log.action}
                         </span>
                       </td>
@@ -435,24 +440,28 @@ const ActivityLog: React.FC = () => {
         )}
         {logs.length > 0 && (
           <div className="px-6 py-4 border-t flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              Mostrando {logs.length} registro(s)
+            <div className="text-sm text-gray-500">
+              Exibindo <span className="font-semibold text-gray-700">{(page - 1) * limit + 1}–{(page - 1) * limit + logs.length}</span> registro(s)
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors"
               >
+                <ChevronLeft className="w-4 h-4" />
                 Anterior
               </button>
-              <span className="px-3 py-1 text-sm">Página {page}</span>
+              <span className="px-3 py-1.5 text-sm font-semibold bg-amber-100 text-amber-800 rounded-lg">
+                {page}
+              </span>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={logs.length < limit}
-                className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors"
               >
                 Próxima
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>

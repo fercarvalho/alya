@@ -41,12 +41,16 @@ const AdminPanel: React.FC = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="h-8 w-8 text-amber-600" />
-          <h1 className="text-3xl font-bold text-amber-900">Painel Administrativo</h1>
+      <div className="bg-gradient-to-r from-amber-500 to-orange-400 rounded-2xl shadow-lg p-6 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-white/20 rounded-xl p-3">
+            <Shield className="h-8 w-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white">Painel Administrativo</h1>
+            <p className="text-white/80 text-sm mt-0.5">Gerencie usuários, módulos e visualize estatísticas do sistema</p>
+          </div>
         </div>
-        <p className="text-gray-600">Gerencie usuários, módulos e visualize estatísticas do sistema</p>
       </div>
 
       {/* Tabs */}

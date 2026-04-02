@@ -397,18 +397,28 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <select
-                      id={`user-role-${u.id}`}
-                      name={`user-role-${u.id}`}
-                      value={u.role}
-                      onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
-                      className="text-sm border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
-                      <option value="admin">Admin</option>
-                      <option value="user">Usuário</option>
-                      <option value="guest">Convidado</option>
-                    </select>
+                    <div className="flex flex-col gap-1.5">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold w-fit ${
+                        u.role === 'superadmin' ? 'bg-violet-100 text-violet-700' :
+                        u.role === 'admin' ? 'bg-amber-100 text-amber-700' :
+                        u.role === 'user' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {u.role === 'superadmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : u.role === 'user' ? 'Usuário' : 'Convidado'}
+                      </span>
+                      <select
+                        id={`user-role-${u.id}`}
+                        name={`user-role-${u.id}`}
+                        value={u.role}
+                        onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50 text-gray-600"
+                      >
+                        {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
+                        <option value="admin">Admin</option>
+                        <option value="user">Usuário</option>
+                        <option value="guest">Convidado</option>
+                      </select>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-2 max-w-md">
@@ -444,8 +454,8 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded ${u.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${u.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
                       {u.isActive !== false ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
@@ -453,47 +463,44 @@ const UserManagement: React.FC = () => {
                     {u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Nunca'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => {
-                          setEditingUser(u);
-                          setShowEditModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-800"
+                        onClick={() => { setEditingUser(u); setShowEditModal(true); }}
+                        className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-800 transition-colors"
                         title="Editar Usuário"
                       >
-                        <Edit className="h-5 w-5" />
+                        <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setUserToReset(u)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
                         title="Resetar Senha"
                       >
-                        <RefreshCw className="h-5 w-5" />
+                        <RefreshCw className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleUpdateUser(u.id, { isActive: !(u.isActive !== false) })}
-                        className="text-amber-600 hover:text-amber-800"
+                        className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 hover:text-amber-800 transition-colors"
                         title={u.isActive !== false ? 'Desativar' : 'Ativar'}
                       >
-                        {u.isActive !== false ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+                        {u.isActive !== false ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                       </button>
                       {u.id !== currentUser?.id && currentUser?.role === 'superadmin' && u.role !== 'superadmin' && (
                         <button
                           onClick={() => impersonate(u.id)}
-                          className="text-purple-600 hover:text-purple-800"
+                          className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 hover:text-purple-800 transition-colors"
                           title={`Logar como ${u.username}`}
                         >
-                          <LogIn className="h-5 w-5" />
+                          <LogIn className="h-4 w-4" />
                         </button>
                       )}
                       {u.id !== currentUser?.id && (
                         <button
                           onClick={() => handleDeleteUser(u.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-800 transition-colors"
                           title="Deletar"
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       )}
                     </div>
