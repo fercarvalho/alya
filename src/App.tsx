@@ -5808,25 +5808,20 @@ const AppContent: React.FC = () => {
         return d >= ini && d <= fim;
       });
 
-    const [iniAtual, fimAtual] = calcRangeAtual(periodoRelatorio, off);
-    const [iniAnt, fimAnt] = calcRangeAtual(periodoRelatorio, off - 1);
+    const p = periodoRelatorio;
+    const [iniAtual, fimAtual] = calcRangeAtual(p, off);
+    const tsAtual = filtrar(iniAtual, fimAtual);
+    const tsAnt   = filtrar(...calcRangeAtual(p, off - 1));
 
-    const transacoesPorPeriodo = {
-      semana: { atual: filtrar(...calcRangeAtual("semana", off)), anterior: filtrar(...calcRangeAtual("semana", off - 1)) },
-      mes: { atual: filtrar(...calcRangeAtual("mes", off)), anterior: filtrar(...calcRangeAtual("mes", off - 1)) },
-      trimestre: { atual: filtrar(...calcRangeAtual("trimestre", off)), anterior: filtrar(...calcRangeAtual("trimestre", off - 1)) },
-      ano: { atual: filtrar(...calcRangeAtual("ano", off)), anterior: filtrar(...calcRangeAtual("ano", off - 1)) },
-    };
-
-    const somarReceitas = (ts: any[]) => ts.filter((t) => isReceita(t.type)).reduce((s, t) => s + Number(t.value), 0);
-    const somarDespesas = (ts: any[]) => ts.filter((t) => isDespesa(t.type)).reduce((s, t) => s + Number(t.value), 0);
+    const somarReceitas = (ts: any[]) => ts.filter((t) => isReceita(t.type)).reduce((s, t) => s + (Number(t.value) || 0), 0);
+    const somarDespesas = (ts: any[]) => ts.filter((t) => isDespesa(t.type)).reduce((s, t) => s + (Number(t.value) || 0), 0);
 
     const calcPorCategoria = (ts: any[], tipo: "receita" | "despesa") => {
       const acc: { [k: string]: number } = {};
       ts.forEach((t) => {
         if (tipo === "receita" ? isReceita(t.type) : isDespesa(t.type)) {
           const cat = t.category || "Sem categoria";
-          acc[cat] = (acc[cat] || 0) + Number(t.value);
+          acc[cat] = (acc[cat] || 0) + (Number(t.value) || 0);
         }
       });
       const cores = tipo === "receita"
@@ -5841,7 +5836,7 @@ const AppContent: React.FC = () => {
       const acc: { [k: string]: number } = {};
       ts.filter((t) => isReceita(t.type)).forEach((t) => {
         const nome = t.description || "Sem descrição";
-        acc[nome] = (acc[nome] || 0) + Number(t.value);
+        acc[nome] = (acc[nome] || 0) + (Number(t.value) || 0);
       });
       const cores = ["#8b5cf6", "#ec4899", "#06b6d4", "#22c55e", "#3b82f6"];
       return Object.entries(acc)
@@ -5872,17 +5867,13 @@ const AppContent: React.FC = () => {
           ordem = d.getMonth();
         }
         if (!grupos[chave]) grupos[chave] = { rec: 0, desp: 0, ordem };
-        if (isReceita(t.type)) grupos[chave].rec += Number(t.value);
-        if (isDespesa(t.type)) grupos[chave].desp += Number(t.value);
+        if (isReceita(t.type)) grupos[chave].rec += (Number(t.value) || 0);
+        if (isDespesa(t.type)) grupos[chave].desp += (Number(t.value) || 0);
       });
       return Object.entries(grupos)
         .sort(([, a], [, b]) => a.ordem - b.ordem)
         .map(([nome, v]) => ({ nome, receitas: v.rec, despesas: v.desp, saldo: v.rec - v.desp }));
     };
-
-    const p = periodoRelatorio;
-    const tsAtual = transacoesPorPeriodo[p].atual;
-    const tsAnt = transacoesPorPeriodo[p].anterior;
 
     const recAtual = somarReceitas(tsAtual);
     const despAtual = somarDespesas(tsAtual);
@@ -5905,20 +5896,11 @@ const AppContent: React.FC = () => {
     const totalCatRec = catReceitas.reduce((s, i) => s + i.valor, 0);
     const totalCatDesp = catDespesas.reduce((s, i) => s + i.valor, 0);
 
-    const varBadge = (vari: number, invertido = false) => {
-      const positivo = invertido ? vari < 0 : vari >= 0;
-      return (
-        <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${positivo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-          {vari >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} {Math.abs(vari).toFixed(1)}%
-        </span>
-      );
-    };
-
     const periodoLabels: Record<string, string> = {
-      semana: "Esta Semana",
-      mes: "Este Mês",
-      trimestre: "Este Trimestre",
-      ano: "Este Ano",
+      semana: periodoOffset === 0 ? "Esta Semana" : periodoOffset === -1 ? "Semana Passada" : `Semana (${periodoOffset})`,
+      mes: periodoOffset === 0 ? "Este Mês" : periodoOffset === -1 ? "Mês Passado" : labelPeriodo("mes", periodoOffset),
+      trimestre: periodoOffset === 0 ? "Este Trimestre" : periodoOffset === -1 ? "Trimestre Passado" : labelPeriodo("trimestre", periodoOffset),
+      ano: periodoOffset === 0 ? "Este Ano" : periodoOffset === -1 ? "Ano Passado" : String(new Date().getFullYear() + periodoOffset),
     };
 
     return (
@@ -5949,10 +5931,10 @@ const AppContent: React.FC = () => {
           return (
             <div className="flex flex-wrap items-center justify-between gap-3">
               {/* Tabs de tipo */}
-              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 overflow-hidden w-fit">
+              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 w-fit">
                 <span
-                  className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
-                  style={{ width: tabWidth, left: activeIdx * tabWidth + 4 }}
+                  className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-300 ease-in-out pointer-events-none"
+                  style={{ width: tabWidth - 2, left: activeIdx * tabWidth + 5 }}
                 />
                 {periodos.map((per) => (
                   <button
@@ -6001,7 +5983,7 @@ const AppContent: React.FC = () => {
               gradFrom: "from-emerald-500", gradTo: "to-green-400", icon: <TrendingUp className="w-5 h-5" /> },
             { label: "Despesas", valor: despAtual, margem: null, vari: varDesp, temBase: despAnt > 0, invertido: true,
               gradFrom: "from-rose-500", gradTo: "to-red-400", icon: <TrendingDown className="w-5 h-5" /> },
-            { label: "Lucro Líquido", valor: lucroAtual, margem: null, vari: varLucro, temBase: lucroAnt !== 0, invertido: false,
+            { label: "Lucro", valor: lucroAtual, margem: null, vari: varLucro, temBase: lucroAnt !== 0, invertido: false,
               gradFrom: lucroAtual >= 0 ? "from-teal-500" : "from-orange-500", gradTo: lucroAtual >= 0 ? "to-emerald-400" : "to-red-400", icon: lucroAtual >= 0 ? <Sparkles className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" /> },
             { label: "Margem", valor: null, margem: margemAtual, vari: varMargem, temBase: recAnt > 0, invertido: false,
               gradFrom: margemAtual >= 0 ? "from-violet-500" : "from-orange-500", gradTo: margemAtual >= 0 ? "to-purple-400" : "to-red-400", icon: <BarChart3 className="w-5 h-5" /> },
@@ -6182,7 +6164,7 @@ const AppContent: React.FC = () => {
               <p className="text-sm font-medium">Nenhum produto/serviço no período</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={produtos.length * 52}>
+            <ResponsiveContainer width="100%" height={Math.max(120, produtos.length * 52)}>
               <BarChart data={produtos} layout="vertical" margin={{ top: 0, right: 80, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tickFormatter={(v: any) => `R$${Number(v).toLocaleString("pt-BR")}`} tick={{ fontSize: 11 }} />
