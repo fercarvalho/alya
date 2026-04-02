@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle, Edit, LogIn
+  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle, Edit, LogIn, Users as UsersIcon
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -512,7 +512,7 @@ const UserManagement: React.FC = () => {
         </div>
         {filteredUsers.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-12">
-            <Users className="w-12 h-12 text-gray-300" />
+            <UsersIcon className="w-12 h-12 text-gray-300" />
             <p className="text-gray-500 font-medium">Nenhum usuário encontrado</p>
             <p className="text-gray-400 text-sm">Tente ajustar os filtros</p>
           </div>
