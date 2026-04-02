@@ -325,7 +325,7 @@ const DRE: React.FC = () => {
         'Valor Atual': row.value,
         'Valor Anterior': row.valuePrevious || 0,
         'Variação': row.variation || 0,
-        'Variação %': row.variationPercent ? `${row.variationPercent.toFixed(2)}%` : '-'
+        'Variação %': row.variationPercent !== undefined ? `${row.variationPercent.toFixed(2)}%` : '-'
       }))
 
       const dadosAnterior = previousDRE.map(row => ({
@@ -339,7 +339,7 @@ const DRE: React.FC = () => {
         [''],
         ['Descrição', 'Valor Atual', 'Valor Anterior', 'Variação', 'Variação %'],
         ...dadosAtual.map(row => [
-          row['Descrição'],
+          `"${row['Descrição']}"`,
           row['Valor Atual'].toFixed(2),
           row['Valor Anterior'].toFixed(2),
           row['Variação'].toFixed(2),
@@ -352,7 +352,7 @@ const DRE: React.FC = () => {
         [''],
         ['Descrição', 'Valor'],
         ...dadosAnterior.map(row => [
-          row['Descrição'],
+          `"${row['Descrição']}"`,
           row['Valor'].toFixed(2)
         ])
       ].map(row => row.join(',')).join('\n')
@@ -576,11 +576,12 @@ const DRE: React.FC = () => {
                   return (
                   <tr
                     key={row.id}
-                    className={`${rowBg} ${row.level === 0 ? 'font-semibold' : ''} ${borderColor} ${isResultado ? 'border-t-2 border-gray-300' : ''}`}
+                    className={`${rowBg} ${row.level === 0 ? 'font-semibold' : ''} ${borderColor}`}
+                    style={isResultado ? { borderTop: '2px solid #D1D5DB' } : undefined}
                   >
                     <td
-                      className={`px-4 sm:px-6 py-3 text-sm ${isResultado ? (row.value >= 0 ? 'text-green-800' : 'text-red-800') : row.level === 0 ? 'text-amber-900' : 'text-gray-900'}`}
-                      style={{ paddingLeft: `${row.level * 20 + 16}px` }}
+                      className={`py-3 text-sm ${isResultado ? (row.value >= 0 ? 'text-green-800' : 'text-red-800') : row.level === 0 ? 'text-amber-900' : 'text-gray-900'}`}
+                      style={{ paddingLeft: `${row.level * 20 + 16}px`, paddingRight: '24px' }}
                     >
                       {isResultado ? <span className="text-base font-bold">{row.description}</span> : row.description}
                     </td>
@@ -641,7 +642,7 @@ const DRE: React.FC = () => {
               <p className="text-2xl font-bold text-white">
                 {formatCurrency(totalReceitas)}
               </p>
-              {previousPeriodTransactions.length > 0 && receitasAnterior > 0 && (
+              {previousPeriodTransactions.length > 0 && (
                 <div className="flex items-center gap-1 mt-1">
                   <span className="text-xs text-white/90 flex items-center gap-0.5">
                     {variacaoReceitas >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} {formatCurrency(Math.abs(variacaoReceitas))}
@@ -679,7 +680,7 @@ const DRE: React.FC = () => {
               <p className="text-2xl font-bold text-white">
                 {formatCurrency(totalDespesas)}
               </p>
-              {previousPeriodTransactions.length > 0 && despesasAnterior > 0 && (
+              {previousPeriodTransactions.length > 0 && (
                 <div className="flex items-center gap-1 mt-1">
                   <span className="text-xs text-white/90 flex items-center gap-0.5">
                     {variacaoDespesas <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />} {formatCurrency(Math.abs(variacaoDespesas))}
@@ -717,7 +718,7 @@ const DRE: React.FC = () => {
               <p className="text-2xl font-bold text-white">
                 {formatCurrency(resultadoLiquido)}
               </p>
-              {previousPeriodTransactions.length > 0 && resultadoAnterior !== 0 && (
+              {previousPeriodTransactions.length > 0 && (
                 <div className="flex items-center gap-1 mt-1">
                   <span className="text-xs text-white/90 flex items-center gap-0.5">
                     {variacaoResultado >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} {formatCurrency(Math.abs(variacaoResultado))}
