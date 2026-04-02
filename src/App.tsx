@@ -6507,7 +6507,7 @@ const AppContent: React.FC = () => {
                     Alya Velas
                   </h1>
                   <p className="text-sm text-amber-600/70 font-medium break-words">
-                    Sistema de Gestão Financeira
+                    Sistema de Gestão Inteligente
                   </p>
                 </div>
               </div>
@@ -8224,7 +8224,7 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
               <p className="text-amber-100 text-sm">
-                Sistema de Gestão Financeira por Viver de PJ. A Viver de PJ é um
+                Sistema de Gestão Inteligente por Viver de PJ. A Viver de PJ é um
                 ecosistema completo de gestão e educação para Empreeendedores.
                 <br />
                 <br />
