@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  Users, Settings, Activity, BarChart3, Shield
+import {
+  Users, Settings, Activity, BarChart3, Shield, ShieldOff
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import UserManagement from './admin/UserManagement';
@@ -16,8 +16,16 @@ const AdminPanel: React.FC = () => {
 
   if (user?.role !== 'superadmin' && user?.role !== 'admin') {
     return (
-      <div className="p-6 text-center">
-        <p className="text-red-600 text-lg">Acesso negado. Apenas administradores podem acessar este painel.</p>
+      <div className="flex items-center justify-center min-h-[300px] p-6">
+        <div className="bg-white rounded-2xl shadow-lg border border-red-100 p-10 text-center max-w-sm">
+          <div className="flex justify-center mb-4">
+            <div className="bg-red-100 rounded-full p-4">
+              <ShieldOff className="w-10 h-10 text-red-500" />
+            </div>
+          </div>
+          <h2 className="text-xl font-bold text-red-700 mb-2">Acesso Negado</h2>
+          <p className="text-gray-500 text-sm">Apenas administradores podem acessar este painel.</p>
+        </div>
       </div>
     );
   }
@@ -42,20 +50,20 @@ const AdminPanel: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 border-b mb-6">
+      <div className="flex gap-2 flex-wrap mb-6">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center px-6 py-3 border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-sm transition-all duration-200 shadow-sm ${
                 activeTab === tab.id
-                  ? 'border-amber-500 text-amber-600 font-semibold'
-                  : 'border-transparent text-gray-600 hover:text-amber-600'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-300 hover:text-amber-600'
               }`}
             >
-              <Icon className="h-5 w-5 mr-2" />
+              <Icon className="h-4 w-4" />
               {tab.name}
             </button>
           );

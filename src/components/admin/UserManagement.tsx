@@ -288,25 +288,30 @@ const UserManagement: React.FC = () => {
   });
 
   if (isLoading) {
-    return <div className="text-center py-8">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-amber-900">Gerenciar Usuários</h2>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setShowResetAllModal(true)}
-            className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="flex items-center px-4 py-2 bg-white border border-red-300 text-red-600 rounded-xl hover:bg-red-50 transition-colors text-sm font-medium"
             title="Resetar senhas de todos os usuários"
           >
-            <RefreshCw className="h-5 w-5 mr-2" />
+            <RefreshCw className="h-4 w-4 mr-2" />
             Resetar Todas as Senhas
           </button>
+          <div className="w-px h-6 bg-gray-200" />
           <button
             onClick={() => setShowCreationTypeModal(true)}
-            className="flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+            className="flex items-center px-5 py-2 bg-gradient-to-r from-amber-400 to-orange-400 text-white rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg transition-all font-semibold"
           >
             <UserPlus className="h-5 w-5 mr-2" />
             Novo Usuário
@@ -315,7 +320,7 @@ const UserManagement: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-4 items-center">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-lg flex gap-4 items-center">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
@@ -355,7 +360,7 @@ const UserManagement: React.FC = () => {
       </div>
 
       {/* Tabela */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-amber-50">
@@ -499,7 +504,11 @@ const UserManagement: React.FC = () => {
           </table>
         </div>
         {filteredUsers.length === 0 && (
-          <div className="text-center py-8 text-gray-500">Nenhum usuário encontrado</div>
+          <div className="flex flex-col items-center gap-3 py-12">
+            <Users className="w-12 h-12 text-gray-300" />
+            <p className="text-gray-500 font-medium">Nenhum usuário encontrado</p>
+            <p className="text-gray-400 text-sm">Tente ajustar os filtros</p>
+          </div>
         )}
       </div>
 

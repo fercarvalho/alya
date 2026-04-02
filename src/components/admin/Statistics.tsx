@@ -138,11 +138,21 @@ const Statistics: React.FC = () => {
   const COLORS = ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
 
   if (isLoading) {
-    return <div className="text-center py-8">Carregando estatísticas...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+      </div>
+    );
   }
 
   if (!statistics) {
-    return <div className="text-center py-8 text-red-600">Erro ao carregar estatísticas</div>;
+    return (
+      <div className="flex flex-col items-center gap-3 py-16">
+        <BarChart3 className="w-12 h-12 text-red-300" />
+        <p className="text-red-600 font-medium">Erro ao carregar estatísticas</p>
+        <p className="text-gray-400 text-sm">Tente recarregar a página</p>
+      </div>
+    );
   }
 
   const moduleData = Object.entries(statistics.activity.byModule).map(([key, value]) => ({
@@ -172,63 +182,63 @@ const Statistics: React.FC = () => {
 
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-400 rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total de Usuários</p>
-              <p className="text-2xl font-bold text-gray-900">{statistics.users.total}</p>
-              <p className="text-xs text-green-600 mt-1">
-                {statistics.users.active} ativos
-              </p>
+              <p className="text-sm text-white/80 font-medium">Total de Usuários</p>
+              <p className="text-2xl font-bold text-white">{statistics.users.total}</p>
+              <p className="text-xs text-white/70 mt-1">{statistics.users.active} ativos</p>
             </div>
-            <Users className="h-12 w-12 text-amber-500" />
+            <div className="bg-white/20 rounded-xl p-3">
+              <Users className="h-8 w-8 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-400 rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Ações (30 dias)</p>
-              <p className="text-2xl font-bold text-gray-900">{statistics.activity.actionsLast30Days}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {statistics.activity.totalActions} total
-              </p>
+              <p className="text-sm text-white/80 font-medium">Ações (30 dias)</p>
+              <p className="text-2xl font-bold text-white">{statistics.activity.actionsLast30Days}</p>
+              <p className="text-xs text-white/70 mt-1">{statistics.activity.totalActions} total</p>
             </div>
-            <Activity className="h-12 w-12 text-blue-500" />
+            <div className="bg-white/20 rounded-xl p-3">
+              <Activity className="h-8 w-8 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-r from-emerald-500 to-green-400 rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Módulos</p>
-              <p className="text-2xl font-bold text-gray-900">{statistics.modules.total}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {statistics.modules.active} ativos
-              </p>
+              <p className="text-sm text-white/80 font-medium">Módulos</p>
+              <p className="text-2xl font-bold text-white">{statistics.modules.total}</p>
+              <p className="text-xs text-white/70 mt-1">{statistics.modules.active} ativos</p>
             </div>
-            <Package className="h-12 w-12 text-green-500" />
+            <div className="bg-white/20 rounded-xl p-3">
+              <Package className="h-8 w-8 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-r from-violet-500 to-purple-400 rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Dados</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-white/80 font-medium">Dados</p>
+              <p className="text-2xl font-bold text-white">
                 {statistics.data.transactions + statistics.data.products + statistics.data.clients}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Transações, Produtos, Clientes
-              </p>
+              <p className="text-xs text-white/70 mt-1">Transações, Produtos, Clientes</p>
             </div>
-            <BarChart3 className="h-12 w-12 text-purple-500" />
+            <div className="bg-white/20 rounded-xl p-3">
+              <BarChart3 className="h-8 w-8 text-white" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filtros de Período */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-lg p-4">
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-gray-700">Período:</label>
           <div className="flex gap-2">
@@ -288,7 +298,7 @@ const Statistics: React.FC = () => {
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Timeline de Uso */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Timeline de Uso</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={timeline}>
@@ -309,7 +319,7 @@ const Statistics: React.FC = () => {
         </div>
 
         {/* Uso por Módulo */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Uso por Módulo</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={moduleData}>
@@ -324,7 +334,7 @@ const Statistics: React.FC = () => {
         </div>
 
         {/* Distribuição de Usuários por Função */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Usuários por Função</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -351,7 +361,7 @@ const Statistics: React.FC = () => {
         </div>
 
         {/* Top Usuários */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Top 5 Usuários Mais Ativos</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={statistics.activity.topUsers}>
@@ -368,7 +378,7 @@ const Statistics: React.FC = () => {
 
       {/* Tabelas de Detalhes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Módulos Mais Usados</h3>
           <div className="space-y-2">
             {statistics.activity.topModules.map((module, _index) => (
@@ -380,7 +390,7 @@ const Statistics: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Resumo de Dados</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-gray-50 rounded">

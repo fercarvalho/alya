@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Download, Filter, ChevronDown, ChevronRight
+  Download, Filter, ChevronDown, ChevronRight, Activity
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -237,7 +237,11 @@ const ActivityLog: React.FC = () => {
   const uniqueActions = Array.from(new Set(logs.map(log => log.action)));
 
   if (isLoading) {
-    return <div className="text-center py-8">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+      </div>
+    );
   }
 
   return (
@@ -263,7 +267,7 @@ const ActivityLog: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-lg p-4">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-5 w-5 text-gray-600" />
           <h3 className="font-semibold text-gray-900">Filtros</h3>
@@ -351,7 +355,7 @@ const ActivityLog: React.FC = () => {
       </div>
 
       {/* Tabela */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-amber-50">
@@ -423,7 +427,11 @@ const ActivityLog: React.FC = () => {
           </table>
         </div>
         {logs.length === 0 && (
-          <div className="text-center py-8 text-gray-500">Nenhum log encontrado</div>
+          <div className="flex flex-col items-center gap-3 py-12">
+            <Activity className="w-12 h-12 text-gray-300" />
+            <p className="text-gray-500 font-medium">Nenhum log encontrado</p>
+            <p className="text-gray-400 text-sm">Tente ajustar os filtros ou o período</p>
+          </div>
         )}
         {logs.length > 0 && (
           <div className="px-6 py-4 border-t flex justify-between items-center">
