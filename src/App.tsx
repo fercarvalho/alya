@@ -5940,19 +5940,19 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Controle de período unificado */}
+        {/* Seletor de período + navegador */}
         {(() => {
           const periodos = ["ano", "trimestre", "mes", "semana"] as const;
           const labels: Record<string, string> = { semana: "Semana", mes: "Mês", trimestre: "Trimestre", ano: "Ano" };
           const tabWidth = 100;
           const activeIdx = periodos.indexOf(periodoRelatorio);
           return (
-            <div className="bg-white rounded-2xl shadow border border-gray-200 p-2 flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {/* Tabs de tipo */}
-              <div className="relative flex p-0 gap-0 overflow-hidden w-fit">
+              <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 overflow-hidden w-fit">
                 <span
-                  className="absolute top-0 bottom-0 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
-                  style={{ width: tabWidth, left: activeIdx * tabWidth }}
+                  className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
+                  style={{ width: tabWidth, left: activeIdx * tabWidth + 4 }}
                 />
                 {periodos.map((per) => (
                   <button
@@ -5968,18 +5968,15 @@ const AppContent: React.FC = () => {
                 ))}
               </div>
 
-              {/* Divisor */}
-              <div className="hidden sm:block w-px h-8 bg-gray-200 mx-1" />
-
               {/* Navegação ← período → */}
-              <div className="flex items-center gap-1 flex-1 justify-end sm:justify-start">
+              <div className="flex items-center gap-2 bg-white rounded-2xl shadow border border-gray-200 px-2 py-1">
                 <button
                   onClick={() => setPeriodoOffset((o) => o - 1)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <span className="min-w-[160px] text-center text-sm font-bold text-gray-700 px-1">
+                <span className="min-w-[160px] text-center text-sm font-bold text-gray-700 px-2">
                   {labelPeriodo(periodoRelatorio, periodoOffset)}
                 </span>
                 <button
