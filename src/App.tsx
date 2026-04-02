@@ -5951,20 +5951,20 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Navegação ← período → */}
-              <div className="flex items-center gap-2 bg-white rounded-2xl shadow border border-gray-200 px-2 py-1">
+              <div className="flex items-center gap-2 bg-gradient-to-r from-amber-400 to-orange-400 rounded-2xl shadow-lg px-2 py-1">
                 <button
                   onClick={() => setPeriodoOffset((o) => o - 1)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors duration-150"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <span className="min-w-[160px] text-center text-sm font-bold text-gray-700 px-2">
+                <span className="min-w-[160px] text-center text-sm font-bold text-white px-2">
                   {labelPeriodo(periodoRelatorio, periodoOffset)}
                 </span>
                 <button
                   onClick={() => setPeriodoOffset((o) => o + 1)}
                   disabled={periodoOffset >= 0}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
