@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, Download, FileText, Filter } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Download, FileText, Filter, BarChart3 } from 'lucide-react'
 import { parseLocalDate } from '../utils/dateUtils'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -410,7 +410,7 @@ const DRE: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">DRE - Demonstrativo de Resultado do Exercício</h1>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3"><BarChart3 className="w-8 h-8 text-amber-500" />DRE - Demonstrativo de Resultado do Exercício</h1>
           <p className="text-gray-600">Análise de receitas e despesas do período</p>
         </div>
         <div className="flex gap-3">
@@ -432,7 +432,7 @@ const DRE: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-lg">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
@@ -508,7 +508,7 @@ const DRE: React.FC = () => {
       </div>
 
       {/* DRE Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
             DRE - {getPeriodLabel()}
@@ -545,8 +545,12 @@ const DRE: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {dreWithComparison.length === 0 ? (
                 <tr>
-                  <td colSpan={previousPeriodTransactions.length > 0 ? 4 : 2} className="px-4 sm:px-6 py-8 text-center text-gray-500">
-                    Nenhuma transação encontrada para o período selecionado
+                  <td colSpan={previousPeriodTransactions.length > 0 ? 4 : 2} className="px-4 sm:px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <BarChart3 className="w-12 h-12 text-gray-300" />
+                      <p className="text-gray-500 font-medium">Nenhuma transação encontrada para o período selecionado</p>
+                      <p className="text-gray-400 text-sm">Tente selecionar outro período</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -589,10 +593,10 @@ const DRE: React.FC = () => {
                           {row.variation !== undefined && row.variationPercent !== undefined ? (
                             <div className="flex items-center justify-end gap-1">
                               <span
-                                className={`font-medium ${row.variation >= 0 ? 'text-green-600' : 'text-red-600'
+                                className={`font-medium flex items-center gap-0.5 ${row.variation >= 0 ? 'text-green-600' : 'text-red-600'
                                   }`}
                               >
-                                {row.variation >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(row.variation))}
+                                {row.variation >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />} {formatCurrency(Math.abs(row.variation))}
                               </span>
                               <span
                                 className={`text-xs ${row.variationPercent >= 0 ? 'text-green-600' : 'text-red-600'
@@ -617,22 +621,22 @@ const DRE: React.FC = () => {
 
       {/* Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-gradient-to-r from-emerald-500 to-green-400 rounded-2xl shadow-lg p-6">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <TrendingUp className="h-8 w-8 text-green-600" />
+            <div className="flex-shrink-0 bg-white/20 rounded-xl p-2">
+              <TrendingUp className="h-8 w-8 text-white" />
             </div>
             <div className="ml-4 flex-1">
-              <p className="text-sm font-medium text-gray-500">Total Receitas</p>
-              <p className="text-2xl font-semibold text-green-600">
+              <p className="text-sm font-medium text-white/80">Total Receitas</p>
+              <p className="text-2xl font-bold text-white">
                 {formatCurrency(totalReceitas)}
               </p>
               {previousPeriodTransactions.length > 0 && receitasAnterior > 0 && (
                 <div className="flex items-center gap-1 mt-1">
-                  <span className={`text-xs ${variacaoReceitas >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {variacaoReceitas >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(variacaoReceitas))}
+                  <span className="text-xs text-white/90 flex items-center gap-0.5">
+                    {variacaoReceitas >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} {formatCurrency(Math.abs(variacaoReceitas))}
                   </span>
-                  <span className={`text-xs ${variacaoReceitasPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className="text-xs text-white/80">
                     ({formatPercent(variacaoReceitasPercent)})
                   </span>
                 </div>
@@ -641,22 +645,22 @@ const DRE: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-gradient-to-r from-rose-500 to-red-400 rounded-2xl shadow-lg p-6">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <TrendingDown className="h-8 w-8 text-red-600" />
+            <div className="flex-shrink-0 bg-white/20 rounded-xl p-2">
+              <TrendingDown className="h-8 w-8 text-white" />
             </div>
             <div className="ml-4 flex-1">
-              <p className="text-sm font-medium text-gray-500">Total Despesas</p>
-              <p className="text-2xl font-semibold text-red-600">
+              <p className="text-sm font-medium text-white/80">Total Despesas</p>
+              <p className="text-2xl font-bold text-white">
                 {formatCurrency(totalDespesas)}
               </p>
               {previousPeriodTransactions.length > 0 && despesasAnterior > 0 && (
                 <div className="flex items-center gap-1 mt-1">
-                  <span className={`text-xs ${variacaoDespesas <= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {variacaoDespesas <= 0 ? '↓' : '↑'} {formatCurrency(Math.abs(variacaoDespesas))}
+                  <span className="text-xs text-white/90 flex items-center gap-0.5">
+                    {variacaoDespesas <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />} {formatCurrency(Math.abs(variacaoDespesas))}
                   </span>
-                  <span className={`text-xs ${variacaoDespesasPercent <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className="text-xs text-white/80">
                     ({formatPercent(variacaoDespesasPercent)})
                   </span>
                 </div>
@@ -665,23 +669,22 @@ const DRE: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className={`bg-gradient-to-r ${resultadoLiquido >= 0 ? 'from-amber-500 to-orange-400' : 'from-rose-600 to-red-500'} rounded-2xl shadow-lg p-6`}>
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <DollarSign className="h-8 w-8 text-amber-600" />
+            <div className="flex-shrink-0 bg-white/20 rounded-xl p-2">
+              <DollarSign className="h-8 w-8 text-white" />
             </div>
             <div className="ml-4 flex-1">
-              <p className="text-sm font-medium text-gray-500">Resultado Líquido</p>
-              <p className={`text-2xl font-semibold ${resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
+              <p className="text-sm font-medium text-white/80">Resultado Líquido</p>
+              <p className="text-2xl font-bold text-white">
                 {formatCurrency(resultadoLiquido)}
               </p>
               {previousPeriodTransactions.length > 0 && resultadoAnterior !== 0 && (
                 <div className="flex items-center gap-1 mt-1">
-                  <span className={`text-xs ${variacaoResultado >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {variacaoResultado >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(variacaoResultado))}
+                  <span className="text-xs text-white/90 flex items-center gap-0.5">
+                    {variacaoResultado >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} {formatCurrency(Math.abs(variacaoResultado))}
                   </span>
-                  <span className={`text-xs ${variacaoResultadoPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className="text-xs text-white/80">
                     ({formatPercent(variacaoResultadoPercent)})
                   </span>
                 </div>
