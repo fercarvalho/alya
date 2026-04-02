@@ -2933,7 +2933,6 @@ const AppContent: React.FC = () => {
     _monthName: string,
     monthIndex: number,
     metaValue: number,
-    saldoInicial: number = 0,
   ) => {
     const currentYear = new Date().getFullYear();
     const { receitas, despesas, resultado } = calculateTotalsForMonth(
@@ -2983,7 +2982,7 @@ const AppContent: React.FC = () => {
       );
       if (pct >= 85) return (
         <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-          <AlertTriangle className="w-3 h-3" /><Zap className="w-3 h-3" /> Próximo do limite
+          <AlertTriangle className="w-3 h-3" /> Próximo do limite
         </span>
       );
       return (
@@ -3393,7 +3392,6 @@ const AppContent: React.FC = () => {
     monthName: string,
     monthIndex: number,
     metaValue: number,
-    saldoInicial: number = 0,
   ) => {
     const currentYear = new Date().getFullYear();
     return (
@@ -3406,7 +3404,7 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Conteúdo do Mês */}
-        {renderMonthContent(monthName, monthIndex, metaValue, saldoInicial)}
+        {renderMonthContent(monthName, monthIndex, metaValue)}
       </div>
     );
   };
@@ -3430,7 +3428,7 @@ const AppContent: React.FC = () => {
 
     // Metas totais do ano (valores da projeção)
     const metaTotalAno = mesesMetas.reduce((sum, m) => sum + m.meta, 0);
-    const saldoInicialAno = 0;
+    const margemLiquidaAno = totalReceitasAno > 0 ? ((totalReceitasAno - totalDespesasAno) / totalReceitasAno) * 100 : 0;
 
     // Metas anuais da projeção e valores reais por categoria
     const projAnual = getProjectionMetasAnual();
@@ -3502,16 +3500,13 @@ const AppContent: React.FC = () => {
                   </span>
                 </div>
 
-                {/* SALDO INICIAL */}
+                {/* MARGEM LÍQUIDA */}
                 <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
-                  <span className="font-bold text-blue-700 text-lg">
-                    SALDO INICIAL
+                  <span className="font-bold text-violet-700 text-lg">
+                    MARGEM LÍQUIDA
                   </span>
-                  <span className="font-bold text-blue-800 text-lg">
-                    R${" "}
-                    {saldoInicialAno.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
+                  <span className={`font-bold text-lg ${margemLiquidaAno >= 0 ? "text-violet-800" : "text-red-800"}`}>
+                    {margemLiquidaAno.toFixed(1)}%
                   </span>
                 </div>
 
@@ -3522,17 +3517,13 @@ const AppContent: React.FC = () => {
                   </span>
                   <span
                     className={`font-bold text-2xl ${
-                      saldoInicialAno + totalReceitasAno - totalDespesasAno >= 0
+                      totalReceitasAno - totalDespesasAno >= 0
                         ? "text-emerald-800"
                         : "text-red-800"
                     }`}
                   >
                     R${" "}
-                    {(
-                      saldoInicialAno +
-                      totalReceitasAno -
-                      totalDespesasAno
-                    ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    {(totalReceitasAno - totalDespesasAno).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -3599,20 +3590,10 @@ const AppContent: React.FC = () => {
                     RESTANTE
                   </div>
                   <div className="text-center font-bold text-red-800 text-lg">
-                    -R${" "}
-                    {Math.max(
-                      0,
-                      metaTotalAno - totalReceitasAno,
-                    ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    {totalReceitasAno >= metaTotalAno ? "—" : `-R$ ${Math.max(0, metaTotalAno - totalReceitasAno).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
                   </div>
                   <div className="text-center font-bold text-red-800 text-lg">
-                    {metaTotalAno > 0
-                      ? Math.max(
-                          0,
-                          100 - (totalReceitasAno / metaTotalAno) * 100,
-                        ).toFixed(0)
-                      : 100}
-                    %
+                    {totalReceitasAno >= metaTotalAno ? "—" : `${(metaTotalAno > 0 ? Math.max(0, 100 - (totalReceitasAno / metaTotalAno) * 100) : 100).toFixed(0)}%`}
                   </div>
                 </div>
               </div>
@@ -6508,7 +6489,7 @@ const AppContent: React.FC = () => {
                 className="w-full flex items-center justify-center gap-3 text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
               >
                 <span>{mesSelecionado?.nome} - {new Date().getFullYear()}</span>
-                <ChevronRight className={`w-7 h-7 transition-transform duration-200 ${metasMonthDropdownOpen ? "rotate-90" : "rotate-90 opacity-70"}`} style={{ transform: metasMonthDropdownOpen ? "rotate(-90deg)" : "rotate(90deg)" }} />
+                <ChevronRight className={`w-7 h-7 transition-transform duration-200 ${metasMonthDropdownOpen ? "-rotate-90" : "rotate-90 opacity-70"}`} />
               </button>
 
               {metasMonthDropdownOpen && (
@@ -6539,7 +6520,6 @@ const AppContent: React.FC = () => {
               mesSelecionado.nome,
               mesSelecionado.indice,
               mesSelecionado.meta,
-              0,
             )}
           </div>
         )}
@@ -6547,7 +6527,7 @@ const AppContent: React.FC = () => {
         {/* Renderizar todos os 12 meses em ordem normal (exceto o já exibido no topo) */}
         {mesesMetas
           .filter((mes) => mes.indice !== selectedMonth)
-          .map((mes) => renderMonth(mes.nome, mes.indice, mes.meta, 0))}
+          .map((mes) => renderMonth(mes.nome, mes.indice, mes.meta))}
 
         {/* Renderizar Total do Ano — sempre por último */}
         {renderTotalAno()}
