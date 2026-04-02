@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, Download, FileText, Filter, BarChart3 } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Download, FileText, Filter, BarChart3, ArrowLeftRight } from 'lucide-react'
 import { parseLocalDate } from '../utils/dateUtils'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -87,13 +87,14 @@ const DRE: React.FC = () => {
 
   // Filtrar transações por período
   const filterTransactionsByPeriod = (month: number, year: number, period: 'mensal' | 'trimestral' | 'anual') => {
-    const startDate = new Date(year, month, 1)
+    const normalizedMonth = period === 'trimestral' ? Math.floor(month / 3) * 3 : month
+    const startDate = new Date(year, normalizedMonth, 1)
     let endDate: Date
 
     if (period === 'mensal') {
-      endDate = new Date(year, month + 1, 0)
+      endDate = new Date(year, normalizedMonth + 1, 0)
     } else if (period === 'trimestral') {
-      endDate = new Date(year, month + 3, 0)
+      endDate = new Date(year, normalizedMonth + 3, 0)
     } else {
       endDate = new Date(year, 11, 31)
     }
@@ -519,7 +520,7 @@ const DRE: React.FC = () => {
             </h2>
             {previousPeriodTransactions.length > 0 && (
               <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" />
+                <ArrowLeftRight className="w-3.5 h-3.5" />
                 Comparando com <span className="font-medium text-gray-700">{getPreviousPeriodLabel()}</span>
               </p>
             )}
@@ -549,7 +550,7 @@ const DRE: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {dreWithComparison.length === 0 ? (
+              {filteredTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={previousPeriodTransactions.length > 0 ? 4 : 2} className="px-4 sm:px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
