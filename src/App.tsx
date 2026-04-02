@@ -6548,16 +6548,16 @@ const AppContent: React.FC = () => {
                       key: "metas",
                     },
                     {
-                      id: "projecao",
-                      name: "Projeção",
-                      icon: Calculator,
-                      key: "projecao",
-                    },
-                    {
                       id: "reports",
                       name: "Relatórios",
                       icon: BarChart3,
                       key: "reports",
+                    },
+                    {
+                      id: "projecao",
+                      name: "Projeção",
+                      icon: Calculator,
+                      key: "projecao",
                     },
                     {
                       id: "transactions",
