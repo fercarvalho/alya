@@ -163,14 +163,21 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
           />
           
           {/* Nome e Role */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <User className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span className="text-sm font-medium text-amber-800 truncate">
-                {getUserDisplayName()}
+          <div className="hidden sm:flex items-center gap-2 flex-1 min-w-0">
+            <User className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            {user.firstName ? (
+              <span className="text-sm font-medium text-amber-800 whitespace-nowrap">
+                {user.firstName}
+                {user.lastName && (
+                  <span className="hidden md:inline"> {user.lastName}</span>
+                )}
               </span>
-            </div>
-            <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full flex-shrink-0">
+            ) : (
+              <span className="text-sm font-medium text-amber-800 whitespace-nowrap">
+                {user.username}
+              </span>
+            )}
+            <span className="hidden lg:inline-flex text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
               {getRoleLabel(user.role)}
             </span>
           </div>
