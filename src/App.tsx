@@ -5909,7 +5909,7 @@ const AppContent: React.FC = () => {
       const positivo = invertido ? vari < 0 : vari >= 0;
       return (
         <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${positivo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-          {vari >= 0 ? "▲" : "▼"} {Math.abs(vari).toFixed(1)}%
+          {vari >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} {Math.abs(vari).toFixed(1)}%
         </span>
       );
     };
@@ -5940,22 +5940,19 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Seletor de período */}
+        {/* Seletor de período + navegador na mesma linha */}
         {(() => {
           const periodos = ["ano", "trimestre", "mes", "semana"] as const;
           const labels: Record<string, string> = { semana: "Semana", mes: "Mês", trimestre: "Trimestre", ano: "Ano" };
           const tabWidth = 100;
           const activeIdx = periodos.indexOf(periodoRelatorio);
           return (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {/* Tabs de tipo */}
               <div className="relative flex bg-white rounded-2xl shadow border border-gray-200 p-1 gap-0 overflow-hidden w-fit">
                 <span
                   className="absolute top-1 bottom-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 shadow-md transition-all duration-300 ease-in-out pointer-events-none"
-                  style={{
-                    width: tabWidth,
-                    left: activeIdx * tabWidth + 4,
-                  }}
+                  style={{ width: tabWidth, left: activeIdx * tabWidth + 4 }}
                 />
                 {periodos.map((per) => (
                   <button
@@ -5972,12 +5969,12 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Navegação ← período → */}
-              <div className="flex items-center gap-2 bg-white rounded-xl shadow border border-gray-200 px-2 py-1 w-fit">
+              <div className="flex items-center gap-2 bg-white rounded-xl shadow border border-gray-200 px-2 py-1">
                 <button
                   onClick={() => setPeriodoOffset((o) => o - 1)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150"
                 >
-                  ‹
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="min-w-[160px] text-center text-sm font-bold text-gray-700 px-2">
                   {labelPeriodo(periodoRelatorio, periodoOffset)}
@@ -5985,9 +5982,9 @@ const AppContent: React.FC = () => {
                 <button
                   onClick={() => setPeriodoOffset((o) => o + 1)}
                   disabled={periodoOffset >= 0}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 text-lg font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  ›
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -5998,16 +5995,16 @@ const AppContent: React.FC = () => {
         {(() => {
           const margemAnt = recAnt > 0 ? (lucroAnt / recAnt) * 100 : 0;
           const varMargem = margemAnt !== 0 ? margemAtual - margemAnt : 0;
-          const temAnt = (vari: number, base: number) => base !== 0;
+          const semTransacoes = tsAtual.length === 0;
           const cards = [
             { label: "Receitas", valor: recAtual as number | null, margem: null as number | null, vari: varRec, temBase: recAnt > 0, invertido: false,
-              gradFrom: "from-emerald-500", gradTo: "to-green-400", icon: "trending-up" },
+              gradFrom: "from-emerald-500", gradTo: "to-green-400", icon: <TrendingUp className="w-5 h-5" /> },
             { label: "Despesas", valor: despAtual, margem: null, vari: varDesp, temBase: despAnt > 0, invertido: true,
-              gradFrom: "from-rose-500", gradTo: "to-red-400", icon: "trending-down" },
+              gradFrom: "from-rose-500", gradTo: "to-red-400", icon: <TrendingDown className="w-5 h-5" /> },
             { label: "Lucro Líquido", valor: lucroAtual, margem: null, vari: varLucro, temBase: lucroAnt !== 0, invertido: false,
-              gradFrom: lucroAtual >= 0 ? "from-teal-500" : "from-orange-500", gradTo: lucroAtual >= 0 ? "to-emerald-400" : "to-red-400", icon: lucroAtual >= 0 ? "sparkles" : "alert" },
+              gradFrom: lucroAtual >= 0 ? "from-teal-500" : "from-orange-500", gradTo: lucroAtual >= 0 ? "to-emerald-400" : "to-red-400", icon: lucroAtual >= 0 ? <Sparkles className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" /> },
             { label: "Margem", valor: null, margem: margemAtual, vari: varMargem, temBase: recAnt > 0, invertido: false,
-              gradFrom: margemAtual >= 0 ? "from-violet-500" : "from-orange-500", gradTo: margemAtual >= 0 ? "to-purple-400" : "to-red-400", icon: "chart" },
+              gradFrom: margemAtual >= 0 ? "from-violet-500" : "from-orange-500", gradTo: margemAtual >= 0 ? "to-purple-400" : "to-red-400", icon: <BarChart3 className="w-5 h-5" /> },
           ];
           return (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -6015,11 +6012,7 @@ const AppContent: React.FC = () => {
                 <div key={i} className={`bg-gradient-to-br ${card.gradFrom} ${card.gradTo} rounded-2xl shadow-lg p-5 text-white`}>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-white/80 uppercase tracking-wide">{card.label}</p>
-                    {card.icon === "trending-up" ? <TrendingUp className="w-5 h-5" /> :
-                    card.icon === "trending-down" ? <TrendingDown className="w-5 h-5" /> :
-                    card.icon === "sparkles" ? <Sparkles className="w-5 h-5" /> :
-                    card.icon === "alert" ? <AlertTriangle className="w-5 h-5" /> :
-                    card.icon === "chart" ? <BarChart3 className="w-5 h-5" /> : null}
+                    {card.icon}
                   </div>
                   <p className="text-2xl font-black text-white drop-shadow">
                     {card.valor !== null
@@ -6027,13 +6020,15 @@ const AppContent: React.FC = () => {
                       : `${card.margem!.toFixed(1)}%`}
                   </p>
                   <div className="mt-3 flex items-center gap-2">
-                    {card.temBase ? (
+                    {semTransacoes ? (
+                      <span className="text-xs text-white/60 italic">sem dados no período</span>
+                    ) : card.temBase ? (
                       <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
                         (card.invertido ? card.vari < 0 : card.vari >= 0)
                           ? "bg-white/25 text-white"
                           : "bg-black/20 text-white/90"
                       }`}>
-                        {card.vari >= 0 ? "▲" : "▼"} {Math.abs(card.vari).toFixed(1)}% vs ant.
+                        {card.vari >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} {Math.abs(card.vari).toFixed(1)}% vs ant.
                       </span>
                     ) : (
                       <span className="text-xs text-white/60 italic">sem histórico</span>
@@ -6046,23 +6041,29 @@ const AppContent: React.FC = () => {
         })()}
 
         {/* Gráfico de tendência */}
-        {tendencia.length > 0 && (
-          <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-2xl shadow border border-blue-100 p-6">
-            <h3 className="text-base font-bold text-gray-800 mb-4">Evolução — {periodoLabels[p]}</h3>
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow border border-slate-200 p-6">
+          <h3 className="text-base font-bold text-gray-800 mb-4">Evolução — {periodoLabels[p]}</h3>
+          {tendencia.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
+              <p className="text-sm font-medium">Nenhuma transação neste período</p>
+              <p className="text-xs mt-1 opacity-70">Navegue para outro período ou adicione transações</p>
+            </div>
+          ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={tendencia} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="nome" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={(v: any) => `R$${Number(v).toLocaleString("pt-BR")}`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: any) => [`R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]} />
                 <Legend />
-                <Line type="monotone" dataKey="receitas" stroke="#22c55e" strokeWidth={2} dot={false} name="Receitas" />
-                <Line type="monotone" dataKey="despesas" stroke="#ef4444" strokeWidth={2} dot={false} name="Despesas" />
-                <Line type="monotone" dataKey="saldo" stroke="#f59e0b" strokeWidth={2} dot={false} name="Saldo" />
+                <Line type="monotone" dataKey="receitas" stroke="#22c55e" strokeWidth={2} dot={tendencia.length <= 5} name="Receitas" />
+                <Line type="monotone" dataKey="despesas" stroke="#ef4444" strokeWidth={2} dot={tendencia.length <= 5} name="Despesas" />
+                <Line type="monotone" dataKey="saldo" stroke="#f59e0b" strokeWidth={2} dot={tendencia.length <= 5} name="Saldo" />
               </LineChart>
             </ResponsiveContainer>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Grid: Receitas por categoria + Despesas por categoria */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -6073,7 +6074,10 @@ const AppContent: React.FC = () => {
               <h3 className="text-base font-bold text-gray-800">Receitas por Categoria</h3>
             </div>
             {catReceitas.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-8">Nenhuma receita no período</p>
+              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                <TrendingUp className="w-10 h-10 mb-2 opacity-25" />
+                <p className="text-sm font-medium">Nenhuma receita no período</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {catReceitas.map((item, i) => {
@@ -6089,7 +6093,7 @@ const AppContent: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{ width: `${pct}%`, backgroundColor: item.cor }}
@@ -6115,7 +6119,10 @@ const AppContent: React.FC = () => {
               <h3 className="text-base font-bold text-gray-800">Despesas por Categoria</h3>
             </div>
             {catDespesas.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-8">Nenhuma despesa no período</p>
+              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                <TrendingDown className="w-10 h-10 mb-2 opacity-25" />
+                <p className="text-sm font-medium">Nenhuma despesa no período</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {catDespesas.map((item, i) => {
@@ -6131,7 +6138,7 @@ const AppContent: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{ width: `${pct}%`, backgroundColor: item.cor }}
@@ -6152,12 +6159,17 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Top produtos */}
-        {produtos.length > 0 && (
-          <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl shadow border border-violet-100 p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Award className="w-5 h-5 text-purple-500" />
-              <h3 className="text-base font-bold text-gray-800">Top Produtos / Serviços</h3>
+        <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl shadow border border-violet-100 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Award className="w-5 h-5 text-purple-500" />
+            <h3 className="text-base font-bold text-gray-800">Top Produtos / Serviços</h3>
+          </div>
+          {produtos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+              <Award className="w-10 h-10 mb-2 opacity-25" />
+              <p className="text-sm font-medium">Nenhum produto/serviço no período</p>
             </div>
+          ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={produtos} layout="vertical" margin={{ top: 0, right: 60, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -6172,8 +6184,8 @@ const AppContent: React.FC = () => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
