@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, X, Save, RefreshCw, AlertTriangle, Edit, LogIn, Users as UsersIcon
+  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, RefreshCw, AlertTriangle, Edit, LogIn, Users as UsersIcon
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModules } from '../../hooks/useModules';
@@ -49,13 +49,6 @@ const UserManagement: React.FC = () => {
   const [showSimpleUserModal, setShowSimpleUserModal] = useState(false);
   const [showUserCreatedModal, setShowUserCreatedModal] = useState(false);
   const [createdUserData, setCreatedUserData] = useState<any>(null);
-
-  const [newUser, setNewUser] = useState({
-    username: '',
-    role: 'user',
-    modules: [] as string[],
-    isActive: true
-  });
 
   useEffect(() => {
     loadUsers();
@@ -363,7 +356,7 @@ const UserManagement: React.FC = () => {
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-amber-50">
+            <thead className="bg-amber-50 border-b border-amber-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-amber-900 uppercase tracking-wider">Usuário</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-amber-900 uppercase tracking-wider">Função</th>

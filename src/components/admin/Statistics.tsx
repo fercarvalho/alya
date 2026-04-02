@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Download, Users, Activity, Package, BarChart3
 } from 'lucide-react';
@@ -49,9 +49,24 @@ const Statistics: React.FC = () => {
   const [period, setPeriod] = useState<'7' | '30' | '90' | 'custom'>('30');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadStatistics();
+  }, []);
+
+  useEffect(() => {
+    // Para datas customizadas, aguardar 600ms após a última alteração antes de buscar
+    if (period === 'custom') {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      // Capturar valores atuais no closure para evitar stale closure no setTimeout
+      const start = customStartDate;
+      const end = customEndDate;
+      debounceRef.current = setTimeout(() => {
+        if (start) loadTimeline(start, end);
+      }, 600);
+      return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }
     loadTimeline();
   }, [period, customStartDate, customEndDate]);
 
@@ -75,7 +90,7 @@ const Statistics: React.FC = () => {
     }
   };
 
-  const loadTimeline = async () => {
+  const loadTimeline = async (overrideStart?: string, overrideEnd?: string) => {
     try {
       let startDate = '';
       let endDate = new Date().toISOString().split('T')[0];
@@ -93,8 +108,8 @@ const Statistics: React.FC = () => {
         date.setDate(date.getDate() - 90);
         startDate = date.toISOString().split('T')[0];
       } else if (period === 'custom') {
-        startDate = customStartDate;
-        endDate = customEndDate || endDate;
+        startDate = overrideStart ?? customStartDate;
+        endDate = overrideEnd || customEndDate || endDate;
       }
 
       if (!startDate) return;
@@ -133,6 +148,7 @@ const Statistics: React.FC = () => {
     a.href = url;
     a.download = `statistics-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const COLORS = ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -242,53 +258,34 @@ const Statistics: React.FC = () => {
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-gray-700">Período:</label>
           <div className="flex gap-2">
-            <button
-              onClick={() => setPeriod('7')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                period === '7' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              7 dias
-            </button>
-            <button
-              onClick={() => setPeriod('30')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                period === '30' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              30 dias
-            </button>
-            <button
-              onClick={() => setPeriod('90')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                period === '90' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              90 dias
-            </button>
-            <button
-              onClick={() => setPeriod('custom')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                period === 'custom' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Personalizado
-            </button>
+            {(['7', '30', '90', 'custom'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all duration-200 ${
+                  period === p
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                }`}
+              >
+                {p === '7' ? '7 dias' : p === '30' ? '30 dias' : p === '90' ? '90 dias' : 'Personalizado'}
+              </button>
+            ))}
           </div>
           {period === 'custom' && (
-            <div className="flex gap-2 ml-4">
+            <div className="flex items-center gap-2 ml-4">
               <input
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="px-3 py-2 border rounded-lg"
+                className="px-3 py-2 border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-sm"
               />
-              <span className="self-center">até</span>
+              <span className="text-sm text-amber-700 font-medium">até</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="px-3 py-2 border rounded-lg"
+                className="px-3 py-2 border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-sm"
               />
             </div>
           )}
@@ -382,7 +379,7 @@ const Statistics: React.FC = () => {
           <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Módulos Mais Usados</h3>
           <div className="space-y-2">
             {statistics.activity.topModules.map((module, _index) => (
-              <div key={module.key} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+              <div key={module.key} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
                 <span className="text-sm font-medium">{module.key}</span>
                 <span className="text-sm text-gray-600">{module.count} ações</span>
               </div>
@@ -393,15 +390,15 @@ const Statistics: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4 border-l-4 border-amber-400 pl-3">Resumo de Dados</h3>
           <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
               <span className="text-sm font-medium">Transações</span>
               <span className="text-lg font-bold text-amber-600">{statistics.data.transactions}</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
               <span className="text-sm font-medium">Produtos</span>
               <span className="text-lg font-bold text-blue-600">{statistics.data.products}</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
               <span className="text-sm font-medium">Clientes</span>
               <span className="text-lg font-bold text-green-600">{statistics.data.clients}</span>
             </div>

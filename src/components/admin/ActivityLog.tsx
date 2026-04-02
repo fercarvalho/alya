@@ -133,6 +133,9 @@ const ActivityLog: React.FC = () => {
   });
   const [page, setPage] = useState(1);
   const limit = 50;
+  // Acumulador de todos os usuários/ações já vistos — persiste entre páginas para os dropdowns de filtro
+  const [knownUsers, setKnownUsers] = useState<string[]>([]);
+  const [knownActions, setKnownActions] = useState<string[]>([]);
 
   useEffect(() => {
     loadLogs();
@@ -159,6 +162,9 @@ const ActivityLog: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         setLogs(result.data);
+        // Acumular usuários e ações conhecidos para os filtros
+        setKnownUsers(prev => Array.from(new Set([...prev, ...result.data.map((l: ActivityLog) => l.username)])));
+        setKnownActions(prev => Array.from(new Set([...prev, ...result.data.map((l: ActivityLog) => l.action)])));
       }
     } catch (error) {
       console.error('Erro ao carregar logs:', error);
@@ -179,37 +185,63 @@ const ActivityLog: React.FC = () => {
   const hasDiff = (log: ActivityLog) =>
     log.details && (log.details.before !== undefined || log.details.after !== undefined);
 
-  const handleExport = (format: 'csv' | 'json') => {
-    const data = logs.map(log => ({
-      Usuário: log.username,
-      Ação: log.action,
-      Módulo: log.module,
-      Tipo: log.entityType || '',
-      Data: new Date(log.timestamp).toLocaleString(),
-      Detalhes: JSON.stringify(log.details || {})
-    }));
+  const handleExport = async (format: 'csv' | 'json') => {
+    // Buscar todos os logs sem paginação para exportação completa
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.userId) queryParams.append('userId', filters.userId);
+      if (filters.module) queryParams.append('module', filters.module);
+      if (filters.action) queryParams.append('action', filters.action);
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+      queryParams.append('limit', '10000');
+      queryParams.append('page', '1');
 
-    if (format === 'csv') {
-      const headers = Object.keys(data[0] || {});
-      const csv = [
-        headers.join(','),
-        ...data.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
-      ].join('\n');
+      const response = await fetch(`${API_BASE_URL}/admin/activity-log?${queryParams}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const result = await response.json();
+      const allLogs: ActivityLog[] = result.success ? result.data : logs;
 
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-    } else {
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
+      const data = allLogs.map(log => ({
+        Usuário: log.username,
+        Ação: log.action,
+        Módulo: log.module,
+        Tipo: log.entityType || '',
+        Data: new Date(log.timestamp).toLocaleString(),
+        Detalhes: JSON.stringify(log.details || {})
+      }));
+
+      if (data.length === 0) {
+        alert('Nenhum registro encontrado para exportar.');
+        return;
+      }
+
+      if (format === 'csv') {
+        const headers = Object.keys(data[0]);
+        const csv = [
+          headers.join(','),
+          ...data.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+        ].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
     }
   };
 
@@ -233,9 +265,6 @@ const ActivityLog: React.FC = () => {
     'impersonate': 'Impersonar',
   };
 
-  const uniqueUsers = Array.from(new Set(logs.map(log => log.username)));
-  const uniqueActions = Array.from(new Set(logs.map(log => log.action)));
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -251,16 +280,16 @@ const ActivityLog: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={() => handleExport('csv')}
-            className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-green-700 shadow-lg transition-all"
           >
-            <Download className="h-5 w-5 mr-2" />
+            <Download className="h-5 w-5" />
             Exportar CSV
           </button>
           <button
             onClick={() => handleExport('json')}
-            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-600 shadow-lg transition-all"
           >
-            <Download className="h-5 w-5 mr-2" />
+            <Download className="h-5 w-5" />
             Exportar JSON
           </button>
         </div>
@@ -290,7 +319,7 @@ const ActivityLog: React.FC = () => {
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="">Todos</option>
-              {uniqueUsers.map(user => (
+              {knownUsers.map(user => (
                 <option key={user} value={user}>{user}</option>
               ))}
             </select>
@@ -322,7 +351,7 @@ const ActivityLog: React.FC = () => {
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="">Todas</option>
-              {uniqueActions.map(action => (
+              {knownActions.map(action => (
                 <option key={action} value={action}>{actionLabels[action] || action}</option>
               ))}
             </select>

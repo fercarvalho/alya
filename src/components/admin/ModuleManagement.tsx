@@ -168,7 +168,7 @@ const ModuleManagement: React.FC = () => {
             });
             setShowModuleModal(true);
           }}
-          className="flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+          className="flex items-center px-5 py-2 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg transition-all"
         >
           <Plus className="h-5 w-5 mr-2" />
           Novo Módulo
@@ -180,7 +180,7 @@ const ModuleManagement: React.FC = () => {
         {modules.map((module) => (
           <div
             key={module.id}
-            className={`bg-white rounded-lg shadow p-6 border-2 ${module.isSystem ? 'border-amber-300' : 'border-gray-200'
+            className={`bg-white rounded-2xl shadow-lg p-6 border-2 ${module.isSystem ? 'border-amber-300' : 'border-gray-200'
               }`}
           >
             <div className="flex items-start justify-between mb-4">
@@ -188,8 +188,8 @@ const ModuleManagement: React.FC = () => {
                 {module.isSystem && <Shield className="h-5 w-5 text-amber-600" />}
                 <h3 className="text-lg font-semibold text-gray-900">{module.name}</h3>
               </div>
-              <span className={`px-2 py-1 text-xs rounded ${module.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${module.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${module.isActive ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
                 {module.isActive ? 'Ativo' : 'Inativo'}
               </span>
             </div>
@@ -224,7 +224,11 @@ const ModuleManagement: React.FC = () => {
                   }
                   handleUpdateModule(module.id, { isActive: !module.isActive });
                 }}
-                className="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  module.isActive
+                    ? 'border border-red-200 text-red-600 hover:bg-red-50'
+                    : 'border border-green-200 text-green-600 hover:bg-green-50'
+                }`}
               >
                 {module.isActive ? 'Desativar' : 'Ativar'}
               </button>
