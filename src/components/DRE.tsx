@@ -423,7 +423,7 @@ const DRE: React.FC = () => {
           </button>
           <button
             onClick={exportarExcel}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-green-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
             <FileText className="h-5 w-5" />
             Exportar Excel
@@ -509,33 +509,39 @@ const DRE: React.FC = () => {
 
       {/* DRE Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            DRE - {getPeriodLabel()}
-          </h2>
-          {previousPeriodTransactions.length > 0 && (
-            <p className="text-sm text-gray-600 mt-1">
-              Comparação com {getPreviousPeriodLabel()}
-            </p>
-          )}
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              DRE
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                {getPeriodLabel()}
+              </span>
+            </h2>
+            {previousPeriodTransactions.length > 0 && (
+              <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5" />
+                Comparando com <span className="font-medium text-gray-700">{getPreviousPeriodLabel()}</span>
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-amber-50 border-b border-amber-200">
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
                   Descrição
                 </th>
-                <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold text-amber-800 uppercase tracking-wider">
                   Valor Atual
                 </th>
                 {previousPeriodTransactions.length > 0 && (
                   <>
-                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold text-amber-800 uppercase tracking-wider">
                       Valor Anterior
                     </th>
-                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-semibold text-amber-800 uppercase tracking-wider">
                       Variação
                     </th>
                   </>
@@ -554,26 +560,31 @@ const DRE: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                dreWithComparison.map((row) => (
+                dreWithComparison.map((row) => {
+                  const isReceitas = row.id === 'receitas'
+                  const isDespesas = row.id === 'despesas'
+                  const isResultado = row.id === 'resultado'
+                  const borderColor = isReceitas ? 'border-l-4 border-l-emerald-500'
+                    : isDespesas ? 'border-l-4 border-l-rose-500'
+                    : isResultado ? `border-l-4 ${row.value >= 0 ? 'border-l-amber-500' : 'border-l-red-500'}`
+                    : ''
+                  const rowBg = isResultado
+                    ? row.value >= 0 ? 'bg-green-50' : 'bg-red-50'
+                    : row.level === 0 ? 'bg-amber-50' : row.level === 1 ? 'bg-gray-50' : ''
+
+                  return (
                   <tr
                     key={row.id}
-                    className={`${row.level === 0
-                      ? 'bg-amber-50 font-semibold'
-                      : row.level === 1
-                        ? 'bg-gray-50'
-                        : ''
-                      } ${row.id === 'resultado' ? 'border-t-2 border-gray-300' : ''
-                      }`}
+                    className={`${rowBg} ${row.level === 0 ? 'font-semibold' : ''} ${borderColor} ${isResultado ? 'border-t-2 border-gray-300' : ''}`}
                   >
                     <td
-                      className={`px-4 sm:px-6 py-3 text-sm ${row.level === 0 ? 'text-amber-900' : 'text-gray-900'
-                        }`}
+                      className={`px-4 sm:px-6 py-3 text-sm ${isResultado ? (row.value >= 0 ? 'text-green-800' : 'text-red-800') : row.level === 0 ? 'text-amber-900' : 'text-gray-900'}`}
                       style={{ paddingLeft: `${row.level * 20 + 16}px` }}
                     >
-                      {row.description}
+                      {isResultado ? <span className="text-base font-bold">{row.description}</span> : row.description}
                     </td>
                     <td
-                      className={`px-4 sm:px-6 py-3 text-sm text-right font-medium ${row.type === 'receita'
+                      className={`px-4 sm:px-6 py-3 text-right font-medium ${isResultado ? 'text-base' : 'text-sm'} ${row.type === 'receita'
                         ? 'text-green-600'
                         : row.type === 'despesa'
                           ? 'text-red-600'
@@ -582,7 +593,7 @@ const DRE: React.FC = () => {
                             : 'text-red-600'
                         }`}
                     >
-                      {formatCurrency(row.value)}
+                      {isResultado ? <span className="text-base font-bold">{formatCurrency(row.value)}</span> : formatCurrency(row.value)}
                     </td>
                     {previousPeriodTransactions.length > 0 && (
                       <>
@@ -593,16 +604,13 @@ const DRE: React.FC = () => {
                           {row.variation !== undefined && row.variationPercent !== undefined ? (
                             <div className="flex items-center justify-end gap-1">
                               <span
-                                className={`font-medium flex items-center gap-0.5 ${row.variation >= 0 ? 'text-green-600' : 'text-red-600'
-                                  }`}
+                                className={`inline-flex items-center gap-0.5 font-medium px-2 py-0.5 rounded-full text-xs ${row.variation >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
                               >
-                                {row.variation >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />} {formatCurrency(Math.abs(row.variation))}
+                                {row.variation >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                {formatPercent(row.variationPercent)}
                               </span>
-                              <span
-                                className={`text-xs ${row.variationPercent >= 0 ? 'text-green-600' : 'text-red-600'
-                                  }`}
-                              >
-                                ({formatPercent(row.variationPercent)})
+                              <span className="text-xs text-gray-500 hidden sm:inline">
+                                {formatCurrency(Math.abs(row.variation))}
                               </span>
                             </div>
                           ) : (
@@ -612,7 +620,8 @@ const DRE: React.FC = () => {
                       </>
                     )}
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -643,6 +652,20 @@ const DRE: React.FC = () => {
               )}
             </div>
           </div>
+          {totalReceitas > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-white/70 mb-1">
+                <span>Despesas / Receitas</span>
+                <span>{Math.min(100, Math.round((totalDespesas / totalReceitas) * 100))}%</span>
+              </div>
+              <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, (totalDespesas / totalReceitas) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-gradient-to-r from-rose-500 to-red-400 rounded-2xl shadow-lg p-6">
@@ -667,6 +690,20 @@ const DRE: React.FC = () => {
               )}
             </div>
           </div>
+          {totalReceitas > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-white/70 mb-1">
+                <span>Do total de receitas</span>
+                <span>{Math.min(100, Math.round((totalDespesas / totalReceitas) * 100))}%</span>
+              </div>
+              <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${(totalDespesas / totalReceitas) > 0.9 ? 'bg-yellow-300' : 'bg-white'}`}
+                  style={{ width: `${Math.min(100, (totalDespesas / totalReceitas) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className={`bg-gradient-to-r ${resultadoLiquido >= 0 ? 'from-amber-500 to-orange-400' : 'from-rose-600 to-red-500'} rounded-2xl shadow-lg p-6`}>
@@ -691,6 +728,20 @@ const DRE: React.FC = () => {
               )}
             </div>
           </div>
+          {totalReceitas > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-white/70 mb-1">
+                <span>Margem líquida</span>
+                <span>{Math.round((resultadoLiquido / totalReceitas) * 100)}%</span>
+              </div>
+              <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white rounded-full transition-all duration-500"
+                  style={{ width: `${Math.max(0, Math.min(100, (resultadoLiquido / totalReceitas) * 100))}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
