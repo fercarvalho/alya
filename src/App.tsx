@@ -508,7 +508,7 @@ const AppContent: React.FC = () => {
     new Date().getMonth(),
   );
   const [expandedCharts, setExpandedCharts] = useState<string[]>([]);
-  const [metasMonthDropdownOpen, setMetasMonthDropdownOpen] = useState(false);
+
   const [periodoRelatorio, setPeriodoRelatorio] = useState<"semana" | "mes" | "trimestre" | "ano">("mes");
   const [periodoOffset, setPeriodoOffset] = useState(0);
 
@@ -740,16 +740,6 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener("auth:impersonation-changed", handler);
   }, []);
 
-  useEffect(() => {
-    if (!metasMonthDropdownOpen) return;
-    const close = (e: MouseEvent) => {
-      const dropdown = document.getElementById("metas-month-dropdown");
-      if (dropdown && dropdown.contains(e.target as Node)) return;
-      setMetasMonthDropdownOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [metasMonthDropdownOpen]);
 
   // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
   if (isLoading) {
@@ -6447,72 +6437,28 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Mini visão anual — barra de progresso por mês */}
-        {(() => {
-          const mesesNomesAbrev = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-          return (
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow-lg border border-slate-200 p-5">
-              <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-4">Visão Anual — % da Meta por Mês</h3>
-              <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
-                {mesesMetas.map((mes) => {
-                  const { receitas } = calculateTotalsForMonth(mes.indice, new Date().getFullYear());
-                  const pct = mes.meta > 0 ? Math.min(100, (receitas / mes.meta) * 100) : 0;
-                  const color = pct >= 100 ? "bg-emerald-500" : pct >= 75 ? "bg-amber-400" : pct > 0 ? "bg-red-400" : "bg-gray-200";
-                  const isSelected = mes.indice === selectedMonth;
-                  return (
-                    <button
-                      key={mes.indice}
-                      onClick={() => setSelectedMonth(mes.indice)}
-                      className={`flex flex-col items-center gap-1 p-1 rounded-lg transition-all ${isSelected ? "ring-2 ring-amber-400 bg-amber-50" : "hover:bg-gray-50"}`}
-                    >
-                      <div className="w-full bg-gray-100 rounded-full h-16 flex flex-col justify-end overflow-hidden">
-                        <div className={`${color} rounded-full transition-all duration-500`} style={{ height: `${Math.max(4, pct)}%` }} />
-                      </div>
-                      <span className={`text-xs font-bold ${isSelected ? "text-amber-700" : "text-gray-500"}`}>{mesesNomesAbrev[mes.indice]}</span>
-                      <span className={`text-xs font-black ${pct >= 100 ? "text-emerald-600" : pct >= 75 ? "text-amber-600" : pct > 0 ? "text-red-500" : "text-gray-400"}`}>{pct.toFixed(0)}%</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Renderizar Mês Selecionado com Dropdown Integrado */}
+        {/* Renderizar Mês Selecionado com navegador horizontal */}
         {mesSelecionado && (
           <div className="space-y-6 mb-12">
-            {/* Dropdown do Mês Selecionado */}
-            <div id="metas-month-dropdown" className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg relative">
+            {/* Navegador de Mês */}
+            <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6 rounded-2xl shadow-lg flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setMetasMonthDropdownOpen((v) => !v)}
-                className="w-full flex items-center justify-center gap-3 text-3xl font-bold text-white text-center uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
+                onClick={() => setSelectedMonth((m) => (m - 1 + 12) % 12)}
+                className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors duration-150"
               >
-                <span>{mesSelecionado?.nome} - {new Date().getFullYear()}</span>
-                <ChevronRight className={`w-7 h-7 transition-transform duration-200 ${metasMonthDropdownOpen ? "-rotate-90" : "rotate-90 opacity-70"}`} />
+                <ChevronLeft className="w-7 h-7" />
               </button>
-
-              {metasMonthDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-amber-100 z-50 overflow-hidden">
-                  {mesesMetas.map((mes) => (
-                    <button
-                      key={mes.indice}
-                      type="button"
-                      onClick={() => {
-                        setSelectedMonth(mes.indice);
-                        setMetasMonthDropdownOpen(false);
-                      }}
-                      className={`w-full text-center px-5 py-3 text-lg font-bold transition-colors duration-150 ${
-                        mes.indice === selectedMonth
-                          ? "bg-amber-50 text-amber-800"
-                          : "text-gray-700 hover:bg-amber-50 hover:text-amber-800"
-                      }`}
-                    >
-                      {mes.nome} - {new Date().getFullYear()}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <h2 className="text-3xl font-bold text-white text-center uppercase tracking-wider">
+                {mesSelecionado.nome} - {new Date().getFullYear()}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSelectedMonth((m) => (m + 1) % 12)}
+                className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors duration-150"
+              >
+                <ChevronRight className="w-7 h-7" />
+              </button>
             </div>
 
             {/* Conteúdo do Mês */}
