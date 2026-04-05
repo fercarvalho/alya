@@ -128,6 +128,7 @@ class Database extends FileDatabase {
           ['Sessões Ativas', 'activeSessions', 'Lock'],
           ['Anomalias', 'anomalies', 'Activity'],
           ['Alertas de Segurança', 'securityAlerts', 'Bell'],
+          ['Bluetooth', 'bluetooth', 'Bluetooth'],
         ];
         for (const [name, key, icon] of mods) {
           const id = this.generateId();
@@ -137,6 +138,17 @@ class Database extends FileDatabase {
           );
         }
         console.log('Módulos padrão criados no PostgreSQL.');
+      } else {
+        // Garantir que o módulo Bluetooth existe em instalações existentes
+        const btRes = await this.pool.query("SELECT id FROM modules WHERE key = 'bluetooth'");
+        if (btRes.rows.length === 0) {
+          const id = this.generateId();
+          await this.pool.query(
+            'INSERT INTO modules (id, name, key, icon, is_active, is_system) VALUES ($1, $2, $3, $4, true, true)',
+            [id, 'Bluetooth', 'bluetooth', 'Bluetooth']
+          );
+          console.log('Módulo Bluetooth adicionado ao PostgreSQL.');
+        }
       }
     } catch (err) {
       console.error('Erro ao configurar PostgreSQL:', err.message);

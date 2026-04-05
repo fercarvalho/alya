@@ -4406,8 +4406,34 @@ app.get("/api/test", (req, res) => {
       "POST /api/auth/login - Fazer login",
       "POST /api/auth/verify - Verificar token",
       "GET /api/test - Testar API",
+      "GET /api/bluetooth/devices - Listar dispositivos Bluetooth próximos",
     ],
   });
+});
+
+// 📡 Bluetooth: Escanear dispositivos BLE próximos
+const { scanDevices: scanBluetoothDevices } = require("./utils/bluetooth");
+
+app.get("/api/bluetooth/devices", authenticateToken, async (req, res) => {
+  try {
+    const duration = Math.min(
+      Math.max(parseInt(req.query.duration) || 5000, 1000),
+      15000
+    );
+    const devices = await scanBluetoothDevices(duration);
+    res.json({
+      success: true,
+      devices,
+      count: devices.length,
+      duration,
+      scannedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      error: error.message,
+    });
+  }
 });
 
 // Middleware de tratamento de erros

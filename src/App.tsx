@@ -39,9 +39,11 @@ import {
   Award,
   Wallet,
   Sparkles,
+  Bluetooth,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
+const BluetoothDevices = lazy(() => import("./components/BluetoothDevices"));
 import Login from "./components/Login";
 import MenuUsuario from "./components/MenuUsuario";
 import ImpersonationBanner from "./components/ImpersonationBanner";
@@ -142,7 +144,8 @@ type TabType =
   | "dre"
   | "activeSessions"
   | "anomalies"
-  | "securityAlerts";
+  | "securityAlerts"
+  | "bluetooth";
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -6581,6 +6584,7 @@ const AppContent: React.FC = () => {
                     { id: "activeSessions", name: "Sessões", icon: Lock, key: "activeSessions" },
                     { id: "anomalies", name: "Anomalias", icon: Activity, key: "anomalies" },
                     { id: "securityAlerts", name: "Alertas", icon: Bell, key: "securityAlerts" },
+                    { id: "bluetooth", name: "Bluetooth", icon: Bluetooth, key: "bluetooth" },
                     { id: "admin", name: "Admin", icon: Shield, key: "admin" },
                   ];
 
@@ -6691,6 +6695,19 @@ const AppContent: React.FC = () => {
             }
           >
             <SecurityAlerts />
+          </Suspense>
+        )}
+        {activeTab === "bluetooth" && (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">
+                  Carregando Bluetooth...
+                </div>
+              </div>
+            }
+          >
+            <BluetoothDevices />
           </Suspense>
         )}
       </main>
