@@ -5,7 +5,6 @@ const { encrypt } = require('./encryption');
 
 /**
  * Converte o valor de um pedido Nuvemshop para float em reais.
- * A API retorna valores como string (ex: "150.00").
  */
 function parseOrderValue(total) {
   const v = parseFloat(total);
@@ -14,7 +13,6 @@ function parseOrderValue(total) {
 
 /**
  * Extrai o primeiro preço de venda de um produto Nuvemshop.
- * A API retorna um array de variantes com preço.
  */
 function parseProductPrice(product) {
   if (product.variants && product.variants.length > 0) {
@@ -36,9 +34,10 @@ function parseProductStock(product) {
 
 /**
  * Sincroniza pedidos pagos da Nuvemshop como transações de receita no ALYA.
+ * Filtra por payment_status diretamente na API (server-side) para economizar rate limit.
  *
  * @param {object} db - Instância do Database
- * @param {number} userId - ID do usuário no ALYA
+ * @param {string} userId - ID do usuário no ALYA
  * @param {string} token - Access token Nuvemshop (descriptografado)
  * @param {string} storeId - ID da loja Nuvemshop
  * @param {Date|null} since - Buscar apenas pedidos atualizados após esta data
@@ -49,26 +48,30 @@ async function syncOrders(db, userId, token, storeId, since) {
   let skipped = 0;
   let errors = 0;
 
-  const orders = await nuvemshopService.getAllOrders(token, storeId, since);
+  // Busca pedidos pagos e autorizados diretamente via query param (filtragem server-side)
+  const [paidOrders, authorizedOrders] = await Promise.all([
+    nuvemshopService.getAllOrders(token, storeId, since, 'paid'),
+    nuvemshopService.getAllOrders(token, storeId, since, 'authorized'),
+  ]);
 
-  // Filtra apenas pedidos com pagamento confirmado
-  const paidOrders = orders.filter(
-    (o) => o.payment_status === 'paid' || o.payment_status === 'authorized'
-  );
+  // Deduplica por ID (improvável, mas seguro)
+  const seen = new Set();
+  const allPaidOrders = [...paidOrders, ...authorizedOrders].filter((o) => {
+    if (seen.has(o.id)) return false;
+    seen.add(o.id);
+    return true;
+  });
 
-  for (const order of paidOrders) {
+  for (const order of allPaidOrders) {
     try {
-      // Verifica se já foi sincronizado
       const existing = await db.getSyncMap(userId, 'order', order.id);
       if (existing) {
         skipped++;
         continue;
       }
 
-      // Determina a data do pedido (paid_at ou created_at)
       const orderDate = order.paid_at || order.created_at || new Date().toISOString();
 
-      // Cria transação de receita
       const transaction = await db.saveTransaction({
         date: orderDate.split('T')[0],
         description: `Pedido #${order.number} - Nuvemshop`,
@@ -77,9 +80,7 @@ async function syncOrders(db, userId, token, storeId, since) {
         category: 'Venda Online',
       });
 
-      // Registra mapeamento para não importar novamente
       await db.saveSyncMap(userId, 'order', order.id, transaction.id);
-
       imported++;
     } catch (err) {
       console.error(`[NuvemshopSync] Erro ao importar pedido ${order.id}:`, err.message);
@@ -94,7 +95,7 @@ async function syncOrders(db, userId, token, storeId, since) {
  * Sincroniza produtos da Nuvemshop com o cadastro de produtos do ALYA.
  *
  * @param {object} db - Instância do Database
- * @param {number} userId - ID do usuário no ALYA
+ * @param {string} userId - ID do usuário no ALYA
  * @param {string} token - Access token Nuvemshop (descriptografado)
  * @param {string} storeId - ID da loja Nuvemshop
  * @param {Date|null} since - Buscar apenas produtos atualizados após esta data
@@ -121,11 +122,9 @@ async function syncProducts(db, userId, token, storeId, since) {
       const existing = await db.getSyncMap(userId, 'product', product.id);
 
       if (existing) {
-        // Atualiza preço e estoque do produto existente
         await db.updateProduct(existing.localId, { price, stock });
         updated++;
       } else {
-        // Cria novo produto no ALYA
         const created = await db.saveProduct({
           name,
           category: 'Nuvemshop',
@@ -151,7 +150,7 @@ async function syncProducts(db, userId, token, storeId, since) {
  * Dados sensíveis (email, phone) são criptografados com AES-256-GCM.
  *
  * @param {object} db - Instância do Database
- * @param {number} userId - ID do usuário no ALYA
+ * @param {string} userId - ID do usuário no ALYA
  * @param {string} token - Access token Nuvemshop (descriptografado)
  * @param {string} storeId - ID da loja Nuvemshop
  * @param {Date|null} since - Buscar apenas clientes atualizados após esta data
@@ -168,12 +167,10 @@ async function syncCustomers(db, userId, token, storeId, since) {
     try {
       const existing = await db.getSyncMap(userId, 'customer', customer.id);
 
-      // Criptografa dados sensíveis
       const encryptedEmail = customer.email ? encrypt(customer.email) : null;
       const encryptedPhone = customer.phone ? encrypt(customer.phone) : null;
 
       if (existing) {
-        // Atualiza cliente existente
         await db.updateClient(existing.localId, {
           name: customer.name || '',
           email: encryptedEmail,
@@ -181,7 +178,6 @@ async function syncCustomers(db, userId, token, storeId, since) {
         });
         updated++;
       } else {
-        // Cria novo cliente no ALYA
         const created = await db.saveClient({
           name: customer.name || '',
           email: encryptedEmail,

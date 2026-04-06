@@ -3,7 +3,6 @@
 const axios = require('axios');
 
 // Rate limiting: Nuvemshop permite 2 req/s com burst de 40
-// Implementado como fila com controle de intervalo
 const REQUEST_INTERVAL_MS = 500; // 2 req/s
 let lastRequestTime = 0;
 const requestQueue = [];
@@ -58,15 +57,27 @@ function createClient(token, storeId) {
     timeout: 30000,
   });
 
-  // Interceptor para retry em caso de 429 (rate limit excedido)
+  // Interceptor para retry em 429 (rate limit) e erros 5xx
   client.interceptors.response.use(
     (response) => response,
     async (error) => {
-      if (error.response?.status === 429) {
+      const status = error.response?.status;
+      const config = error.config;
+
+      // Rate limit: aguarda o reset informado pelo header
+      if (status === 429) {
         const resetMs = parseInt(error.response.headers['x-rate-limit-reset'] || '1000', 10);
         await sleep(resetMs);
-        return client(error.config);
+        return client(config);
       }
+
+      // Erros de servidor (5xx): retry com backoff exponencial, até 3 tentativas
+      config._retryCount = (config._retryCount || 0) + 1;
+      if (status >= 500 && config._retryCount <= 3) {
+        await sleep(Math.pow(2, config._retryCount) * 1000);
+        return client(config);
+      }
+
       throw error;
     }
   );
@@ -86,14 +97,14 @@ async function getStore(token, storeId) {
 }
 
 /**
- * Busca pedidos da loja
- * @param {object} params - { since: Date, page: number, perPage: number }
+ * Busca uma página de pedidos.
+ * @param {object} params - { since, page, perPage, paymentStatus }
  */
 async function getOrders(token, storeId, params = {}) {
   return enqueue(async () => {
     const client = createClient(token, storeId);
     const query = {
-      per_page: params.perPage || 50,
+      per_page: params.perPage || 200,
       page: params.page || 1,
     };
     if (params.since) {
@@ -101,23 +112,41 @@ async function getOrders(token, storeId, params = {}) {
         ? params.since.toISOString()
         : params.since;
     }
+    // Filtragem server-side por status de pagamento (evita trafegar pedidos desnecessários)
+    if (params.paymentStatus) {
+      query.payment_status = params.paymentStatus;
+    }
     const { data } = await client.get('/orders', { params: query });
     return data;
   });
 }
 
 /**
- * Busca todos os pedidos com paginação automática
+ * Busca todos os pedidos com paginação automática via header Link.
+ * @param {string} paymentStatus - Filtro opcional: 'paid', 'authorized', etc.
  */
-async function getAllOrders(token, storeId, since) {
+async function getAllOrders(token, storeId, since, paymentStatus) {
   const allOrders = [];
   let page = 1;
-  let hasMore = true;
 
-  while (hasMore) {
-    const orders = await getOrders(token, storeId, { page, perPage: 50, since });
+  while (true) {
+    const { orders, hasNext } = await enqueue(async () => {
+      const client = createClient(token, storeId);
+      const query = { per_page: 200, page };
+      if (since) {
+        query.updated_at_min = since instanceof Date ? since.toISOString() : since;
+      }
+      if (paymentStatus) {
+        query.payment_status = paymentStatus;
+      }
+      const response = await client.get('/orders', { params: query });
+      // Usa header Link para detectar próxima página (mais confiável que comparar length)
+      const linkHeader = response.headers['link'] || '';
+      return { orders: response.data, hasNext: linkHeader.includes('rel="next"') };
+    });
+
     allOrders.push(...orders);
-    hasMore = orders.length === 50;
+    if (!hasNext) break;
     page++;
   }
 
@@ -125,13 +154,13 @@ async function getAllOrders(token, storeId, since) {
 }
 
 /**
- * Busca produtos da loja
+ * Busca uma página de produtos.
  */
 async function getProducts(token, storeId, params = {}) {
   return enqueue(async () => {
     const client = createClient(token, storeId);
     const query = {
-      per_page: params.perPage || 50,
+      per_page: params.perPage || 200,
       page: params.page || 1,
     };
     if (params.since) {
@@ -145,17 +174,26 @@ async function getProducts(token, storeId, params = {}) {
 }
 
 /**
- * Busca todos os produtos com paginação automática
+ * Busca todos os produtos com paginação automática via header Link.
  */
 async function getAllProducts(token, storeId, since) {
   const allProducts = [];
   let page = 1;
-  let hasMore = true;
 
-  while (hasMore) {
-    const products = await getProducts(token, storeId, { page, perPage: 50, since });
+  while (true) {
+    const { products, hasNext } = await enqueue(async () => {
+      const client = createClient(token, storeId);
+      const query = { per_page: 200, page };
+      if (since) {
+        query.updated_at_min = since instanceof Date ? since.toISOString() : since;
+      }
+      const response = await client.get('/products', { params: query });
+      const linkHeader = response.headers['link'] || '';
+      return { products: response.data, hasNext: linkHeader.includes('rel="next"') };
+    });
+
     allProducts.push(...products);
-    hasMore = products.length === 50;
+    if (!hasNext) break;
     page++;
   }
 
@@ -163,13 +201,13 @@ async function getAllProducts(token, storeId, since) {
 }
 
 /**
- * Busca clientes da loja
+ * Busca uma página de clientes.
  */
 async function getCustomers(token, storeId, params = {}) {
   return enqueue(async () => {
     const client = createClient(token, storeId);
     const query = {
-      per_page: params.perPage || 50,
+      per_page: params.perPage || 200,
       page: params.page || 1,
     };
     if (params.since) {
@@ -183,17 +221,26 @@ async function getCustomers(token, storeId, params = {}) {
 }
 
 /**
- * Busca todos os clientes com paginação automática
+ * Busca todos os clientes com paginação automática via header Link.
  */
 async function getAllCustomers(token, storeId, since) {
   const allCustomers = [];
   let page = 1;
-  let hasMore = true;
 
-  while (hasMore) {
-    const customers = await getCustomers(token, storeId, { page, perPage: 50, since });
+  while (true) {
+    const { customers, hasNext } = await enqueue(async () => {
+      const client = createClient(token, storeId);
+      const query = { per_page: 200, page };
+      if (since) {
+        query.updated_at_min = since instanceof Date ? since.toISOString() : since;
+      }
+      const response = await client.get('/customers', { params: query });
+      const linkHeader = response.headers['link'] || '';
+      return { customers: response.data, hasNext: linkHeader.includes('rel="next"') };
+    });
+
     allCustomers.push(...customers);
-    hasMore = customers.length === 50;
+    if (!hasNext) break;
     page++;
   }
 
@@ -201,7 +248,7 @@ async function getAllCustomers(token, storeId, since) {
 }
 
 /**
- * Registra um webhook na Nuvemshop
+ * Registra um webhook na Nuvemshop.
  * @param {string} event - ex: 'order/paid', 'product/created'
  * @param {string} url - URL HTTPS que receberá o webhook
  */
@@ -225,7 +272,7 @@ async function deleteWebhook(token, storeId, webhookId) {
 }
 
 /**
- * Lista webhooks registrados
+ * Lista todos os webhooks registrados para a loja
  */
 async function listWebhooks(token, storeId) {
   return enqueue(async () => {

@@ -4,20 +4,32 @@
  * Rotas da integração Nuvemshop.
  *
  * Uso em server.js:
- *   const nuvemshopRouter = require('./routes/nuvemshop');
- *   app.use('/api/nuvemshop', nuvemshopRouter(db, authenticateToken));
- *
- * O endpoint de webhook é registrado separadamente em server.js (precisa de raw body):
- *   const { handleWebhook } = require('./routes/nuvemshop');
+ *   const { createRouter, handleWebhook } = require('./routes/nuvemshop');
+ *   // Webhook precisa de express.raw() ANTES do express.json() global:
  *   app.post('/api/nuvemshop/webhook', express.raw({ type: 'application/json' }), handleWebhook(db));
+ *   app.use('/api/nuvemshop', createRouter(db, authenticateToken));
+ *
+ * Variável de ambiente opcional:
+ *   NUVEMSHOP_CLIENT_SECRET — client_secret do app Nuvemshop para validar HMAC dos webhooks.
+ *   Sem ela, a validação HMAC é pulada (log de aviso emitido).
  */
 
 const express = require('express');
 const crypto = require('crypto');
-const { decrypt } = require('../utils/encryption');
-const { encrypt } = require('../utils/encryption');
+const { decrypt, encrypt } = require('../utils/encryption');
 const nuvemshopService = require('../services/nuvemshopService');
 const { syncOrders, syncProducts, syncCustomers } = require('../utils/nuvemshopSync');
+
+// Eventos que serão registrados na Nuvemshop ao conectar
+const WEBHOOK_EVENTS = [
+  'order/paid',
+  'order/cancelled',
+  'order/updated',
+  'product/created',
+  'product/updated',
+  'customer/created',
+  'customer/updated',
+];
 
 /**
  * Factory que recebe db e authenticateToken do server.js e retorna o router configurado.
@@ -26,7 +38,6 @@ function createRouter(db, authenticateToken) {
   const router = express.Router();
 
   // ─── GET /api/nuvemshop/status ────────────────────────────────────────────────
-  // Retorna se o usuário já conectou uma loja Nuvemshop
   router.get('/status', authenticateToken, async (req, res) => {
     try {
       const config = await db.getNuvemshopConfig(req.user.id);
@@ -51,7 +62,6 @@ function createRouter(db, authenticateToken) {
   });
 
   // ─── POST /api/nuvemshop/connect ─────────────────────────────────────────────
-  // Salva o token e store ID, valida a conexão e registra webhooks
   router.post('/connect', authenticateToken, async (req, res) => {
     const { accessToken, storeId } = req.body;
 
@@ -63,55 +73,44 @@ function createRouter(db, authenticateToken) {
       // Valida a conexão buscando informações da loja
       const storeInfo = await nuvemshopService.getStore(accessToken, storeId);
 
-      // Criptografa o token antes de salvar
       const encryptedToken = encrypt(accessToken);
 
-      // Gera um token secreto para validar webhooks recebidos
-      const webhookToken = crypto.randomBytes(32).toString('hex');
-
-      // Salva a configuração no banco
       await db.saveNuvemshopConfig(req.user.id, {
         storeId,
         accessToken: encryptedToken,
-        storeName: storeInfo.name && typeof storeInfo.name === 'object'
+        storeName: typeof storeInfo.name === 'object'
           ? (storeInfo.name.pt || storeInfo.name.es || Object.values(storeInfo.name)[0] || '')
           : (storeInfo.name || ''),
         storeUrl: storeInfo.original_domain || storeInfo.url || '',
-        webhookToken,
+        webhookToken: null, // não usado; autenticação via HMAC-SHA256
       });
 
-      // Registra webhooks na Nuvemshop (se a aplicação tiver URL pública configurada)
+      // Registra webhooks se WEBHOOK_BASE_URL estiver configurada
       const webhookBaseUrl = process.env.WEBHOOK_BASE_URL;
       let webhookIdOrders = null;
-      let webhookIdProducts = null;
-      let webhookIdCustomers = null;
 
       if (webhookBaseUrl) {
         const webhookUrl = `${webhookBaseUrl}/api/nuvemshop/webhook`;
         try {
-          const whOrders = await nuvemshopService.registerWebhook(
-            accessToken, storeId, 'order/paid', webhookUrl
-          );
-          webhookIdOrders = whOrders.id;
+          // Remove webhooks antigos desta loja para evitar duplicatas
+          const existing = await nuvemshopService.listWebhooks(accessToken, storeId);
+          for (const wh of existing) {
+            await nuvemshopService.deleteWebhook(accessToken, storeId, wh.id);
+          }
 
-          const whProducts = await nuvemshopService.registerWebhook(
-            accessToken, storeId, 'product/updated', webhookUrl
-          );
-          webhookIdProducts = whProducts.id;
+          // Registra todos os eventos necessários
+          for (const event of WEBHOOK_EVENTS) {
+            try {
+              const wh = await nuvemshopService.registerWebhook(accessToken, storeId, event, webhookUrl);
+              if (event === 'order/paid') webhookIdOrders = wh.id;
+            } catch (evtErr) {
+              console.warn(`[Nuvemshop] Webhook '${event}' não registrado:`, evtErr.message);
+            }
+          }
 
-          const whCustomers = await nuvemshopService.registerWebhook(
-            accessToken, storeId, 'customer/created', webhookUrl
-          );
-          webhookIdCustomers = whCustomers.id;
-
-          await db.updateNuvemshopConfig(req.user.id, {
-            webhookIdOrders,
-            webhookIdProducts,
-            webhookIdCustomers,
-          });
+          await db.updateNuvemshopConfig(req.user.id, { webhookIdOrders });
         } catch (whErr) {
-          // Falha ao registrar webhooks não impede a conexão
-          console.warn('[Nuvemshop] Webhooks não registrados:', whErr.message);
+          console.warn('[Nuvemshop] Erro ao gerenciar webhooks:', whErr.message);
         }
       }
 
@@ -131,7 +130,6 @@ function createRouter(db, authenticateToken) {
   });
 
   // ─── DELETE /api/nuvemshop/disconnect ────────────────────────────────────────
-  // Remove webhooks e limpa a configuração
   router.delete('/disconnect', authenticateToken, async (req, res) => {
     try {
       const config = await db.getNuvemshopConfig(req.user.id);
@@ -139,17 +137,12 @@ function createRouter(db, authenticateToken) {
         return res.status(404).json({ error: 'Nenhuma integração encontrada' });
       }
 
-      // Tenta remover webhooks da Nuvemshop
+      // Remove todos os webhooks desta loja (lista e deleta, sem depender de IDs salvos)
       try {
         const token = decrypt(config.accessToken);
-        if (config.webhookIdOrders) {
-          await nuvemshopService.deleteWebhook(token, config.storeId, config.webhookIdOrders);
-        }
-        if (config.webhookIdProducts) {
-          await nuvemshopService.deleteWebhook(token, config.storeId, config.webhookIdProducts);
-        }
-        if (config.webhookIdCustomers) {
-          await nuvemshopService.deleteWebhook(token, config.storeId, config.webhookIdCustomers);
+        const webhooks = await nuvemshopService.listWebhooks(token, config.storeId);
+        for (const wh of webhooks) {
+          await nuvemshopService.deleteWebhook(token, config.storeId, wh.id);
         }
       } catch (whErr) {
         console.warn('[Nuvemshop] Erro ao remover webhooks:', whErr.message);
@@ -174,7 +167,6 @@ function createRouter(db, authenticateToken) {
 
       const token = decrypt(config.accessToken);
       const since = config.lastSyncOrders ? new Date(config.lastSyncOrders) : null;
-
       const result = await syncOrders(db, req.user.id, token, config.storeId, since);
 
       await db.updateNuvemshopConfig(req.user.id, { lastSyncOrders: new Date().toISOString() });
@@ -196,7 +188,6 @@ function createRouter(db, authenticateToken) {
 
       const token = decrypt(config.accessToken);
       const since = config.lastSyncProducts ? new Date(config.lastSyncProducts) : null;
-
       const result = await syncProducts(db, req.user.id, token, config.storeId, since);
 
       await db.updateNuvemshopConfig(req.user.id, { lastSyncProducts: new Date().toISOString() });
@@ -218,7 +209,6 @@ function createRouter(db, authenticateToken) {
 
       const token = decrypt(config.accessToken);
       const since = config.lastSyncCustomers ? new Date(config.lastSyncCustomers) : null;
-
       const result = await syncCustomers(db, req.user.id, token, config.storeId, since);
 
       await db.updateNuvemshopConfig(req.user.id, { lastSyncCustomers: new Date().toISOString() });
@@ -231,7 +221,6 @@ function createRouter(db, authenticateToken) {
   });
 
   // ─── GET /api/nuvemshop/dashboard ────────────────────────────────────────────
-  // Métricas de e-commerce para o painel Nuvemshop
   router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
       const config = await db.getNuvemshopConfig(req.user.id);
@@ -239,7 +228,6 @@ function createRouter(db, authenticateToken) {
         return res.status(400).json({ error: 'Nenhuma integração Nuvemshop ativa' });
       }
 
-      // Busca transações do mês atual originadas da Nuvemshop
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
       const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -262,59 +250,72 @@ function createRouter(db, authenticateToken) {
 
 /**
  * Handler de webhook — recebe eventos da Nuvemshop em tempo real.
- * Registrado em server.js com express.raw() para acesso ao body bruto (necessário para validação HMAC).
  *
- * Nota: A Nuvemshop envia o header 'x-linkedstore-token' com o token configurado no webhook.
+ * Autenticação: HMAC-SHA256 via header 'x-linkedstore-hmac-sha256'.
+ * Requer variável de ambiente NUVEMSHOP_CLIENT_SECRET para validar a assinatura.
+ * Sem ela, a validação é pulada e um aviso é emitido.
+ *
+ * O store_id e o event são lidos do payload JSON (conforme documentação oficial).
  */
 function handleWebhook(db) {
   return async (req, res) => {
     try {
-      // O body chega como Buffer quando usando express.raw()
-      const bodyBuffer = req.body;
-      const receivedToken = req.headers['x-linkedstore-token'];
+      const bodyBuffer = req.body; // Buffer (express.raw)
 
-      // Extrai o store_id do header ou da URL para buscar a config
-      const storeId = req.headers['x-store-id'] || req.query.store_id;
-
-      if (!storeId) {
-        return res.status(400).json({ error: 'Store ID não identificado' });
+      // ── Validação HMAC-SHA256 ──────────────────────────────────────────────
+      const clientSecret = process.env.NUVEMSHOP_CLIENT_SECRET;
+      if (clientSecret) {
+        const receivedHmac = req.headers['x-linkedstore-hmac-sha256'];
+        if (!receivedHmac) {
+          return res.status(401).json({ error: 'Assinatura do webhook ausente' });
+        }
+        const expectedHmac = crypto
+          .createHmac('sha256', clientSecret)
+          .update(bodyBuffer)
+          .digest('hex');
+        // Comparação de tempo constante para evitar timing attacks
+        const expectedBuf = Buffer.from(expectedHmac, 'utf8');
+        const receivedBuf = Buffer.from(receivedHmac, 'utf8');
+        const isValid = expectedBuf.length === receivedBuf.length &&
+          crypto.timingSafeEqual(expectedBuf, receivedBuf);
+        if (!isValid) {
+          console.warn('[Nuvemshop Webhook] Assinatura HMAC inválida');
+          return res.status(401).json({ error: 'Assinatura do webhook inválida' });
+        }
+      } else {
+        console.warn('[Nuvemshop Webhook] NUVEMSHOP_CLIENT_SECRET não configurado — validação HMAC desabilitada');
       }
 
-      // Busca a configuração pelo storeId para validar o token do webhook
+      // ── Parse do payload ───────────────────────────────────────────────────
+      const payload = JSON.parse(bodyBuffer.toString('utf8'));
+
+      // store_id e event vêm do payload (não de headers customizados)
+      const storeId = String(payload.store_id);
+      const event = payload.event;
+
+      if (!storeId) {
+        return res.status(400).json({ error: 'store_id ausente no payload' });
+      }
+
       const config = await db.getNuvemshopConfigByStoreId(storeId);
       if (!config) {
         return res.status(404).json({ error: 'Loja não encontrada' });
       }
 
-      // Valida o token do webhook
-      if (receivedToken && config.webhookToken && receivedToken !== config.webhookToken) {
-        console.warn('[Nuvemshop Webhook] Token inválido para loja:', storeId);
-        return res.status(401).json({ error: 'Token de webhook inválido' });
-      }
-
-      // Parseia o payload
-      const payload = JSON.parse(bodyBuffer.toString('utf8'));
-      const event = req.headers['x-store-event'] || payload.event;
-
-      // Responde 200 imediatamente (Nuvemshop considera timeout após 10s)
+      // Responde 200 imediatamente — Nuvemshop considera timeout após 3 segundos
       res.status(200).json({ received: true });
 
-      // Processa o evento assincronamente
+      // ── Processamento assíncrono do evento ────────────────────────────────
       const token = decrypt(config.accessToken);
 
-      if (event === 'order/paid') {
-        const order = payload;
-        // Verifica se já foi importado
-        const existing = await db.getSyncMap(config.userId, 'order', order.id);
-        if (!existing) {
-          const { syncOrders: syncOneOrder } = require('../utils/nuvemshopSync');
-          // Importa apenas este pedido
-          await syncOneOrder(db, config.userId, token, storeId, null);
+      if (event === 'order/paid' || event === 'order/updated') {
+        const existing = await db.getSyncMap(config.userId, 'order', payload.id);
+        if (!existing && (payload.payment_status === 'paid' || payload.payment_status === 'authorized')) {
+          await syncOrders(db, config.userId, token, storeId, null);
         }
       } else if (event === 'order/cancelled') {
         const existing = await db.getSyncMap(config.userId, 'order', payload.id);
         if (existing) {
-          // Cria uma transação de estorno
           await db.saveTransaction({
             date: new Date().toISOString().split('T')[0],
             description: `Cancelamento Pedido #${payload.number} - Nuvemshop`,
@@ -323,16 +324,33 @@ function handleWebhook(db) {
             category: 'Estorno Nuvemshop',
           });
         }
-      } else if (event === 'product/updated' || event === 'product/created') {
-        const { syncProducts: syncOneProduct } = require('../utils/nuvemshopSync');
-        await syncOneProduct(db, config.userId, token, storeId, null);
+      } else if (event === 'product/created' || event === 'product/updated') {
+        await syncProducts(db, config.userId, token, storeId, null);
       } else if (event === 'customer/created' || event === 'customer/updated') {
-        const { syncCustomers: syncOneCustomer } = require('../utils/nuvemshopSync');
-        await syncOneCustomer(db, config.userId, token, storeId, null);
+        await syncCustomers(db, config.userId, token, storeId, null);
+
+      // ── Eventos obrigatórios LGPD/GDPR ────────────────────────────────────
+      } else if (event === 'store/redact') {
+        // Solicitação de exclusão de todos os dados da loja (ex: desinstalação do app)
+        console.log(`[Nuvemshop Webhook] store/redact para loja ${storeId} — removendo integração`);
+        await db.deleteNuvemshopConfig(config.userId);
+      } else if (event === 'customers/redact') {
+        // Solicitação de exclusão de dados de um cliente específico (LGPD/GDPR)
+        const customerId = payload.customer?.id;
+        if (customerId) {
+          const map = await db.getSyncMap(config.userId, 'customer', customerId);
+          if (map) {
+            await db.updateClient(map.localId, { email: null, phone: null, cpf: null });
+            console.log(`[Nuvemshop Webhook] customers/redact — dados do cliente ${customerId} anonimizados`);
+          }
+        }
+      } else if (event === 'customers/data_request') {
+        // Solicitação de exportação de dados do cliente (LGPD/GDPR)
+        // O processamento real deve ser feito manualmente pelo administrador da loja
+        console.log(`[Nuvemshop Webhook] customers/data_request para cliente ${payload.customer?.id} — revisar no painel admin`);
       }
     } catch (err) {
       console.error('[Nuvemshop Webhook] Erro ao processar evento:', err.message);
-      // Se ainda não respondeu, manda 200 mesmo assim (evitar reenvio da Nuvemshop)
       if (!res.headersSent) {
         res.status(200).json({ received: true });
       }
