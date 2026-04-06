@@ -723,12 +723,12 @@ const getDefaultModulesForRole = (role) => {
       return [
         "dashboard", "transactions", "products", "clients",
         "reports", "metas", "dre", "projecao",
-        "admin", "activeSessions", "anomalies", "securityAlerts",
+        "admin", "activeSessions", "anomalies", "securityAlerts", "roadmap",
       ];
     case "admin":
       return [
         "dashboard", "transactions", "products", "clients",
-        "reports", "metas", "dre", "projecao", "admin",
+        "reports", "metas", "dre", "projecao", "admin", "roadmap",
       ];
     case "user":
       return [
@@ -4387,6 +4387,122 @@ app.get(
     }
   },
 );
+
+// ========== ROTAS DO ROADMAP ==========
+
+// Listar todos os itens (admin + superadmin)
+app.get("/api/admin/roadmap", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const items = await db.getRoadmapItems();
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Buscar item por ID (admin + superadmin)
+app.get("/api/admin/roadmap/:id", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const item = await db.getRoadmapItemById(req.params.id);
+    if (!item) return res.status(404).json({ error: "Item não encontrado" });
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Criar item (superadmin only)
+app.post("/api/admin/roadmap", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { titulo, descricao, status, prioridade, dataInicio, dependeDe } = req.body;
+    if (!titulo) return res.status(400).json({ error: "Título é obrigatório" });
+    const item = await db.createRoadmapItem({
+      titulo, descricao, status, prioridade, dataInicio, dependeDe,
+      createdBy: req.user.id,
+    });
+    await logActivity(req.user, "create", "roadmap", item.id, { titulo });
+    res.status(201).json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Atualizar ordem em lote (superadmin only) — deve vir antes de /:id
+app.put("/api/admin/roadmap/ordem", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { itens } = req.body;
+    if (!Array.isArray(itens)) return res.status(400).json({ error: "itens deve ser um array" });
+    await db.updateRoadmapOrdem(itens);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Atualizar item (superadmin only)
+app.put("/api/admin/roadmap/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const item = await db.updateRoadmapItem(req.params.id, req.body);
+    await logActivity(req.user, "update", "roadmap", req.params.id, req.body);
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mudar status (superadmin only)
+app.put("/api/admin/roadmap/:id/status", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ error: "Status é obrigatório" });
+    const item = await db.updateRoadmapItemStatus(req.params.id, status);
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Deletar item (superadmin only)
+app.delete("/api/admin/roadmap/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const item = await db.deleteRoadmapItem(req.params.id);
+    await logActivity(req.user, "delete", "roadmap", req.params.id, { titulo: item.titulo });
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Iniciar timer (superadmin only)
+app.post("/api/admin/roadmap/:id/iniciar-tempo", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const item = await db.iniciarTempoRoadmap(req.params.id);
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Pausar timer (superadmin only)
+app.post("/api/admin/roadmap/:id/pausar-tempo", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const item = await db.pausarTempoRoadmap(req.params.id);
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Parar timer (superadmin only)
+app.post("/api/admin/roadmap/:id/parar-tempo", authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { tempoDecorrido } = req.body;
+    const item = await db.pararTempoRoadmap(req.params.id, tempoDecorrido);
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Rota de teste
 app.get("/api/test", (req, res) => {

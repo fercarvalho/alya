@@ -56,6 +56,8 @@ const NuvemshopIntegration = lazy(() => import("./components/Nuvemshop"));
 const ActiveSessions = lazy(() => import("./pages/ActiveSessions"));
 const AnomalyDashboard = lazy(() => import("./pages/admin/AnomalyDashboard"));
 const SecurityAlerts = lazy(() => import("./pages/admin/SecurityAlerts"));
+// Lazy load Roadmap
+const Roadmap = lazy(() => import("./components/Roadmap"));
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
@@ -146,7 +148,8 @@ type TabType =
   | "activeSessions"
   | "anomalies"
   | "securityAlerts"
-  | "nuvemshop";
+  | "nuvemshop"
+  | "roadmap";
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -6602,12 +6605,17 @@ const AppContent: React.FC = () => {
                     { id: "anomalies", name: "Anomalias", icon: Activity, key: "anomalies" },
                     { id: "securityAlerts", name: "Alertas", icon: Bell, key: "securityAlerts" },
                     { id: "admin", name: "Admin", icon: Shield, key: "admin" },
+                    { id: "roadmap", name: "Roadmap", icon: Map, key: "roadmap" },
                   ];
 
                   // Filtrar abas: módulo deve estar ativo no sistema E visível para o usuário
                   const filteredTabs = allTabs.filter((tab) => {
                     // painel admin: requer role admin ou superadmin além do módulo
                     if (tab.key === "admin") {
+                      return (user?.role === "superadmin" || user?.role === "admin") && activeModuleKeys.has(tab.key);
+                    }
+                    // roadmap: requer role admin ou superadmin além do módulo
+                    if (tab.key === "roadmap") {
                       return (user?.role === "superadmin" || user?.role === "admin") && activeModuleKeys.has(tab.key);
                     }
                     // Todos os outros (incluindo sessões, anomalias, alertas): basta ter o módulo ativo
@@ -6666,6 +6674,17 @@ const AppContent: React.FC = () => {
           </Suspense>
         )}
         {activeTab === "dre" && <DRE />}
+        {activeTab === "roadmap" && (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">Carregando roadmap...</div>
+              </div>
+            }
+          >
+            <Roadmap />
+          </Suspense>
+        )}
         {activeTab === "admin" && (
           <Suspense
             fallback={

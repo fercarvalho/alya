@@ -100,7 +100,7 @@ class Database extends FileDatabase {
       if (parseInt(userRes.rows[0].count, 10) === 0) {
         const ph = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
         const defaults = [
-          ['admin', ph, 'superadmin', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin', 'activeSessions', 'anomalies', 'securityAlerts']],
+          ['admin', ph, 'superadmin', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin', 'activeSessions', 'anomalies', 'securityAlerts', 'roadmap']],
           ['user', ph, 'user', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre']],
           ['guest', ph, 'guest', ['dashboard', 'metas', 'reports', 'dre']],
         ];
@@ -128,6 +128,7 @@ class Database extends FileDatabase {
           ['Sessões Ativas', 'activeSessions', 'Lock'],
           ['Anomalias', 'anomalies', 'Activity'],
           ['Alertas de Segurança', 'securityAlerts', 'Bell'],
+          ['Roadmap', 'roadmap', 'Map'],
         ];
         for (const [name, key, icon] of mods) {
           const id = this.generateId();
@@ -1621,6 +1622,171 @@ class Database extends FileDatabase {
       recentOrders: toCamelCase(recentOrders.rows),
       syncedProductCount: parseInt(productCount.rows[0].count, 10),
     };
+  }
+
+  // ========== ROADMAP ==========
+
+  async getRoadmapItems() {
+    try {
+      const r = await this.pool.query(
+        `SELECT r.*, u.username AS created_by_username
+         FROM roadmap_items r
+         LEFT JOIN users u ON u.id = r.created_by
+         ORDER BY
+           CASE r.status
+             WHEN 'backlog' THEN 1
+             WHEN 'doing' THEN 2
+             WHEN 'em_testes' THEN 3
+             WHEN 'em_beta' THEN 4
+             WHEN 'lancado' THEN 5
+             WHEN 'done' THEN 6
+             ELSE 7
+           END,
+           r.ordem ASC,
+           r.created_at ASC`
+      );
+      return r.rows.map(row => toCamelCase(row));
+    } catch (e) {
+      console.error('Erro ao buscar itens do roadmap:', e);
+      return [];
+    }
+  }
+
+  async getRoadmapItemById(id) {
+    const r = await this.pool.query(
+      `SELECT r.*, u.username AS created_by_username
+       FROM roadmap_items r
+       LEFT JOIN users u ON u.id = r.created_by
+       WHERE r.id = $1`,
+      [id]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async createRoadmapItem({ titulo, descricao, status, prioridade, dataInicio, dependeDe, createdBy }) {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+    const r = await this.pool.query(
+      `INSERT INTO roadmap_items
+         (id, titulo, descricao, status, prioridade, ordem, data_inicio, depende_de, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5,
+         (SELECT COALESCE(MAX(ordem), 0) + 1 FROM roadmap_items WHERE status = $4),
+         $6, $7, $8, $9, $9)
+       RETURNING *`,
+      [id, titulo, descricao || null, status || 'backlog', prioridade || 'media',
+       dataInicio || null, dependeDe || null, createdBy || null, now]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async updateRoadmapItem(id, dados) {
+    const fields = [];
+    const values = [id];
+    let i = 2;
+    const map = {
+      titulo: 'titulo',
+      descricao: 'descricao',
+      status: 'status',
+      prioridade: 'prioridade',
+      dataInicio: 'data_inicio',
+      dependeDe: 'depende_de',
+    };
+    for (const [key, col] of Object.entries(map)) {
+      if (dados[key] !== undefined) {
+        fields.push(`${col} = $${i}`);
+        values.push(dados[key] !== '' ? dados[key] : null);
+        i++;
+      }
+    }
+    if (fields.length === 0) return this.getRoadmapItemById(id);
+    fields.push('updated_at = CURRENT_TIMESTAMP');
+    const r = await this.pool.query(
+      `UPDATE roadmap_items SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+    if (r.rows.length === 0) throw new Error('Item do roadmap não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async updateRoadmapItemStatus(id, status) {
+    const r = await this.pool.query(
+      `UPDATE roadmap_items SET
+         status = $2,
+         ordem = (SELECT COALESCE(MAX(ordem), 0) + 1 FROM roadmap_items WHERE status = $2 AND id != $1),
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 RETURNING *`,
+      [id, status]
+    );
+    if (r.rows.length === 0) throw new Error('Item do roadmap não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async updateRoadmapOrdem(itens) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const { id, ordem } of itens) {
+        await client.query(
+          'UPDATE roadmap_items SET ordem = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+          [id, ordem]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  async deleteRoadmapItem(id) {
+    const r = await this.pool.query(
+      'DELETE FROM roadmap_items WHERE id = $1 RETURNING *',
+      [id]
+    );
+    if (r.rows.length === 0) throw new Error('Item do roadmap não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async iniciarTempoRoadmap(id) {
+    const r = await this.pool.query(
+      `UPDATE roadmap_items SET
+         em_andamento = TRUE,
+         ultimo_inicio = COALESCE(ultimo_inicio, CURRENT_TIMESTAMP),
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    if (r.rows.length === 0) throw new Error('Item do roadmap não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async pausarTempoRoadmap(id) {
+    const r = await this.pool.query(
+      `UPDATE roadmap_items SET
+         em_andamento = FALSE,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    if (r.rows.length === 0) throw new Error('Item do roadmap não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async pararTempoRoadmap(id, tempoDecorrido) {
+    const r = await this.pool.query(
+      `UPDATE roadmap_items SET
+         tempo_acumulado = tempo_acumulado + $2,
+         em_andamento = FALSE,
+         ultimo_inicio = NULL,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 RETURNING *`,
+      [id, parseInt(tempoDecorrido, 10) || 0]
+    );
+    if (r.rows.length === 0) throw new Error('Item do roadmap não encontrado');
+    return toCamelCase(r.rows[0]);
   }
 }
 
