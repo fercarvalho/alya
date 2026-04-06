@@ -1462,6 +1462,166 @@ class Database extends FileDatabase {
     await this.updateProjectionBase(nextBase);
     return this.syncProjectionData();
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INTEGRAÇÃO NUVEMSHOP
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getNuvemshopConfig(userId) {
+    const r = await this.pool.query(
+      'SELECT * FROM nuvemshop_config WHERE user_id = $1 AND is_active = TRUE',
+      [userId]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async getNuvemshopConfigByStoreId(storeId) {
+    const r = await this.pool.query(
+      'SELECT * FROM nuvemshop_config WHERE store_id = $1 AND is_active = TRUE',
+      [storeId]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async saveNuvemshopConfig(userId, data) {
+    const now = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO nuvemshop_config
+        (user_id, store_id, access_token, store_name, store_url, webhook_token, connected_at, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
+       ON CONFLICT (user_id) DO UPDATE SET
+        store_id = EXCLUDED.store_id,
+        access_token = EXCLUDED.access_token,
+        store_name = EXCLUDED.store_name,
+        store_url = EXCLUDED.store_url,
+        webhook_token = EXCLUDED.webhook_token,
+        connected_at = EXCLUDED.connected_at,
+        is_active = TRUE`,
+      [userId, data.storeId, data.accessToken, data.storeName, data.storeUrl, data.webhookToken, now]
+    );
+  }
+
+  async updateNuvemshopConfig(userId, fields) {
+    const sets = [];
+    const values = [userId];
+    let idx = 2;
+
+    if (fields.webhookIdOrders !== undefined) {
+      sets.push(`webhook_id_orders = $${idx++}`);
+      values.push(fields.webhookIdOrders);
+    }
+    if (fields.webhookIdProducts !== undefined) {
+      sets.push(`webhook_id_products = $${idx++}`);
+      values.push(fields.webhookIdProducts);
+    }
+    if (fields.webhookIdCustomers !== undefined) {
+      sets.push(`webhook_id_customers = $${idx++}`);
+      values.push(fields.webhookIdCustomers);
+    }
+    if (fields.lastSyncOrders !== undefined) {
+      sets.push(`last_sync_orders = $${idx++}`);
+      values.push(fields.lastSyncOrders);
+    }
+    if (fields.lastSyncProducts !== undefined) {
+      sets.push(`last_sync_products = $${idx++}`);
+      values.push(fields.lastSyncProducts);
+    }
+    if (fields.lastSyncCustomers !== undefined) {
+      sets.push(`last_sync_customers = $${idx++}`);
+      values.push(fields.lastSyncCustomers);
+    }
+
+    if (sets.length === 0) return;
+
+    await this.pool.query(
+      `UPDATE nuvemshop_config SET ${sets.join(', ')} WHERE user_id = $1`,
+      values
+    );
+  }
+
+  async deleteNuvemshopConfig(userId) {
+    await this.pool.query('DELETE FROM nuvemshop_config WHERE user_id = $1', [userId]);
+    await this.pool.query('DELETE FROM nuvemshop_sync_map WHERE user_id = $1', [userId]);
+  }
+
+  async getSyncMap(userId, resourceType, nuvemshopId) {
+    const r = await this.pool.query(
+      'SELECT * FROM nuvemshop_sync_map WHERE user_id = $1 AND resource_type = $2 AND nuvemshop_id = $3',
+      [userId, resourceType, nuvemshopId]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async saveSyncMap(userId, resourceType, nuvemshopId, localId) {
+    await this.pool.query(
+      `INSERT INTO nuvemshop_sync_map (user_id, resource_type, nuvemshop_id, local_id, synced_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (user_id, resource_type, nuvemshop_id) DO UPDATE SET
+        local_id = EXCLUDED.local_id,
+        synced_at = NOW()`,
+      [userId, resourceType, nuvemshopId, localId]
+    );
+  }
+
+  async getNuvemshopDashboardMetrics(userId, startDate, endDate) {
+    // Receitas do mês com categoria "Venda Online" (originadas da Nuvemshop)
+    const revenueResult = await this.pool.query(
+      `SELECT
+        COUNT(*) AS order_count,
+        COALESCE(SUM(value), 0) AS total_revenue,
+        COALESCE(AVG(value), 0) AS avg_ticket
+       FROM transactions
+       WHERE category = 'Venda Online'
+         AND type = 'Receita'
+         AND date BETWEEN $1 AND $2`,
+      [startDate, endDate]
+    );
+
+    // Total de saques Nuvemshop no mês
+    const withdrawalResult = await this.pool.query(
+      `SELECT COALESCE(SUM(value), 0) AS total_withdrawals
+       FROM transactions
+       WHERE category = 'Saque Nuvemshop'
+         AND type = 'Despesa'
+         AND date BETWEEN $1 AND $2`,
+      [startDate, endDate]
+    );
+
+    // Últimos 10 pedidos importados
+    const recentOrders = await this.pool.query(
+      `SELECT t.id, t.date, t.description, t.value, m.nuvemshop_id
+       FROM transactions t
+       JOIN nuvemshop_sync_map m ON m.local_id::text = t.id::text AND m.resource_type = 'order'
+       WHERE m.user_id = $1
+         AND t.category = 'Venda Online'
+       ORDER BY t.created_at DESC
+       LIMIT 10`,
+      [userId]
+    );
+
+    // Total de produtos sincronizados
+    const productCount = await this.pool.query(
+      `SELECT COUNT(*) AS count FROM nuvemshop_sync_map
+       WHERE user_id = $1 AND resource_type = 'product'`,
+      [userId]
+    );
+
+    const rev = revenueResult.rows[0];
+    const wd = withdrawalResult.rows[0];
+
+    return {
+      orderCount: parseInt(rev.order_count, 10),
+      totalRevenue: parseFloat(rev.total_revenue),
+      avgTicket: parseFloat(rev.avg_ticket),
+      totalWithdrawals: parseFloat(wd.total_withdrawals),
+      pendingBalance: parseFloat(rev.total_revenue) - parseFloat(wd.total_withdrawals),
+      recentOrders: toCamelCase(recentOrders.rows),
+      syncedProductCount: parseInt(productCount.rows[0].count, 10),
+    };
+  }
 }
 
 module.exports = Database;

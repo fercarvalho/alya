@@ -153,6 +153,14 @@ app.use(
     maxAge: 86400, // 24 horas de cache para preflight
   }),
 );
+// Nuvemshop webhook precisa de raw body para validação HMAC — registrado ANTES do express.json()
+const { createRouter: createNuvemshopRouter, handleWebhook: nuvemshopWebhookHandler } = require("./routes/nuvemshop");
+app.post(
+  "/api/nuvemshop/webhook",
+  express.raw({ type: "application/json" }),
+  nuvemshopWebhookHandler(db)
+);
+
 app.use(express.json({ limit: "10mb" })); // Limitar tamanho do payload
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -4423,6 +4431,9 @@ app.use((error, req, res, next) => {
 
   res.status(400).json({ error: error.message });
 });
+
+// Rotas da integração Nuvemshop (autenticadas)
+app.use("/api/nuvemshop", createNuvemshopRouter(db, authenticateToken));
 
 // Iniciar servidor
 app.listen(port, () => {

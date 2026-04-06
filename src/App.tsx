@@ -39,6 +39,7 @@ import {
   Award,
   Wallet,
   Sparkles,
+  ShoppingBag,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -49,6 +50,8 @@ import ImpersonationBanner from "./components/ImpersonationBanner";
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 // Lazy load Projeção (componente grande)
 const Projection = lazy(() => import("./components/Projection"));
+// Lazy load integração Nuvemshop
+const NuvemshopIntegration = lazy(() => import("./components/Nuvemshop"));
 // Lazy load páginas de segurança
 const ActiveSessions = lazy(() => import("./pages/ActiveSessions"));
 const AnomalyDashboard = lazy(() => import("./pages/admin/AnomalyDashboard"));
@@ -142,7 +145,8 @@ type TabType =
   | "dre"
   | "activeSessions"
   | "anomalies"
-  | "securityAlerts";
+  | "securityAlerts"
+  | "nuvemshop";
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -738,6 +742,16 @@ const AppContent: React.FC = () => {
     const handler = () => setActiveTab("dashboard");
     window.addEventListener("auth:impersonation-changed", handler);
     return () => window.removeEventListener("auth:impersonation-changed", handler);
+  }, []);
+
+  // Navegação interna via evento customizado (ex: componente Nuvemshop → Transações)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab: string }>).detail?.tab;
+      if (tab) setActiveTab(tab as TabType);
+    };
+    window.addEventListener("alya:navigate", handler);
+    return () => window.removeEventListener("alya:navigate", handler);
   }, []);
 
 
@@ -6577,6 +6591,12 @@ const AppContent: React.FC = () => {
                       icon: Users,
                       key: "clients",
                     },
+                    {
+                      id: "nuvemshop",
+                      name: "Nuvemshop",
+                      icon: ShoppingBag,
+                      key: "nuvemshop",
+                    },
                     { id: "dre", name: "DRE", icon: BarChart3, key: "dre" },
                     { id: "activeSessions", name: "Sessões", icon: Lock, key: "activeSessions" },
                     { id: "anomalies", name: "Anomalias", icon: Activity, key: "anomalies" },
@@ -6640,6 +6660,11 @@ const AppContent: React.FC = () => {
         {activeTab === "products" && renderProducts()}
         {activeTab === "reports" && renderReports()}
         {activeTab === "clients" && <Clients />}
+        {activeTab === "nuvemshop" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Nuvemshop...</div>}>
+            <NuvemshopIntegration />
+          </Suspense>
+        )}
         {activeTab === "dre" && <DRE />}
         {activeTab === "admin" && (
           <Suspense
