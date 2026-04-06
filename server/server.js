@@ -4390,6 +4390,59 @@ app.get(
 
 // ========== ROTAS DO ROADMAP ==========
 
+// Configurações do roadmap
+app.get('/api/admin/roadmap/config', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const config = await db.getRoadmapConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/admin/roadmap/config', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const config = await db.updateRoadmapConfig(req.body);
+    await logActivity(req.user, 'update', 'roadmap_config', config.id, req.body);
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Colunas do roadmap
+app.get('/api/admin/roadmap/colunas', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const colunas = await db.getRoadmapColunas();
+    res.json(colunas);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/roadmap/colunas', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { label, cor, corFundo } = req.body;
+    if (!label) return res.status(400).json({ error: 'Nome da coluna é obrigatório' });
+    const coluna = await db.createRoadmapColuna({ label, cor, corFundo });
+    await logActivity(req.user, 'create', 'roadmap_coluna', coluna.id, { label });
+    res.status(201).json(coluna);
+  } catch (error) {
+    console.error('[Roadmap] Erro ao criar coluna:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/admin/roadmap/colunas/ordem', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { colunas } = req.body;
+    await db.updateRoadmapColunasOrdem(colunas);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Listar todos os itens (admin + superadmin)
 app.get("/api/admin/roadmap", authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -4423,6 +4476,7 @@ app.post("/api/admin/roadmap", authenticateToken, requireSuperAdmin, async (req,
     await logActivity(req.user, "create", "roadmap", item.id, { titulo });
     res.status(201).json(item);
   } catch (error) {
+    console.error('[Roadmap] Erro ao criar item:', error);
     res.status(500).json({ error: error.message });
   }
 });

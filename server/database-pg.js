@@ -96,6 +96,76 @@ class Database extends FileDatabase {
 
   async _ensurePgDefaults() {
     try {
+      // Garantir que a tabela roadmap_items existe
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS roadmap_items (
+          id VARCHAR(255) PRIMARY KEY,
+          titulo VARCHAR(255) NOT NULL,
+          descricao TEXT,
+          status VARCHAR(50) NOT NULL DEFAULT 'backlog',
+          prioridade VARCHAR(20) DEFAULT 'media',
+          ordem INTEGER DEFAULT 0,
+          data_inicio TIMESTAMP,
+          depende_de VARCHAR(255) REFERENCES roadmap_items(id) ON DELETE SET NULL,
+          tempo_acumulado INTEGER DEFAULT 0,
+          em_andamento BOOLEAN DEFAULT FALSE,
+          ultimo_inicio TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_by VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL
+        )
+      `);
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_roadmap_status ON roadmap_items(status)`);
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_roadmap_ordem ON roadmap_items(ordem)`);
+
+      // Criar tabela de colunas
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS roadmap_colunas (
+          id VARCHAR(255) PRIMARY KEY,
+          key VARCHAR(100) UNIQUE NOT NULL,
+          label VARCHAR(255) NOT NULL,
+          cor VARCHAR(50) DEFAULT '#6b7280',
+          cor_fundo VARCHAR(50) DEFAULT '#f3f4f6',
+          ordem INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Criar tabela de configurações do roadmap
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS roadmap_config (
+          id VARCHAR(255) PRIMARY KEY,
+          coluna_concluir VARCHAR(100) DEFAULT 'lancado',
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      const cfgRes = await this.pool.query('SELECT COUNT(*) FROM roadmap_config');
+      if (parseInt(cfgRes.rows[0].count, 10) === 0) {
+        await this.pool.query(
+          'INSERT INTO roadmap_config (id, coluna_concluir) VALUES ($1, $2)',
+          [this.generateId(), 'lancado']
+        );
+      }
+
+      // Inserir colunas padrão se a tabela estiver vazia
+      const colRes = await this.pool.query('SELECT COUNT(*) FROM roadmap_colunas');
+      if (parseInt(colRes.rows[0].count, 10) === 0) {
+        const defaultCols = [
+          { key: 'backlog', label: 'Backlog',  cor: '#6b7280', cor_fundo: '#f3f4f6', ordem: 0 },
+          { key: 'doing',   label: 'Doing',    cor: '#d97706', cor_fundo: '#fef3c7', ordem: 1 },
+          { key: 'em_beta', label: 'Em Beta',  cor: '#2563eb', cor_fundo: '#dbeafe', ordem: 2 },
+          { key: 'lancado', label: 'Lançado',  cor: '#16a34a', cor_fundo: '#dcfce7', ordem: 3 },
+        ];
+        for (const col of defaultCols) {
+          const id = this.generateId();
+          await this.pool.query(
+            'INSERT INTO roadmap_colunas (id, key, label, cor, cor_fundo, ordem) VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, col.key, col.label, col.cor, col.cor_fundo, col.ordem]
+          );
+        }
+      }
+
       const userRes = await this.pool.query('SELECT COUNT(*) FROM users');
       if (parseInt(userRes.rows[0].count, 10) === 0) {
         const ph = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
@@ -1671,7 +1741,7 @@ class Database extends FileDatabase {
       `INSERT INTO roadmap_items
          (id, titulo, descricao, status, prioridade, ordem, data_inicio, depende_de, created_by, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5,
-         (SELECT COALESCE(MAX(ordem), 0) + 1 FROM roadmap_items WHERE status = $4),
+         (SELECT COALESCE(MAX(ordem), 0) + 1 FROM roadmap_items WHERE status = $4::varchar),
          $6, $7, $8, $9, $9)
        RETURNING *`,
       [id, titulo, descricao || null, status || 'backlog', prioridade || 'media',
@@ -1713,7 +1783,7 @@ class Database extends FileDatabase {
     const r = await this.pool.query(
       `UPDATE roadmap_items SET
          status = $2,
-         ordem = (SELECT COALESCE(MAX(ordem), 0) + 1 FROM roadmap_items WHERE status = $2 AND id != $1),
+         ordem = (SELECT COALESCE(MAX(ordem), 0) + 1 FROM roadmap_items WHERE status = $2::varchar AND id != $1),
          updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 RETURNING *`,
       [id, status]
@@ -1787,6 +1857,59 @@ class Database extends FileDatabase {
     );
     if (r.rows.length === 0) throw new Error('Item do roadmap não encontrado');
     return toCamelCase(r.rows[0]);
+  }
+
+  async getRoadmapConfig() {
+    const r = await this.pool.query('SELECT * FROM roadmap_config LIMIT 1');
+    if (r.rows.length === 0) return { colunaConcluir: 'lancado' };
+    return toCamelCase(r.rows[0]);
+  }
+
+  async updateRoadmapConfig(dados) {
+    const r = await this.pool.query(
+      `UPDATE roadmap_config SET coluna_concluir = $1, updated_at = CURRENT_TIMESTAMP RETURNING *`,
+      [dados.colunaConcluir || 'lancado']
+    );
+    if (r.rows.length === 0) throw new Error('Configuração não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async getRoadmapColunas() {
+    const r = await this.pool.query('SELECT * FROM roadmap_colunas ORDER BY ordem ASC, created_at ASC');
+    return r.rows.map(row => toCamelCase(row));
+  }
+
+  async createRoadmapColuna({ label, cor, corFundo }) {
+    const id = this.generateId();
+    const key = label.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'coluna';
+    const existing = await this.pool.query('SELECT COUNT(*) FROM roadmap_colunas WHERE key LIKE $1', [key + '%']);
+    const count = parseInt(existing.rows[0].count, 10);
+    const finalKey = count > 0 ? `${key}_${count + 1}` : key;
+    const maxOrdem = await this.pool.query('SELECT COALESCE(MAX(ordem), -1) + 1 AS next FROM roadmap_colunas');
+    const ordem = maxOrdem.rows[0].next;
+    const r = await this.pool.query(
+      'INSERT INTO roadmap_colunas (id, key, label, cor, cor_fundo, ordem) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [id, finalKey, label, cor || '#6b7280', corFundo || '#f3f4f6', ordem]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async updateRoadmapColunasOrdem(colunas) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const { id, ordem } of colunas) {
+        await client.query('UPDATE roadmap_colunas SET ordem = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id, ordem]);
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 }
 

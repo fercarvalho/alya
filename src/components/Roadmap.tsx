@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
   Plus, Edit2, Trash2, GripVertical, CheckCircle2,
   Clock, Rocket, FlaskConical, Code2, Archive, Map as MapIcon,
-  Calendar, ChevronLeft, ChevronRight,
+  Calendar, ChevronLeft, ChevronRight, Tag, Layers, Settings,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -25,6 +25,15 @@ interface RoadmapItem {
   createdByUsername: string | null;
 }
 
+interface Coluna {
+  id: string;
+  key: string;
+  label: string;
+  cor: string;
+  corFundo: string;
+  ordem: number;
+}
+
 type StatusKey = RoadmapItem['status'];
 type PrioridadeKey = RoadmapItem['prioridade'];
 
@@ -37,15 +46,12 @@ const STATUS_CONFIG: Record<StatusKey, { label: string; Icon: React.ElementType;
   done:      { label: 'Done',       Icon: Archive,      color: '#9ca3af', bg: '#f9fafb' },
 };
 
-const VISIBLE_STATUS_ORDER: StatusKey[] = ['backlog', 'doing', 'em_beta', 'lancado'];
-
 const PRIORIDADE_CONFIG: Record<PrioridadeKey, { label: string; color: string; bg: string }> = {
   baixa: { label: 'Baixa', color: '#16a34a', bg: '#dcfce7' },
   media: { label: 'Média', color: '#d97706', bg: '#fef3c7' },
   alta:  { label: 'Alta',  color: '#dc2626', bg: '#fee2e2' },
 };
 
-const STATUS_ORDER: StatusKey[] = ['backlog', 'doing', 'em_testes', 'em_beta', 'lancado', 'done'];
 
 // ============================================================
 // Calendário personalizado (padrão do sistema)
@@ -175,6 +181,7 @@ const CalendarPicker = ({ value, onChange }: CalendarPickerProps) => {
 interface FormProps {
   item: RoadmapItem | null;
   todasTarefas: RoadmapItem[];
+  colunas: Coluna[];
   onSave: (dados: {
     titulo: string; descricao: string; status: string;
     prioridade: string; dataInicio?: string; dependeDe?: string | null;
@@ -182,7 +189,7 @@ interface FormProps {
   onCancel: () => void;
 }
 
-const FormItemRoadmap = ({ item, todasTarefas, onSave, onCancel }: FormProps) => {
+const FormItemRoadmap = ({ item, todasTarefas, colunas, onSave, onCancel }: FormProps) => {
   const [titulo, setTitulo] = useState(item?.titulo || '');
   const [descricao, setDescricao] = useState(item?.descricao || '');
   const [status, setStatus] = useState<StatusKey>(item?.status || 'backlog');
@@ -243,8 +250,8 @@ const FormItemRoadmap = ({ item, todasTarefas, onSave, onCancel }: FormProps) =>
         <div>
           <label className={labelCls}>Status <span className="text-red-500">*</span></label>
           <select value={status} onChange={e => setStatus(e.target.value as StatusKey)} className={inputCls}>
-            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-              <option key={key} value={key}>{cfg.label}</option>
+            {colunas.map(c => (
+              <option key={c.key} value={c.key}>{c.label}</option>
             ))}
           </select>
         </div>
@@ -305,13 +312,14 @@ interface CardProps {
   onAtualizarPrioridade: (id: string, prioridade: number) => void;
   onAvancar: (id: string) => void;
   onConcluir: (id: string) => void;
+  isUltimaColuna: boolean;
 }
 
 const RoadmapCard = ({
   item, isSuperAdmin, isDragging, prioridade, totalColuna, tempoAtual,
   formatarTempo, onEdit, onDelete, onDragStart, onDragEnd,
   onIniciarTempo, onPausarTempo, onPararTempo,
-  onAtualizarPrioridade, onAvancar, onConcluir,
+  onAtualizarPrioridade, onAvancar, onConcluir, isUltimaColuna,
 }: CardProps) => {
   const [prioridadeEditando, setPrioridadeEditando] = useState(prioridade.toString());
   useEffect(() => setPrioridadeEditando(prioridade.toString()), [prioridade]);
@@ -421,11 +429,11 @@ const RoadmapCard = ({
               ▶ Start
             </button>
           )}
-          <button onClick={() => onAvancar(item.id)} disabled={item.status === 'done'}
+          <button onClick={() => onAvancar(item.id)} disabled={isUltimaColuna}
             className="flex-1 text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed">
             ➡ Avançar
           </button>
-          <button onClick={() => onConcluir(item.id)} disabled={item.status === 'done'}
+          <button onClick={() => onConcluir(item.id)} disabled={isUltimaColuna && !item.emAndamento}
             className="flex-1 text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed">
             ✓ Concluir
           </button>
@@ -494,6 +502,116 @@ const InlineModal = ({ title, onClose, children }: ModalProps) => {
 };
 
 // ============================================================
+// Paleta e form de nova coluna
+// ============================================================
+const PALETTE = [
+  { cor: '#6b7280', bg: '#f3f4f6' },
+  { cor: '#d97706', bg: '#fef3c7' },
+  { cor: '#2563eb', bg: '#dbeafe' },
+  { cor: '#16a34a', bg: '#dcfce7' },
+  { cor: '#7c3aed', bg: '#ede9fe' },
+  { cor: '#0e7490', bg: '#cffafe' },
+  { cor: '#be185d', bg: '#fce7f3' },
+  { cor: '#dc2626', bg: '#fee2e2' },
+];
+
+interface FormNovaColunaProps {
+  onSave: (label: string, cor: string, corFundo: string) => void;
+  onCancel: () => void;
+}
+
+const FormNovaColuna = ({ onSave, onCancel }: FormNovaColunaProps) => {
+  const [label, setLabel] = useState('');
+  const [selectedPalette, setSelectedPalette] = useState(0);
+  const inputCls = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm';
+  const labelCls = 'block text-sm font-semibold text-gray-700 mb-2';
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!label.trim()) { alert('Nome da coluna é obrigatório'); return; }
+    onSave(label.trim(), PALETTE[selectedPalette].cor, PALETTE[selectedPalette].bg);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className={labelCls}>Nome da coluna <span className="text-red-500">*</span></label>
+        <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+          placeholder="Ex: Em Revisão, QA, Deploy..."
+          className={inputCls} autoFocus />
+      </div>
+      <div>
+        <label className={labelCls}>Cor</label>
+        <div className="flex gap-2 flex-wrap">
+          {PALETTE.map((p, i) => (
+            <button key={i} type="button" onClick={() => setSelectedPalette(i)}
+              className={`w-8 h-8 rounded-full border-2 transition-all ${selectedPalette === i ? 'border-gray-800 scale-110 shadow-md' : 'border-transparent'}`}
+              style={{ backgroundColor: p.bg, outline: selectedPalette === i ? `2px solid ${p.cor}` : 'none', outlineOffset: '2px' }}
+            />
+          ))}
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-xs px-3 py-1 rounded-full font-semibold"
+            style={{ color: PALETTE[selectedPalette].cor, backgroundColor: PALETTE[selectedPalette].bg }}>
+            Prévia da cor
+          </span>
+        </div>
+      </div>
+      <div className="flex gap-3 pt-2">
+        <button type="button" onClick={onCancel}
+          className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition-all text-sm">
+          Cancelar
+        </button>
+        <button type="submit"
+          className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-400 hover:from-amber-600 hover:to-orange-500 text-white font-semibold rounded-xl transition-all shadow-md text-sm">
+          Criar Coluna
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// ============================================================
+// Formulário de configurações
+// ============================================================
+interface FormConfiguracoesProps {
+  colunas: Coluna[];
+  colunaConcluir: string;
+  onSave: (colunaConcluir: string) => void;
+  onCancel: () => void;
+}
+
+const FormConfiguracoes = ({ colunas, colunaConcluir, onSave, onCancel }: FormConfiguracoesProps) => {
+  const [selected, setSelected] = useState(colunaConcluir);
+  const inputCls = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm';
+  const labelCls = 'block text-sm font-semibold text-gray-700 mb-2';
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className={labelCls}>Coluna de destino do botão "Concluir"</label>
+        <p className="text-xs text-gray-500 mb-3">Ao clicar em Concluir, a tarefa será movida para esta coluna.</p>
+        <select value={selected} onChange={e => setSelected(e.target.value)} className={inputCls}>
+          {colunas.map(col => (
+            <option key={col.key} value={col.key}>{col.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex gap-3 pt-2">
+        <button type="button" onClick={onCancel}
+          className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition-all text-sm">
+          Cancelar
+        </button>
+        <button type="button" onClick={() => onSave(selected)}
+          className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-400 hover:from-amber-600 hover:to-orange-500 text-white font-semibold rounded-xl transition-all shadow-md text-sm">
+          Salvar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // Componente principal Roadmap
 // ============================================================
 const Roadmap = () => {
@@ -501,17 +619,25 @@ const Roadmap = () => {
   const isSuperAdmin = user?.role === 'superadmin';
 
   const [itens, setItens] = useState<RoadmapItem[]>([]);
+  const [colunas, setColunas] = useState<Coluna[]>([]);
+  const [colunaConcluir, setColunaConcluir] = useState('lancado');
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showNovaColuna, setShowNovaColuna] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
   const [itemEditando, setItemEditando] = useState<RoadmapItem | null>(null);
   const [draggedItem, setDraggedItem] = useState<RoadmapItem | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColHeader, setDragOverColHeader] = useState<string | null>(null);
   const [temposAtuais, setTemposAtuais] = useState<Record<string, number>>({});
   const timersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const itensRef = useRef<RoadmapItem[]>([]);
 
   useEffect(() => {
     carregarRoadmap();
+    carregarColunas();
+    carregarConfig();
     return () => {
       Object.values(timersRef.current).forEach(t => clearInterval(t));
       timersRef.current = {};
@@ -551,6 +677,24 @@ const Roadmap = () => {
     });
   }, [itens]);
 
+  const carregarConfig = async () => {
+    try {
+      const { data } = await axios.get('/api/admin/roadmap/config');
+      setColunaConcluir(data.colunaConcluir || 'lancado');
+    } catch (e) {
+      console.error('Erro ao carregar config:', e);
+    }
+  };
+
+  const carregarColunas = async () => {
+    try {
+      const { data } = await axios.get('/api/admin/roadmap/colunas');
+      setColunas(data);
+    } catch (e) {
+      console.error('Erro ao carregar colunas:', e);
+    }
+  };
+
   const carregarRoadmap = async () => {
     setLoading(true);
     try {
@@ -578,6 +722,23 @@ const Roadmap = () => {
 
   const getItensPorStatus = (status: string) =>
     itens.filter(i => i.status === status).sort((a, b) => a.ordem - b.ordem);
+
+  const dynamicStatusConfig = useMemo(() => {
+    const iconMap: Record<string, React.ElementType> = {
+      backlog: Code2, doing: Clock, em_testes: FlaskConical,
+      em_beta: Rocket, lancado: CheckCircle2, done: Archive,
+    };
+    const result: Record<string, { label: string; Icon: React.ElementType; color: string; bg: string }> = {};
+    colunas.forEach(col => {
+      result[col.key] = {
+        label: col.label,
+        Icon: iconMap[col.key] || Tag,
+        color: col.cor,
+        bg: col.corFundo,
+      };
+    });
+    return result;
+  }, [colunas]);
 
   const calcularPrioridade = (item: RoadmapItem) => {
     const col = getItensPorStatus(item.status);
@@ -632,9 +793,13 @@ const Roadmap = () => {
     try {
       const item = itens.find(i => i.id === id);
       if (!item) return;
+      const wasStop = !item.ultimoInicio;
       const { data } = await axios.post(`/api/admin/roadmap/${id}/iniciar-tempo`);
       const ultimoInicio = data?.ultimoInicio || item.ultimoInicio || new Date().toISOString();
-      setItens(prev => prev.map(i => i.id === id ? { ...i, emAndamento: true, ultimoInicio } : i));
+      setItens(prev => prev.map(i => i.id === id ? {
+        ...i, emAndamento: true, ultimoInicio,
+        ...(wasStop ? { tempoAcumulado: 0 } : {}),
+      } : i));
       const decorrido = Math.floor((Date.now() - new Date(ultimoInicio).getTime()) / 1000);
       setTemposAtuais(prev => ({ ...prev, [id]: decorrido }));
       if (!timersRef.current[id]) {
@@ -657,7 +822,11 @@ const Roadmap = () => {
   const handlePausarTempo = async (id: string) => {
     try {
       if (timersRef.current[id]) { clearInterval(timersRef.current[id]); delete timersRef.current[id]; }
-      setTemposAtuais(prev => { const n = { ...prev }; delete n[id]; return n; });
+      const item = itens.find(i => i.id === id);
+      const elapsed = item?.ultimoInicio
+        ? Math.floor((Date.now() - new Date(item.ultimoInicio).getTime()) / 1000)
+        : (temposAtuais[id] || 0);
+      setTemposAtuais(prev => ({ ...prev, [id]: elapsed }));
       await axios.post(`/api/admin/roadmap/${id}/pausar-tempo`);
       setItens(prev => prev.map(i => i.id === id ? { ...i, emAndamento: false } : i));
     } catch (e) {
@@ -686,8 +855,8 @@ const Roadmap = () => {
   };
 
   // --- Avançar / Concluir ---
-  const mudarStatus = async (id: string, novoStatus: StatusKey) => {
-    setItens(prev => prev.map(i => i.id === id ? { ...i, status: novoStatus } : i));
+  const mudarStatus = async (id: string, novoStatus: string) => {
+    setItens(prev => prev.map(i => i.id === id ? { ...i, status: novoStatus as StatusKey } : i));
     try {
       await axios.put(`/api/admin/roadmap/${id}/status`, { status: novoStatus });
     } catch (e) {
@@ -698,15 +867,28 @@ const Roadmap = () => {
   const handleAvancar = (id: string) => {
     const item = itens.find(i => i.id === id);
     if (!item) return;
-    const idx = STATUS_ORDER.indexOf(item.status);
-    if (idx === -1 || idx === STATUS_ORDER.length - 1) { alert('A tarefa já está na última coluna'); return; }
-    mudarStatus(id, STATUS_ORDER[idx + 1]);
+    const order = colunas.map(c => c.key);
+    const idx = order.indexOf(item.status);
+    if (idx === -1 || idx === order.length - 1) { alert('A tarefa já está na última coluna'); return; }
+    mudarStatus(id, order[idx + 1]);
   };
 
-  const handleConcluir = (id: string) => {
+  const handleConcluir = async (id: string) => {
     const item = itens.find(i => i.id === id);
-    if (!item || item.status === 'done') return;
-    mudarStatus(id, 'done');
+    if (!item) return;
+    if (item.emAndamento) await handlePararTempo(id);
+    if (item.status !== colunaConcluir) mudarStatus(id, colunaConcluir);
+  };
+
+  const handleSalvarConfig = async (novaColunaConcluir: string) => {
+    try {
+      await axios.put('/api/admin/roadmap/config', { colunaConcluir: novaColunaConcluir });
+      setColunaConcluir(novaColunaConcluir);
+      setShowConfig(false);
+    } catch (e) {
+      console.error('Erro ao salvar configuração:', e);
+      alert('Erro ao salvar configuração');
+    }
   };
 
   // --- Prioridade ---
@@ -787,6 +969,42 @@ const Roadmap = () => {
     }
   };
 
+  const handleColumnDragStart = (e: React.DragEvent, colKey: string) => {
+    setDraggedColumn(colKey);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('column-key', colKey);
+    e.stopPropagation();
+  };
+
+  const handleColumnDrop = async (e: React.DragEvent, targetKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverColHeader(null);
+    if (!draggedColumn || draggedColumn === targetKey) { setDraggedColumn(null); return; }
+    const newOrder = [...colunas];
+    const fromIdx = newOrder.findIndex(c => c.key === draggedColumn);
+    const toIdx = newOrder.findIndex(c => c.key === targetKey);
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
+    const ordered = newOrder.map((c, i) => ({ ...c, ordem: i }));
+    setColunas(ordered);
+    setDraggedColumn(null);
+    try {
+      await axios.put('/api/admin/roadmap/colunas/ordem', { colunas: ordered.map(c => ({ id: c.id, ordem: c.ordem })) });
+    } catch { await carregarColunas(); }
+  };
+
+  const handleNovaColunaSubmit = async (label: string, cor: string, corFundo: string) => {
+    try {
+      await axios.post('/api/admin/roadmap/colunas', { label, cor, corFundo });
+      setShowNovaColuna(false);
+      await carregarColunas();
+    } catch (e) {
+      console.error('Erro ao criar coluna:', e);
+      alert('Erro ao criar coluna');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -803,12 +1021,24 @@ const Roadmap = () => {
           </div>
         </div>
         {isSuperAdmin && (
-          <button
-            onClick={() => { setItemEditando(null); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 text-white text-sm font-semibold hover:from-amber-600 hover:to-orange-500 transition-all shadow-md">
-            <Plus size={15} />
-            Novo Item
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowConfig(true)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/80 border border-amber-200 text-amber-700 text-sm font-semibold hover:bg-amber-50 transition-all shadow-sm"
+              title="Configurações do Roadmap">
+              <Settings size={15} />
+            </button>
+            <button onClick={() => setShowNovaColuna(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/80 border border-amber-200 text-amber-700 text-sm font-semibold hover:bg-amber-50 transition-all shadow-sm">
+              <Layers size={15} />
+              Nova Coluna
+            </button>
+            <button
+              onClick={() => { setItemEditando(null); setShowModal(true); }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 text-white text-sm font-semibold hover:from-amber-600 hover:to-orange-500 transition-all shadow-md">
+              <Plus size={15} />
+              Nova Tarefa
+            </button>
+          </div>
         )}
       </div>
 
@@ -817,61 +1047,80 @@ const Roadmap = () => {
         <div className="flex items-center justify-center flex-1 text-gray-400 text-sm">Carregando...</div>
       ) : (
         <div className="flex-1 p-4 overflow-auto">
-          <div className="grid gap-4 h-full" style={{ gridTemplateColumns: `repeat(${VISIBLE_STATUS_ORDER.length}, minmax(0, 1fr))` }}>
-            {VISIBLE_STATUS_ORDER.map(status => {
-              const cfg = STATUS_CONFIG[status];
+          {(() => {
+            const statusKeys = new Set(colunas.map(c => c.key));
+            const itensOrfaos = itens.filter(i => !statusKeys.has(i.status));
+            const totalCols = colunas.length + (itensOrfaos.length > 0 ? 1 : 0);
+            return (
+          <div className="grid gap-4 h-full" style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}>
+            {colunas.map(coluna => {
+              const cfg = dynamicStatusConfig[coluna.key] || { label: coluna.label, Icon: Tag, color: coluna.cor, bg: coluna.corFundo };
               const { Icon } = cfg;
-              const col = getItensPorStatus(status);
-              const isOver = dragOverColumn === status;
+              const col = getItensPorStatus(coluna.key);
+              const isOver = dragOverColumn === coluna.key && !draggedColumn;
+              const isColDragOver = dragOverColHeader === coluna.key && draggedColumn;
 
               return (
                 <div
-                  key={status}
+                  key={coluna.key}
                   className={`flex flex-col rounded-2xl border-2 transition-all min-h-0
-                    ${isOver
-                      ? 'border-amber-400 bg-amber-50/80 shadow-lg shadow-amber-100'
+                    ${isOver ? 'border-amber-400 bg-amber-50/80 shadow-lg shadow-amber-100'
+                      : isColDragOver ? 'border-gray-400 bg-gray-50/80'
                       : 'border-gray-200/60 bg-white/60 shadow-sm'}`}
-                  onDragOver={isSuperAdmin ? e => handleDragOver(e, status) : undefined}
-                  onDragLeave={isSuperAdmin ? () => setDragOverColumn(null) : undefined}
-                  onDrop={isSuperAdmin ? e => {
-                    const colEl = e.currentTarget.querySelector('[data-col-content]');
-                    let targetIndex: number | undefined;
-                    if (colEl && draggedItem) {
-                      const cards = Array.from(colEl.querySelectorAll('[data-card]'));
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const my = e.clientY - rect.top;
-                      for (let i = 0; i < cards.length; i++) {
-                        const cr = cards[i].getBoundingClientRect();
-                        if (my < cr.top - rect.top + cr.height / 2) { targetIndex = i; break; }
-                      }
-                      if (targetIndex === undefined) targetIndex = cards.length;
+                  onDragOver={isSuperAdmin ? e => {
+                    e.preventDefault();
+                    if (draggedColumn) {
+                      setDragOverColHeader(coluna.key);
+                    } else {
+                      handleDragOver(e, coluna.key);
                     }
-                    handleDrop(e, status, targetIndex);
+                  } : undefined}
+                  onDragLeave={isSuperAdmin ? () => {
+                    setDragOverColumn(null);
+                    setDragOverColHeader(null);
+                  } : undefined}
+                  onDrop={isSuperAdmin ? e => {
+                    if (draggedColumn) {
+                      handleColumnDrop(e, coluna.key);
+                    } else {
+                      const colEl = e.currentTarget.querySelector('[data-col-content]');
+                      let targetIndex: number | undefined;
+                      if (colEl && draggedItem) {
+                        const cards = Array.from(colEl.querySelectorAll('[data-card]'));
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const my = e.clientY - rect.top;
+                        for (let i = 0; i < cards.length; i++) {
+                          const cr = cards[i].getBoundingClientRect();
+                          if (my < cr.top - rect.top + cr.height / 2) { targetIndex = i; break; }
+                        }
+                        if (targetIndex === undefined) targetIndex = cards.length;
+                      }
+                      handleDrop(e, coluna.key, targetIndex);
+                    }
                   } : undefined}
                 >
                   {/* Header da coluna */}
                   <div
-                    className="flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b ${isSuperAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     style={{ backgroundColor: cfg.bg + 'cc', borderColor: cfg.color + '30' }}
+                    draggable={isSuperAdmin}
+                    onDragStart={isSuperAdmin ? e => handleColumnDragStart(e, coluna.key) : undefined}
+                    onDragEnd={isSuperAdmin ? () => { setDraggedColumn(null); setDragOverColHeader(null); } : undefined}
                   >
+                    {isSuperAdmin && <GripVertical size={12} style={{ color: cfg.color, opacity: 0.6 }} className="flex-shrink-0" />}
                     <div className="p-1.5 rounded-lg bg-white/70 shadow-sm">
                       <Icon size={14} style={{ color: cfg.color }} />
                     </div>
                     <span className="text-sm font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
-                    <span
-                      className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-white/80 shadow-sm"
-                      style={{ color: cfg.color }}
-                    >
+                    <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-white/80 shadow-sm"
+                      style={{ color: cfg.color }}>
                       {col.length}
                     </span>
                   </div>
 
                   {/* Itens */}
-                  <div
-                    data-col-content
-                    className="flex flex-col gap-2 p-3 overflow-y-auto flex-1"
-                    style={{ maxHeight: 'calc(100vh - 260px)' }}
-                  >
+                  <div data-col-content className="flex flex-col gap-2 p-3 overflow-y-auto flex-1"
+                    style={{ maxHeight: 'calc(100vh - 260px)' }}>
                     {col.map(item => (
                       <div key={item.id} data-card>
                         <RoadmapCard
@@ -882,6 +1131,7 @@ const Roadmap = () => {
                           totalColuna={col.length}
                           tempoAtual={temposAtuais[item.id]}
                           formatarTempo={formatarTempo}
+                          isUltimaColuna={coluna.key === colunas[colunas.length - 1]?.key}
                           onEdit={i => { setItemEditando(i); setShowModal(true); }}
                           onDelete={handleDeletar}
                           onDragStart={handleDragStart}
@@ -902,8 +1152,62 @@ const Roadmap = () => {
                 </div>
               );
             })}
+            {/* Coluna catch-all para tarefas com status sem coluna correspondente */}
+            {itensOrfaos.length > 0 && (
+              <div className="flex flex-col rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/60 shadow-sm min-h-0">
+                <div className="flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b border-gray-200 bg-gray-100/80">
+                  <div className="p-1.5 rounded-lg bg-white/70 shadow-sm">
+                    <Tag size={14} className="text-gray-500" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-500">Outros</span>
+                  <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-white/80 shadow-sm text-gray-500">
+                    {itensOrfaos.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2 p-3 overflow-y-auto flex-1" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+                  {itensOrfaos.map(item => (
+                    <div key={item.id} data-card>
+                      <RoadmapCard
+                        item={item}
+                        isSuperAdmin={isSuperAdmin}
+                        isDragging={draggedItem?.id === item.id}
+                        prioridade={calcularPrioridade(item)}
+                        totalColuna={itensOrfaos.length}
+                        tempoAtual={temposAtuais[item.id]}
+                        formatarTempo={formatarTempo}
+                        isUltimaColuna={false}
+                        onEdit={i => { setItemEditando(i); setShowModal(true); }}
+                        onDelete={handleDeletar}
+                        onDragStart={handleDragStart}
+                        onDragEnd={() => { setDraggedItem(null); setDragOverColumn(null); }}
+                        onIniciarTempo={handleIniciarTempo}
+                        onPausarTempo={handlePausarTempo}
+                        onPararTempo={handlePararTempo}
+                        onAtualizarPrioridade={handleAtualizarPrioridade}
+                        onAvancar={handleAvancar}
+                        onConcluir={handleConcluir}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+            );
+          })()}
         </div>
+      )}
+
+      {/* Modal de configurações */}
+      {showConfig && (
+        <InlineModal title="Configurações do Roadmap" onClose={() => setShowConfig(false)}>
+          <FormConfiguracoes
+            colunas={colunas}
+            colunaConcluir={colunaConcluir}
+            onSave={handleSalvarConfig}
+            onCancel={() => setShowConfig(false)}
+          />
+        </InlineModal>
       )}
 
       {/* Modal de formulário */}
@@ -915,8 +1219,22 @@ const Roadmap = () => {
           <FormItemRoadmap
             item={itemEditando}
             todasTarefas={itens}
+            colunas={colunas}
             onSave={handleSalvar}
             onCancel={() => { setShowModal(false); setItemEditando(null); }}
+          />
+        </InlineModal>
+      )}
+
+      {/* Modal de nova coluna */}
+      {showNovaColuna && (
+        <InlineModal
+          title="Nova Coluna"
+          onClose={() => setShowNovaColuna(false)}
+        >
+          <FormNovaColuna
+            onSave={handleNovaColunaSubmit}
+            onCancel={() => setShowNovaColuna(false)}
           />
         </InlineModal>
       )}
