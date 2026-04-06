@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Vite)",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["node_modules/.bin/vite"],
+      "port": 8000
+    },
+    {
+      "name": "Backend (Node.js API)",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["server/server.js"],
+      "port": 8001
+    }
+  ]
+}
