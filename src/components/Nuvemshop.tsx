@@ -270,7 +270,7 @@ const NuvemshopIntegration: React.FC = () => {
                 {connecting ? 'Conectando...' : 'Conectar loja'}
               </button>
               <a
-                href="https://www.nuvemshop.com.br/aplicativos"
+                href="https://dev.nuvemshop.com.br/docs/developer-tools/nuvemshop-api"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
