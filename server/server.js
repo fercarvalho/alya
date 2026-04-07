@@ -4829,6 +4829,123 @@ app.delete('/api/admin/faq/:id', authenticateToken, requireAdmin, async (req, re
 app.use("/api/nuvemshop", createNuvemshopRouter(db, authenticateToken));
 
 // ============================================================
+// DOCUMENTAÇÃO
+// ============================================================
+
+// GET /api/documentation — público (todos os usuários autenticados)
+app.get('/api/documentation', authenticateToken, async (req, res) => {
+  try {
+    const data = await db.obterDocumentacao();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/documentation/sections — criar seção
+app.post('/api/admin/documentation/sections', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Título é obrigatório' });
+    }
+    const section = await db.criarDocSection({ title: title.trim() });
+    await logActivity(req.user, 'create', 'DocSection', section.id, { title: section.title });
+    res.status(201).json({ success: true, data: section });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/documentation/sections/reorder — reordenar seções (deve vir ANTES de :id)
+app.put('/api/admin/documentation/sections/reorder', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ success: false, error: 'ids deve ser array' });
+    await db.reordenarDocSections(ids);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/documentation/sections/:id — atualizar seção
+app.put('/api/admin/documentation/sections/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Título é obrigatório' });
+    }
+    const section = await db.atualizarDocSection(req.params.id, { title: title.trim() });
+    await logActivity(req.user, 'update', 'DocSection', req.params.id, { title });
+    res.json({ success: true, data: section });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/admin/documentation/sections/:id — deletar seção (e suas páginas)
+app.delete('/api/admin/documentation/sections/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const section = await db.deletarDocSection(req.params.id);
+    await logActivity(req.user, 'delete', 'DocSection', req.params.id, { title: section.title });
+    res.json({ success: true, data: section });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/documentation/sections/:sectionId/pages — criar página
+app.post('/api/admin/documentation/sections/:sectionId/pages', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Título é obrigatório' });
+    }
+    const page = await db.criarDocPage(req.params.sectionId, { title: title.trim(), content: content || '' });
+    await logActivity(req.user, 'create', 'DocPage', page.id, { title: page.title });
+    res.status(201).json({ success: true, data: page });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/documentation/pages/reorder — reordenar páginas (deve vir ANTES de :id)
+app.put('/api/admin/documentation/pages/reorder', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ success: false, error: 'ids deve ser array' });
+    await db.reordenarDocPages(ids);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/documentation/pages/:id — atualizar página
+app.put('/api/admin/documentation/pages/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    const page = await db.atualizarDocPage(req.params.id, { title, content });
+    await logActivity(req.user, 'update', 'DocPage', req.params.id, { title: page.title });
+    res.json({ success: true, data: page });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/admin/documentation/pages/:id — deletar página
+app.delete('/api/admin/documentation/pages/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const page = await db.deletarDocPage(req.params.id);
+    await logActivity(req.user, 'delete', 'DocPage', req.params.id, { title: page.title });
+    res.json({ success: true, data: page });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================
 // FEEDBACK
 // ============================================================
 

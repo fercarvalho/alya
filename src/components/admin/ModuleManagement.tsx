@@ -183,7 +183,7 @@ const ModuleManagement: React.FC = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ids: reordered.map(m => m.id) }),
+        body: JSON.stringify({ ids: reordered.map((m: SystemModule) => m.id) }),
       });
       loadModules();
     } catch (error) {

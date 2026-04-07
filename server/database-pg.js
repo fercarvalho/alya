@@ -96,6 +96,41 @@ class Database extends FileDatabase {
 
   async _ensurePgDefaults() {
     try {
+      // Garantir que as tabelas de documentação existem
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS doc_sections (
+          id VARCHAR(255) PRIMARY KEY,
+          title VARCHAR(500) NOT NULL,
+          ordem INTEGER DEFAULT 0,
+          created_at TIMESTAMP,
+          updated_at TIMESTAMP
+        )
+      `);
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS doc_pages (
+          id VARCHAR(255) PRIMARY KEY,
+          section_id VARCHAR(255) NOT NULL REFERENCES doc_sections(id) ON DELETE CASCADE,
+          title VARCHAR(500) NOT NULL,
+          content TEXT DEFAULT '',
+          ordem INTEGER DEFAULT 0,
+          created_at TIMESTAMP,
+          updated_at TIMESTAMP
+        )
+      `);
+
+      // Garantir que o módulo documentacao está registrado
+      const modDocRes = await this.pool.query(
+        `SELECT id FROM modules WHERE key = 'documentacao' LIMIT 1`
+      );
+      if (modDocRes.rows.length === 0) {
+        const modId = this.generateId();
+        await this.pool.query(
+          `INSERT INTO modules (id, name, key, icon, is_active, is_system) VALUES ($1, $2, $3, $4, true, true)`,
+          [modId, 'Documentação', 'documentacao', 'BookOpen']
+        );
+        console.log('Módulo Documentação criado no PostgreSQL.');
+      }
+
       // Garantir que a tabela roadmap_items existe
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS roadmap_items (
@@ -2093,6 +2128,117 @@ class Database extends FileDatabase {
     );
     if (r.rows.length === 0) throw new Error('Feedback não encontrado');
     return toCamelCase(r.rows[0]);
+  }
+
+  // ========== DOCUMENTAÇÃO ==========
+
+  async obterDocumentacao() {
+    const sectionsRes = await this.pool.query(
+      `SELECT * FROM doc_sections ORDER BY ordem ASC, created_at ASC`
+    );
+    const pagesRes = await this.pool.query(
+      `SELECT * FROM doc_pages ORDER BY ordem ASC, created_at ASC`
+    );
+    const pages = pagesRes.rows.map(r => toCamelCase(r));
+    return sectionsRes.rows.map(row => {
+      const section = toCamelCase(row);
+      section.pages = pages.filter(p => p.sectionId === section.id);
+      return section;
+    });
+  }
+
+  async criarDocSection({ title }) {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+    const ordemRes = await this.pool.query(
+      `SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM doc_sections`
+    );
+    const ordem = ordemRes.rows[0].prox;
+    const r = await this.pool.query(
+      `INSERT INTO doc_sections (id, title, ordem, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $4) RETURNING *`,
+      [id, title, ordem, now]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarDocSection(id, { title }) {
+    const now = new Date().toISOString();
+    const r = await this.pool.query(
+      `UPDATE doc_sections SET title = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
+      [title, now, id]
+    );
+    if (r.rows.length === 0) throw new Error('Seção não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async deletarDocSection(id) {
+    await this.pool.query(`DELETE FROM doc_pages WHERE section_id = $1`, [id]);
+    const r = await this.pool.query(
+      `DELETE FROM doc_sections WHERE id = $1 RETURNING *`, [id]
+    );
+    if (r.rows.length === 0) throw new Error('Seção não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async criarDocPage(sectionId, { title, content }) {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+    const ordemRes = await this.pool.query(
+      `SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM doc_pages WHERE section_id = $1`,
+      [sectionId]
+    );
+    const ordem = ordemRes.rows[0].prox;
+    const r = await this.pool.query(
+      `INSERT INTO doc_pages (id, section_id, title, content, ordem, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING *`,
+      [id, sectionId, title, content || '', ordem, now]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarDocPage(id, { title, content }) {
+    const now = new Date().toISOString();
+    const fields = [];
+    const values = [id];
+    if (title !== undefined) { values.push(title); fields.push(`title = $${values.length}`); }
+    if (content !== undefined) { values.push(content); fields.push(`content = $${values.length}`); }
+    values.push(now);
+    fields.push(`updated_at = $${values.length}`);
+    const r = await this.pool.query(
+      `UPDATE doc_pages SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+    if (r.rows.length === 0) throw new Error('Página não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async deletarDocPage(id) {
+    const r = await this.pool.query(
+      `DELETE FROM doc_pages WHERE id = $1 RETURNING *`, [id]
+    );
+    if (r.rows.length === 0) throw new Error('Página não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async reordenarDocSections(ids) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < ids.length; i++) {
+      await this.pool.query(
+        `UPDATE doc_sections SET ordem = $1, updated_at = $2 WHERE id = $3`,
+        [i, now, ids[i]]
+      );
+    }
+  }
+
+  async reordenarDocPages(ids) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < ids.length; i++) {
+      await this.pool.query(
+        `UPDATE doc_pages SET ordem = $1, updated_at = $2 WHERE id = $3`,
+        [i, now, ids[i]]
+      );
+    }
   }
 }
 

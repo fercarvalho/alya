@@ -25,12 +25,14 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.263.1",
+    "marked": "^18.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-easy-crop": "^5.0.4",
     "recharts": "^3.2.1"
   },
   "devDependencies": {
+    "@types/marked": "^5.0.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
