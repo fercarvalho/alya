@@ -4559,6 +4559,11 @@ app.post("/api/admin/roadmap/:id/parar-tempo", authenticateToken, requireSuperAd
   }
 });
 
+// ─── Diagrama de Sequência ───────────────────────────────────────────────────
+app.get("/api/sequence-diagram", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "sequence-diagram.html"));
+});
+
 // ─── Política de Privacidade ─────────────────────────────────────────────────
 app.get("/api/privacy-policy", (req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
