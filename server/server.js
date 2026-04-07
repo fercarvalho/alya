@@ -4561,6 +4561,18 @@ app.post("/api/admin/roadmap/:id/parar-tempo", authenticateToken, requireSuperAd
 
 // ─── Diagrama de Sequência ───────────────────────────────────────────────────
 app.get("/api/sequence-diagram", (req, res) => {
+  // Sobrescreve CSP para permitir Mermaid.js do CDN e eval (necessário para renderização)
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+    ].join("; ")
+  );
   res.sendFile(path.join(__dirname, "public", "sequence-diagram.html"));
 });
 
