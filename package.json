@@ -29,7 +29,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-easy-crop": "^5.0.4",
-    "recharts": "^3.2.1"
+    "recharts": "^3.2.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/marked": "^5.0.2",
