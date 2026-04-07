@@ -170,9 +170,9 @@ class Database extends FileDatabase {
       if (parseInt(userRes.rows[0].count, 10) === 0) {
         const ph = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
         const defaults = [
-          ['admin', ph, 'superadmin', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin', 'activeSessions', 'anomalies', 'securityAlerts', 'roadmap']],
-          ['user', ph, 'user', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre']],
-          ['guest', ph, 'guest', ['dashboard', 'metas', 'reports', 'dre']],
+          ['admin', ph, 'superadmin', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin', 'activeSessions', 'anomalies', 'securityAlerts', 'roadmap', 'faq']],
+          ['user', ph, 'user', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'faq']],
+          ['guest', ph, 'guest', ['dashboard', 'metas', 'reports', 'dre', 'faq']],
         ];
         for (const [username, password, role, modules] of defaults) {
           const id = this.generateId();
@@ -199,6 +199,7 @@ class Database extends FileDatabase {
           ['Anomalias', 'anomalies', 'Activity'],
           ['Alertas de Segurança', 'securityAlerts', 'Bell'],
           ['Roadmap', 'roadmap', 'Map'],
+          ['FAQ', 'faq', 'HelpCircle'],
         ];
         for (const [name, key, icon] of mods) {
           const id = this.generateId();
@@ -1948,6 +1949,83 @@ class Database extends FileDatabase {
       throw e;
     } finally {
       client.release();
+    }
+  }
+
+  // ========== FAQ ==========
+
+  async obterFAQ() {
+    try {
+      const r = await this.pool.query(
+        `SELECT * FROM faq WHERE ativo = true ORDER BY ordem ASC, created_at ASC`
+      );
+      return r.rows.map(row => toCamelCase(row));
+    } catch (e) {
+      console.error('Erro ao buscar FAQ:', e);
+      return [];
+    }
+  }
+
+  async obterFAQAdmin() {
+    try {
+      const r = await this.pool.query(
+        `SELECT * FROM faq ORDER BY ordem ASC, created_at ASC`
+      );
+      return r.rows.map(row => toCamelCase(row));
+    } catch (e) {
+      console.error('Erro ao buscar FAQ (admin):', e);
+      return [];
+    }
+  }
+
+  async criarFAQ({ pergunta, resposta }) {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+    const ordemRes = await this.pool.query(
+      'SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM faq'
+    );
+    const ordem = ordemRes.rows[0].prox;
+    const r = await this.pool.query(
+      `INSERT INTO faq (id, pergunta, resposta, ativo, ordem, created_at, updated_at)
+       VALUES ($1, $2, $3, true, $4, $5, $5) RETURNING *`,
+      [id, pergunta, resposta, ordem, now]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarFAQ(id, { pergunta, resposta, ativo }) {
+    const fields = [];
+    const values = [id];
+    let i = 2;
+    if (pergunta !== undefined) { fields.push(`pergunta = $${i++}`); values.push(pergunta); }
+    if (resposta !== undefined) { fields.push(`resposta = $${i++}`); values.push(resposta); }
+    if (ativo !== undefined)    { fields.push(`ativo = $${i++}`);    values.push(ativo); }
+    fields.push(`updated_at = $${i++}`);
+    values.push(new Date().toISOString());
+    const r = await this.pool.query(
+      `UPDATE faq SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+    if (r.rows.length === 0) throw new Error('Item FAQ não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async deletarFAQ(id) {
+    const r = await this.pool.query(
+      'DELETE FROM faq WHERE id = $1 RETURNING *',
+      [id]
+    );
+    if (r.rows.length === 0) throw new Error('Item FAQ não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarOrdemFAQ(faqIds) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < faqIds.length; i++) {
+      await this.pool.query(
+        'UPDATE faq SET ordem = $1, updated_at = $2 WHERE id = $3',
+        [i, now, faqIds[i]]
+      );
     }
   }
 }

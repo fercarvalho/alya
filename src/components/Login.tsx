@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Lock, User, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, Copy, Check, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import EsqueciSenhaModal from './modals/EsqueciSenhaModal';
 import ResetarSenhaModal from './modals/ResetarSenhaModal';
+import { API_BASE_URL } from '../config/api';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -18,6 +19,8 @@ const Login: React.FC = () => {
   const [showEsqueciSenhaModal, setShowEsqueciSenhaModal] = useState(false);
   const [showResetarSenhaModal, setShowResetarSenhaModal] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [faqItems, setFaqItems] = useState<Array<{ id: string; pergunta: string; resposta: string }>>([]);
+  const [faqOpenId, setFaqOpenId] = useState<string | null>(null);
   const { login, completeFirstLogin } = useAuth();
 
   // Detectar se está em modo demo
@@ -44,6 +47,13 @@ const Login: React.FC = () => {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
+  }, []);
+
+  React.useEffect(() => {
+    fetch(`${API_BASE_URL}/faq`)
+      .then(r => r.json())
+      .then(result => { if (result.success) setFaqItems(result.data); })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,7 +104,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 flex flex-col items-center justify-start py-8 px-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto w-16 h-16 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full flex items-center justify-center mb-4">
@@ -216,6 +226,38 @@ const Login: React.FC = () => {
         </form>
 
       </div>
+
+      {/* Seção FAQ pública — exibida apenas quando há itens cadastrados */}
+      {faqItems.length > 0 && (
+        <div className="w-full max-w-md mt-6 mb-4">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <HelpCircle className="h-4 w-4 text-amber-600" />
+            <h2 className="text-sm font-semibold text-amber-800">Perguntas Frequentes</h2>
+          </div>
+          <div className="space-y-2">
+            {faqItems.map(item => (
+              <div key={item.id} className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setFaqOpenId(prev => prev === item.id ? null : item.id)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-amber-50/50 transition-colors"
+                >
+                  <span className="text-sm font-medium text-gray-800 leading-snug">{item.pergunta}</span>
+                  {faqOpenId === item.id
+                    ? <ChevronUp className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                    : <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  }
+                </button>
+                {faqOpenId === item.id && (
+                  <div className="px-4 pb-4 border-t border-amber-50">
+                    <p className="text-xs text-gray-600 leading-relaxed pt-3 whitespace-pre-wrap">{item.resposta}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Modal de Nova Senha */}
       {showPasswordModal && (

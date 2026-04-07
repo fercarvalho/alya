@@ -40,6 +40,7 @@ import {
   Wallet,
   Sparkles,
   ShoppingBag,
+  HelpCircle,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -58,6 +59,8 @@ const AnomalyDashboard = lazy(() => import("./pages/admin/AnomalyDashboard"));
 const SecurityAlerts = lazy(() => import("./pages/admin/SecurityAlerts"));
 // Lazy load Roadmap
 const Roadmap = lazy(() => import("./components/Roadmap"));
+// Lazy load FAQ
+const FAQ = lazy(() => import("./components/FAQ"));
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
@@ -149,7 +152,8 @@ type TabType =
   | "anomalies"
   | "securityAlerts"
   | "nuvemshop"
-  | "roadmap";
+  | "roadmap"
+  | "faq";
 
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
@@ -6564,6 +6568,7 @@ const AppContent: React.FC = () => {
                     securityAlerts: Bell,
                     admin: Shield,
                     roadmap: Map,
+                    faq: HelpCircle,
                   };
 
                   const visibleModules = getVisibleModules();
@@ -6637,6 +6642,17 @@ const AppContent: React.FC = () => {
             }
           >
             <Roadmap />
+          </Suspense>
+        )}
+        {activeTab === "faq" && (
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">Carregando FAQ...</div>
+              </div>
+            }
+          >
+            <FAQ />
           </Suspense>
         )}
         {activeTab === "admin" && (

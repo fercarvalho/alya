@@ -4752,6 +4752,79 @@ app.use((error, req, res, next) => {
   res.status(400).json({ error: error.message });
 });
 
+// ─── FAQ ──────────────────────────────────────────────────────────────────────
+
+// GET /api/faq — público (sem autenticação), apenas itens ativos
+app.get('/api/faq', async (req, res) => {
+  try {
+    const items = await db.obterFAQ();
+    res.json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/admin/faq — todos os itens (admin + superadmin)
+app.get('/api/admin/faq', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const items = await db.obterFAQAdmin();
+    res.json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/faq — criar novo item
+app.post('/api/admin/faq', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { pergunta, resposta } = req.body;
+    if (!pergunta || !pergunta.trim() || !resposta || !resposta.trim()) {
+      return res.status(400).json({ success: false, error: 'Pergunta e resposta são obrigatórias' });
+    }
+    const item = await db.criarFAQ({ pergunta: pergunta.trim(), resposta: resposta.trim() });
+    await logActivity(req.user, 'create', 'FAQ', item.id, { pergunta: item.pergunta });
+    res.status(201).json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/faq/ordem — atualizar ordem em lote (deve vir ANTES de /:id)
+app.put('/api/admin/faq/ordem', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { faqIds } = req.body;
+    if (!Array.isArray(faqIds)) {
+      return res.status(400).json({ success: false, error: 'faqIds deve ser um array' });
+    }
+    await db.atualizarOrdemFAQ(faqIds);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/faq/:id — atualizar item
+app.put('/api/admin/faq/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const item = await db.atualizarFAQ(req.params.id, req.body);
+    await logActivity(req.user, 'update', 'FAQ', req.params.id, req.body);
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/admin/faq/:id — deletar item
+app.delete('/api/admin/faq/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const item = await db.deletarFAQ(req.params.id);
+    await logActivity(req.user, 'delete', 'FAQ', req.params.id, { pergunta: item.pergunta });
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Rotas da integração Nuvemshop (autenticadas)
 app.use("/api/nuvemshop", createNuvemshopRouter(db, authenticateToken));
 
