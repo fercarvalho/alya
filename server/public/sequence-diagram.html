@@ -10,6 +10,21 @@
     h2 { color: #d97706; margin-top: 48px; }
     .diagram { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 32px; }
     .mermaid { display: flex; justify-content: center; }
+    .btn-download {
+      display: block;
+      margin: 16px auto 0;
+      padding: 8px 20px;
+      background: #d97706;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-download:hover { background: #b45309; }
+    .btn-download:active { background: #92400e; }
   </style>
 </head>
 <body>
@@ -18,7 +33,7 @@
   <!-- ── 1. Conexão da Loja ──────────────────────────────────────── -->
   <h2>1. Conexão da Loja (Autenticação por Access Token)</h2>
   <div class="diagram">
-    <div class="mermaid">
+    <div class="mermaid" id="diagram-1">
 sequenceDiagram
     actor Lojista
     participant ALYA as ALYA Frontend
@@ -38,12 +53,13 @@ sequenceDiagram
     Backend-->>ALYA: {success, storeName, webhooksRegistered}
     ALYA-->>Lojista: Loja conectada com sucesso ✓
     </div>
+    <button class="btn-download" onclick="downloadDiagram('diagram-1', '1-conexao-loja')">⬇ Baixar imagem</button>
   </div>
 
   <!-- ── 2. Sincronização Manual de Pedidos ─────────────────────── -->
   <h2>2. Sincronização Manual de Pedidos</h2>
   <div class="diagram">
-    <div class="mermaid">
+    <div class="mermaid" id="diagram-2">
 sequenceDiagram
     actor Lojista
     participant ALYA as ALYA Frontend
@@ -77,12 +93,13 @@ sequenceDiagram
     Backend-->>ALYA: {imported, skipped, errors}
     ALYA-->>Lojista: X pedidos importados ✓
     </div>
+    <button class="btn-download" onclick="downloadDiagram('diagram-2', '2-sync-pedidos')">⬇ Baixar imagem</button>
   </div>
 
   <!-- ── 3. Webhook — Pedido Pago em Tempo Real ─────────────────── -->
   <h2>3. Webhook — Pedido Pago em Tempo Real</h2>
   <div class="diagram">
-    <div class="mermaid">
+    <div class="mermaid" id="diagram-3">
 sequenceDiagram
     participant NS as Nuvemshop
     participant Backend as ALYA Backend
@@ -119,12 +136,13 @@ sequenceDiagram
         Backend->>DB: Upsert cliente (email/telefone criptografados)
     end
     </div>
+    <button class="btn-download" onclick="downloadDiagram('diagram-3', '3-webhook-tempo-real')">⬇ Baixar imagem</button>
   </div>
 
   <!-- ── 4. Sincronização de Produtos e Clientes ────────────────── -->
   <h2>4. Sincronização Manual de Produtos e Clientes</h2>
   <div class="diagram">
-    <div class="mermaid">
+    <div class="mermaid" id="diagram-4">
 sequenceDiagram
     actor Lojista
     participant Backend as ALYA Backend
@@ -158,12 +176,13 @@ sequenceDiagram
     end
     Backend-->>Lojista: {imported, updated, errors}
     </div>
+    <button class="btn-download" onclick="downloadDiagram('diagram-4', '4-sync-produtos-clientes')">⬇ Baixar imagem</button>
   </div>
 
   <!-- ── 5. Conformidade LGPD ───────────────────────────────────── -->
   <h2>5. Webhooks de Conformidade LGPD / GDPR</h2>
   <div class="diagram">
-    <div class="mermaid">
+    <div class="mermaid" id="diagram-5">
 sequenceDiagram
     participant NS as Nuvemshop
     participant Backend as ALYA Backend
@@ -183,12 +202,13 @@ sequenceDiagram
     Backend-->>NS: 200 OK
     Note over Backend: Log da solicitação para<br/>revisão manual pelo administrador
     </div>
+    <button class="btn-download" onclick="downloadDiagram('diagram-5', '5-lgpd')">⬇ Baixar imagem</button>
   </div>
 
   <!-- ── 6. Desconexão ──────────────────────────────────────────── -->
   <h2>6. Desconexão da Loja</h2>
   <div class="diagram">
-    <div class="mermaid">
+    <div class="mermaid" id="diagram-6">
 sequenceDiagram
     actor Lojista
     participant Backend as ALYA Backend
@@ -207,10 +227,55 @@ sequenceDiagram
     Backend->>DB: DELETE nuvemshop_sync_map
     Backend-->>Lojista: {success: true}
     </div>
+    <button class="btn-download" onclick="downloadDiagram('diagram-6', '6-desconexao')">⬇ Baixar imagem</button>
   </div>
 
   <script>
     mermaid.initialize({ startOnLoad: true, theme: 'default', sequence: { actorMargin: 80 } });
+
+    function downloadDiagram(containerId, filename) {
+      const container = document.getElementById(containerId);
+      const svg = container.querySelector('svg');
+      if (!svg) { alert('Diagrama ainda não renderizado. Aguarde e tente novamente.'); return; }
+
+      // Clona o SVG e garante fundo branco
+      const clone = svg.cloneNode(true);
+      const { width, height } = svg.getBoundingClientRect();
+      clone.setAttribute('width', width);
+      clone.setAttribute('height', height);
+
+      // Adiciona fundo branco explícito
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bg.setAttribute('width', '100%');
+      bg.setAttribute('height', '100%');
+      bg.setAttribute('fill', 'white');
+      clone.insertBefore(bg, clone.firstChild);
+
+      // Serializa e converte para PNG via canvas
+      const svgData = new XMLSerializer().serializeToString(clone);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = () => {
+        const scale = 2; // resolução 2x para melhor qualidade
+        const canvas = document.createElement('canvas');
+        canvas.width  = width  * scale;
+        canvas.height = height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+
+        const link = document.createElement('a');
+        link.download = `alya-nuvemshop-${filename}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      };
+      img.src = url;
+    }
   </script>
 </body>
 </html>
