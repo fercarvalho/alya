@@ -4558,6 +4558,109 @@ app.post("/api/admin/roadmap/:id/parar-tempo", authenticateToken, requireSuperAd
   }
 });
 
+// ─── Política de Privacidade ─────────────────────────────────────────────────
+app.get("/api/privacy-policy", (req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidade — ALYA</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; line-height: 1.7; }
+    h1 { color: #d97706; border-bottom: 2px solid #fde68a; padding-bottom: 12px; }
+    h2 { color: #92400e; margin-top: 32px; }
+    p, li { color: #374151; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Política de Privacidade</h1>
+  <p><strong>ALYA — Sistema de Gestão Financeira</strong><br>Última atualização: abril de 2026</p>
+
+  <h2>1. Dados coletados</h2>
+  <p>Ao integrar com a Nuvemshop, o ALYA coleta os seguintes dados da sua loja:</p>
+  <ul>
+    <li>Informações de pedidos (número, valor, data, status de pagamento)</li>
+    <li>Informações de produtos (nome, preço, estoque)</li>
+    <li>Informações de clientes (nome, e-mail e telefone — armazenados com criptografia AES-256)</li>
+  </ul>
+
+  <h2>2. Finalidade do uso</h2>
+  <p>Os dados são utilizados exclusivamente para:</p>
+  <ul>
+    <li>Importar pedidos pagos como transações financeiras no ALYA</li>
+    <li>Sincronizar produtos e estoque para gestão interna</li>
+    <li>Exibir métricas de e-commerce no painel do usuário</li>
+  </ul>
+
+  <h2>3. Armazenamento e segurança</h2>
+  <p>Todos os dados são armazenados em servidor privado com acesso restrito. Dados sensíveis (e-mail e telefone de clientes) são criptografados com AES-256-GCM. O access token da Nuvemshop é armazenado de forma criptografada e nunca é exposto ao frontend.</p>
+
+  <h2>4. Compartilhamento de dados</h2>
+  <p>O ALYA <strong>não compartilha, vende ou transfere</strong> dados de clientes ou da loja para terceiros.</p>
+
+  <h2>5. Exclusão de dados (LGPD)</h2>
+  <p>Ao desinstalar o aplicativo, todos os dados da loja são removidos automaticamente dos nossos servidores. Para solicitar a exclusão de dados específicos de clientes, entre em contato pelo e-mail abaixo.</p>
+
+  <h2>6. Contato</h2>
+  <p>Em caso de dúvidas sobre esta política: <a href="mailto:vem@viverdepj.com.br">vem@viverdepj.com.br</a></p>
+
+  <footer>ALYA · Sistema de Gestão Financeira · alya.sistemas.viverdepj.com.br</footer>
+</body>
+</html>`);
+});
+
+// ─── Suporte ──────────────────────────────────────────────────────────────────
+app.get("/api/support", (req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suporte — ALYA</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; line-height: 1.7; }
+    h1 { color: #d97706; border-bottom: 2px solid #fde68a; padding-bottom: 12px; }
+    h2 { color: #92400e; margin-top: 32px; }
+    p, li { color: #374151; }
+    .card { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 24px; margin: 24px 0; }
+    a { color: #d97706; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Suporte ALYA</h1>
+  <p>Precisa de ajuda com o aplicativo ALYA integrado à Nuvemshop? Estamos aqui para ajudar.</p>
+
+  <div class="card">
+    <h2 style="margin-top:0">📧 Contato</h2>
+    <p>Envie sua dúvida ou problema para:<br>
+    <strong><a href="mailto:vem@viverdepj.com.br">vem@viverdepj.com.br</a></strong></p>
+    <p>Respondemos em até 1 dia útil.</p>
+  </div>
+
+  <h2>Perguntas frequentes</h2>
+
+  <h3>Como conecto minha loja Nuvemshop ao ALYA?</h3>
+  <p>Acesse o ALYA, vá até a aba <strong>Nuvemshop</strong>, insira seu Access Token e Store ID e clique em <strong>Conectar loja</strong>.</p>
+
+  <h3>Como obtenho o Access Token?</h3>
+  <p>O Access Token é gerado no <a href="https://partners.nuvemshop.com.br" target="_blank">Portal de Parceiros da Nuvemshop</a> ao instalar o aplicativo na sua loja.</p>
+
+  <h3>Os pedidos são sincronizados automaticamente?</h3>
+  <p>Sim. Após conectar a loja, pedidos pagos são importados automaticamente via webhook em tempo real. Você também pode sincronizar manualmente pelo painel.</p>
+
+  <h3>Como removo a integração?</h3>
+  <p>Na aba Nuvemshop do ALYA, clique em <strong>Desconectar loja</strong>. Todos os webhooks serão removidos automaticamente.</p>
+
+  <footer>ALYA · Sistema de Gestão Financeira · alya.sistemas.viverdepj.com.br</footer>
+</body>
+</html>`);
+});
+
 // Rota de teste
 app.get("/api/test", (req, res) => {
   res.json({
