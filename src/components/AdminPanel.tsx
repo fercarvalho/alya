@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Users, Settings, Activity, BarChart3, Shield, ShieldOff, HelpCircle
+  Users, Settings, Activity, BarChart3, Shield, ShieldOff, HelpCircle, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import UserManagement from './admin/UserManagement';
@@ -8,8 +8,9 @@ import ModuleManagement from './admin/ModuleManagement';
 import ActivityLog from './admin/ActivityLog';
 import Statistics from './admin/Statistics';
 import FAQManagement from './admin/FAQManagement';
+import FeedbackManagement from './admin/FeedbackManagement';
 
-type AdminTab = 'users' | 'modules' | 'activity' | 'statistics' | 'faq';
+type AdminTab = 'users' | 'modules' | 'activity' | 'statistics' | 'faq' | 'feedbacks';
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth();
@@ -38,7 +39,8 @@ const AdminPanel: React.FC = () => {
     ...(isSuperAdmin ? [{ id: 'modules' as AdminTab, name: 'Módulos', icon: Settings }] : []),
     { id: 'activity' as AdminTab, name: 'Atividades', icon: Activity },
     { id: 'statistics' as AdminTab, name: 'Estatísticas', icon: BarChart3 },
-    { id: 'faq' as AdminTab, name: 'FAQ', icon: HelpCircle }
+    { id: 'faq' as AdminTab, name: 'FAQ', icon: HelpCircle },
+    { id: 'feedbacks' as AdminTab, name: 'Feedbacks', icon: MessageSquare }
   ];
 
   return (
@@ -83,6 +85,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'activity' && <ActivityLog />}
         {activeTab === 'statistics' && <Statistics />}
         {activeTab === 'faq' && <FAQManagement />}
+        {activeTab === 'feedbacks' && <FeedbackManagement />}
       </div>
     </div>
   );

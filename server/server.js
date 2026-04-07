@@ -4828,6 +4828,195 @@ app.delete('/api/admin/faq/:id', authenticateToken, requireAdmin, async (req, re
 // Rotas da integração Nuvemshop (autenticadas)
 app.use("/api/nuvemshop", createNuvemshopRouter(db, authenticateToken));
 
+// ============================================================
+// FEEDBACK
+// ============================================================
+
+// POST /api/feedback — usuário envia um feedback
+app.post('/api/feedback', authenticateToken, async (req, res) => {
+  try {
+    const { categoria, descricao, imagemBase64, linkVideo, pagina } = req.body;
+
+    if (!categoria || !['duvida', 'melhoria', 'sugestao', 'critica'].includes(categoria)) {
+      return res.status(400).json({ success: false, error: 'Categoria inválida.' });
+    }
+    if (!descricao || descricao.trim().length < 20) {
+      return res.status(400).json({ success: false, error: 'Descrição deve ter pelo menos 20 caracteres.' });
+    }
+    if (descricao.trim().length > 1000) {
+      return res.status(400).json({ success: false, error: 'Descrição deve ter no máximo 1000 caracteres.' });
+    }
+    if (linkVideo && linkVideo.trim()) {
+      const l = linkVideo.toLowerCase();
+      if (!l.includes('drive.google.com') && !l.includes('docs.google.com')) {
+        return res.status(400).json({ success: false, error: 'Link de vídeo deve ser do Google Drive.' });
+      }
+    }
+
+    const feedback = await db.criarFeedback({
+      usuarioId: req.user.id,
+      categoria,
+      descricao: descricao.trim(),
+      imagemBase64: imagemBase64 || null,
+      linkVideo: linkVideo?.trim() || null,
+      pagina: pagina || null,
+    });
+
+    await logActivity(req.user.id, req.user.username, 'create', 'feedback', 'feedback', feedback.id, { categoria });
+
+    res.status(201).json({ success: true, data: feedback });
+  } catch (error) {
+    console.error('Erro ao criar feedback:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/admin/feedbacks — listar todos (admin + superadmin)
+app.get('/api/admin/feedbacks', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const feedbacks = await db.obterFeedbacks();
+    res.json({ success: true, data: feedbacks });
+  } catch (error) {
+    console.error('Erro ao buscar feedbacks:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/feedbacks/:id/responder — superadmin responde (sem aceitar)
+app.post('/api/admin/feedbacks/:id/responder', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { mensagem } = req.body;
+    if (!mensagem || mensagem.trim().length < 10) {
+      return res.status(400).json({ success: false, error: 'A mensagem deve ter pelo menos 10 caracteres.' });
+    }
+
+    const feedback = await db.obterFeedbackPorId(req.params.id);
+    if (feedback.status !== 'pendente') {
+      return res.status(400).json({ success: false, error: 'Este feedback já foi respondido ou aceito.' });
+    }
+
+    const atualizado = await db.responderFeedback(req.params.id, { resposta: mensagem.trim() });
+
+    await logActivity(req.user.id, req.user.username, 'update', 'feedback', 'feedback', req.params.id, { acao: 'responder' });
+
+    // Enviar email ao usuário
+    if (SENDGRID_API_KEY && feedback.usuarioEmail) {
+      const nomeUsuario = feedback.usuarioNome || feedback.usuarioEmail;
+      const msg = {
+        to: feedback.usuarioEmail,
+        from: { email: SENDGRID_FROM_EMAIL, name: 'Alya Sistema' },
+        subject: 'Seu feedback foi respondido — Alya',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 32px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <div style="display: inline-block; background: #fef3c7; border-radius: 50%; padding: 16px; margin-bottom: 12px;">
+                <span style="font-size: 32px;">💬</span>
+              </div>
+              <h2 style="color: #1e293b; margin: 0;">Seu feedback foi respondido</h2>
+            </div>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6;">Olá <strong>${nomeUsuario}</strong>,</p>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6;">Nossa equipe analisou seu feedback e enviou uma resposta:</p>
+            <div style="background: #f8fafc; border-left: 4px solid #d97706; border-radius: 4px; padding: 16px; margin: 20px 0;">
+              <p style="color: #1e293b; font-size: 14px; margin: 0; line-height: 1.6; white-space: pre-wrap;">${mensagem.trim()}</p>
+            </div>
+            <p style="color: #64748b; font-size: 13px; line-height: 1.5;"><strong>Seu feedback original (${feedback.categoria}):</strong><br/>${feedback.descricao}</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">Este é um e-mail automático. Por favor, não responda.</p>
+          </div>
+        `,
+      };
+      try {
+        await sgMail.send(msg);
+      } catch (sgError) {
+        console.error('Erro ao enviar e-mail de resposta de feedback:', sgError?.response?.body || sgError);
+      }
+    }
+
+    res.json({ success: true, data: atualizado });
+  } catch (error) {
+    console.error('Erro ao responder feedback:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/feedbacks/:id/aceitar — superadmin aceita + cria roadmap + notifica usuário
+app.post('/api/admin/feedbacks/:id/aceitar', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { mensagem, criarRoadmap } = req.body;
+    if (!mensagem || mensagem.trim().length < 10) {
+      return res.status(400).json({ success: false, error: 'A mensagem deve ter pelo menos 10 caracteres.' });
+    }
+
+    const feedback = await db.obterFeedbackPorId(req.params.id);
+    if (feedback.status !== 'pendente') {
+      return res.status(400).json({ success: false, error: 'Este feedback já foi respondido ou aceito.' });
+    }
+
+    // Criar item no roadmap se solicitado
+    let roadmapItemId = null;
+    if (criarRoadmap !== false) {
+      const tituloRoadmap = `[Feedback] ${feedback.categoria.charAt(0).toUpperCase() + feedback.categoria.slice(1)}: ${feedback.descricao.slice(0, 80)}${feedback.descricao.length > 80 ? '...' : ''}`;
+      const descricaoRoadmap = `Originado de feedback do usuário ${feedback.usuarioNome}.\n\n${feedback.descricao}${feedback.linkVideo ? `\n\nVídeo: ${feedback.linkVideo}` : ''}`;
+      const roadmapItem = await db.createRoadmapItem({
+        titulo: tituloRoadmap,
+        descricao: descricaoRoadmap,
+        status: 'backlog',
+        prioridade: 'media',
+        dataInicio: null,
+        dependeDe: null,
+        createdBy: req.user.id,
+      });
+      roadmapItemId = roadmapItem.id;
+    }
+
+    const atualizado = await db.aceitarFeedback(req.params.id, {
+      resposta: mensagem.trim(),
+      roadmapItemId,
+    });
+
+    await logActivity(req.user.id, req.user.username, 'update', 'feedback', 'feedback', req.params.id, { acao: 'aceitar', roadmapItemId });
+
+    // Enviar email ao usuário
+    if (SENDGRID_API_KEY && feedback.usuarioEmail) {
+      const nomeUsuario = feedback.usuarioNome || feedback.usuarioEmail;
+      const msg = {
+        to: feedback.usuarioEmail,
+        from: { email: SENDGRID_FROM_EMAIL, name: 'Alya Sistema' },
+        subject: '🎉 Seu feedback foi aceito — Alya',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 32px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <div style="display: inline-block; background: #dcfce7; border-radius: 50%; padding: 16px; margin-bottom: 12px;">
+                <span style="font-size: 32px;">✅</span>
+              </div>
+              <h2 style="color: #1e293b; margin: 0;">Seu feedback foi aceito!</h2>
+            </div>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6;">Olá <strong>${nomeUsuario}</strong>,</p>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6;">Ótima notícia! Sua sugestão foi analisada pela nossa equipe e <strong style="color: #16a34a;">aceita</strong>. Ela foi adicionada ao nosso roadmap de melhorias.</p>
+            <div style="background: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 4px; padding: 16px; margin: 20px 0;">
+              <p style="color: #166534; font-size: 14px; font-weight: bold; margin: 0 0 8px 0;">Mensagem da equipe:</p>
+              <p style="color: #1e293b; font-size: 14px; margin: 0; line-height: 1.6; white-space: pre-wrap;">${mensagem.trim()}</p>
+            </div>
+            <p style="color: #64748b; font-size: 13px; line-height: 1.5;"><strong>Seu feedback original (${feedback.categoria}):</strong><br/>${feedback.descricao}</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">Este é um e-mail automático. Por favor, não responda.</p>
+          </div>
+        `,
+      };
+      try {
+        await sgMail.send(msg);
+      } catch (sgError) {
+        console.error('Erro ao enviar e-mail de aceite de feedback:', sgError?.response?.body || sgError);
+      }
+    }
+
+    res.json({ success: true, data: atualizado });
+  } catch (error) {
+    console.error('Erro ao aceitar feedback:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Iniciar servidor
 app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
