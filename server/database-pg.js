@@ -1911,6 +1911,32 @@ class Database extends FileDatabase {
       client.release();
     }
   }
+
+  async deleteRoadmapColuna(id) {
+    const colRes = await this.pool.query('SELECT * FROM roadmap_colunas WHERE id = $1', [id]);
+    if (colRes.rows.length === 0) throw new Error('Coluna não encontrada');
+    const col = toCamelCase(colRes.rows[0]);
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Remover dependências entre itens da coluna e outros
+      await client.query(
+        `UPDATE roadmap_items SET depende_de = NULL WHERE depende_de IN (SELECT id FROM roadmap_items WHERE status = $1)`,
+        [col.key]
+      );
+      // Deletar todos os itens da coluna
+      await client.query('DELETE FROM roadmap_items WHERE status = $1', [col.key]);
+      // Deletar a coluna
+      await client.query('DELETE FROM roadmap_colunas WHERE id = $1', [id]);
+      await client.query('COMMIT');
+      return col;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = Database;

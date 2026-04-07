@@ -572,6 +572,52 @@ const FormNovaColuna = ({ onSave, onCancel }: FormNovaColunaProps) => {
 };
 
 // ============================================================
+// Modal de confirmação de delete de coluna
+// ============================================================
+interface ConfirmDeleteColunaProps {
+  coluna: Coluna;
+  qtdTarefas: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const ConfirmDeleteColuna = ({ coluna, qtdTarefas, onConfirm, onCancel }: ConfirmDeleteColunaProps) => (
+  <div className="space-y-4">
+    {qtdTarefas > 0 ? (
+      <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+        <span className="text-red-500 text-xl flex-shrink-0">⚠️</span>
+        <div>
+          <p className="text-sm font-semibold text-red-700 mb-1">
+            Esta coluna possui {qtdTarefas} tarefa{qtdTarefas > 1 ? 's' : ''}
+          </p>
+          <p className="text-xs text-red-600">
+            Ao confirmar, <strong>todas as tarefas desta coluna serão deletadas permanentemente</strong>.
+            Mova ou finalize as tarefas antes de deletar se quiser preservá-las.
+          </p>
+        </div>
+      </div>
+    ) : (
+      <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+        <span className="text-amber-500 text-xl flex-shrink-0">🗑️</span>
+        <p className="text-sm text-amber-700">
+          Tem certeza que deseja deletar a coluna <strong>"{coluna.label}"</strong>? Esta ação não pode ser desfeita.
+        </p>
+      </div>
+    )}
+    <div className="flex gap-3 pt-1">
+      <button type="button" onClick={onCancel}
+        className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition-all text-sm">
+        Cancelar
+      </button>
+      <button type="button" onClick={onConfirm}
+        className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all shadow-md text-sm">
+        {qtdTarefas > 0 ? `Deletar coluna e ${qtdTarefas} tarefa${qtdTarefas > 1 ? 's' : ''}` : 'Deletar coluna'}
+      </button>
+    </div>
+  </div>
+);
+
+// ============================================================
 // Formulário de configurações
 // ============================================================
 interface FormConfiguracoesProps {
@@ -625,6 +671,7 @@ const Roadmap = () => {
   const [showModal, setShowModal] = useState(false);
   const [showNovaColuna, setShowNovaColuna] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [colunaParaDeletar, setColunaParaDeletar] = useState<Coluna | null>(null);
   const [itemEditando, setItemEditando] = useState<RoadmapItem | null>(null);
   const [draggedItem, setDraggedItem] = useState<RoadmapItem | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -994,6 +1041,19 @@ const Roadmap = () => {
     } catch { await carregarColunas(); }
   };
 
+  const handleDeletarColuna = async () => {
+    if (!colunaParaDeletar) return;
+    try {
+      await axios.delete(`/api/admin/roadmap/colunas/${colunaParaDeletar.id}`);
+      setColunaParaDeletar(null);
+      await carregarColunas();
+      await carregarRoadmap();
+    } catch (e) {
+      console.error('Erro ao deletar coluna:', e);
+      alert('Erro ao deletar coluna');
+    }
+  };
+
   const handleNovaColunaSubmit = async (label: string, cor: string, corFundo: string) => {
     try {
       await axios.post('/api/admin/roadmap/colunas', { label, cor, corFundo });
@@ -1116,6 +1176,15 @@ const Roadmap = () => {
                       style={{ color: cfg.color }}>
                       {col.length}
                     </span>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setColunaParaDeletar(coluna); }}
+                        onDragStart={e => e.stopPropagation()}
+                        className="ml-1 p-1 rounded hover:bg-red-100 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                        title="Deletar coluna">
+                        <Trash2 size={11} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Itens */}
@@ -1196,6 +1265,21 @@ const Roadmap = () => {
             );
           })()}
         </div>
+      )}
+
+      {/* Modal de confirmação de delete de coluna */}
+      {colunaParaDeletar && (
+        <InlineModal
+          title={`Deletar coluna "${colunaParaDeletar.label}"`}
+          onClose={() => setColunaParaDeletar(null)}
+        >
+          <ConfirmDeleteColuna
+            coluna={colunaParaDeletar}
+            qtdTarefas={itens.filter(i => i.status === colunaParaDeletar.key).length}
+            onConfirm={handleDeletarColuna}
+            onCancel={() => setColunaParaDeletar(null)}
+          />
+        </InlineModal>
       )}
 
       {/* Modal de configurações */}

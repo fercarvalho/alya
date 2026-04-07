@@ -4444,6 +4444,17 @@ app.put('/api/admin/roadmap/colunas/ordem', authenticateToken, requireSuperAdmin
   }
 });
 
+app.delete('/api/admin/roadmap/colunas/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const result = await db.deleteRoadmapColuna(req.params.id);
+    await logActivity(req.user, 'delete', 'roadmap_coluna', req.params.id, { label: result.label });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Roadmap] Erro ao deletar coluna:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Listar todos os itens (admin + superadmin)
 app.get("/api/admin/roadmap", authenticateToken, requireAdmin, async (req, res) => {
   try {
