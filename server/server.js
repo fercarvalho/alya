@@ -4298,6 +4298,24 @@ app.delete(
   },
 );
 
+app.post(
+  "/api/admin/modules/reorder",
+  authenticateToken,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, error: "ids deve ser um array não vazio" });
+      }
+      await db.reorderModules(ids);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
+
 // Rotas de Activity Log
 app.get(
   "/api/admin/activity-log",

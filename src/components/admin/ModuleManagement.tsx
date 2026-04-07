@@ -1,18 +1,148 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Plus, Edit, Trash2, Save, X, Shield, Package, AlertTriangle
+  Plus, Edit, Trash2, Save, X, Shield, Package, AlertTriangle, GripVertical
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useAuth } from '../../contexts/AuthContext';
 import { SystemModule, useModules } from '../../hooks/useModules';
 import { API_BASE_URL } from '../../config/api';
 
+interface SortableModuleCardProps {
+  module: SystemModule;
+  onToggleActive: (module: SystemModule) => void;
+  onEdit: (module: SystemModule) => void;
+  onDelete: (moduleId: string) => void;
+}
+
+const SortableModuleCard: React.FC<SortableModuleCardProps> = ({
+  module, onToggleActive, onEdit, onDelete
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: module.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white rounded-2xl shadow-lg p-6 border-2 flex items-start gap-4 ${
+        module.isSystem ? 'border-amber-300' : 'border-gray-200'
+      } ${isDragging ? 'shadow-2xl ring-2 ring-amber-400' : ''}`}
+    >
+      {/* Handle de drag */}
+      <button
+        className="mt-1 text-gray-300 hover:text-amber-500 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+        {...attributes}
+        {...listeners}
+        tabIndex={-1}
+        aria-label="Arrastar para reordenar"
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+
+      {/* Conteúdo do card */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2">
+            {module.isSystem && <Shield className="h-5 w-5 text-amber-600 flex-shrink-0" />}
+            <h3 className="text-lg font-semibold text-gray-900">{module.name}</h3>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${
+            module.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${module.isActive ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
+            {module.isActive ? 'Ativo' : 'Inativo'}
+          </span>
+        </div>
+
+        <div className="space-y-2 mb-4">
+          <div>
+            <span className="text-sm font-medium text-gray-600">Key:</span>
+            <span className="ml-2 text-sm text-gray-900 font-mono">{module.key}</span>
+          </div>
+          <div>
+            <span className="text-sm font-medium text-gray-600">Ícone:</span>
+            <span className="ml-2 text-sm text-gray-900">{module.icon}</span>
+          </div>
+          {module.description && (
+            <div>
+              <span className="text-sm text-gray-600">{module.description}</span>
+            </div>
+          )}
+          <div>
+            <span className="text-xs text-gray-500">
+              {module.isSystem ? 'Módulo do Sistema' : 'Módulo Customizado'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => onToggleActive(module)}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              module.isActive
+                ? 'border border-red-200 text-red-600 hover:bg-red-50'
+                : 'border border-green-200 text-green-600 hover:bg-green-50'
+            }`}
+          >
+            {module.isActive ? 'Desativar' : 'Ativar'}
+          </button>
+          <button
+            onClick={() => onEdit(module)}
+            className="px-3 py-2 text-sm text-amber-600 hover:text-amber-800"
+            title="Editar"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+          {!module.isSystem && (
+            <button
+              onClick={() => onDelete(module.id)}
+              className="px-3 py-2 text-sm text-red-600 hover:text-red-800"
+              title="Deletar"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ModuleManagement: React.FC = () => {
   const { token } = useAuth();
   const { modules, loadModules } = useModules();
-  // const [isLoading, setIsLoading] = useState(false); // Reservado para uso futuro
+  const [orderedModules, setOrderedModules] = useState<SystemModule[]>([]);
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [editingModule, setEditingModule] = useState<SystemModule | null>(null);
-
   const [showAdminBlockModal, setShowAdminBlockModal] = useState(false);
 
   const [newModule, setNewModule] = useState({
@@ -24,9 +154,43 @@ const ModuleManagement: React.FC = () => {
     isActive: true
   });
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   useEffect(() => {
     loadModules();
   }, []);
+
+  useEffect(() => {
+    setOrderedModules(modules);
+  }, [modules]);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedModules.findIndex(m => m.id === active.id);
+    const newIndex = orderedModules.findIndex(m => m.id === over.id);
+    const reordered = arrayMove(orderedModules, oldIndex, newIndex);
+    setOrderedModules(reordered);
+
+    try {
+      await fetch(`${API_BASE_URL}/admin/modules/reorder`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: reordered.map(m => m.id) }),
+      });
+      loadModules();
+    } catch (error) {
+      console.error('Erro ao salvar ordem:', error);
+      setOrderedModules(modules);
+    }
+  };
 
   const handleCreateModule = async () => {
     try {
@@ -44,14 +208,7 @@ const ModuleManagement: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         setShowModuleModal(false);
-        setNewModule({
-          name: '',
-          key: '',
-          icon: 'Package',
-          description: '',
-          route: '',
-          isActive: true
-        });
+        setNewModule({ name: '', key: '', icon: 'Package', description: '', route: '', isActive: true });
         loadModules();
       } else {
         alert(result.error || 'Erro ao criar módulo');
@@ -107,6 +264,14 @@ const ModuleManagement: React.FC = () => {
     }
   };
 
+  const handleToggleActive = (module: SystemModule) => {
+    if (module.key === 'admin' && module.isActive) {
+      setShowAdminBlockModal(true);
+      return;
+    }
+    handleUpdateModule(module.id, { isActive: !module.isActive });
+  };
+
   const openEditModal = (module: SystemModule) => {
     setEditingModule(module);
     setNewModule({
@@ -122,28 +287,18 @@ const ModuleManagement: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editingModule) return;
-
     try {
-      const updates = {
+      await handleUpdateModule(editingModule.id, {
         name: newModule.name,
         key: newModule.key,
         icon: newModule.icon,
         description: newModule.description,
         route: newModule.route || null,
         isActive: newModule.isActive
-      };
-
-      await handleUpdateModule(editingModule.id, updates);
+      });
       setShowModuleModal(false);
       setEditingModule(null);
-      setNewModule({
-        name: '',
-        key: '',
-        icon: 'Package',
-        description: '',
-        route: '',
-        isActive: true
-      });
+      setNewModule({ name: '', key: '', icon: 'Package', description: '', route: '', isActive: true });
     } catch (error) {
       console.error('Erro ao salvar edição:', error);
     }
@@ -154,18 +309,14 @@ const ModuleManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-amber-900">Gerenciar Módulos</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-amber-900">Gerenciar Módulos</h2>
+          <p className="text-sm text-amber-700 mt-1">Arraste os módulos para definir a ordem das guias no sistema</p>
+        </div>
         <button
           onClick={() => {
             setEditingModule(null);
-            setNewModule({
-              name: '',
-              key: '',
-              icon: 'Package',
-              description: '',
-              route: '',
-              isActive: true
-            });
+            setNewModule({ name: '', key: '', icon: 'Package', description: '', route: '', isActive: true });
             setShowModuleModal(true);
           }}
           className="flex items-center px-5 py-2 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg transition-all"
@@ -175,83 +326,29 @@ const ModuleManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Lista de Módulos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {modules.map((module) => (
-          <div
-            key={module.id}
-            className={`bg-white rounded-2xl shadow-lg p-6 border-2 ${module.isSystem ? 'border-amber-300' : 'border-gray-200'
-              }`}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                {module.isSystem && <Shield className="h-5 w-5 text-amber-600" />}
-                <h3 className="text-lg font-semibold text-gray-900">{module.name}</h3>
-              </div>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${module.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${module.isActive ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
-                {module.isActive ? 'Ativo' : 'Inativo'}
-              </span>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              <div>
-                <span className="text-sm font-medium text-gray-600">Key:</span>
-                <span className="ml-2 text-sm text-gray-900 font-mono">{module.key}</span>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-600">Ícone:</span>
-                <span className="ml-2 text-sm text-gray-900">{module.icon}</span>
-              </div>
-              {module.description && (
-                <div>
-                  <span className="text-sm text-gray-600">{module.description}</span>
-                </div>
-              )}
-              <div>
-                <span className="text-xs text-gray-500">
-                  {module.isSystem ? 'Módulo do Sistema' : 'Módulo Customizado'}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  if (module.key === 'admin' && module.isActive) {
-                    setShowAdminBlockModal(true);
-                    return;
-                  }
-                  handleUpdateModule(module.id, { isActive: !module.isActive });
-                }}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  module.isActive
-                    ? 'border border-red-200 text-red-600 hover:bg-red-50'
-                    : 'border border-green-200 text-green-600 hover:bg-green-50'
-                }`}
-              >
-                {module.isActive ? 'Desativar' : 'Ativar'}
-              </button>
-              <button
-                onClick={() => openEditModal(module)}
-                className="px-3 py-2 text-sm text-amber-600 hover:text-amber-800"
-                title="Editar"
-              >
-                <Edit className="h-4 w-4" />
-              </button>
-              {!module.isSystem && (
-                <button
-                  onClick={() => handleDeleteModule(module.id)}
-                  className="px-3 py-2 text-sm text-red-600 hover:text-red-800"
-                  title="Deletar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+      {/* Lista de Módulos com Drag and Drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={orderedModules.map(m => m.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-3">
+            {orderedModules.map((module) => (
+              <SortableModuleCard
+                key={module.id}
+                module={module}
+                onToggleActive={handleToggleActive}
+                onEdit={openEditModal}
+                onDelete={handleDeleteModule}
+              />
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Modal de bloqueio: módulo admin não pode ser desativado */}
       {showAdminBlockModal && (
@@ -295,10 +392,7 @@ const ModuleManagement: React.FC = () => {
                   {editingModule ? 'Editar Módulo' : 'Novo Módulo'}
                 </h3>
                 <button
-                  onClick={() => {
-                    setShowModuleModal(false);
-                    setEditingModule(null);
-                  }}
+                  onClick={() => { setShowModuleModal(false); setEditingModule(null); }}
                   className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
                 >
                   <X className="w-5 h-5" />
@@ -374,10 +468,7 @@ const ModuleManagement: React.FC = () => {
               </div>
               <div className="flex justify-end space-x-2 pt-4">
                 <button
-                  onClick={() => {
-                    setShowModuleModal(false);
-                    setEditingModule(null);
-                  }}
+                  onClick={() => { setShowModuleModal(false); setEditingModule(null); }}
                   className="px-4 py-2 border rounded-lg hover:bg-gray-50"
                 >
                   Cancelar
@@ -399,4 +490,3 @@ const ModuleManagement: React.FC = () => {
 };
 
 export default ModuleManagement;
-

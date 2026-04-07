@@ -6549,96 +6549,50 @@ const AppContent: React.FC = () => {
             <div className="flex items-center overflow-x-auto scrollbar-hide">
               <div className="flex items-center space-x-2 min-w-max">
                 {(() => {
-                  const visibleModules = getVisibleModules();
-                  const activeModuleKeys = new Set(visibleModules.map(m => m.key));
-                  const allTabs = [
-                    {
-                      id: "dashboard",
-                      name: "Dashboard",
-                      icon: Home,
-                      key: "dashboard",
-                    },
-                    {
-                      id: "metas",
-                      name: "Metas",
-                      icon: TrendingUp,
-                      key: "metas",
-                    },
-                    {
-                      id: "reports",
-                      name: "Relatórios",
-                      icon: BarChart3,
-                      key: "reports",
-                    },
-                    {
-                      id: "projecao",
-                      name: "Projeção",
-                      icon: Calculator,
-                      key: "projecao",
-                    },
-                    {
-                      id: "transactions",
-                      name: "Transações",
-                      icon: DollarSign,
-                      key: "transactions",
-                    },
-                    {
-                      id: "products",
-                      name: "Produtos",
-                      icon: Package,
-                      key: "products",
-                    },
-                    {
-                      id: "clients",
-                      name: "Clientes",
-                      icon: Users,
-                      key: "clients",
-                    },
-                    {
-                      id: "nuvemshop",
-                      name: "Nuvemshop",
-                      icon: ShoppingBag,
-                      key: "nuvemshop",
-                    },
-                    { id: "dre", name: "DRE", icon: BarChart3, key: "dre" },
-                    { id: "activeSessions", name: "Sessões", icon: Lock, key: "activeSessions" },
-                    { id: "anomalies", name: "Anomalias", icon: Activity, key: "anomalies" },
-                    { id: "securityAlerts", name: "Alertas", icon: Bell, key: "securityAlerts" },
-                    { id: "admin", name: "Admin", icon: Shield, key: "admin" },
-                    { id: "roadmap", name: "Roadmap", icon: Map, key: "roadmap" },
-                  ];
+                  const iconMap: Record<string, React.ElementType> = {
+                    dashboard: Home,
+                    metas: TrendingUp,
+                    reports: BarChart3,
+                    projecao: Calculator,
+                    transactions: DollarSign,
+                    products: Package,
+                    clients: Users,
+                    nuvemshop: ShoppingBag,
+                    dre: BarChart3,
+                    activeSessions: Lock,
+                    anomalies: Activity,
+                    securityAlerts: Bell,
+                    admin: Shield,
+                    roadmap: Map,
+                  };
 
-                  // Filtrar abas: módulo deve estar ativo no sistema E visível para o usuário
-                  const filteredTabs = allTabs.filter((tab) => {
-                    // painel admin: requer role admin ou superadmin além do módulo
-                    if (tab.key === "admin") {
-                      return (user?.role === "superadmin" || user?.role === "admin") && activeModuleKeys.has(tab.key);
+                  const visibleModules = getVisibleModules();
+
+                  // Filtrar respeitando restrições de role, na ordem definida pelos módulos
+                  const filteredTabs = visibleModules.filter((m) => {
+                    if (m.key === "admin" || m.key === "roadmap") {
+                      return user?.role === "superadmin" || user?.role === "admin";
                     }
-                    // roadmap: requer role admin ou superadmin além do módulo
-                    if (tab.key === "roadmap") {
-                      return (user?.role === "superadmin" || user?.role === "admin") && activeModuleKeys.has(tab.key);
-                    }
-                    // Todos os outros (incluindo sessões, anomalias, alertas): basta ter o módulo ativo
-                    return activeModuleKeys.has(tab.key);
+                    return true;
                   });
 
-                  return filteredTabs.map((tab) => {
-                    const Icon = tab.icon;
+                  return filteredTabs.map((m) => {
+                    const Icon = iconMap[m.key] ?? Package;
                     return (
                       <button
-                        key={tab.id}
+                        key={m.key}
                         onClick={() => {
-                          setActiveTab(tab.id as TabType);
+                          setActiveTab(m.key as TabType);
                           setExpandedCharts([]); // Limpa todos os gráficos ao trocar de aba
                         }}
                         className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
-                          activeTab === tab.id
+                          activeTab === m.key
                             ? "bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg"
                             : "text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg"
                         }`}
                       >
                         <Icon className="h-5 w-5 mr-2" />
-                        {tab.name}
+                        {m.name}
                       </button>
                     );
                   });

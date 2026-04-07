@@ -675,11 +675,22 @@ class Database extends FileDatabase {
 
   async getAllSystemModules() {
     try {
-      const r = await this.pool.query('SELECT * FROM modules ORDER BY created_at DESC');
+      await this.pool.query('ALTER TABLE modules ADD COLUMN IF NOT EXISTS sort_order INTEGER');
+      const r = await this.pool.query('SELECT * FROM modules ORDER BY sort_order ASC NULLS LAST, created_at ASC');
       return toCamelCase(r.rows);
     } catch (e) {
       console.error('Erro ao ler módulos:', e);
       return [];
+    }
+  }
+
+  async reorderModules(orderedIds) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < orderedIds.length; i++) {
+      await this.pool.query(
+        'UPDATE modules SET sort_order = $1, updated_at = $2 WHERE id = $3',
+        [i, now, orderedIds[i]]
+      );
     }
   }
 
@@ -712,10 +723,12 @@ class Database extends FileDatabase {
     }
     const id = this.generateId();
     const now = new Date().toISOString();
+    const maxR = await this.pool.query('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM modules');
+    const nextOrder = maxR.rows[0].next;
     await this.pool.query(
-      `INSERT INTO modules (id, name, key, icon, description, route, is_active, is_system, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [id, data.name || '', data.key || '', data.icon || null, data.description || null, data.route || null, data.isActive !== false, data.isSystem || false, now, now]
+      `INSERT INTO modules (id, name, key, icon, description, route, is_active, is_system, sort_order, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [id, data.name || '', data.key || '', data.icon || null, data.description || null, data.route || null, data.isActive !== false, data.isSystem || false, nextOrder, now, now]
     );
     return this.getSystemModuleById(id);
   }

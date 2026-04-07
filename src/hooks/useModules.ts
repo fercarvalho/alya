@@ -11,6 +11,7 @@ export interface SystemModule {
   route?: string | null;
   isActive: boolean;
   isSystem: boolean;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,17 +46,24 @@ export const useModules = () => {
     }
   };
 
+  const sortByOrder = (list: SystemModule[]) =>
+    [...list].sort((a, b) => {
+      const ao = a.sortOrder ?? Infinity;
+      const bo = b.sortOrder ?? Infinity;
+      return ao - bo;
+    });
+
   const getVisibleModules = (): SystemModule[] => {
     if (!user) return [];
 
     // superadmin vê todos os módulos ativos, independente do array de módulos
     if (user.role === 'superadmin') {
-      return modules.filter(m => m.isActive);
+      return sortByOrder(modules.filter(m => m.isActive));
     }
 
     // Todos os outros (incluindo admin) são filtrados estritamente pelo array de módulos
     if (!user.modules || user.modules.length === 0) return [];
-    return modules.filter(m => m.isActive && user.modules!.includes(m.key));
+    return sortByOrder(modules.filter(m => m.isActive && user.modules!.includes(m.key)));
   };
 
   const getModuleByKey = (key: string): SystemModule | undefined => {
