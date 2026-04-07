@@ -1,6 +1,9 @@
 # Documentos privados (não subir para o Git)
 IMPLEMENTACOES-FUTURAS-PRIVADO.md
 
+# Scripts de seed (dados locais/produção)
+server/seed-*.js
+
 # Dependencies
 node_modules/
 

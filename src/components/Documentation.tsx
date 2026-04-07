@@ -3,6 +3,7 @@ import {
   BookOpen, ChevronRight, ChevronDown, FileText, Search, X, Menu, Clock
 } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 import { marked, Renderer, use } from 'marked';
 
 interface DocPage {
@@ -79,6 +80,7 @@ async function renderMermaidInContainer(container: HTMLElement) {
 }
 
 const Documentation: React.FC = () => {
+  const { token } = useAuth();
   const [sections, setSections] = useState<DocSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -91,7 +93,9 @@ const Documentation: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/documentation`);
+        const res = await fetch(`${API_BASE_URL}/documentation`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const result = await res.json();
         if (result.success && result.data.length > 0) {
           setSections(result.data);
