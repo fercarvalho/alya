@@ -163,6 +163,7 @@ app.post(
 
 app.use(express.json({ limit: "10mb" })); // Limitar tamanho do payload
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Logger de segurança
 app.use(securityLogger);

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Diagrama de Sequência — ALYA × Nuvemshop</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #f9fafb; padding: 32px; }
+    h1 { color: #92400e; }
+    h2 { color: #d97706; margin-top: 48px; }
+    .diagram { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 32px; }
+    .mermaid { display: flex; justify-content: center; }
+  </style>
+</head>
+<body>
+  <h1>Diagrama de Sequência — ALYA × Nuvemshop</h1>
+
+  <!-- ── 1. Conexão da Loja ──────────────────────────────────────── -->
+  <h2>1. Conexão da Loja (Autenticação por Access Token)</h2>
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    actor Lojista
+    participant ALYA as ALYA Frontend
+    participant Backend as ALYA Backend
+    participant NS as API Nuvemshop
+
+    Lojista->>ALYA: Insere Access Token + Store ID
+    ALYA->>Backend: POST /api/nuvemshop/connect
+    Backend->>NS: GET /v1/{storeId}/store<br/>Authentication: bearer {token}
+    NS-->>Backend: 200 OK · dados da loja
+    Backend->>Backend: Criptografa token (AES-256-GCM)<br/>Salva em nuvemshop_config
+    Backend->>NS: DELETE /webhooks existentes (limpeza)
+    loop Para cada evento
+        Backend->>NS: POST /webhooks<br/>{event, url: /api/nuvemshop/webhook}
+    end
+    NS-->>Backend: 200 OK · IDs dos webhooks registrados
+    Backend-->>ALYA: {success, storeName, webhooksRegistered}
+    ALYA-->>Lojista: Loja conectada com sucesso ✓
+    </div>
+  </div>
+
+  <!-- ── 2. Sincronização Manual de Pedidos ─────────────────────── -->
+  <h2>2. Sincronização Manual de Pedidos</h2>
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    actor Lojista
+    participant ALYA as ALYA Frontend
+    participant Backend as ALYA Backend
+    participant NS as API Nuvemshop
+    participant DB as Banco de Dados
+
+    Lojista->>ALYA: Clica em "Sincronizar Pedidos"
+    ALYA->>Backend: POST /api/nuvemshop/sync/orders
+    Backend->>DB: Busca token criptografado + last_sync_orders
+    DB-->>Backend: config da loja
+    Backend->>Backend: Descriptografa token
+
+    loop Paginação (per_page=200, via header Link)
+        Backend->>NS: GET /orders?payment_status=paid&per_page=200
+        NS-->>Backend: [ lista de pedidos ]
+    end
+    loop Paginação (authorized)
+        Backend->>NS: GET /orders?payment_status=authorized&per_page=200
+        NS-->>Backend: [ lista de pedidos ]
+    end
+
+    loop Para cada pedido não sincronizado
+        Backend->>DB: Verifica nuvemshop_sync_map
+        DB-->>Backend: não encontrado
+        Backend->>DB: INSERT transaction (Receita · Venda Online)
+        Backend->>DB: INSERT nuvemshop_sync_map
+    end
+
+    Backend->>DB: Atualiza last_sync_orders
+    Backend-->>ALYA: {imported, skipped, errors}
+    ALYA-->>Lojista: X pedidos importados ✓
+    </div>
+  </div>
+
+  <!-- ── 3. Webhook — Pedido Pago em Tempo Real ─────────────────── -->
+  <h2>3. Webhook — Pedido Pago em Tempo Real</h2>
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    participant NS as Nuvemshop
+    participant Backend as ALYA Backend
+    participant DB as Banco de Dados
+
+    NS->>Backend: POST /api/nuvemshop/webhook<br/>x-linkedstore-hmac-sha256: {hmac}<br/>Content-Type: application/json
+
+    alt NUVEMSHOP_CLIENT_SECRET configurado
+        Backend->>Backend: Valida HMAC-SHA256<br/>timingSafeEqual(expected, received)
+    else Sem client secret
+        Backend->>Backend: Log de aviso (sem bloqueio)
+    end
+
+    Backend->>Backend: Parse payload<br/>storeId = payload.store_id<br/>event = payload.event
+    Backend->>DB: Busca config por store_id
+    DB-->>Backend: config encontrada
+
+    Backend-->>NS: 200 OK · {received: true}<br/>(resposta em < 3 segundos)
+
+    Note over Backend: Processamento assíncrono
+
+    alt event = order/paid
+        Backend->>DB: Verifica nuvemshop_sync_map
+        DB-->>Backend: não encontrado
+        Backend->>DB: INSERT transaction (Receita · Venda Online)
+        Backend->>DB: INSERT nuvemshop_sync_map
+    else event = order/cancelled
+        Backend->>DB: Verifica nuvemshop_sync_map
+        DB-->>Backend: encontrado
+        Backend->>DB: INSERT transaction (Despesa · Estorno Nuvemshop)
+    else event = product/created ou product/updated
+        Backend->>DB: Upsert produto + atualiza estoque
+    else event = customer/created ou customer/updated
+        Backend->>DB: Upsert cliente (email/telefone criptografados)
+    end
+    </div>
+  </div>
+
+  <!-- ── 4. Sincronização de Produtos e Clientes ────────────────── -->
+  <h2>4. Sincronização Manual de Produtos e Clientes</h2>
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    actor Lojista
+    participant Backend as ALYA Backend
+    participant NS as API Nuvemshop
+    participant DB as Banco de Dados
+
+    Lojista->>Backend: POST /api/nuvemshop/sync/products
+    loop Paginação (per_page=200, via header Link)
+        Backend->>NS: GET /products?per_page=200&page=N
+        NS-->>Backend: [ lista de produtos ]
+    end
+    loop Para cada produto
+        Backend->>DB: Verifica nuvemshop_sync_map
+        alt Novo produto
+            Backend->>DB: INSERT produto (nome, preço, estoque)
+            Backend->>DB: INSERT nuvemshop_sync_map
+        else Produto existente
+            Backend->>DB: UPDATE produto (preço, estoque)
+        end
+    end
+    Backend-->>Lojista: {imported, updated, errors}
+
+    Lojista->>Backend: POST /api/nuvemshop/sync/customers
+    loop Paginação (per_page=200, via header Link)
+        Backend->>NS: GET /customers?per_page=200&page=N
+        NS-->>Backend: [ lista de clientes ]
+    end
+    loop Para cada cliente
+        Backend->>Backend: encrypt(email) · encrypt(phone)<br/>AES-256-GCM
+        Backend->>DB: Upsert cliente + nuvemshop_sync_map
+    end
+    Backend-->>Lojista: {imported, updated, errors}
+    </div>
+  </div>
+
+  <!-- ── 5. Conformidade LGPD ───────────────────────────────────── -->
+  <h2>5. Webhooks de Conformidade LGPD / GDPR</h2>
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    participant NS as Nuvemshop
+    participant Backend as ALYA Backend
+    participant DB as Banco de Dados
+
+    NS->>Backend: POST /api/nuvemshop/webhook<br/>event: store/redact
+    Backend-->>NS: 200 OK
+    Backend->>DB: DELETE nuvemshop_config (userId)<br/>DELETE nuvemshop_sync_map (userId)
+    Note over Backend,DB: Todos os dados da loja removidos
+
+    NS->>Backend: POST /api/nuvemshop/webhook<br/>event: customers/redact
+    Backend-->>NS: 200 OK
+    Backend->>DB: UPDATE cliente SET email=null, phone=null, cpf=null<br/>WHERE id = syncMap(customer_id)
+    Note over Backend,DB: Dados pessoais do cliente anonimizados
+
+    NS->>Backend: POST /api/nuvemshop/webhook<br/>event: customers/data_request
+    Backend-->>NS: 200 OK
+    Note over Backend: Log da solicitação para<br/>revisão manual pelo administrador
+    </div>
+  </div>
+
+  <!-- ── 6. Desconexão ──────────────────────────────────────────── -->
+  <h2>6. Desconexão da Loja</h2>
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    actor Lojista
+    participant Backend as ALYA Backend
+    participant NS as API Nuvemshop
+    participant DB as Banco de Dados
+
+    Lojista->>Backend: DELETE /api/nuvemshop/disconnect
+    Backend->>DB: Busca config + descriptografa token
+    Backend->>NS: GET /webhooks
+    NS-->>Backend: [ lista de webhooks ]
+    loop Para cada webhook
+        Backend->>NS: DELETE /webhooks/{id}
+        NS-->>Backend: 200 OK
+    end
+    Backend->>DB: DELETE nuvemshop_config
+    Backend->>DB: DELETE nuvemshop_sync_map
+    Backend-->>Lojista: {success: true}
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default', sequence: { actorMargin: 80 } });
+  </script>
+</body>
+</html>
