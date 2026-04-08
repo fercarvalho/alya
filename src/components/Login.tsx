@@ -392,7 +392,7 @@ const Login: React.FC = () => {
 
       {/* ─── Modal FAQ ─── */}
       {showFaqModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4" onClick={closeFaqModal}>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4" onClick={closeFaqModal}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-500 to-orange-400 px-6 py-4 flex items-center justify-between flex-shrink-0">
@@ -460,7 +460,7 @@ const Login: React.FC = () => {
 
       {/* ─── Modal Documentação ─── */}
       {showDocsModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4" onClick={closeDocsModal}>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4" onClick={closeDocsModal}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-500 to-orange-400 px-6 py-4 flex items-center justify-between flex-shrink-0">
