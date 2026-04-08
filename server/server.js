@@ -4832,6 +4832,16 @@ app.use("/api/nuvemshop", createNuvemshopRouter(db, authenticateToken));
 // DOCUMENTAÇÃO
 // ============================================================
 
+// GET /api/documentation/public — sem autenticação (para página de login)
+app.get('/api/documentation/public', async (req, res) => {
+  try {
+    const data = await db.obterDocumentacao();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET /api/documentation — público (todos os usuários autenticados)
 app.get('/api/documentation', authenticateToken, async (req, res) => {
   try {
