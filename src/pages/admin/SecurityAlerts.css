@@ -480,3 +480,130 @@
     font-size: 24px;
   }
 }
+
+/* === DARK MODE === */
+html.dark .security-alerts {
+  color: #e2e8f0;
+}
+
+html.dark .page-title {
+  color: #f1f5f9;
+}
+
+html.dark .page-subtitle {
+  color: #94a3b8;
+}
+
+html.dark .spinner {
+  border-color: #334155;
+  border-top-color: #f59e0b;
+}
+
+html.dark .filters {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .filters label,
+html.dark .filter-label {
+  color: #cbd5e1;
+}
+
+html.dark .filters select,
+html.dark .filters input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+html.dark .stat-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .stat-value {
+  color: #f1f5f9;
+}
+
+html.dark .stat-label {
+  color: #94a3b8;
+}
+
+html.dark .alert-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .alert-card:hover {
+  border-color: #475569;
+}
+
+html.dark .alert-title {
+  color: #f1f5f9;
+}
+
+html.dark .alert-description {
+  color: #94a3b8;
+}
+
+html.dark .alert-meta {
+  color: #64748b;
+}
+
+html.dark .pagination-button {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+html.dark .pagination-button:hover:not(:disabled) {
+  background: #334155;
+}
+
+html.dark .pagination-info {
+  color: #94a3b8;
+}
+
+html.dark .section {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .section h2 {
+  color: #f1f5f9;
+  border-bottom-color: #334155;
+}
+
+html.dark .alert-type {
+  color: #f1f5f9;
+}
+
+html.dark .alert-user {
+  color: #94a3b8;
+}
+
+html.dark .alert-user strong {
+  color: #e2e8f0;
+}
+
+html.dark .alert-details {
+  background: #0f172a;
+  color: #cbd5e1;
+  border-left-color: #3b82f6;
+}
+
+html.dark .alert-footer {
+  color: #64748b;
+}
+
+html.dark .chart-label {
+  color: #cbd5e1;
+}
+
+html.dark .chart-count {
+  color: #94a3b8;
+}
+
+html.dark .chart-bar-outer {
+  background: #334155;
+}

@@ -4,79 +4,15 @@ import {
   Lock, User, Eye, EyeOff, Copy, Check,
   HelpCircle, ChevronDown, ChevronUp, BookOpen, X, Search, ChevronRight
 } from 'lucide-react';
-import { marked, Renderer, use } from 'marked';
 import EsqueciSenhaModal from './modals/EsqueciSenhaModal';
 import ResetarSenhaModal from './modals/ResetarSenhaModal';
 import { API_BASE_URL } from '../config/api';
-
-declare global {
-  interface Window {
-    mermaid?: {
-      initialize: (config: object) => void;
-      run: (opts?: object) => Promise<void>;
-    };
-  }
-}
-
-const mermaidRenderer = new Renderer();
-mermaidRenderer.code = function ({ text, lang }: { text: string; lang?: string }) {
-  if (lang === 'mermaid') {
-    return `<div class="mermaid not-rendered">${text}</div>`;
-  }
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  return `<pre class="login-code-block"><code>${escaped}</code></pre>`;
-};
-use({ renderer: mermaidRenderer });
-
-function loadMermaidCDN(): Promise<void> {
-  return new Promise((resolve) => {
-    if (window.mermaid) { resolve(); return; }
-    const existing = document.querySelector('script[data-mermaid]');
-    if (existing) { existing.addEventListener('load', () => resolve()); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
-    script.setAttribute('data-mermaid', 'true');
-    script.onload = () => {
-      window.mermaid?.initialize({ startOnLoad: false, theme: 'default' });
-      resolve();
-    };
-    document.head.appendChild(script);
-  });
-}
-
-async function renderMermaidInContainer(container: HTMLElement) {
-  const divs = container.querySelectorAll('.mermaid.not-rendered');
-  if (divs.length === 0) return;
-  await loadMermaidCDN();
-  divs.forEach(d => d.classList.remove('not-rendered'));
-  try {
-    await window.mermaid?.run({ nodes: Array.from(divs) as HTMLElement[] });
-  } catch {
-    // diagrama inválido — mantém o texto raw
-  }
-}
+import Documentation from './Documentation';
 
 interface FaqItem {
   id: string;
   pergunta: string;
   resposta: string;
-}
-
-interface DocPage {
-  id: string;
-  title: string;
-  content: string;
-  sectionId: string;
-  updatedAt: string;
-}
-
-interface DocSection {
-  id: string;
-  title: string;
-  pages: DocPage[];
 }
 
 const Login: React.FC = () => {
@@ -102,21 +38,9 @@ const Login: React.FC = () => {
 
   // Documentação
   const [showDocsModal, setShowDocsModal] = useState(false);
-  const [docsData, setDocsData] = useState<DocSection[]>([]);
-  const [docsLoaded, setDocsLoaded] = useState(false);
-  const [selectedPage, setSelectedPage] = useState<DocPage | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [docsSearch, setDocsSearch] = useState('');
-  const docsContentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (selectedPage && docsContentRef.current) {
-      renderMermaidInContainer(docsContentRef.current);
-    }
-  }, [selectedPage]);
 
   const closeFaqModal = () => { setShowFaqModal(false); setFaqSearch(''); setFaqOpenId(null); };
-  const closeDocsModal = () => { setShowDocsModal(false); setDocsSearch(''); };
+  const closeDocsModal = () => { setShowDocsModal(false); };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -157,34 +81,7 @@ const Login: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  const handleOpenDocs = () => {
-    setShowDocsModal(true);
-    if (!docsLoaded) {
-      fetch(`${API_BASE_URL}/documentation/public`)
-        .then(r => r.json())
-        .then(result => {
-          if (result.success && result.data.length > 0) {
-            setDocsData(result.data);
-            // Expandir a primeira seção automaticamente
-            setExpandedSections(new Set([result.data[0].id]));
-            // Selecionar a primeira página automaticamente
-            if (result.data[0].pages.length > 0) {
-              setSelectedPage(result.data[0].pages[0]);
-            }
-          }
-          setDocsLoaded(true);
-        })
-        .catch(() => setDocsLoaded(true));
-    }
-  };
-
-  const toggleSection = (id: string) => {
-    setExpandedSections(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+  const handleOpenDocs = () => setShowDocsModal(true);
 
   const filteredFaq = faqSearch
     ? faqItems.filter(f =>
@@ -192,21 +89,6 @@ const Login: React.FC = () => {
         f.resposta.toLowerCase().includes(faqSearch.toLowerCase())
       )
     : faqItems;
-
-  const filteredDocs = docsSearch
-    ? docsData.map(s => ({
-        ...s,
-        pages: s.pages.filter(p =>
-          p.title.toLowerCase().includes(docsSearch.toLowerCase()) ||
-          p.content.toLowerCase().includes(docsSearch.toLowerCase())
-        )
-      })).filter(s => s.pages.length > 0)
-    : docsData;
-
-  const renderMarkdown = (content: string) => {
-    const html = marked(content, { breaks: true }) as string;
-    return html;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,16 +132,16 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 flex flex-col items-center justify-start py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 dark:from-gray-900 dark:to-gray-950 flex flex-col items-center justify-start py-8 px-4">
 
       {/* Card de Login */}
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto w-16 h-16 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full flex items-center justify-center mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">ALYA</h1>
-          <p className="text-gray-600">Sistema Financeiro</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">ALYA</h1>
+          <p className="text-gray-600 dark:text-gray-400">Sistema Financeiro</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -283,7 +165,7 @@ const Login: React.FC = () => {
           )}
 
           <div>
-            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
+            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Usuário
             </label>
             <div className="relative">
@@ -296,7 +178,7 @@ const Login: React.FC = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                className="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-gray-50 dark:!bg-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                 placeholder="Digite seu usuário"
                 autoComplete="username"
                 required
@@ -305,7 +187,7 @@ const Login: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Senha
             </label>
             <div className="relative">
@@ -318,7 +200,7 @@ const Login: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-gray-50 dark:!bg-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                 placeholder="Digite sua senha"
                 autoComplete="current-password"
                 required
@@ -373,18 +255,18 @@ const Login: React.FC = () => {
         <button
           type="button"
           onClick={handleOpenDocs}
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-white/70 hover:bg-white border border-amber-200 hover:border-amber-400 rounded-xl text-sm font-medium text-amber-800 hover:text-amber-900 shadow-sm hover:shadow transition-all duration-200 backdrop-blur-sm"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-white/70 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 border border-amber-200 dark:border-amber-800/60 hover:border-amber-400 dark:hover:border-amber-600 rounded-xl text-sm font-medium text-amber-800 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 shadow-sm hover:shadow transition-all duration-200 backdrop-blur-sm"
         >
-          <BookOpen className="h-4 w-4 text-amber-600" />
+          <BookOpen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           Documentação
         </button>
         {faqItems.length > 0 && (
           <button
             type="button"
             onClick={() => setShowFaqModal(true)}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-white/70 hover:bg-white border border-amber-200 hover:border-amber-400 rounded-xl text-sm font-medium text-amber-800 hover:text-amber-900 shadow-sm hover:shadow transition-all duration-200 backdrop-blur-sm"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-white/70 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 border border-amber-200 dark:border-amber-800/60 hover:border-amber-400 dark:hover:border-amber-600 rounded-xl text-sm font-medium text-amber-800 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 shadow-sm hover:shadow transition-all duration-200 backdrop-blur-sm"
           >
-            <HelpCircle className="h-4 w-4 text-amber-600" />
+            <HelpCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             Dúvidas Frequentes
           </button>
         )}
@@ -393,7 +275,7 @@ const Login: React.FC = () => {
       {/* ─── Modal FAQ ─── */}
       {showFaqModal && (
         <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4" onClick={closeFaqModal}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-500 to-orange-400 px-6 py-4 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
@@ -422,7 +304,7 @@ const Login: React.FC = () => {
                   placeholder="Buscar pergunta..."
                   value={faqSearch}
                   onChange={e => setFaqSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:!bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 dark:text-gray-100 dark:placeholder-gray-400"
                 />
               </div>
             </div>
@@ -433,21 +315,21 @@ const Login: React.FC = () => {
                 <div className="text-center py-8 text-gray-400 text-sm">Nenhuma pergunta encontrada.</div>
               ) : (
                 filteredFaq.map(item => (
-                  <div key={item.id} className="rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                  <div key={item.id} className="rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm">
                     <button
                       type="button"
                       onClick={() => setFaqOpenId(prev => prev === item.id ? null : item.id)}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-amber-50/60 transition-colors"
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-amber-50/60 dark:hover:bg-amber-900/20 transition-colors"
                     >
-                      <span className="text-sm font-medium text-gray-800 leading-snug">{item.pergunta}</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-100 leading-snug">{item.pergunta}</span>
                       {faqOpenId === item.id
                         ? <ChevronUp className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                        : <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        : <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                       }
                     </button>
                     {faqOpenId === item.id && (
-                      <div className="px-4 pb-4 pt-1 border-t border-amber-50 bg-amber-50/30">
-                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{item.resposta}</p>
+                      <div className="px-4 pb-4 pt-1 border-t border-amber-50 dark:border-gray-700 bg-amber-50/30 dark:bg-gray-900/40">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{item.resposta}</p>
                       </div>
                     )}
                   </div>
@@ -460,111 +342,16 @@ const Login: React.FC = () => {
 
       {/* ─── Modal Documentação ─── */}
       {showDocsModal && (
-        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4" onClick={closeDocsModal}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="bg-gradient-to-r from-amber-500 to-orange-400 px-6 py-4 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-white font-bold text-lg">Documentação</h2>
-                  <p className="text-amber-100 text-xs">Guias e referências do sistema</p>
-                </div>
-              </div>
-              <button
-                onClick={closeDocsModal}
-                className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
-              >
-                <X className="h-4 w-4 text-white" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="flex flex-1 overflow-hidden">
-              {/* Sidebar */}
-              <div className="w-64 flex-shrink-0 border-r border-gray-100 flex flex-col overflow-hidden">
-                {/* Search docs */}
-                <div className="p-3 border-b border-gray-100">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar..."
-                      value={docsSearch}
-                      onChange={e => setDocsSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
-                </div>
-
-                {/* Sections tree */}
-                <div className="overflow-y-auto flex-1">
-                  {!docsLoaded ? (
-                    <div className="p-4 text-sm text-gray-400 text-center">Carregando...</div>
-                  ) : filteredDocs.length === 0 ? (
-                    <div className="p-4 text-sm text-gray-400 text-center">Nenhum conteúdo encontrado.</div>
-                  ) : (
-                    filteredDocs.map(section => (
-                      <div key={section.id}>
-                        <button
-                          onClick={() => toggleSection(section.id)}
-                          className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-amber-50 transition-colors group"
-                        >
-                          <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide group-hover:text-amber-700">
-                            {section.title}
-                          </span>
-                          {expandedSections.has(section.id)
-                            ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-                            : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
-                          }
-                        </button>
-                        {expandedSections.has(section.id) && (
-                          <div className="pb-1">
-                            {section.pages.map(page => (
-                              <button
-                                key={page.id}
-                                onClick={() => setSelectedPage(page)}
-                                className={`w-full text-left px-5 py-2 text-xs transition-colors ${
-                                  selectedPage?.id === page.id
-                                    ? 'bg-amber-50 text-amber-800 font-medium border-l-2 border-amber-500'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
-                                }`}
-                              >
-                                {page.title}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto">
-                {!selectedPage ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                    <BookOpen className="h-10 w-10 text-amber-200 mb-3" />
-                    <p className="text-gray-500 text-sm">Selecione uma página no menu ao lado</p>
-                  </div>
-                ) : (
-                  <div className="p-6">
-                    <h1 className="text-xl font-bold text-gray-900 mb-1">{selectedPage.title}</h1>
-                    <p className="text-xs text-gray-400 mb-5">
-                      Atualizado em {new Date(selectedPage.updatedAt).toLocaleDateString('pt-BR')}
-                    </p>
-                    <div
-                      ref={docsContentRef}
-                      className="prose-login"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(selectedPage.content) }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeDocsModal}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={closeDocsModal}
+              className="absolute top-4 right-4 z-10 w-9 h-9 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center shadow transition-colors"
+              aria-label="Fechar documentação"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <Documentation inModal />
           </div>
         </div>
       )}
@@ -582,7 +369,7 @@ const Login: React.FC = () => {
             </div>
 
             <div className="mb-6">
-              <label htmlFor="new-password-display" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="new-password-display" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Sua Nova Senha
               </label>
               <div className="relative">
@@ -660,6 +447,19 @@ const Login: React.FC = () => {
         .prose-login strong { font-weight: 600; color: #1f2937; }
         .prose-login hr { border-color: #f3f4f6; margin: 1rem 0; }
         .mermaid { display: flex; justify-content: center; margin: 1rem 0; }
+        /* Dark mode overrides para prose-login */
+        html.dark .prose-login h1 { color: #f1f5f9; }
+        html.dark .prose-login h2 { color: #e2e8f0; border-bottom-color: #334155; }
+        html.dark .prose-login h3 { color: #cbd5e1; }
+        html.dark .prose-login p { color: #cbd5e1; }
+        html.dark .prose-login ul, html.dark .prose-login ol { color: #cbd5e1; }
+        html.dark .prose-login blockquote { background: #1c1200; border-left-color: #f59e0b; }
+        html.dark .prose-login code { background: #1e293b; color: #fbbf24; }
+        html.dark .prose-login th { background: #1c1a00; border-color: #334155; color: #f1f5f9; }
+        html.dark .prose-login td { border-color: #334155; color: #cbd5e1; }
+        html.dark .prose-login a { color: #fbbf24; }
+        html.dark .prose-login strong { color: #f1f5f9; }
+        html.dark .prose-login hr { border-color: #334155; }
       `}</style>
     </div>
   );

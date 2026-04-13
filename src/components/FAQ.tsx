@@ -63,7 +63,7 @@ const FAQ: React.FC = () => {
           value={busca}
           onChange={e => setBusca(e.target.value)}
           placeholder="Buscar pergunta ou resposta..."
-          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm outline-none"
+          className="w-full pl-11 pr-4 py-3 bg-white dark:!bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm outline-none dark:text-gray-100 dark:placeholder-gray-400"
         />
       </div>
 
@@ -111,7 +111,7 @@ const FAQ: React.FC = () => {
               </button>
               {openId === item.id && (
                 <div className="px-5 pb-5 pt-0 border-t border-amber-100">
-                  <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap pt-4">
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap pt-4">
                     {item.resposta}
                   </p>
                 </div>

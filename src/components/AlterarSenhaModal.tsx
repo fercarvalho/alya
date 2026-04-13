@@ -110,9 +110,9 @@ const AlterarSenhaModal: React.FC<AlterarSenhaModalProps> = ({ isOpen, onClose }
         }
       }}
     >
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50 max-h-[calc(100vh-220px)] overflow-y-auto">
+      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200/50 dark:border-gray-700 max-h-[calc(100vh-220px)] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900/80 dark:to-gray-900/80 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
               <Key className="w-6 h-6 text-amber-700" />
@@ -145,10 +145,10 @@ const AlterarSenhaModal: React.FC<AlterarSenhaModalProps> = ({ isOpen, onClose }
                 type={showSenhaAtual ? 'text' : 'password'}
                 value={senhaAtual}
                 onChange={(e) => setSenhaAtual(e.target.value)}
-                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all ${
+                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:text-gray-100 dark:placeholder-gray-400 ${
                   errors.senhaAtual
                     ? 'bg-red-50 border-red-300 focus:ring-red-500'
-                    : 'bg-gray-50 border-gray-200'
+                    : 'bg-gray-50 border-gray-200 dark:!bg-gray-700 dark:border-gray-600'
                 }`}
                 placeholder="Digite sua senha atual"
                 disabled={loading}
@@ -187,10 +187,10 @@ const AlterarSenhaModal: React.FC<AlterarSenhaModalProps> = ({ isOpen, onClose }
                     }
                   }
                 }}
-                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all ${
+                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:text-gray-100 dark:placeholder-gray-400 ${
                   errors.novaSenha
                     ? 'bg-red-50 border-red-300 focus:ring-red-500'
-                    : 'bg-gray-50 border-gray-200'
+                    : 'bg-gray-50 border-gray-200 dark:!bg-gray-700 dark:border-gray-600'
                 }`}
                 placeholder="Digite a nova senha (mínimo 6 caracteres)"
                 disabled={loading}
@@ -231,10 +231,10 @@ const AlterarSenhaModal: React.FC<AlterarSenhaModalProps> = ({ isOpen, onClose }
                     setErrors(prev => ({ ...prev, confirmarSenha: 'As senhas não coincidem' }));
                   }
                 }}
-                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all ${
+                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:text-gray-100 dark:placeholder-gray-400 ${
                   errors.confirmarSenha
                     ? 'bg-red-50 border-red-300 focus:ring-red-500'
-                    : 'bg-gray-50 border-gray-200'
+                    : 'bg-gray-50 border-gray-200 dark:!bg-gray-700 dark:border-gray-600'
                 }`}
                 placeholder="Confirme a nova senha"
                 disabled={loading}

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { marked, Renderer, use as markedUse } from 'marked';
 
 interface DocPage {
@@ -28,6 +29,7 @@ declare global {
     mermaid?: {
       initialize: (config: object) => void;
       run: (opts?: object) => Promise<void>;
+      render: (id: string, text: string) => Promise<{ svg: string }>;
     };
   }
 }
@@ -59,18 +61,23 @@ function loadMermaid(): Promise<void> {
   });
 }
 
-async function runMermaidIn(container: HTMLElement) {
-  const divs = container.querySelectorAll('.mermaid.not-rendered-admin');
-  if (divs.length === 0) return;
+async function runMermaidIn(container: HTMLElement, isDark: boolean) {
   await loadMermaid();
+  window.mermaid?.initialize({ startOnLoad: false, theme: isDark ? 'dark' : 'default' });
+
+  const divs = Array.from(container.querySelectorAll<HTMLElement>('.mermaid.not-rendered-admin'));
+  if (divs.length === 0) return;
+
   divs.forEach(d => d.classList.remove('not-rendered-admin'));
+
   try {
-    await window.mermaid?.run({ nodes: Array.from(divs) as HTMLElement[] });
+    await window.mermaid?.run({ nodes: divs });
   } catch { /* ignora diagrama inválido */ }
 }
 
 const DocumentationManagement: React.FC = () => {
   const { token } = useAuth();
+  const { isDark } = useTheme();
   const [sections, setSections] = useState<DocSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -120,11 +127,13 @@ const DocumentationManagement: React.FC = () => {
 
   useEffect(() => { loadSections(); }, [loadSections]);
 
-  // Atualiza preview com mermaid
-  const renderedHtml = editContent ? (marked(editContent) as string) : '';
+  // Inclui o tema no HTML para forçar React a resetar o DOM quando o tema muda
+  const renderedHtml = editContent
+    ? `<!--${isDark ? 'dark' : 'light'}-->${marked(editContent) as string}`
+    : '';
   useEffect(() => {
     if (previewRef.current && renderedHtml) {
-      runMermaidIn(previewRef.current);
+      runMermaidIn(previewRef.current, isDark);
     }
   }, [renderedHtml]);
 
@@ -279,8 +288,8 @@ const DocumentationManagement: React.FC = () => {
     <div className="flex gap-4 h-[calc(100vh-300px)] min-h-[500px]">
       {/* Sidebar de seções/páginas */}
       <aside className="w-64 flex-shrink-0 flex flex-col gap-2">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <span className="text-sm font-semibold text-gray-700">Estrutura</span>
             <button
               onClick={() => setShowNewSection(true)}
@@ -303,7 +312,7 @@ const DocumentationManagement: React.FC = () => {
                 return (
                   <div key={section.id}>
                     {/* Cabeçalho da seção */}
-                    <div className="flex items-center group hover:bg-amber-50 transition-colors">
+                    <div className="flex items-center group hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors">
                       <button
                         onClick={() =>
                           setExpandedSections(prev => {
@@ -312,7 +321,7 @@ const DocumentationManagement: React.FC = () => {
                             return n;
                           })
                         }
-                        className="flex-1 flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-gray-700 text-left"
+                        className="flex-1 flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 text-left"
                       >
                         {isExpanded
                           ? <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
@@ -346,14 +355,14 @@ const DocumentationManagement: React.FC = () => {
 
                     {/* Páginas */}
                     {isExpanded && (
-                      <div className="bg-gray-50 border-l-2 border-gray-100 ml-3">
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border-l-2 border-gray-100 dark:border-gray-700 ml-3">
                         {section.pages.map(page => (
                           <div
                             key={page.id}
                             className={`flex items-center group transition-colors ${
                               selectedPage?.id === page.id
-                                ? 'bg-amber-100 border-l-2 border-amber-500 -ml-0.5'
-                                : 'hover:bg-amber-50'
+                                ? 'bg-amber-100 dark:bg-amber-900/30 border-l-2 border-amber-500 -ml-0.5'
+                                : 'hover:bg-amber-50 dark:hover:bg-gray-700'
                             }`}
                           >
                             <button
@@ -361,7 +370,7 @@ const DocumentationManagement: React.FC = () => {
                               className="flex-1 flex items-center gap-2 pl-3 pr-2 py-2 text-sm text-left truncate"
                             >
                               <FileText className={`h-3.5 w-3.5 flex-shrink-0 ${selectedPage?.id === page.id ? 'text-amber-600' : 'text-gray-400'}`} />
-                              <span className={`truncate ${selectedPage?.id === page.id ? 'text-amber-700 font-medium' : 'text-gray-600'}`}>
+                              <span className={`truncate ${selectedPage?.id === page.id ? 'text-amber-700 dark:text-amber-300 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
                                 {page.title}
                               </span>
                             </button>
@@ -392,13 +401,13 @@ const DocumentationManagement: React.FC = () => {
         {selectedPage ? (
           <>
             {/* Toolbar do editor */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-2.5 mb-3 flex items-center justify-between">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-2.5 mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <input
                   type="text"
                   value={editTitle}
                   onChange={e => handleTitleChange(e.target.value)}
-                  className="text-base font-semibold text-gray-800 border-none outline-none bg-transparent truncate max-w-sm focus:ring-0"
+                  className="text-base font-semibold text-gray-800 dark:text-gray-100 border-none outline-none bg-transparent truncate max-w-sm focus:ring-0"
                   placeholder="Título da página"
                 />
                 {isDirty && (
@@ -407,13 +416,13 @@ const DocumentationManagement: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 {/* Toggle view */}
-                <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
+                <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5 gap-0.5">
                   <button
                     onClick={() => setPreviewMode('editor')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
                       previewMode === 'editor'
-                        ? 'bg-white text-amber-700 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                     }`}
                   >
                     <Code2 className="h-3.5 w-3.5" />
@@ -423,8 +432,8 @@ const DocumentationManagement: React.FC = () => {
                     onClick={() => setPreviewMode('split')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       previewMode === 'split'
-                        ? 'bg-white text-amber-700 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                     }`}
                   >
                     Split
@@ -433,8 +442,8 @@ const DocumentationManagement: React.FC = () => {
                     onClick={() => setPreviewMode('preview')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
                       previewMode === 'preview'
-                        ? 'bg-white text-amber-700 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                     }`}
                   >
                     <Eye className="h-3.5 w-3.5" />
@@ -460,15 +469,15 @@ const DocumentationManagement: React.FC = () => {
             <div className="flex-1 flex gap-3 min-h-0">
               {/* Editor */}
               {previewMode !== 'preview' && (
-                <div className={`flex flex-col ${previewMode === 'split' ? 'w-1/2' : 'flex-1'} bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden`}>
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50">
+                <div className={`flex flex-col ${previewMode === 'split' ? 'w-1/2' : 'flex-1'} bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden`}>
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
                     <Code2 className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-xs text-gray-500 font-medium">Markdown + Mermaid</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-300 font-medium">Markdown + Mermaid</span>
                   </div>
                   <textarea
                     value={editContent}
                     onChange={e => handleContentChange(e.target.value)}
-                    className="flex-1 p-4 text-sm font-mono text-gray-700 outline-none resize-none leading-relaxed"
+                    className="flex-1 p-4 text-sm font-mono text-gray-700 dark:text-gray-200 bg-white dark:!bg-gray-800 outline-none resize-none leading-relaxed"
                     placeholder={`# Título\n\nDigite o conteúdo em Markdown...\n\n\`\`\`mermaid\ngraph TD\n  A --> B\n\`\`\``}
                     spellCheck={false}
                   />
@@ -477,10 +486,10 @@ const DocumentationManagement: React.FC = () => {
 
               {/* Preview */}
               {previewMode !== 'editor' && (
-                <div className={`flex flex-col ${previewMode === 'split' ? 'w-1/2' : 'flex-1'} bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden`}>
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50">
+                <div className={`flex flex-col ${previewMode === 'split' ? 'w-1/2' : 'flex-1'} bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden`}>
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
                     <Eye className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-xs text-gray-500 font-medium">Preview</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-300 font-medium">Preview</span>
                   </div>
                   <div
                     ref={previewRef}
@@ -514,7 +523,7 @@ const DocumentationManagement: React.FC = () => {
           className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={e => e.target === e.currentTarget && setShowNewSection(false)}
         >
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <h3 className="text-base font-bold text-gray-800 mb-4">Nova Seção</h3>
             <input
               autoFocus
@@ -523,7 +532,7 @@ const DocumentationManagement: React.FC = () => {
               onChange={e => setNewSectionTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && createSection()}
               placeholder="Nome da seção"
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
             />
             <div className="flex gap-2 justify-end">
               <button
@@ -550,7 +559,7 @@ const DocumentationManagement: React.FC = () => {
           className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={e => e.target === e.currentTarget && setShowNewPage(null)}
         >
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <h3 className="text-base font-bold text-gray-800 mb-4">Nova Página</h3>
             <input
               autoFocus
@@ -559,7 +568,7 @@ const DocumentationManagement: React.FC = () => {
               onChange={e => setNewPageTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && createPage(showNewPage)}
               placeholder="Título da página"
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
             />
             <div className="flex gap-2 justify-end">
               <button
@@ -586,7 +595,7 @@ const DocumentationManagement: React.FC = () => {
           className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={e => e.target === e.currentTarget && setEditingSection(null)}
         >
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <h3 className="text-base font-bold text-gray-800 mb-4">Renomear Seção</h3>
             <input
               autoFocus
@@ -594,7 +603,7 @@ const DocumentationManagement: React.FC = () => {
               value={editingSection.title}
               onChange={e => setEditingSection({ ...editingSection, title: e.target.value })}
               onKeyDown={e => e.key === 'Enter' && updateSectionTitle()}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4 bg-white dark:!bg-gray-700 dark:text-gray-100"
             />
             <div className="flex gap-2 justify-end">
               <button
@@ -618,7 +627,7 @@ const DocumentationManagement: React.FC = () => {
       {/* Modal: Confirmar Delete */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 rounded-full p-2">
                 <AlertTriangle className="h-5 w-5 text-red-500" />

@@ -133,9 +133,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
         }
       }}
     >
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-2xl max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-2xl max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900/80 dark:to-gray-900/80 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
               <User className="w-6 h-6 text-amber-700" />

@@ -433,12 +433,12 @@ const DRE: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-lg">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-2xl border border-amber-200 dark:border-gray-700 shadow-lg">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">
               FILTRE SEUS ITENS:
             </h2>
           </div>
@@ -446,7 +446,7 @@ const DRE: React.FC = () => {
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="dre-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="dre-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Período
               </label>
               <select
@@ -454,7 +454,7 @@ const DRE: React.FC = () => {
                 name="dre-period-filter"
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as 'mensal' | 'trimestral' | 'anual')}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value="mensal">Mensal</option>
                 <option value="trimestral">Trimestral</option>
@@ -464,7 +464,7 @@ const DRE: React.FC = () => {
 
             {selectedPeriod !== 'anual' && (
               <div className="flex flex-col flex-1 min-w-0">
-                <label htmlFor="dre-month-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+                <label htmlFor="dre-month-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                   Mês
                 </label>
                 <select
@@ -472,7 +472,7 @@ const DRE: React.FC = () => {
                   name="dre-month-filter"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
                 >
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={i} value={i}>
@@ -484,7 +484,7 @@ const DRE: React.FC = () => {
             )}
 
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="dre-year-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="dre-year-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Ano
               </label>
               <select
@@ -492,7 +492,7 @@ const DRE: React.FC = () => {
                 name="dre-year-filter"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 {Array.from({ length: 5 }, (_, i) => {
                   const year = new Date().getFullYear() - 2 + i

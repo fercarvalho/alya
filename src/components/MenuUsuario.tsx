@@ -99,7 +99,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
   const dropdownContent = showMenu ? (
     <div
       ref={menuRef}
-      className="fixed w-56 bg-white rounded-xl shadow-lg border border-amber-200/50 overflow-hidden z-[9999]"
+      className="fixed w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-amber-200/50 dark:border-amber-800/40 overflow-hidden z-[9999]"
       style={{
         top: `${dropdownPosition.top}px`,
         right: `${dropdownPosition.right}px`,
@@ -110,7 +110,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
       <div className="py-2">
         <button
           onClick={handleProfileClick}
-          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 transition-colors text-gray-700"
+          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-gray-700 dark:text-gray-300"
         >
           <User className="w-4 h-4 text-amber-600" />
           <span className="text-sm font-medium">Ver Perfil</span>
@@ -118,7 +118,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
 
         <button
           onClick={handleUsernameClick}
-          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 transition-colors text-gray-700"
+          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-gray-700 dark:text-gray-300"
         >
           <Edit className="w-4 h-4 text-amber-600" />
           <span className="text-sm font-medium">Alterar Username</span>
@@ -126,7 +126,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
 
         <button
           onClick={handlePasswordClick}
-          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 transition-colors text-gray-700 min-h-[44px]"
+          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-gray-700 dark:text-gray-300 min-h-[44px]"
         >
           <Key className="w-4 h-4 text-amber-600" />
           <span className="text-sm font-medium">Alterar Senha</span>
@@ -134,7 +134,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
 
         <button
           onClick={handleEditProfileClick}
-          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 transition-colors text-gray-700 min-h-[44px]"
+          className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-gray-700 dark:text-gray-300 min-h-[44px]"
         >
           <Edit className="w-4 h-4 text-amber-600" />
           <span className="text-sm font-medium">Editar Perfil</span>
@@ -149,7 +149,7 @@ const MenuUsuario: React.FC<MenuUsuarioProps> = ({ onLogout }) => {
         <button
           ref={buttonRef}
           onClick={handleMenuClick}
-          className="flex items-center gap-3 px-4 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 text-amber-800 transition-colors shadow-sm min-h-[44px] flex-shrink-0 whitespace-nowrap"
+          className="flex items-center gap-3 px-4 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 transition-colors shadow-sm min-h-[44px] flex-shrink-0 whitespace-nowrap"
           title={getUserDisplayName()}
         >
           {/* Avatar */}

@@ -30,10 +30,10 @@ const PAGINA_LABELS: Record<string, string> = {
 type Categoria = 'duvida' | 'melhoria' | 'sugestao' | 'critica';
 
 const CATEGORIAS: { id: Categoria; label: string; color: string; activeColor: string }[] = [
-  { id: 'duvida', label: 'Dúvida', color: 'border-blue-200 text-blue-600 hover:border-blue-400 bg-white', activeColor: 'bg-blue-500 border-blue-500 text-white' },
-  { id: 'melhoria', label: 'Melhoria', color: 'border-green-200 text-green-600 hover:border-green-400 bg-white', activeColor: 'bg-green-500 border-green-500 text-white' },
-  { id: 'sugestao', label: 'Sugestão', color: 'border-amber-200 text-amber-600 hover:border-amber-400 bg-white', activeColor: 'bg-amber-500 border-amber-500 text-white' },
-  { id: 'critica', label: 'Crítica', color: 'border-red-200 text-red-600 hover:border-red-400 bg-white', activeColor: 'bg-red-500 border-red-500 text-white' },
+  { id: 'duvida', label: 'Dúvida', color: 'border-blue-200 text-blue-600 hover:border-blue-400 bg-white dark:bg-gray-700 dark:border-blue-800 dark:text-blue-400 dark:hover:border-blue-600', activeColor: 'bg-blue-500 border-blue-500 text-white' },
+  { id: 'melhoria', label: 'Melhoria', color: 'border-green-200 text-green-600 hover:border-green-400 bg-white dark:bg-gray-700 dark:border-green-800 dark:text-green-400 dark:hover:border-green-600', activeColor: 'bg-green-500 border-green-500 text-white' },
+  { id: 'sugestao', label: 'Sugestão', color: 'border-amber-200 text-amber-600 hover:border-amber-400 bg-white dark:bg-gray-700 dark:border-amber-800 dark:text-amber-400 dark:hover:border-amber-600', activeColor: 'bg-amber-500 border-amber-500 text-white' },
+  { id: 'critica', label: 'Crítica', color: 'border-red-200 text-red-600 hover:border-red-400 bg-white dark:bg-gray-700 dark:border-red-800 dark:text-red-400 dark:hover:border-red-600', activeColor: 'bg-red-500 border-red-500 text-white' },
 ];
 
 const TIPOS_ACEITOS = ['image/jpeg', 'image/png', 'image/webp'];
@@ -183,9 +183,9 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, paginaAt
       className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
       onClick={e => { if (e.target === e.currentTarget) handleClose(); }}
     >
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-lg max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-lg max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 rounded-t-2xl">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900/80 dark:to-gray-900/80 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-gray-700 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
               <MessageSquarePlus className="w-6 h-6 text-amber-700" />
@@ -199,7 +199,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, paginaAt
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-sm text-amber-700/70 mt-0.5">Sua opinião nos ajuda a melhorar o sistema</p>
+          <p className="text-sm text-amber-700/70 dark:text-amber-400/70 mt-0.5">Sua opinião nos ajuda a melhorar o sistema</p>
         </div>
 
         {sucesso ? (
@@ -252,7 +252,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, paginaAt
                 rows={4}
                 maxLength={1000}
                 disabled={isSubmitting}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm resize-none disabled:opacity-50"
+                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:!bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm resize-none disabled:opacity-50 dark:text-gray-100 dark:placeholder-gray-400"
               />
               <div className="flex items-center justify-between mt-1">
                 {errors.descricao
@@ -286,9 +286,9 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, paginaAt
                   onDrop={handleDrop}
                   onDragOver={e => e.preventDefault()}
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-amber-400 rounded-xl p-6 cursor-pointer transition-colors group bg-gray-50 hover:bg-amber-50/30"
+                  className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-600 rounded-xl p-6 cursor-pointer transition-colors group bg-gray-50 dark:bg-gray-700/50 hover:bg-amber-50/30 dark:hover:bg-amber-900/20"
                 >
-                  <div className="bg-white group-hover:bg-amber-50 rounded-xl p-3 shadow-sm transition-colors">
+                  <div className="bg-white dark:bg-gray-700 group-hover:bg-amber-50 dark:group-hover:bg-amber-900/30 rounded-xl p-3 shadow-sm transition-colors">
                     <ImageIcon className="w-6 h-6 text-gray-400 group-hover:text-amber-500 transition-colors" />
                   </div>
                   <p className="text-sm text-gray-500 text-center">
@@ -323,7 +323,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, paginaAt
                   }}
                   placeholder="https://drive.google.com/..."
                   disabled={isSubmitting}
-                  className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm disabled:opacity-50"
+                  className="w-full pl-9 pr-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:!bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm disabled:opacity-50 dark:text-gray-100 dark:placeholder-gray-400"
                 />
               </div>
               {errors.linkVideo && <p className="text-sm text-red-600 bg-red-50 p-2 rounded-md border border-red-100 mt-1.5">{errors.linkVideo}</p>}
@@ -340,7 +340,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, paginaAt
                   value={paginaSelecionada}
                   onChange={e => setPaginaSelecionada(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full pl-9 pr-9 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm text-gray-700 appearance-none disabled:opacity-50"
+                  className="w-full pl-9 pr-9 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:!bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm text-gray-700 dark:text-gray-100 appearance-none disabled:opacity-50"
                 >
                   <option value="">Nenhuma página específica</option>
                   {Object.entries(PAGINA_LABELS).map(([key, label]) => (
@@ -358,12 +358,12 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, paginaAt
             )}
 
             {/* Botões */}
-            <div className="flex gap-3 justify-end pt-2 border-t border-gray-200 mt-2">
+            <div className="flex gap-3 justify-end pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>

@@ -296,27 +296,27 @@ const ActivityLog: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-lg p-4">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl border border-amber-200 dark:border-gray-700 shadow-lg p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Filter className="h-5 w-5 text-gray-600" />
-          <h3 className="font-semibold text-gray-900">Filtros</h3>
+          <Filter className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Filtros</h3>
           <button
             onClick={clearFilters}
-            className="ml-auto text-sm text-amber-600 hover:text-amber-800"
+            className="ml-auto text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
           >
             Limpar filtros
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Usuário</label>
             <select
               value={filters.userId}
               onChange={(e) => {
                 setFilters({ ...filters, userId: e.target.value });
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
             >
               <option value="">Todos</option>
               {knownUsers.map(user => (
@@ -325,14 +325,14 @@ const ActivityLog: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Módulo</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Módulo</label>
             <select
               value={filters.module}
               onChange={(e) => {
                 setFilters({ ...filters, module: e.target.value });
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
             >
               <option value="">Todos</option>
               {modules.map(mod => (
@@ -341,14 +341,14 @@ const ActivityLog: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ação</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ação</label>
             <select
               value={filters.action}
               onChange={(e) => {
                 setFilters({ ...filters, action: e.target.value });
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
             >
               <option value="">Todas</option>
               {knownActions.map(action => (
@@ -357,7 +357,7 @@ const ActivityLog: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Início</label>
             <input
               type="date"
               value={filters.startDate}
@@ -365,11 +365,11 @@ const ActivityLog: React.FC = () => {
                 setFilters({ ...filters, startDate: e.target.value });
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Fim</label>
             <input
               type="date"
               value={filters.endDate}
@@ -377,7 +377,7 @@ const ActivityLog: React.FC = () => {
                 setFilters({ ...filters, endDate: e.target.value });
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
             />
           </div>
         </div>

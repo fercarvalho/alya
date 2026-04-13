@@ -625,3 +625,104 @@
     font-size: 14px;
   }
 }
+
+/* === DARK MODE === */
+html.dark .anomaly-dashboard {
+  color: #e2e8f0;
+}
+
+html.dark .page-title {
+  color: #f1f5f9;
+}
+
+html.dark .page-subtitle {
+  color: #94a3b8;
+}
+
+html.dark .spinner {
+  border-color: #334155;
+  border-top-color: #f59e0b;
+}
+
+html.dark .filters {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .filters label,
+html.dark .filter-label {
+  color: #cbd5e1;
+}
+
+html.dark .filters select,
+html.dark .filters input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+html.dark .stat-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .stat-value {
+  color: #f1f5f9;
+}
+
+html.dark .stat-label {
+  color: #94a3b8;
+}
+
+html.dark .anomaly-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .anomaly-card:hover {
+  border-color: #475569;
+}
+
+html.dark .anomaly-title {
+  color: #f1f5f9;
+}
+
+html.dark .anomaly-description {
+  color: #94a3b8;
+}
+
+html.dark .anomaly-meta {
+  color: #64748b;
+}
+
+html.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+html.dark .modal-content,
+html.dark .modal-body {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+html.dark .modal-header {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+html.dark .modal-title {
+  color: #f1f5f9;
+}
+
+html.dark .user-item {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .user-name {
+  color: #f1f5f9;
+}
+
+html.dark .user-meta {
+  color: #94a3b8;
+}

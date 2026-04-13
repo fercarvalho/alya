@@ -492,15 +492,15 @@ const Clients: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-lg border border-amber-200 dark:border-gray-700 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">Filtre seus itens:</h2>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">Filtre seus itens:</h2>
           </div>
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="client-name-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Nome</label>
+              <label htmlFor="client-name-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">Nome</label>
               <input
                 id="client-name-filter"
                 name="client-name-filter"
@@ -508,11 +508,11 @@ const Clients: React.FC = () => {
                 placeholder="Nome..."
                 value={filters.name}
                 onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 w-full"
               />
             </div>
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="client-email-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Email</label>
+              <label htmlFor="client-email-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">Email</label>
               <input
                 id="client-email-filter"
                 name="client-email-filter"
@@ -520,11 +520,11 @@ const Clients: React.FC = () => {
                 placeholder="Email..."
                 value={filters.email}
                 onChange={(e) => setFilters(prev => ({ ...prev, email: e.target.value }))}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 w-full"
               />
             </div>
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="client-phone-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">Telefone</label>
+              <label htmlFor="client-phone-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">Telefone</label>
               <input
                 id="client-phone-filter"
                 name="client-phone-filter"
@@ -532,7 +532,7 @@ const Clients: React.FC = () => {
                 placeholder="Telefone..."
                 value={filters.phone}
                 onChange={(e) => setFilters(prev => ({ ...prev, phone: e.target.value }))}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 w-full"
               />
             </div>
           </div>

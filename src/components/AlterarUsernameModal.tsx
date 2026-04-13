@@ -127,9 +127,9 @@ const AlterarUsernameModal: React.FC<AlterarUsernameModalProps> = ({
         }
       }}
     >
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900/80 dark:to-gray-900/80 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
               <Edit className="w-6 h-6 text-amber-700" />
@@ -161,7 +161,7 @@ const AlterarUsernameModal: React.FC<AlterarUsernameModalProps> = ({
               type="text"
               value={currentUsername}
               disabled
-              className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-600 cursor-not-allowed"
+              className="w-full px-4 py-3 bg-gray-100 dark:!bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-400 cursor-not-allowed"
             />
           </div>
 
@@ -177,10 +177,10 @@ const AlterarUsernameModal: React.FC<AlterarUsernameModalProps> = ({
                 const error = validateUsername(newUsername);
                 setErrors(prev => ({ ...prev, username: error }));
               }}
-              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all ${
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:text-gray-100 dark:placeholder-gray-400 ${
                 errors.username
                   ? 'bg-red-50 border-red-300 focus:ring-red-500'
-                  : 'bg-gray-50 border-gray-200'
+                  : 'bg-gray-50 border-gray-200 dark:!bg-gray-700 dark:border-gray-600'
               }`}
               placeholder="Digite o novo username"
               disabled={loading}
@@ -199,7 +199,7 @@ const AlterarUsernameModal: React.FC<AlterarUsernameModalProps> = ({
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all ${
+                className={`w-full px-4 py-3 pr-12 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:text-gray-100 dark:placeholder-gray-400 ${
                   errors.password
                     ? 'bg-red-50 border-red-300 focus:ring-red-500'
                     : 'bg-gray-50 border-gray-200'

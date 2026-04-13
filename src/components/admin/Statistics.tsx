@@ -254,9 +254,9 @@ const Statistics: React.FC = () => {
       </div>
 
       {/* Filtros de Período */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-lg p-4">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl border border-amber-200 dark:border-gray-700 shadow-lg p-4">
         <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">Período:</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Período:</label>
           <div className="flex gap-2">
             {(['7', '30', '90', 'custom'] as const).map((p) => (
               <button
@@ -265,7 +265,7 @@ const Statistics: React.FC = () => {
                 className={`px-4 py-2 rounded-2xl text-sm font-semibold transition-all duration-200 ${
                   period === p
                     ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-300 hover:text-amber-600'
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-amber-300 dark:hover:border-amber-600 hover:text-amber-600 dark:hover:text-amber-400'
                 }`}
               >
                 {p === '7' ? '7 dias' : p === '30' ? '30 dias' : p === '90' ? '90 dias' : 'Personalizado'}
@@ -278,14 +278,14 @@ const Statistics: React.FC = () => {
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="px-3 py-2 border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-sm"
+                className="px-3 py-2 border border-amber-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 text-sm"
               />
-              <span className="text-sm text-amber-700 font-medium">até</span>
+              <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">até</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="px-3 py-2 border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-sm"
+                className="px-3 py-2 border border-amber-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 text-sm"
               />
             </div>
           )}

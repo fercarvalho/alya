@@ -183,7 +183,7 @@ const CalculatedCell: React.FC<{ value: number; className?: string }> = ({ value
   const n = asNumber(value)
   const isNeg = n < 0
   return (
-    <div className={`text-center font-semibold ${isNeg ? 'text-red-600' : 'text-gray-900'} ${className || ''}`}>
+    <div className={`text-center font-semibold ${isNeg ? 'text-red-500 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'} ${className || ''}`}>
       {formatCurrencyBRL(n)}
     </div>
   )
@@ -204,7 +204,7 @@ const NumberCell: React.FC<{
       value={Number.isFinite(value) ? value : 0}
       disabled={disabled}
       onChange={e => onChange(asNumber(e.target.value))}
-      className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${disabled ? 'bg-gray-100 text-gray-500' : 'bg-white'
+      className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${disabled ? 'bg-gray-100 text-gray-500 dark:!bg-gray-700 dark:text-gray-400 dark:border-gray-600' : 'bg-white dark:!bg-gray-600 dark:text-gray-100 dark:border-gray-500'
         }`}
     />
   )
@@ -229,7 +229,7 @@ const OverrideCell: React.FC<{
         value={Number.isFinite(valueEffective) ? valueEffective : 0}
         disabled={disabled}
         onChange={e => onSet(asNumber(e.target.value))}
-        className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${disabled ? 'bg-gray-100 text-gray-500' : hasOverride ? 'bg-amber-50 border-amber-300' : 'bg-white'
+        className={`w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-center ${disabled ? 'bg-gray-100 text-gray-500 dark:!bg-gray-700 dark:text-gray-400 dark:border-gray-600' : hasOverride ? 'bg-amber-50 border-amber-300 dark:!bg-amber-900/40 dark:border-amber-600 dark:text-amber-100' : 'bg-white dark:!bg-gray-600 dark:text-gray-100 dark:border-gray-500'
           }`}
         title={hasOverride ? 'Valor com override manual' : 'Valor calculado automaticamente'}
       />
@@ -238,7 +238,7 @@ const OverrideCell: React.FC<{
           type="button"
           onClick={onClear}
           disabled={disabled}
-          className="px-2 py-1 text-xs rounded border border-amber-300 bg-white text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+          className="px-2 py-1 text-xs rounded border border-amber-300 bg-white text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:bg-gray-700 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-gray-600"
           title="Limpar override (voltar ao automático)"
         >
           ↺
@@ -254,9 +254,9 @@ const LegendBox: React.FC<{
   right?: React.ReactNode
 }> = ({ title, left, right }) => {
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-      <h3 className="font-semibold text-amber-900 mb-2">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-amber-900/90">
+    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+      <h3 className="font-semibold text-amber-900 dark:text-amber-300 mb-2">{title}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-amber-900/90 dark:text-amber-200/90">
         <div>{left}</div>
         <div>{right}</div>
       </div>
@@ -869,7 +869,7 @@ export default function Projection() {
             </div>
 
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200 dark:[&_th:last-child]:bg-amber-900 dark:[&_td:last-child]:bg-amber-900/40">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-amber-600">Linha</th>
@@ -895,8 +895,8 @@ export default function Projection() {
                   ].map(row => {
                     const arr = row.get()
                     return (
-                      <tr key={row.key}>
-                        <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white">{row.label}</td>
+                      <tr key={row.key} className="dark:bg-gray-800">
+                        <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                         {MONTHS_WITH_QUARTERS.map(col =>
                           col.kind === 'month' ? (
                             <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -913,7 +913,7 @@ export default function Projection() {
                               />
                             </td>
                           ) : (
-                            <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                            <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                               <CalculatedCell value={sumQuarter(arr, col.startMonthIndex)} />
                             </td>
                           )
@@ -926,8 +926,8 @@ export default function Projection() {
                   })}
 
                   {/* Despesas totais (não editável): Fixas + Variáveis */}
-                  <tr className="bg-amber-100/60">
-                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60">DESPESAS TOTAIS (Fixas + Variáveis)</td>
+                  <tr className="bg-amber-100/60 dark:bg-amber-900/30">
+                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60 dark:bg-amber-900/30 dark:text-amber-200">DESPESAS TOTAIS (Fixas + Variáveis)</td>
                     {MONTHS_WITH_QUARTERS.map(col =>
                       col.kind === 'month' ? (
                         <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -948,8 +948,8 @@ export default function Projection() {
                   {sortedStreams.map(s => {
                     const arr = ensure12(base.prevYear.revenueStreams?.[s.id])
                     return (
-                      <tr key={`rev-${s.id}`}>
-                        <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white">Faturamento — {s.name}</td>
+                      <tr key={`rev-${s.id}`} className="dark:bg-gray-800">
+                        <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white dark:bg-gray-800 dark:text-gray-100">Faturamento — {s.name}</td>
                         {MONTHS_WITH_QUARTERS.map(col =>
                           col.kind === 'month' ? (
                             <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -969,7 +969,7 @@ export default function Projection() {
                               />
                             </td>
                           ) : (
-                            <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                            <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                               <CalculatedCell value={sumQuarter(arr, col.startMonthIndex)} />
                             </td>
                           )
@@ -985,8 +985,8 @@ export default function Projection() {
                   {sortedComponents.map(c => {
                     const arr = ensure12(base.prevYear.mktComponents?.[c.id])
                     return (
-                      <tr key={`mkt-${c.id}`} className="bg-gray-50/50">
-                        <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-gray-50/50">MKT — {c.name}</td>
+                      <tr key={`mkt-${c.id}`} className="bg-gray-50/50 dark:bg-gray-800/50">
+                        <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-gray-50/50 dark:bg-gray-800/50 dark:text-gray-100">MKT — {c.name}</td>
                         {MONTHS_WITH_QUARTERS.map(col =>
                           col.kind === 'month' ? (
                             <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1006,7 +1006,7 @@ export default function Projection() {
                               />
                             </td>
                           ) : (
-                            <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                            <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                               <CalculatedCell value={sumQuarter(arr, col.startMonthIndex)} />
                             </td>
                           )
@@ -1018,8 +1018,8 @@ export default function Projection() {
                     )
                   })}
 
-                  <tr className="bg-amber-100/60">
-                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60">TOTAL Faturamento (base)</td>
+                  <tr className="bg-amber-100/60 dark:bg-amber-900/30">
+                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60 dark:bg-amber-900/30 dark:text-amber-200">TOTAL Faturamento (base)</td>
                     {MONTHS_WITH_QUARTERS.map(col =>
                       col.kind === 'month' ? (
                         <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1035,8 +1035,8 @@ export default function Projection() {
                       <CalculatedCell value={baseRevenueTotals.reduce((s, v) => s + v, 0)} />
                     </td>
                   </tr>
-                  <tr className="bg-amber-100/60">
-                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60">TOTAL MKT (base)</td>
+                  <tr className="bg-amber-100/60 dark:bg-amber-900/30">
+                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60 dark:bg-amber-900/30 dark:text-amber-200">TOTAL MKT (base)</td>
                     {MONTHS_WITH_QUARTERS.map(col =>
                       col.kind === 'month' ? (
                         <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1054,8 +1054,8 @@ export default function Projection() {
                   </tr>
 
                   {/* Total final (não editável): Faturamento - DespesasTotais - Investimentos - MKT */}
-                  <tr className="bg-amber-100/60">
-                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60">TOTAL (Faturamento − Despesas − Investimentos − MKT)</td>
+                  <tr className="bg-amber-100/60 dark:bg-amber-900/30">
+                    <td className="px-4 py-2 font-bold sticky left-0 z-10 bg-amber-100/60 dark:bg-amber-900/30 dark:text-amber-200">TOTAL (Faturamento − Despesas − Investimentos − MKT)</td>
                     {MONTHS_WITH_QUARTERS.map(col =>
                       col.kind === 'month' ? (
                         <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1170,7 +1170,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Somatório dos streams ativos (com overrides).</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200 dark:[&_th:last-child]:bg-amber-900 dark:[&_td:last-child]:bg-amber-900/40">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1195,14 +1195,14 @@ export default function Projection() {
                     { label: 'Máximo', arr: snapshot.revenueTotals.maximo }
                   ].map(row => (
                     <tr key={row.label}>
-                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white">{row.label}</td>
+                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                       {MONTHS_WITH_QUARTERS.map(col =>
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                             <CalculatedCell value={ensure12(row.arr)[col.monthIndex]} />
                           </td>
                         ) : (
-                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                             <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                           </td>
                         )
@@ -1263,7 +1263,7 @@ export default function Projection() {
                 </div>
 
                 <div className="p-4 overflow-x-auto">
-                  <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+                  <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200 dark:[&_th:last-child]:bg-gray-900 dark:[&_td:last-child]:bg-gray-700/60">
                     <thead className="bg-gray-800 text-white">
                       <tr>
                         <th className="px-4 py-3 text-center sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1287,8 +1287,8 @@ export default function Projection() {
                         { key: 'medio', label: 'Médio', arr: series.med, ov: overrides.medio },
                         { key: 'maximo', label: 'Máximo', arr: series.max, ov: overrides.maximo }
                       ] as const).map(row => (
-                        <tr key={row.key} className="bg-amber-50/30">
-                          <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30">{row.label}</td>
+                        <tr key={row.key} className="bg-amber-50/30 dark:bg-gray-800">
+                          <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30 dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                           {MONTHS_WITH_QUARTERS.map(col =>
                             col.kind === 'month' ? (
                               <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1342,7 +1342,7 @@ export default function Projection() {
                                 />
                               </td>
                             ) : (
-                              <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                              <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                                 <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                               </td>
                             )
@@ -1402,7 +1402,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Previsto = base (sem crescimento). Médio/Máximo aplicam crescimento. Você pode fazer override manual por cenário/mês.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200 dark:[&_th:last-child]:bg-gray-900 dark:[&_td:last-child]:bg-gray-700/60">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1426,8 +1426,8 @@ export default function Projection() {
                     { key: 'mktMedioManual', label: 'Médio', arr: snapshot.mktTotals.medio, ov: base.manualOverrides.mktMedioManual },
                     { key: 'mktMaximoManual', label: 'Máximo', arr: snapshot.mktTotals.maximo, ov: base.manualOverrides.mktMaximoManual }
                   ] as const).map(row => (
-                    <tr key={row.key} className="bg-amber-50/30">
-                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30">{row.label}</td>
+                    <tr key={row.key} className="bg-amber-50/30 dark:bg-gray-800">
+                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30 dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                       {MONTHS_WITH_QUARTERS.map(col =>
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1466,7 +1466,7 @@ export default function Projection() {
                             />
                           </td>
                         ) : (
-                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                             <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                           </td>
                         )
@@ -1526,7 +1526,7 @@ export default function Projection() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200 dark:[&_th:last-child]:bg-amber-900 dark:[&_td:last-child]:bg-amber-900/40">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1550,8 +1550,8 @@ export default function Projection() {
                     { key: 'fixedMediaManual', label: 'Médio', arr: snapshot.fixedExpenses.media, ov: base.manualOverrides.fixedMediaManual },
                     { key: 'fixedMaximoManual', label: 'Máximo', arr: snapshot.fixedExpenses.maximo, ov: base.manualOverrides.fixedMaximoManual }
                   ] as const).map(row => (
-                    <tr key={row.key} className="bg-amber-50/30">
-                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30">{row.label}</td>
+                    <tr key={row.key} className="bg-amber-50/30 dark:bg-gray-800">
+                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30 dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                       {MONTHS_WITH_QUARTERS.map(col =>
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1590,7 +1590,7 @@ export default function Projection() {
                             />
                           </td>
                         ) : (
-                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                             <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                           </td>
                         )
@@ -1638,7 +1638,7 @@ export default function Projection() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200 dark:[&_th:last-child]:bg-amber-900 dark:[&_td:last-child]:bg-amber-900/40">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1662,8 +1662,8 @@ export default function Projection() {
                     { key: 'variableMedioManual', label: 'Médio', arr: snapshot.variableExpenses.medio, ov: base.manualOverrides.variableMedioManual },
                     { key: 'variableMaximoManual', label: 'Máximo', arr: snapshot.variableExpenses.maximo, ov: base.manualOverrides.variableMaximoManual }
                   ] as const).map(row => (
-                    <tr key={row.key} className="bg-amber-50/30">
-                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30">{row.label}</td>
+                    <tr key={row.key} className="bg-amber-50/30 dark:bg-gray-800">
+                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30 dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                       {MONTHS_WITH_QUARTERS.map(col =>
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1702,7 +1702,7 @@ export default function Projection() {
                             />
                           </td>
                         ) : (
-                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                             <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                           </td>
                         )
@@ -1753,7 +1753,7 @@ export default function Projection() {
               </button>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-amber-700 [&_td:last-child]:bg-amber-200 dark:[&_th:last-child]:bg-amber-900 dark:[&_td:last-child]:bg-amber-900/40">
                 <thead className="bg-amber-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-amber-600">Cenário</th>
@@ -1777,8 +1777,8 @@ export default function Projection() {
                     { key: 'investimentosMedioManual', label: 'Médio', arr: snapshot.investments.medio, ov: base.manualOverrides.investimentosMedioManual },
                     { key: 'investimentosMaximoManual', label: 'Máximo', arr: snapshot.investments.maximo, ov: base.manualOverrides.investimentosMaximoManual }
                   ] as const).map(row => (
-                    <tr key={row.key} className="bg-amber-50/30">
-                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30">{row.label}</td>
+                    <tr key={row.key} className="bg-amber-50/30 dark:bg-gray-800">
+                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-amber-50/30 dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                       {MONTHS_WITH_QUARTERS.map(col =>
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
@@ -1817,7 +1817,7 @@ export default function Projection() {
                             />
                           </td>
                         ) : (
-                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                             <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                           </td>
                         )
@@ -1863,7 +1863,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Somatório (Fixas + Variáveis + Investimentos + MKT), por cenário.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200 dark:[&_th:last-child]:bg-gray-900 dark:[&_td:last-child]:bg-gray-700/60">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1888,14 +1888,14 @@ export default function Projection() {
                     { label: 'Máximo', arr: snapshot.budget.maximo }
                   ].map(row => (
                     <tr key={row.label}>
-                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white">{row.label}</td>
+                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                       {MONTHS_WITH_QUARTERS.map(col =>
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                             <CalculatedCell value={ensure12(row.arr)[col.monthIndex]} />
                           </td>
                         ) : (
-                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                             <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                           </td>
                         )
@@ -1941,7 +1941,7 @@ export default function Projection() {
               <p className="text-sm text-gray-600 mt-1">Faturamento Total − Orçamento, por cenário.</p>
             </div>
             <div className="p-4 overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200">
+              <table className="min-w-[1100px] w-full table-fixed [&_th]:w-[100px] [&_th]:min-w-[100px] [&_td]:w-[100px] [&_td]:min-w-[100px] [&_th]:text-center [&_td]:text-center [&_th:last-child]:bg-gray-700 [&_td:last-child]:bg-gray-200 dark:[&_th:last-child]:bg-gray-900 dark:[&_td:last-child]:bg-gray-700/60">
                 <thead className="bg-gray-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-center sticky left-0 z-10 bg-gray-800">Cenário</th>
@@ -1966,14 +1966,14 @@ export default function Projection() {
                     { label: 'Máximo', arr: snapshot.resultado.maximo }
                   ].map(row => (
                     <tr key={row.label}>
-                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white">{row.label}</td>
+                      <td className="px-4 py-2 font-semibold sticky left-0 z-10 bg-white dark:bg-gray-800 dark:text-gray-100">{row.label}</td>
                       {MONTHS_WITH_QUARTERS.map(col =>
                         col.kind === 'month' ? (
                           <td key={`m-${col.monthIndex}`} className="px-3 py-2">
                             <CalculatedCell value={ensure12(row.arr)[col.monthIndex]} />
                           </td>
                         ) : (
-                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40">
+                          <td key={`q-${col.startMonthIndex}`} className="px-3 py-2 bg-amber-50/40 dark:bg-amber-900/20">
                             <CalculatedCell value={sumQuarter(row.arr, col.startMonthIndex)} />
                           </td>
                         )

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import axios from 'axios';
 import {
   Plus, Edit2, Trash2, GripVertical, CheckCircle2,
@@ -37,19 +38,19 @@ interface Coluna {
 type StatusKey = RoadmapItem['status'];
 type PrioridadeKey = RoadmapItem['prioridade'];
 
-const STATUS_CONFIG: Record<StatusKey, { label: string; Icon: React.ElementType; color: string; bg: string }> = {
-  backlog:   { label: 'Backlog',    Icon: Code2,        color: '#6b7280', bg: '#f3f4f6' },
-  doing:     { label: 'Doing',      Icon: Clock,        color: '#d97706', bg: '#fef3c7' },
-  em_testes: { label: 'Em Testes',  Icon: FlaskConical, color: '#0891b2', bg: '#cffafe' },
-  em_beta:   { label: 'Em Beta',    Icon: Rocket,       color: '#2563eb', bg: '#dbeafe' },
-  lancado:   { label: 'Lançado',    Icon: CheckCircle2, color: '#16a34a', bg: '#dcfce7' },
-  done:      { label: 'Done',       Icon: Archive,      color: '#9ca3af', bg: '#f9fafb' },
+const STATUS_CONFIG: Record<StatusKey, { label: string; Icon: React.ElementType; color: string; bg: string; darkColor: string; darkBg: string }> = {
+  backlog:   { label: 'Backlog',    Icon: Code2,        color: '#6b7280', bg: '#f3f4f6', darkColor: '#9ca3af', darkBg: '#374151' },
+  doing:     { label: 'Doing',      Icon: Clock,        color: '#d97706', bg: '#fef3c7', darkColor: '#fbbf24', darkBg: '#451a03' },
+  em_testes: { label: 'Em Testes',  Icon: FlaskConical, color: '#0891b2', bg: '#cffafe', darkColor: '#22d3ee', darkBg: '#083344' },
+  em_beta:   { label: 'Em Beta',    Icon: Rocket,       color: '#2563eb', bg: '#dbeafe', darkColor: '#60a5fa', darkBg: '#1e3a5f' },
+  lancado:   { label: 'Lançado',    Icon: CheckCircle2, color: '#16a34a', bg: '#dcfce7', darkColor: '#4ade80', darkBg: '#052e16' },
+  done:      { label: 'Done',       Icon: Archive,      color: '#9ca3af', bg: '#f9fafb', darkColor: '#6b7280', darkBg: '#1f2937' },
 };
 
-const PRIORIDADE_CONFIG: Record<PrioridadeKey, { label: string; color: string; bg: string }> = {
-  baixa: { label: 'Baixa', color: '#16a34a', bg: '#dcfce7' },
-  media: { label: 'Média', color: '#d97706', bg: '#fef3c7' },
-  alta:  { label: 'Alta',  color: '#dc2626', bg: '#fee2e2' },
+const PRIORIDADE_CONFIG: Record<PrioridadeKey, { label: string; color: string; bg: string; darkColor: string; darkBg: string }> = {
+  baixa: { label: 'Baixa', color: '#16a34a', bg: '#dcfce7', darkColor: '#4ade80', darkBg: '#052e16' },
+  media: { label: 'Média', color: '#d97706', bg: '#fef3c7', darkColor: '#fbbf24', darkBg: '#451a03' },
+  alta:  { label: 'Alta',  color: '#dc2626', bg: '#fee2e2', darkColor: '#f87171', darkBg: '#450a0a' },
 };
 
 
@@ -110,31 +111,31 @@ const CalendarPicker = ({ value, onChange }: CalendarPickerProps) => {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all shadow-sm hover:bg-white"
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all shadow-sm hover:bg-white dark:hover:bg-gray-600"
       >
-        <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+        <span className={value ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}>
           {displayValue || 'Selecionar data'}
         </span>
-        <Calendar className="w-4 h-4 text-amber-600 flex-shrink-0" />
+        <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[300px]">
+        <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-50 min-w-[300px]">
           <div className="flex items-center justify-between mb-3">
             <button type="button" onClick={() => navigateMonth('prev')}
-              className="p-2 hover:bg-amber-50 rounded-lg transition-colors">
-              <ChevronLeft className="w-4 h-4 text-amber-600" />
+              className="p-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors">
+              <ChevronLeft className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </button>
-            <span className="text-sm font-semibold text-amber-800">
+            <span className="text-sm font-semibold text-amber-800 dark:text-amber-400">
               {MONTH_NAMES[calDate.getMonth()]} {calDate.getFullYear()}
             </span>
             <button type="button" onClick={() => navigateMonth('next')}
-              className="p-2 hover:bg-amber-50 rounded-lg transition-colors">
-              <ChevronRight className="w-4 h-4 text-amber-600" />
+              className="p-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors">
+              <ChevronRight className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
             {WEEK_DAYS.map((d, i) => (
-              <div key={i} className="text-center text-xs font-semibold text-gray-500 py-1">{d}</div>
+              <div key={i} className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 py-1">{d}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -148,10 +149,10 @@ const CalendarPicker = ({ value, onChange }: CalendarPickerProps) => {
                   key={i}
                   onClick={() => handleSelect(date)}
                   className={`w-9 h-9 text-xs rounded-lg transition-all
-                    ${inMonth ? 'text-gray-900' : 'text-gray-300'}
+                    ${inMonth ? 'text-gray-900 dark:text-gray-100' : 'text-gray-300 dark:text-gray-600'}
                     ${isSelected ? 'bg-amber-500 text-white font-semibold' : ''}
-                    ${isToday && !isSelected ? 'bg-amber-100 text-amber-800 font-semibold' : ''}
-                    ${!isSelected && !isToday ? 'hover:bg-amber-50' : ''}
+                    ${isToday && !isSelected ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold' : ''}
+                    ${!isSelected && !isToday ? 'hover:bg-amber-50 dark:hover:bg-amber-900/20' : ''}
                   `}
                 >
                   {date.getDate()}
@@ -159,9 +160,9 @@ const CalendarPicker = ({ value, onChange }: CalendarPickerProps) => {
               );
             })}
           </div>
-          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
             <button type="button" onClick={() => { onChange(''); setOpen(false); }}
-              className="flex-1 px-3 py-2 text-xs text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+              className="flex-1 px-3 py-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
               Limpar
             </button>
             <button type="button" onClick={() => handleSelect(new Date())}
@@ -229,8 +230,8 @@ const FormItemRoadmap = ({ item, todasTarefas, colunas, onSave, onCancel }: Form
     onSave({ titulo: titulo.trim(), descricao: descricao.trim(), status, prioridade, dataInicio, dependeDe: dependeDe || null });
   };
 
-  const inputCls = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm';
-  const labelCls = 'block text-sm font-semibold text-gray-700 mb-2';
+  const inputCls = 'w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 shadow-sm';
+  const labelCls = 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -279,7 +280,7 @@ const FormItemRoadmap = ({ item, todasTarefas, colunas, onSave, onCancel }: Form
       </div>
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel}
-          className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition-all text-sm">
+          className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold rounded-xl transition-all text-sm">
           Cancelar
         </button>
         <button type="submit"
@@ -323,6 +324,7 @@ const RoadmapCard = ({
 }: CardProps) => {
   const [prioridadeEditando, setPrioridadeEditando] = useState(prioridade.toString());
   useEffect(() => setPrioridadeEditando(prioridade.toString()), [prioridade]);
+  const { isDark } = useTheme();
 
   const tempoTotal = item.tempoAcumulado + (tempoAtual || 0);
   const prioridadeCfg = PRIORIDADE_CONFIG[item.prioridade];
@@ -344,7 +346,8 @@ const RoadmapCard = ({
 
   return (
     <div
-      className={`bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex flex-col gap-2 transition-all
+      className={`rounded-xl border shadow-sm p-3 flex flex-col gap-2 transition-all
+        ${isDark ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-100'}
         ${isDragging ? 'opacity-40 scale-95' : ''}
         ${isSuperAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
       draggable={isSuperAdmin}
@@ -372,14 +375,14 @@ const RoadmapCard = ({
 
       {/* Título e descrição */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 leading-tight">{item.titulo}</h3>
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight">{item.titulo}</h3>
         {item.descricao && (
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">{item.descricao}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed line-clamp-2">{item.descricao}</p>
         )}
       </div>
 
       {/* Prioridade numérica — superadmin edita, admin visualiza */}
-      <div className="flex items-center gap-1 text-xs text-gray-500">
+      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
         <span>Prioridade:</span>
         {isSuperAdmin ? (
           <>
@@ -392,17 +395,17 @@ const RoadmapCard = ({
               }}
               onBlur={handlePrioridadeBlur}
               onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
-              className="w-10 text-center border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400"
+              className="w-10 text-center border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400"
             />
-            <span className="text-gray-400">/ {totalColuna}</span>
+            <span className="text-gray-400 dark:text-gray-500">/ {totalColuna}</span>
           </>
         ) : (
-          <span className="font-medium text-gray-700">{prioridade} / {totalColuna}</span>
+          <span className="font-medium text-gray-700 dark:text-gray-300">{prioridade} / {totalColuna}</span>
         )}
       </div>
 
       {/* Data e tempo */}
-      <div className="flex flex-col gap-1 text-xs text-gray-500">
+      <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
         {item.dataInicio && (
           <span><strong>Início:</strong> {new Date(item.dataInicio).toLocaleDateString('pt-BR')}</span>
         )}
@@ -441,14 +444,17 @@ const RoadmapCard = ({
       )}
 
       {/* Rodapé */}
-      <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-50">
+      <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-50 dark:border-gray-700">
         <span
           className="text-xs font-medium px-2 py-0.5 rounded-full"
-          style={{ color: prioridadeCfg.color, backgroundColor: prioridadeCfg.bg }}>
+          style={{
+            color: isDark ? prioridadeCfg.darkColor : prioridadeCfg.color,
+            backgroundColor: isDark ? prioridadeCfg.darkBg : prioridadeCfg.bg,
+          }}>
           {prioridadeCfg.label}
         </span>
         {item.createdByUsername && (
-          <span className="text-xs text-gray-400 truncate">por {item.createdByUsername}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 truncate">por {item.createdByUsername}</span>
         )}
       </div>
     </div>
@@ -477,19 +483,19 @@ const InlineModal = ({ title, onClose, children }: ModalProps) => {
       onClick={onClose}
     >
       <div
-        className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-gray-200/50"
+        className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-gray-200/50 dark:border-gray-700"
         style={{ maxHeight: 'calc(100vh - 220px)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-t-2xl px-6 py-4 border-b border-amber-200/50 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-lg font-bold text-amber-800 flex items-center gap-2">
-            <MapIcon className="w-5 h-5 text-amber-700" />
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-900 rounded-t-2xl px-6 py-4 border-b border-amber-200/50 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+          <h2 className="text-lg font-bold text-amber-800 dark:text-amber-400 flex items-center gap-2">
+            <MapIcon className="w-5 h-5 text-amber-700 dark:text-amber-500" />
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+            className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 p-2 rounded-full transition-all"
           >
             ✕
           </button>
@@ -523,8 +529,8 @@ interface FormNovaColunaProps {
 const FormNovaColuna = ({ onSave, onCancel }: FormNovaColunaProps) => {
   const [label, setLabel] = useState('');
   const [selectedPalette, setSelectedPalette] = useState(0);
-  const inputCls = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm';
-  const labelCls = 'block text-sm font-semibold text-gray-700 mb-2';
+  const inputCls = 'w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 shadow-sm';
+  const labelCls = 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -559,7 +565,7 @@ const FormNovaColuna = ({ onSave, onCancel }: FormNovaColunaProps) => {
       </div>
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel}
-          className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition-all text-sm">
+          className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold rounded-xl transition-all text-sm">
           Cancelar
         </button>
         <button type="submit"
@@ -629,8 +635,8 @@ interface FormConfiguracoesProps {
 
 const FormConfiguracoes = ({ colunas, colunaConcluir, onSave, onCancel }: FormConfiguracoesProps) => {
   const [selected, setSelected] = useState(colunaConcluir);
-  const inputCls = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm';
-  const labelCls = 'block text-sm font-semibold text-gray-700 mb-2';
+  const inputCls = 'w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-600 transition-all duration-200 shadow-sm';
+  const labelCls = 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2';
 
   return (
     <div className="space-y-4">
@@ -645,7 +651,7 @@ const FormConfiguracoes = ({ colunas, colunaConcluir, onSave, onCancel }: FormCo
       </div>
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel}
-          className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl transition-all text-sm">
+          className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold rounded-xl transition-all text-sm">
           Cancelar
         </button>
         <button type="button" onClick={() => onSave(selected)}
@@ -662,6 +668,7 @@ const FormConfiguracoes = ({ colunas, colunaConcluir, onSave, onCancel }: FormCo
 // ============================================================
 const Roadmap = () => {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const isSuperAdmin = user?.role === 'superadmin';
 
   const [itens, setItens] = useState<RoadmapItem[]>([]);
@@ -1068,14 +1075,14 @@ const Roadmap = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200/50">
+      <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-900 border-b border-amber-200/50 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 shadow-md">
             <MapIcon size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-amber-800">Roadmap do Sistema</h1>
-            <p className="text-xs text-amber-600/80">
+            <h1 className="text-xl font-bold text-amber-800 dark:text-amber-400">Roadmap do Sistema</h1>
+            <p className="text-xs text-amber-600/80 dark:text-amber-500/80">
               {isSuperAdmin ? 'Gerencie o desenvolvimento do sistema' : 'Acompanhe o desenvolvimento do sistema'}
             </p>
           </div>
@@ -1083,12 +1090,12 @@ const Roadmap = () => {
         {isSuperAdmin && (
           <div className="flex items-center gap-2">
             <button onClick={() => setShowConfig(true)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/80 border border-amber-200 text-amber-700 text-sm font-semibold hover:bg-amber-50 transition-all shadow-sm"
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-semibold hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all shadow-sm"
               title="Configurações do Roadmap">
               <Settings size={15} />
             </button>
             <button onClick={() => setShowNovaColuna(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/80 border border-amber-200 text-amber-700 text-sm font-semibold hover:bg-amber-50 transition-all shadow-sm">
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm font-semibold hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all shadow-sm">
               <Layers size={15} />
               Nova Coluna
             </button>
@@ -1124,9 +1131,9 @@ const Roadmap = () => {
                 <div
                   key={coluna.key}
                   className={`flex flex-col rounded-2xl border-2 transition-all min-h-0
-                    ${isOver ? 'border-amber-400 bg-amber-50/80 shadow-lg shadow-amber-100'
-                      : isColDragOver ? 'border-gray-400 bg-gray-50/80'
-                      : 'border-gray-200/60 bg-white/60 shadow-sm'}`}
+                    ${isOver ? 'border-amber-400 bg-amber-50/80 shadow-lg shadow-amber-100 dark:bg-amber-900/20'
+                      : isColDragOver ? 'border-gray-400 bg-gray-50/80 dark:bg-gray-700/80'
+                      : isDark ? 'border-gray-700 bg-gray-800/60 shadow-sm' : 'border-gray-200/60 bg-white/60 shadow-sm'}`}
                   onDragOver={isSuperAdmin ? e => {
                     e.preventDefault();
                     if (draggedColumn) {
@@ -1162,17 +1169,20 @@ const Roadmap = () => {
                   {/* Header da coluna */}
                   <div
                     className={`flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b ${isSuperAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                    style={{ backgroundColor: cfg.bg + 'cc', borderColor: cfg.color + '30' }}
+                    style={{
+                      backgroundColor: isDark ? cfg.color + '22' : cfg.bg + 'cc',
+                      borderColor: cfg.color + '30',
+                    }}
                     draggable={isSuperAdmin}
                     onDragStart={isSuperAdmin ? e => handleColumnDragStart(e, coluna.key) : undefined}
                     onDragEnd={isSuperAdmin ? () => { setDraggedColumn(null); setDragOverColHeader(null); } : undefined}
                   >
                     {isSuperAdmin && <GripVertical size={12} style={{ color: cfg.color, opacity: 0.6 }} className="flex-shrink-0" />}
-                    <div className="p-1.5 rounded-lg bg-white/70 shadow-sm">
+                    <div className={`p-1.5 rounded-lg shadow-sm ${isDark ? 'bg-gray-700/70' : 'bg-white/70'}`}>
                       <Icon size={14} style={{ color: cfg.color }} />
                     </div>
                     <span className="text-sm font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
-                    <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-white/80 shadow-sm"
+                    <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm ${isDark ? 'bg-gray-700/80' : 'bg-white/80'}`}
                       style={{ color: cfg.color }}>
                       {col.length}
                     </span>
@@ -1223,13 +1233,13 @@ const Roadmap = () => {
             })}
             {/* Coluna catch-all para tarefas com status sem coluna correspondente */}
             {itensOrfaos.length > 0 && (
-              <div className="flex flex-col rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/60 shadow-sm min-h-0">
-                <div className="flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b border-gray-200 bg-gray-100/80">
-                  <div className="p-1.5 rounded-lg bg-white/70 shadow-sm">
-                    <Tag size={14} className="text-gray-500" />
+              <div className={`flex flex-col rounded-2xl border-2 border-dashed shadow-sm min-h-0 ${isDark ? 'border-gray-600 bg-gray-800/60' : 'border-gray-300 bg-gray-50/60'}`}>
+                <div className={`flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b ${isDark ? 'border-gray-700 bg-gray-700/80' : 'border-gray-200 bg-gray-100/80'}`}>
+                  <div className={`p-1.5 rounded-lg shadow-sm ${isDark ? 'bg-gray-600/70' : 'bg-white/70'}`}>
+                    <Tag size={14} className="text-gray-500 dark:text-gray-400" />
                   </div>
-                  <span className="text-sm font-bold text-gray-500">Outros</span>
-                  <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-white/80 shadow-sm text-gray-500">
+                  <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Outros</span>
+                  <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm text-gray-500 dark:text-gray-400 ${isDark ? 'bg-gray-600/80' : 'bg-white/80'}`}>
                     {itensOrfaos.length}
                   </span>
                 </div>

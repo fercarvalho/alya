@@ -338,3 +338,101 @@
     font-size: 16px;
   }
 }
+
+/* === DARK MODE === */
+html.dark .page-title {
+  color: #f1f5f9;
+}
+
+html.dark .page-subtitle {
+  color: #94a3b8;
+}
+
+html.dark .spinner {
+  border-color: #334155;
+  border-top-color: #f59e0b;
+}
+
+html.dark .error-message,
+html.dark .empty-message {
+  color: #94a3b8;
+}
+
+html.dark .session-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .session-card:hover {
+  border-color: #475569;
+}
+
+html.dark .device-name strong {
+  color: #f1f5f9;
+}
+
+html.dark .device-name span {
+  color: #94a3b8;
+}
+
+html.dark .session-detail {
+  color: #94a3b8;
+}
+
+html.dark .badge {
+  background: #374151;
+  color: #d1d5db;
+}
+
+html.dark .badge.current {
+  background: #065f46;
+  color: #6ee7b7;
+}
+
+html.dark .btn-revoke {
+  background: #7f1d1d;
+  color: #fca5a5;
+  border-color: #991b1b;
+}
+
+html.dark .btn-revoke:hover {
+  background: #991b1b;
+}
+
+html.dark .info-box {
+  background: #1e3a5f;
+  border-color: #1e40af;
+  color: #93c5fd;
+}
+
+html.dark .info-box h3 {
+  color: #93c5fd;
+}
+
+html.dark .info-box li {
+  color: #cbd5e1;
+}
+
+html.dark .session-header {
+  border-bottom-color: #334155;
+}
+
+html.dark .device-browser {
+  color: #94a3b8;
+}
+
+html.dark .detail-item {
+  color: #94a3b8;
+}
+
+html.dark .ip-address {
+  color: #64748b;
+}
+
+html.dark .footer-note {
+  color: #64748b;
+}
+
+html.dark .empty-state {
+  color: #64748b;
+}

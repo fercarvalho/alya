@@ -49,6 +49,8 @@ import Login from "./components/Login";
 import MenuUsuario from "./components/MenuUsuario";
 import ImpersonationBanner from "./components/ImpersonationBanner";
 import FeedbackButton from "./components/FeedbackButton";
+import ThemeToggle from "./components/ThemeToggle";
+import { ThemeProvider } from "./contexts/ThemeContext";
 // Lazy load AdminPanel (só carrega quando necessário)
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 // Lazy load Projeção (componente grande)
@@ -66,6 +68,7 @@ const FAQ = lazy(() => import("./components/FAQ"));
 // Lazy load Documentação
 const Documentation = lazy(() => import("./components/Documentation"));
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { useTheme } from "./contexts/ThemeContext";
 import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -163,6 +166,7 @@ type TabType =
 // Componente principal do conteúdo da aplicação
 const AppContent: React.FC = () => {
   const { user, token, logout, isLoading } = useAuth();
+  const { isDark } = useTheme();
   const { getVisibleModules } = useModules();
 
   // Detectar se está em modo demo
@@ -770,17 +774,22 @@ const AppContent: React.FC = () => {
   // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
       </div>
     );
   }
 
   if (!user) {
-    return <Login />;
+    return (
+      <>
+        <ThemeToggle />
+        <Login />
+      </>
+    );
   }
 
   // Funções para gerenciar o calendário personalizado
@@ -1267,7 +1276,7 @@ const AppContent: React.FC = () => {
     ];
 
     return (
-      <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
+      <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-50 min-w-[320px]">
         {/* Header do calendário */}
         <div className="flex items-center justify-between mb-4">
           <button
@@ -1314,10 +1323,10 @@ const AppContent: React.FC = () => {
                 onClick={() => handleDateSelect(date)}
                 className={`
                   w-10 h-10 text-sm rounded-lg transition-all duration-200
-                  ${isCurrentMonth ? "text-gray-900" : "text-gray-400"}
-                  ${isToday ? "bg-amber-100 text-amber-800 font-semibold" : ""}
+                  ${isCurrentMonth ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-600"}
+                  ${isToday ? "bg-amber-100 text-amber-800 font-semibold dark:bg-amber-900/40 dark:text-amber-300" : ""}
                   ${isSelected ? "bg-amber-500 text-white font-semibold" : ""}
-                  ${!isSelected && !isToday ? "hover:bg-amber-50" : ""}
+                  ${!isSelected && !isToday ? "hover:bg-amber-50 dark:hover:bg-amber-900/20" : ""}
                 `}
               >
                 {date.getDate()}
@@ -1381,7 +1390,7 @@ const AppContent: React.FC = () => {
     ];
 
     return (
-      <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
+      <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-50 min-w-[320px]">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigateFilterMonthFrom("prev")}
@@ -1426,10 +1435,10 @@ const AppContent: React.FC = () => {
                 onClick={() => handleFilterDateFromSelect(date)}
                 className={`
                   w-10 h-10 text-sm rounded-lg transition-all duration-200
-                  ${isCurrentMonth ? "text-gray-900" : "text-gray-400"}
-                  ${isToday ? "bg-amber-100 text-amber-800 font-semibold" : ""}
+                  ${isCurrentMonth ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-600"}
+                  ${isToday ? "bg-amber-100 text-amber-800 font-semibold dark:bg-amber-900/40 dark:text-amber-300" : ""}
                   ${isSelected ? "bg-amber-500 text-white font-semibold" : ""}
-                  ${!isSelected && !isToday ? "hover:bg-amber-50" : ""}
+                  ${!isSelected && !isToday ? "hover:bg-amber-50 dark:hover:bg-amber-900/20" : ""}
                 `}
               >
                 {date.getDate()}
@@ -1491,7 +1500,7 @@ const AppContent: React.FC = () => {
     ];
 
     return (
-      <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[320px]">
+      <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-50 min-w-[320px]">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigateFilterMonthTo("prev")}
@@ -1536,10 +1545,10 @@ const AppContent: React.FC = () => {
                 onClick={() => handleFilterDateToSelect(date)}
                 className={`
                   w-10 h-10 text-sm rounded-lg transition-all duration-200
-                  ${isCurrentMonth ? "text-gray-900" : "text-gray-400"}
-                  ${isToday ? "bg-amber-100 text-amber-800 font-semibold" : ""}
+                  ${isCurrentMonth ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-600"}
+                  ${isToday ? "bg-amber-100 text-amber-800 font-semibold dark:bg-amber-900/40 dark:text-amber-300" : ""}
                   ${isSelected ? "bg-amber-500 text-white font-semibold" : ""}
-                  ${!isSelected && !isToday ? "hover:bg-amber-50" : ""}
+                  ${!isSelected && !isToday ? "hover:bg-amber-50 dark:hover:bg-amber-900/20" : ""}
                 `}
               >
                 {date.getDate()}
@@ -2013,8 +2022,8 @@ const AppContent: React.FC = () => {
         : [{ name: "Sem dados", value: 100, color: "#e5e7eb" }];
 
       return (
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 mt-4">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">{title}</h3>
           <ResponsiveContainer width="100%" height={350}>
             <RechartsPieChart>
               <Pie
@@ -2039,10 +2048,11 @@ const AppContent: React.FC = () => {
                     "",
                   ]}
                   contentStyle={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid #e5e7eb",
+                    backgroundColor: isDark ? "#1f2937" : "#ffffff",
+                    border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
                     borderRadius: "12px",
                     boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                    color: isDark ? "#f3f4f6" : "#111827",
                   }}
                 />
               )}
@@ -2077,8 +2087,8 @@ const AppContent: React.FC = () => {
 
     // Componente de gráfico de barras para comparação com metas
     const renderBarChart = (data: any[], title: string) => (
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-4">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">{title}</h3>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 mt-4">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">{title}</h3>
         <ResponsiveContainer width="100%" height={350}>
           <BarChart
             data={data}
@@ -2091,14 +2101,14 @@ const AppContent: React.FC = () => {
           >
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="#f0f0f0"
+              stroke={isDark ? "#374151" : "#f0f0f0"}
               vertical={false}
             />
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: "#666" }}
+              tick={{ fontSize: 12, fill: isDark ? "#9ca3af" : "#666" }}
             />
             <YAxis
               tickFormatter={(value: number) =>
@@ -2106,17 +2116,18 @@ const AppContent: React.FC = () => {
               }
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: "#666" }}
+              tick={{ fontSize: 12, fill: isDark ? "#9ca3af" : "#666" }}
             />
             <Tooltip
               formatter={(value: any) =>
                 `R$ ${(typeof value === 'number' ? value : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
               }
               contentStyle={{
-                backgroundColor: "white",
-                border: "1px solid #e0e0e0",
+                backgroundColor: isDark ? "#1f2937" : "white",
+                border: `1px solid ${isDark ? "#374151" : "#e0e0e0"}`,
                 borderRadius: "12px",
                 boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+                color: isDark ? "#f3f4f6" : "#111827",
               }}
             />
             <Bar dataKey="value" fill="#8884d8" radius={[8, 8, 0, 0]}>
@@ -2129,7 +2140,7 @@ const AppContent: React.FC = () => {
                 formatter={(v: any) =>
                   `R$ ${(Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 }
-                style={{ fontSize: 11, fontWeight: 600, fill: "#374151" }}
+                style={{ fontSize: 11, fontWeight: 600, fill: isDark ? "#d1d5db" : "#374151" }}
               />
             </Bar>
           </BarChart>
@@ -2139,23 +2150,23 @@ const AppContent: React.FC = () => {
 
     // Componente de gráfico de linha (evolução mensal)
     const renderLineChart = () => (
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mt-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Evolução Mensal — {currentYear}</h3>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 mt-6">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Evolução Mensal — {currentYear}</h3>
         <ResponsiveContainer width="100%" height={350}>
           <LineChart data={lineChartData} margin={{ top: 20, right: 30, left: 20, bottom: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#666" }} />
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#f0f0f0"} />
+            <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: isDark ? "#9ca3af" : "#666" }} />
             <YAxis
               tickFormatter={(v: number) => `R$ ${(v / 1000).toFixed(0)}k`}
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: "#666" }}
+              tick={{ fontSize: 11, fill: isDark ? "#9ca3af" : "#666" }}
             />
             <Tooltip
               formatter={(value: any) =>
                 `R$ ${(typeof value === "number" ? value : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
               }
-              contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
+              contentStyle={{ backgroundColor: isDark ? "#1f2937" : "#fff", border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`, borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", color: isDark ? "#f3f4f6" : "#111827" }}
             />
             <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: "16px", fontSize: 13, fontWeight: 600 }} />
             <ReferenceLine x={mesesNomes[selectedMonth]} stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" label={{ value: mesesNomes[selectedMonth], position: "top", fill: "#f59e0b", fontSize: 11, fontWeight: 700 }} />
@@ -2172,8 +2183,8 @@ const AppContent: React.FC = () => {
       const hasData = pieChartDataCategorias.length > 0;
       const displayData = hasData ? pieChartDataCategorias : [{ name: "Sem dados", value: 100, color: "#e5e7eb" }];
       return (
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
             Despesas por Categoria — {mesesNomes[selectedMonth]}
           </h3>
           <ResponsiveContainer width="100%" height={350}>
@@ -2238,9 +2249,9 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Seção do Mês (com seletor para comparar metas vs real) */}
-        <div className="bg-gradient-to-br from-emerald-50/60 to-green-50/40 rounded-2xl p-5 border border-emerald-100 space-y-4">
+        <div className="bg-gradient-to-br from-emerald-50/60 to-green-50/40 dark:from-emerald-900/20 dark:to-green-900/10 rounded-2xl p-5 border border-emerald-100 dark:border-emerald-900/30 space-y-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
               <PieChart className="w-6 h-6 text-emerald-600" />
               Dados do mês
             </h2>
@@ -2270,12 +2281,12 @@ const AppContent: React.FC = () => {
             const emDia = pctMeta >= (new Date().getDate() / 31) * 100;
             return (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${pctMeta >= 100 ? "bg-emerald-100" : pctMeta >= 75 ? "bg-amber-100" : "bg-red-100"}`}>
                     <Target className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">% da Meta</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">% da Meta</p>
                     <p className={`text-xl font-black ${pctMeta >= 100 ? "text-emerald-600" : pctMeta >= 75 ? "text-amber-600" : "text-red-600"}`}>{pctMeta.toFixed(0)}%</p>
                   </div>
                 </div>
@@ -2284,16 +2295,16 @@ const AppContent: React.FC = () => {
                     {variacaoMes >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Variação</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Variação</p>
                     <p className={`text-base font-black ${variacaoMes >= 0 ? "text-emerald-700" : "text-red-700"}`}>{variacaoMes >= 0 ? "+" : ""}R$ {Math.abs(variacaoMes).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                   </div>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${lucroLiquidoMes >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
                     <Wallet className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lucro Líquido</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Lucro Líquido</p>
                     <p className={`text-base font-black ${lucroLiquidoMes >= 0 ? "text-emerald-600" : "text-red-600"}`}>R$ {lucroLiquidoMes.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                   </div>
                 </div>
@@ -2302,7 +2313,7 @@ const AppContent: React.FC = () => {
                     {emDia ? <Zap className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ritmo</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ritmo</p>
                     <p className={`text-sm font-black ${emDia ? "text-emerald-700" : "text-amber-700"}`}>{emDia ? "No ritmo" : "Atenção"}</p>
                   </div>
                 </div>
@@ -2424,11 +2435,11 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Seção Trimestre */}
-        <div className="bg-gradient-to-br from-cyan-50/60 to-sky-50/40 rounded-2xl p-5 border border-cyan-100 space-y-4">
-          <h2 className="text-2xl font-bold text-cyan-800 flex items-center gap-3">
+        <div className="bg-gradient-to-br from-cyan-50/60 to-sky-50/40 dark:from-cyan-900/20 dark:to-sky-900/10 rounded-2xl p-5 border border-cyan-100 dark:border-cyan-900/30 space-y-4">
+          <h2 className="text-2xl font-bold text-cyan-800 dark:text-cyan-300 flex items-center gap-3">
             <PieChart className="w-6 h-6 text-cyan-600" />
             Trimestre Atual
-            <span className="text-lg font-medium text-cyan-600 bg-cyan-50 px-3 py-1 rounded-lg border border-cyan-200">
+            <span className="text-lg font-medium text-cyan-600 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-lg border border-cyan-200 dark:border-cyan-800">
               {nomesTrimestres[trimestreAtual]}
             </span>
           </h2>
@@ -2546,8 +2557,8 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Seção Ano */}
-        <div className="bg-gradient-to-br from-purple-50/60 to-indigo-50/40 rounded-2xl p-5 border border-purple-100 space-y-4">
-          <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-3">
+        <div className="bg-gradient-to-br from-purple-50/60 to-indigo-50/40 dark:from-purple-900/20 dark:to-indigo-900/10 rounded-2xl p-5 border border-purple-100 dark:border-purple-900/30 space-y-4">
+          <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300 flex items-center gap-3">
             <PieChart className="w-6 h-6 text-purple-600" />
             Ano
             <span className="text-sm font-semibold text-purple-700 bg-purple-100 px-3 py-1 rounded-lg border border-purple-200">
@@ -2670,11 +2681,11 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Evolução Mensal e Categorias de Despesas */}
-        <div className="bg-gradient-to-br from-slate-50/80 to-gray-50/60 rounded-2xl p-5 border border-gray-100 space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+        <div className="bg-gradient-to-br from-slate-50/80 to-gray-50/60 dark:from-gray-800 dark:to-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
             <BarChart3 className="w-6 h-6 text-gray-600" />
             Análise do Ano
-            <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-lg border border-gray-200">
+            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600">
               {new Date().getFullYear()}
             </span>
           </h2>
@@ -2687,7 +2698,7 @@ const AppContent: React.FC = () => {
 
         {/* Lista de Transações Recentes */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
             <DollarSign className="w-6 h-6 text-gray-600" />
             Transações Recentes
           </h2>
@@ -2713,7 +2724,7 @@ const AppContent: React.FC = () => {
               </div>
             );
           })()}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             {transacoesRecentes.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-gray-500">Nenhuma transação encontrada.</p>
@@ -2769,10 +2780,10 @@ const AppContent: React.FC = () => {
               </div>
             )}
 
-            <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-100">
+            <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-800 border-t border-gray-100 dark:border-gray-700">
               <button
                 onClick={() => setActiveTab("transactions")}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 group"
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-700 dark:to-indigo-800 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 dark:hover:from-blue-600 dark:hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 group"
               >
                 <DollarSign className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                 Ver todas as transações
@@ -3062,29 +3073,31 @@ const AppContent: React.FC = () => {
     return (
       <div className="space-y-6">
         {/* DONUT CENTRAL — percentual geral de faturamento */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow-lg border border-slate-200 p-6">
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Donut */}
             {(() => {
               const color = pctFaturamento >= 100 ? "#22c55e" : pctFaturamento >= 75 ? "#f59e0b" : "#ef4444";
               const pct = pctFaturamento >= 100 ? 100 : pctFaturamento;
               const deg = (pct / 100) * 360;
+              const trackColor = isDark ? "#374151" : "#e5e7eb";
+              const innerBg = isDark ? "#1e293b" : "white";
               return (
                 <div className="flex-shrink-0 flex items-center justify-center" style={{ width: 220, height: 220 }}>
                   <div style={{
                     width: 200, height: 200, borderRadius: "50%",
-                    background: `conic-gradient(${color} ${deg}deg, #e5e7eb ${deg}deg)`,
+                    background: `conic-gradient(${color} ${deg}deg, ${trackColor} ${deg}deg)`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
                     <div style={{
                       width: 148, height: 148, borderRadius: "50%",
-                      background: "white",
+                      background: innerBg,
                       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                     }}>
                       <span className={`text-3xl font-black`} style={{ color }}>
                         {pctFatDisplay}%
                       </span>
-                      <span className="text-xs text-gray-500 font-medium">da meta</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">da meta</span>
                     </div>
                   </div>
                 </div>
@@ -3096,21 +3109,21 @@ const AppContent: React.FC = () => {
               const margem = totalReceitas > 0 ? ((totalReceitas - totalDespesas) / totalReceitas) * 100 : 0;
               return (
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
-                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meta</div>
                     <div className="text-xl font-black text-gray-800">R$ {metaValue.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
                     <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Realizado</div>
                     <div className="text-xl font-black text-emerald-800">R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
                     <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${resultado >= 0 ? "text-blue-600" : "text-red-600"}`}>Resultado</div>
                     <div className={`text-xl font-black ${resultado >= 0 ? "text-blue-800" : "text-red-800"}`}>
                       {resultado >= 0 ? "+" : ""}R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </div>
                   </div>
-                  <div className="bg-white rounded-xl p-4 text-center shadow-md">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
                     <div className={`text-xs font-bold uppercase tracking-wide mb-1 ${margem >= 0 ? "text-violet-600" : "text-red-600"}`}>Margem</div>
                     <div className={`text-xl font-black ${margem >= 0 ? "text-violet-800" : "text-red-800"}`}>{margem.toFixed(1)}%</div>
                   </div>
@@ -3122,17 +3135,17 @@ const AppContent: React.FC = () => {
 
         {/* 1. RESULTADO */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
             <PieChart className="w-6 h-6 text-gray-600" />
             Resultado
           </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-2xl shadow-lg border border-slate-200">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
               <div className="space-y-3">
                 {/* RECEITA */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="font-semibold text-emerald-700">RECEITA</span>
                   <span className="font-bold text-emerald-800">
                     R$ {totalReceitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
@@ -3140,7 +3153,7 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* DESPESA */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="font-semibold text-red-700">DESPESA</span>
                   <span className="font-bold text-red-800">
                     -R$ {totalDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
@@ -3148,7 +3161,7 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* MARGEM LÍQUIDA */}
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="font-semibold text-violet-700">MARGEM LÍQUIDA</span>
                   <span className="font-bold text-violet-800">
                     {totalReceitas > 0 ? (((totalReceitas - totalDespesas) / totalReceitas) * 100).toFixed(1) : "0.0"}%
@@ -3166,7 +3179,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quadrante META DO MÊS */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-2xl shadow-lg border border-slate-200">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4 pb-2 border-b-2 border-gray-300">
                   <div></div>
@@ -3468,10 +3481,10 @@ const AppContent: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quadrante Financeiro Anual */}
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-100 p-6 rounded-2xl shadow-lg border border-purple-200">
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-800 dark:to-gray-800 p-6 rounded-2xl shadow-lg border border-purple-200 dark:border-gray-700">
               <div className="space-y-4">
                 {/* REFORÇO DE CAIXA */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
                   <span className="font-bold text-purple-800 text-lg">
                     REFORÇO DE CAIXA
                   </span>
@@ -3481,7 +3494,7 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* SAÍDA DE CAIXA */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
                   <span className="font-bold text-purple-800 text-lg">
                     SAÍDA DE CAIXA
                   </span>
@@ -3491,7 +3504,7 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* RECEITA ANUAL */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
                   <span className="font-bold text-emerald-700 text-lg">
                     RECEITA ANUAL
                   </span>
@@ -3504,7 +3517,7 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* DESPESA ANUAL */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
                   <span className="font-bold text-red-700 text-lg">
                     DESPESA ANUAL
                   </span>
@@ -3517,7 +3530,7 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* MARGEM LÍQUIDA */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200">
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
                   <span className="font-bold text-violet-700 text-lg">
                     MARGEM LÍQUIDA
                   </span>
@@ -3527,8 +3540,8 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* TOTAL GERAL ANUAL */}
-                <div className="flex justify-between items-center py-6 bg-gradient-to-r from-purple-100 to-indigo-100 px-6 rounded-xl border-3 border-purple-400 mt-6">
-                  <span className="font-bold text-purple-900 text-2xl">
+                <div className="flex justify-between items-center py-6 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-gray-700 dark:to-gray-700 px-6 rounded-xl border-3 border-purple-400 dark:border-gray-600 mt-6">
+                  <span className="font-bold text-purple-900 dark:text-purple-200 text-2xl">
                     Total Geral Anual
                   </span>
                   <span
@@ -3546,43 +3559,43 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quadrante META ANUAL */}
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-100 p-6 rounded-2xl shadow-lg border border-purple-200">
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-800 dark:to-gray-800 p-6 rounded-2xl shadow-lg border border-purple-200 dark:border-gray-700">
               <div className="space-y-6">
                 {/* Cabeçalho com colunas R$ e % */}
-                <div className="grid grid-cols-3 gap-4 pb-3 border-b-3 border-purple-400">
+                <div className="grid grid-cols-3 gap-4 pb-3 border-b-3 border-purple-400 dark:border-gray-600">
                   <div className="text-center">
                     <span className="font-bold text-purple-700 text-xl"></span>
                   </div>
                   <div className="text-center">
-                    <span className="font-bold text-purple-900 text-2xl">
+                    <span className="font-bold text-purple-900 dark:text-purple-300 text-2xl">
                       R$
                     </span>
                   </div>
                   <div className="text-center">
-                    <span className="font-bold text-purple-900 text-2xl">
+                    <span className="font-bold text-purple-900 dark:text-purple-300 text-2xl">
                       %
                     </span>
                   </div>
                 </div>
 
                 {/* META ANUAL */}
-                <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200">
-                  <div className="font-bold text-purple-800 italic text-lg">
+                <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200 dark:border-gray-700">
+                  <div className="font-bold text-purple-800 dark:text-purple-300 italic text-lg">
                     META ANUAL
                   </div>
-                  <div className="text-center font-bold text-purple-900 text-lg">
+                  <div className="text-center font-bold text-purple-900 dark:text-purple-200 text-lg">
                     R${" "}
                     {metaTotalAno.toLocaleString("pt-BR", {
                       minimumFractionDigits: 2,
                     })}
                   </div>
-                  <div className="text-center font-bold text-purple-900 text-lg">
+                  <div className="text-center font-bold text-purple-900 dark:text-purple-200 text-lg">
                     100%
                   </div>
                 </div>
 
                 {/* ALCANÇADO ANUAL */}
-                <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200">
+                <div className="grid grid-cols-3 gap-4 py-4 border-b-2 border-purple-200 dark:border-gray-700">
                   <div className="font-bold text-emerald-700 italic text-lg">
                     ALCANÇADO
                   </div>
@@ -3619,17 +3632,17 @@ const AppContent: React.FC = () => {
 
         {/* 2. FATURAMENTO ANUAL */}
         <div className="space-y-4">
-          <h2 className="text-3xl font-bold text-emerald-800 flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-emerald-600" />
+          <h2 className="text-3xl font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-3">
+            <TrendingUp className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             Faturamento Anual
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 p-6 rounded-2xl border border-emerald-200 shadow-lg">
-              <h3 className="text-xl font-bold text-emerald-900 mb-6">
+            <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900 dark:to-emerald-800 p-6 rounded-2xl border border-emerald-200 dark:border-emerald-700 shadow-lg">
+              <h3 className="text-xl font-bold text-emerald-900 dark:text-emerald-100 mb-6">
                 Faturamento TOTAL ANUAL
               </h3>
-              <div className="text-3xl font-bold text-emerald-900 mb-4">
+              <div className="text-3xl font-bold text-emerald-900 dark:text-emerald-100 mb-4">
                 R${" "}
                 {totalReceitasAno.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3638,7 +3651,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-emerald-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-1">
                   <span>Progresso Anual</span>
                   <span>
                     {projAnual.faturamentoTotal > 0
@@ -3650,7 +3663,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-emerald-300 rounded-full h-3 relative">
+                <div className="w-full bg-emerald-300 dark:bg-emerald-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-emerald-600 to-emerald-700 h-3 rounded-full transition-all duration-300"
@@ -3673,7 +3686,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Alcançado/Restante */}
-              <div className="text-sm text-emerald-800 font-medium">
+              <div className="text-sm text-emerald-800 dark:text-emerald-200 font-medium">
                 R${" "}
                 {totalReceitasAno.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3686,11 +3699,11 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-100 to-green-200 p-6 rounded-2xl border border-green-200 shadow-lg">
-              <h3 className="text-xl font-bold text-green-900 mb-6">
+            <div className="bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 p-6 rounded-2xl border border-green-200 dark:border-green-700 shadow-lg">
+              <h3 className="text-xl font-bold text-green-900 dark:text-green-100 mb-6">
                 Faturamento Varejo Anual
               </h3>
-              <div className="text-3xl font-bold text-green-900 mb-4">
+              <div className="text-3xl font-bold text-green-900 dark:text-green-100 mb-4">
                 R${" "}
                 {reaisAnual.receitasVarejo.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3699,7 +3712,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-green-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-green-800 dark:text-green-200 mb-1">
                   <span>Progresso Anual</span>
                   <span>
                     {projAnual.faturamentoVarejo > 0
@@ -3712,7 +3725,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-green-300 rounded-full h-3 relative">
+                <div className="w-full bg-green-300 dark:bg-green-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-green-600 to-green-700 h-3 rounded-full transition-all duration-300"
@@ -3736,7 +3749,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Alcançado/Restante */}
-              <div className="text-sm text-green-800 font-medium">
+              <div className="text-sm text-green-800 dark:text-green-200 font-medium">
                 R${" "}
                 {reaisAnual.receitasVarejo.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3749,11 +3762,11 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-teal-100 to-teal-200 p-6 rounded-2xl border border-teal-200 shadow-lg">
-              <h3 className="text-xl font-bold text-teal-900 mb-6">
+            <div className="bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-900 dark:to-teal-800 p-6 rounded-2xl border border-teal-200 dark:border-teal-700 shadow-lg">
+              <h3 className="text-xl font-bold text-teal-900 dark:text-teal-100 mb-6">
                 Faturamento Atacado Anual
               </h3>
-              <div className="text-3xl font-bold text-teal-900 mb-4">
+              <div className="text-3xl font-bold text-teal-900 dark:text-teal-100 mb-4">
                 R${" "}
                 {reaisAnual.receitasAtacado.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3762,7 +3775,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-teal-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-teal-800 dark:text-teal-200 mb-1">
                   <span>Progresso Anual</span>
                   <span>
                     {projAnual.faturamentoAtacado > 0
@@ -3775,7 +3788,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-teal-300 rounded-full h-3 relative">
+                <div className="w-full bg-teal-300 dark:bg-teal-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-teal-600 to-teal-700 h-3 rounded-full transition-all duration-300"
@@ -3800,7 +3813,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Alcançado/Restante */}
-              <div className="text-sm text-teal-800 font-medium">
+              <div className="text-sm text-teal-800 dark:text-teal-200 font-medium">
                 R${" "}
                 {reaisAnual.receitasAtacado.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3817,17 +3830,17 @@ const AppContent: React.FC = () => {
 
         {/* 3. DESPESAS ANUAIS */}
         <div className="space-y-4">
-          <h2 className="text-3xl font-bold text-red-800 flex items-center gap-3">
-            <TrendingDown className="w-8 h-8 text-red-600" />
+          <h2 className="text-3xl font-bold text-red-800 dark:text-red-300 flex items-center gap-3">
+            <TrendingDown className="w-8 h-8 text-red-600 dark:text-red-400" />
             Despesas Anuais
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-red-100 to-red-200 p-6 rounded-2xl border border-red-200 shadow-lg">
-              <h3 className="text-xl font-bold text-red-900 mb-6">
+            <div className="bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 p-6 rounded-2xl border border-red-200 dark:border-red-700 shadow-lg">
+              <h3 className="text-xl font-bold text-red-900 dark:text-red-100 mb-6">
                 Despesas TOTAL Anuais
               </h3>
-              <div className="text-3xl font-bold text-red-900 mb-4">
+              <div className="text-3xl font-bold text-red-900 dark:text-red-100 mb-4">
                 R${" "}
                 {totalDespesasAno.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3836,7 +3849,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-red-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-red-800 dark:text-red-200 mb-1">
                   <span>Limite Anual</span>
                   <span>
                     {projAnual.despesasTotal > 0
@@ -3848,7 +3861,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-red-300 rounded-full h-3 relative">
+                <div className="w-full bg-red-300 dark:bg-red-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-red-600 to-red-700 h-3 rounded-full transition-all duration-300"
@@ -3871,7 +3884,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Usado/Restante */}
-              <div className="text-sm text-red-800 font-medium">
+              <div className="text-sm text-red-800 dark:text-red-200 font-medium">
                 R${" "}
                 {totalDespesasAno.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3884,11 +3897,11 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-100 to-orange-200 p-6 rounded-2xl border border-orange-200 shadow-lg">
-              <h3 className="text-xl font-bold text-orange-900 mb-6">
+            <div className="bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800 p-6 rounded-2xl border border-orange-200 dark:border-orange-700 shadow-lg">
+              <h3 className="text-xl font-bold text-orange-900 dark:text-orange-100 mb-6">
                 Despesas Variáveis Anuais
               </h3>
-              <div className="text-3xl font-bold text-orange-900 mb-4">
+              <div className="text-3xl font-bold text-orange-900 dark:text-orange-100 mb-4">
                 R${" "}
                 {reaisAnual.despesasVariável.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3897,7 +3910,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-orange-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">
                   <span>Limite Anual</span>
                   <span>
                     {projAnual.despesasVariável > 0
@@ -3910,7 +3923,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-orange-300 rounded-full h-3 relative">
+                <div className="w-full bg-orange-300 dark:bg-orange-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-orange-600 to-orange-700 h-3 rounded-full transition-all duration-300"
@@ -3934,7 +3947,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Usado/Restante */}
-              <div className="text-sm text-orange-800 font-medium">
+              <div className="text-sm text-orange-800 dark:text-orange-200 font-medium">
                 R${" "}
                 {reaisAnual.despesasVariável.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3947,11 +3960,11 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-amber-100 to-amber-200 p-6 rounded-2xl border border-amber-200 shadow-lg">
-              <h3 className="text-xl font-bold text-amber-900 mb-6">
+            <div className="bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900 dark:to-amber-800 p-6 rounded-2xl border border-amber-200 dark:border-amber-700 shadow-lg">
+              <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-6">
                 Despesas Fixas Anuais
               </h3>
-              <div className="text-3xl font-bold text-amber-900 mb-4">
+              <div className="text-3xl font-bold text-amber-900 dark:text-amber-100 mb-4">
                 R${" "}
                 {reaisAnual.despesasFixo.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -3960,7 +3973,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-amber-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
                   <span>Limite Anual</span>
                   <span>
                     {projAnual.despesasFixo > 0
@@ -3972,7 +3985,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-amber-300 rounded-full h-3 relative">
+                <div className="w-full bg-amber-300 dark:bg-amber-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-amber-600 to-amber-700 h-3 rounded-full transition-all duration-300"
@@ -3995,7 +4008,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Usado/Restante */}
-              <div className="text-sm text-amber-800 font-medium">
+              <div className="text-sm text-amber-800 dark:text-amber-200 font-medium">
                 R${" "}
                 {reaisAnual.despesasFixo.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -4012,17 +4025,17 @@ const AppContent: React.FC = () => {
 
         {/* 4. INVESTIMENTOS ANUAIS */}
         <div className="space-y-4">
-          <h2 className="text-3xl font-bold text-indigo-800 flex items-center gap-3">
-            <ArrowUpCircle className="w-8 h-8 text-indigo-600" />
+          <h2 className="text-3xl font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-3">
+            <ArrowUpCircle className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             Investimentos Anuais
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-6 rounded-2xl border border-blue-200 shadow-lg">
-              <h3 className="text-xl font-bold text-blue-900 mb-6">
+            <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 p-6 rounded-2xl border border-blue-200 dark:border-blue-700 shadow-lg">
+              <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-6">
                 Investimentos Gerais Anuais
               </h3>
-              <div className="text-3xl font-bold text-blue-900 mb-4">
+              <div className="text-3xl font-bold text-blue-900 dark:text-blue-100 mb-4">
                 R${" "}
                 {reaisAnual.investimentos.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -4031,7 +4044,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-blue-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
                   <span>Meta Anual</span>
                   <span>
                     {projAnual.investimentosGerais > 0
@@ -4044,7 +4057,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-blue-300 rounded-full h-3 relative">
+                <div className="w-full bg-blue-300 dark:bg-blue-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-blue-600 to-blue-700 h-3 rounded-full transition-all duration-300"
@@ -4068,7 +4081,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Alcançado/Restante */}
-              <div className="text-sm text-blue-800 font-medium">
+              <div className="text-sm text-blue-800 dark:text-blue-200 font-medium">
                 R${" "}
                 {reaisAnual.investimentos.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -4081,11 +4094,11 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-6 rounded-2xl border border-purple-200 shadow-lg">
-              <h3 className="text-xl font-bold text-purple-900 mb-6">
+            <div className="bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 p-6 rounded-2xl border border-purple-200 dark:border-purple-700 shadow-lg">
+              <h3 className="text-xl font-bold text-purple-900 dark:text-purple-100 mb-6">
                 Investimentos MKT Anuais
               </h3>
-              <div className="text-3xl font-bold text-purple-900 mb-4">
+              <div className="text-3xl font-bold text-purple-900 dark:text-purple-100 mb-4">
                 R${" "}
                 {reaisAnual.mkt.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -4094,7 +4107,7 @@ const AppContent: React.FC = () => {
 
               {/* Barra de Progresso Anual */}
               <div className="mb-3">
-                <div className="flex justify-between text-sm font-medium text-purple-800 mb-1">
+                <div className="flex justify-between text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">
                   <span>Meta Anual</span>
                   <span>
                     {projAnual.investimentosMkt > 0
@@ -4106,7 +4119,7 @@ const AppContent: React.FC = () => {
                     %
                   </span>
                 </div>
-                <div className="w-full bg-purple-300 rounded-full h-3 relative">
+                <div className="w-full bg-purple-300 dark:bg-purple-700 rounded-full h-3 relative">
                   {/* Barra base (0-100%) */}
                   <div
                     className="bg-gradient-to-r from-purple-600 to-purple-700 h-3 rounded-full transition-all duration-300"
@@ -4129,7 +4142,7 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* Valores Alcançado/Restante */}
-              <div className="text-sm text-purple-800 font-medium">
+              <div className="text-sm text-purple-800 dark:text-purple-200 font-medium">
                 R${" "}
                 {reaisAnual.mkt.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
@@ -4400,12 +4413,12 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Filtros de Transações */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-lg border border-amber-200 dark:border-gray-700 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">
               FILTRE SEUS ITENS:
             </h2>
           </div>
@@ -4414,7 +4427,7 @@ const AppContent: React.FC = () => {
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             {/* Filtro Tipo */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="transaction-type-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="transaction-type-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate truncate">
                 Tipo
               </label>
               <select
@@ -4428,7 +4441,7 @@ const AppContent: React.FC = () => {
                     category: "", // Limpar categoria quando tipo mudar
                   }))
                 }
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value="">Todos os tipos</option>
                 <option value="Receita">Receitas</option>
@@ -4438,7 +4451,7 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Categoria */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="transaction-category-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="transaction-category-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate truncate">
                 Categoria
               </label>
               <select
@@ -4451,7 +4464,7 @@ const AppContent: React.FC = () => {
                     category: e.target.value,
                   }))
                 }
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value="">Todas as categorias</option>
                 {transactionFilters.type ? (
@@ -4487,7 +4500,7 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Data Início */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="filter-date-from" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="filter-date-from" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate truncate">
                 Data Início
               </label>
               <div className="relative">
@@ -4503,7 +4516,7 @@ const AppContent: React.FC = () => {
                   }
                   readOnly
                   onClick={handleFilterCalendarFromToggle}
-                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 cursor-pointer w-full"
                 />
                 <Calendar className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none" />
                 {isFilterCalendarFromOpen && renderFilterCalendarFrom()}
@@ -4512,7 +4525,7 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Data Fim */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="filter-date-to" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate truncate">
+              <label htmlFor="filter-date-to" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate truncate">
                 Data Fim
               </label>
               <div className="relative">
@@ -4528,7 +4541,7 @@ const AppContent: React.FC = () => {
                   }
                   readOnly
                   onClick={handleFilterCalendarToToggle}
-                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white cursor-pointer w-full"
+                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 cursor-pointer w-full"
                 />
                 <Calendar className="absolute right-1 sm:right-2 md:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-amber-600 pointer-events-none" />
                 {isFilterCalendarToOpen && renderFilterCalendarTo()}
@@ -4559,7 +4572,7 @@ const AppContent: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             {/* Ações (acima da lista) */}
             {selectedTransactions.size > 0 && (
               <div className="flex justify-end p-3 sm:p-4 bg-red-50 border-b border-red-200">
@@ -4577,7 +4590,7 @@ const AppContent: React.FC = () => {
             )}
 
             {/* Cabeçalho das Colunas */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800/40 p-4">
               <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
                 <div className="flex justify-center">
                   <input
@@ -4646,7 +4659,7 @@ const AppContent: React.FC = () => {
             {getFilteredAndSortedTransactions().map((transaction, index) => (
               <div
                 key={transaction.id}
-                className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
+                className={`bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-all duration-200 ${
                   index === transactions.length - 1 ? "border-b-0" : ""
                 }`}
               >
@@ -4690,7 +4703,7 @@ const AppContent: React.FC = () => {
 
                   {/* Categoria */}
                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
-                    <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
+                    <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
                       {transaction.category}
                     </span>
                   </div>
@@ -5087,12 +5100,12 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Filtros de Produtos */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-lg border border-amber-200 dark:border-gray-700 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">
               FILTRE SEUS ITENS:
             </h2>
           </div>
@@ -5101,7 +5114,7 @@ const AppContent: React.FC = () => {
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             {/* Filtro Categoria */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="product-category-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-category-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Categoria
               </label>
               <input
@@ -5116,13 +5129,13 @@ const AppContent: React.FC = () => {
                     category: e.target.value,
                   }))
                 }
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               />
             </div>
 
             {/* Filtro Estoque */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="product-stock-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-stock-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Estoque
               </label>
 
@@ -5136,7 +5149,7 @@ const AppContent: React.FC = () => {
                     stockFilter: e.target.value,
                   }))
                 }
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value="">Todos os estoques</option>
                 <option value="inStock">Em estoque</option>
@@ -5146,7 +5159,7 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Vendidos */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="product-sold-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-sold-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Vendidos
               </label>
 
@@ -5160,7 +5173,7 @@ const AppContent: React.FC = () => {
                     soldFilter: e.target.value,
                   }))
                 }
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value="">Todos os vendidos</option>
                 <option value="sold">Vendidos</option>
@@ -5170,7 +5183,7 @@ const AppContent: React.FC = () => {
 
             {/* Filtro Preço de Custo */}
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="product-cost-filter" className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="product-cost-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Preço de Custo
               </label>
 
@@ -5184,7 +5197,7 @@ const AppContent: React.FC = () => {
                     costFilter: e.target.value,
                   }))
                 }
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value="">Todos os custos</option>
                 <option value="withCost">Com preço de custo</option>
@@ -5215,9 +5228,9 @@ const AppContent: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             {/* Cabeçalho das Colunas */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800/40 p-4">
               <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
                 <div className="flex justify-center">
                   <input
@@ -5318,7 +5331,7 @@ const AppContent: React.FC = () => {
 
                   {/* Categoria */}
                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
-                    <span className="text-xs sm:text-sm text-gray-600 bg-gray-50 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
+                    <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
                       {product.category}
                     </span>
                   </div>
@@ -6055,9 +6068,9 @@ const AppContent: React.FC = () => {
           return (
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
               {/* Gráfico — ocupa 3/5 em xl */}
-              <div className="xl:col-span-3 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow border border-slate-200 p-6">
+              <div className="xl:col-span-3 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-800 dark:to-gray-800 rounded-2xl shadow border border-slate-200 dark:border-gray-700 p-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-gray-800">Evolução — {periodoLabels[p]}</h3>
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Evolução — {periodoLabels[p]}</h3>
                   <p className="text-xs text-gray-400 font-medium mt-0.5">{subtitulo}</p>
                 </div>
                 {tendencia.length === 0 ? (
@@ -6085,10 +6098,10 @@ const AppContent: React.FC = () => {
               {/* Categorias — ocupa 2/5 em xl, empilhadas */}
               <div className="xl:col-span-2 grid grid-cols-1 gap-6">
                 {/* Receitas por categoria */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow border border-green-100 p-6">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl shadow border border-green-100 dark:border-gray-700 p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingUp className="w-5 h-5 text-green-500" />
-                    <h3 className="text-base font-bold text-gray-800">Receitas por Categoria</h3>
+                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Receitas por Categoria</h3>
                   </div>
                   {catReceitas.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-gray-400">
@@ -6105,24 +6118,24 @@ const AppContent: React.FC = () => {
                             <div className="flex justify-between items-center mb-1">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.cor }} />
-                                <span className="text-sm font-medium text-gray-700 truncate">{item.nome}</span>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{item.nome}</span>
                                 <span className="text-xs text-gray-400 flex-shrink-0">({qtd})</span>
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                 <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
-                                <span className="text-sm font-bold text-gray-800">
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
                                   R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                 </span>
                               </div>
                             </div>
-                            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: item.cor }} />
                             </div>
                           </div>
                         );
                       })}
-                      <div className="pt-3 border-t border-gray-100 flex justify-between">
-                        <span className="text-sm font-bold text-gray-600">Total</span>
+                      <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between">
+                        <span className="text-sm font-bold text-gray-600 dark:text-gray-400">Total</span>
                         <span className="text-sm font-bold text-green-600">R$ {totalCatRec.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                       </div>
                     </div>
@@ -6130,10 +6143,10 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {/* Despesas por categoria */}
-                <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl shadow border border-red-100 p-6">
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl shadow border border-red-100 dark:border-gray-700 p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingDown className="w-5 h-5 text-red-500" />
-                    <h3 className="text-base font-bold text-gray-800">Despesas por Categoria</h3>
+                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Despesas por Categoria</h3>
                   </div>
                   {catDespesas.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-gray-400">
@@ -6150,17 +6163,17 @@ const AppContent: React.FC = () => {
                             <div className="flex justify-between items-center mb-1">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.cor }} />
-                                <span className="text-sm font-medium text-gray-700 truncate">{item.nome}</span>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{item.nome}</span>
                                 <span className="text-xs text-gray-400 flex-shrink-0">({qtd})</span>
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                 <span className="text-xs text-gray-400">{pct.toFixed(1)}%</span>
-                                <span className="text-sm font-bold text-gray-800">
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
                                   R$ {item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                 </span>
                               </div>
                             </div>
-                            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: item.cor }} />
                             </div>
                           </div>
@@ -6179,10 +6192,10 @@ const AppContent: React.FC = () => {
         })()}
 
         {/* Top produtos */}
-        <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-2xl shadow border border-sky-100 p-6">
+        <div className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl shadow border border-sky-100 dark:border-gray-700 p-6">
           <div className="flex items-center gap-2 mb-5">
             <Award className="w-5 h-5 text-blue-500" />
-            <h3 className="text-base font-bold text-gray-800">Top Produtos / Serviços</h3>
+            <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Top Produtos / Serviços</h3>
           </div>
           {produtos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-gray-400">
@@ -6433,7 +6446,7 @@ const AppContent: React.FC = () => {
         {/* Metas derivadas da Projeção */}
         {Array.isArray(projectionSnapshot?.revenueTotals?.previsto) &&
         projectionSnapshot.revenueTotals.previsto.length >= 12 ? (
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-2xl">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-2xl">
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-5 w-5 text-amber-600" />
@@ -6451,7 +6464,7 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-2xl">
+          <div className="bg-gray-50 dark:bg-gray-800 border-l-4 border-gray-400 p-4 rounded-2xl">
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-5 w-5 text-gray-500" />
@@ -6514,13 +6527,14 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <ImpersonationBanner />
       {user && <FeedbackButton paginaAtual={activeTab} />}
+      <ThemeToggle />
       {/* Container fixo para Header e Navigation */}
       <div className="fixed top-0 left-0 right-0 z-[60]">
         {/* Header */}
-        <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200">
+        <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200 dark:bg-gray-900/95 dark:border-amber-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-5 overflow-x-auto scrollbar-hide">
               <div className="flex items-center min-w-max flex-shrink-0">
@@ -6554,7 +6568,7 @@ const AppContent: React.FC = () => {
         </header>
 
         {/* Navigation - sempre abaixo do header */}
-        <nav className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100">
+        <nav className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-amber-100 dark:bg-gray-900/90 dark:border-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center overflow-x-auto scrollbar-hide">
               <div className="flex items-center space-x-2 min-w-max">
@@ -6600,7 +6614,7 @@ const AppContent: React.FC = () => {
                         className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
                           activeTab === m.key
                             ? "bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg"
-                            : "text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg"
+                            : "text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30"
                         }`}
                       >
                         <Icon className="h-5 w-5 mr-2" />
@@ -6754,9 +6768,9 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Package className="w-6 h-6 text-amber-700" />
@@ -6861,7 +6875,7 @@ const AppContent: React.FC = () => {
             >
               {/* Nome do Produto */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Nome do Produto <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -6870,10 +6884,10 @@ const AppContent: React.FC = () => {
                   required
                   value={productForm.name}
                   onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 transition-all duration-200 shadow-sm dark:text-gray-200 ${
                     productFormErrors.name
-                      ? "bg-red-50 border-red-300 focus:ring-red-500"
-                      : "bg-gray-50 border-gray-200"
+                      ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
+                      : "bg-gray-50 border-gray-200 dark:bg-gray-700 dark:border-gray-600"
                   }`}
                   placeholder="Ex: Vela Aromática Lavanda"
                 />
@@ -6881,7 +6895,7 @@ const AppContent: React.FC = () => {
 
               {/* Categoria */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Categoria <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -6890,10 +6904,10 @@ const AppContent: React.FC = () => {
                   required
                   value={productForm.category}
                   onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 transition-all duration-200 shadow-sm dark:text-gray-200 ${
                     productFormErrors.category
-                      ? "bg-red-50 border-red-300 focus:ring-red-500"
-                      : "bg-gray-50 border-gray-200"
+                      ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
+                      : "bg-gray-50 border-gray-200 dark:bg-gray-700 dark:border-gray-600"
                   }`}
                   placeholder="Ex: Velas Aromáticas"
                 />
@@ -6901,7 +6915,7 @@ const AppContent: React.FC = () => {
 
               {/* Preço de Venda */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Preço de Venda (R$) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -6923,7 +6937,7 @@ const AppContent: React.FC = () => {
 
               {/* Custo */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Custo (R$)
                 </label>
                 <input
@@ -6940,7 +6954,7 @@ const AppContent: React.FC = () => {
 
               {/* Estoque */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Estoque
                 </label>
                 <input
@@ -6956,7 +6970,7 @@ const AppContent: React.FC = () => {
 
               {/* Quantidade Vendida */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Quantidade Vendida
                 </label>
                 <input
@@ -7034,9 +7048,9 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <DollarSign className="w-6 h-6 text-amber-700" />
@@ -7139,7 +7153,7 @@ const AppContent: React.FC = () => {
             >
               {/* Data */}
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Data <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -7152,10 +7166,10 @@ const AppContent: React.FC = () => {
                         : ""
                     }
                     readOnly
-                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white cursor-pointer ${
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white dark:focus:bg-gray-700 cursor-pointer dark:text-gray-200 ${
                       transactionFormErrors.date
-                        ? "bg-red-50 border-red-300 focus:ring-red-500"
-                        : "bg-gray-100 border-gray-300"
+                        ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
+                        : "bg-gray-100 border-gray-300 dark:bg-gray-700 dark:border-gray-600"
                     }`}
                     placeholder="Selecione uma data"
                     onClick={handleCalendarToggle}
@@ -7195,7 +7209,7 @@ const AppContent: React.FC = () => {
 
               {/* Descrição */}
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descrição <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -7236,7 +7250,7 @@ const AppContent: React.FC = () => {
 
               {/* Valor */}
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Valor (R$) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -7245,10 +7259,10 @@ const AppContent: React.FC = () => {
                     name="value"
                     value={transactionForm.value}
                     onChange={handleTransactionInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white dark:focus:bg-gray-700 dark:text-gray-200 ${
                       transactionFormErrors.value
-                        ? "bg-red-50 border-red-300 focus:ring-red-500"
-                        : "bg-gray-100 border-gray-300"
+                        ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
+                        : "bg-gray-100 border-gray-300 dark:bg-gray-700 dark:border-gray-600"
                     }`}
                     placeholder="0,00"
                     step="0.01"
@@ -7279,7 +7293,7 @@ const AppContent: React.FC = () => {
 
               {/* Tipo */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tipo <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -7287,10 +7301,10 @@ const AppContent: React.FC = () => {
                     name="type"
                     value={transactionForm.type}
                     onChange={handleTransactionInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white dark:focus:bg-gray-700 dark:text-gray-200 ${
                       transactionFormErrors.type
-                        ? "bg-red-50 border-red-300 focus:ring-red-500"
-                        : "bg-gray-100 border-gray-300"
+                        ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
+                        : "bg-gray-100 border-gray-300 dark:bg-gray-700 dark:border-gray-600"
                     }`}
                     required
                   >
@@ -7322,7 +7336,7 @@ const AppContent: React.FC = () => {
 
               {/* Categoria */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Categoria <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -7330,10 +7344,10 @@ const AppContent: React.FC = () => {
                     name="category"
                     value={transactionForm.category}
                     onChange={handleTransactionInputChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 focus:bg-white dark:focus:bg-gray-700 dark:text-gray-200 ${
                       transactionFormErrors.category
-                        ? "bg-red-50 border-red-300 focus:ring-red-500"
-                        : "bg-gray-100 border-gray-300"
+                        ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
+                        : "bg-gray-100 border-gray-300 dark:bg-gray-700 dark:border-gray-600"
                     }`}
                     required
                   >
@@ -7420,9 +7434,9 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Download className="w-6 h-6 text-amber-700" />
@@ -7867,9 +7881,9 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Download className="w-6 h-6 text-amber-700" />
@@ -7972,9 +7986,9 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Download className="w-6 h-6 text-amber-700" />
@@ -8110,9 +8124,9 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Download className="w-6 h-6 text-amber-700" />
@@ -8334,9 +8348,11 @@ const AppContent: React.FC = () => {
 // Componente principal que envolve AppContent com AuthProvider
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -143,12 +143,12 @@ export default function SecurityAlerts() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm mb-6">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-lg border border-amber-200 dark:border-gray-700 shadow-sm mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">
               FILTRE SEUS ITENS:
             </h2>
           </div>
@@ -156,7 +156,7 @@ export default function SecurityAlerts() {
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="alert-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="alert-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Período
               </label>
               <select
@@ -164,7 +164,7 @@ export default function SecurityAlerts() {
                 name="alert-period-filter"
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value={1}>Últimas 24 horas</option>
                 <option value={7}>Últimos 7 dias</option>
@@ -174,7 +174,7 @@ export default function SecurityAlerts() {
             </div>
 
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="alert-type-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="alert-type-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Tipo de Alerta
               </label>
               <select
@@ -182,7 +182,7 @@ export default function SecurityAlerts() {
                 name="alert-type-filter"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value="">Todos</option>
                 <option value="login_failed_suspicious">Login Suspeito</option>

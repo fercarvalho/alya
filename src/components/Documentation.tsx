@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { marked, Renderer, use } from 'marked';
 
 interface DocPage {
@@ -27,6 +28,7 @@ declare global {
     mermaid?: {
       initialize: (config: object) => void;
       run: (opts?: object) => Promise<void>;
+      render: (id: string, text: string) => Promise<{ svg: string }>;
     };
   }
 }
@@ -67,20 +69,25 @@ function loadMermaidCDN(): Promise<void> {
   });
 }
 
-async function renderMermaidInContainer(container: HTMLElement) {
-  const divs = container.querySelectorAll('.mermaid.not-rendered');
-  if (divs.length === 0) return;
+async function renderMermaidInContainer(container: HTMLElement, isDark: boolean) {
   await loadMermaidCDN();
+  window.mermaid?.initialize({ startOnLoad: false, theme: isDark ? 'dark' : 'default' });
+
+  const divs = Array.from(container.querySelectorAll<HTMLElement>('.mermaid.not-rendered'));
+  if (divs.length === 0) return;
+
   divs.forEach(d => d.classList.remove('not-rendered'));
+
   try {
-    await window.mermaid?.run({ nodes: Array.from(divs) as HTMLElement[] });
+    await window.mermaid?.run({ nodes: divs });
   } catch {
     // diagrama inválido — mantém o texto raw
   }
 }
 
-const Documentation: React.FC = () => {
+const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => {
   const { token } = useAuth();
+  const { isDark } = useTheme();
   const [sections, setSections] = useState<DocSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -93,7 +100,10 @@ const Documentation: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/documentation`, {
+        const url = token
+          ? `${API_BASE_URL}/documentation`
+          : `${API_BASE_URL}/documentation/public`;
+        const res = await fetch(url, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const result = await res.json();
@@ -119,13 +129,14 @@ const Documentation: React.FC = () => {
     .flatMap(s => s.pages)
     .find(p => p.id === activePageId);
 
+  // Inclui o tema no HTML para forçar React a resetar o DOM quando o tema muda
   const renderedHtml = activePage
-    ? (marked(activePage.content) as string)
+    ? `<!--${isDark ? 'dark' : 'light'}-->${marked(activePage.content) as string}`
     : '';
 
   useEffect(() => {
     if (contentRef.current && renderedHtml) {
-      renderMermaidInContainer(contentRef.current);
+      renderMermaidInContainer(contentRef.current, isDark);
     }
   }, [renderedHtml]);
 
@@ -202,27 +213,27 @@ const Documentation: React.FC = () => {
       ) : (
         <div className="flex gap-4 relative">
           {/* Botão de toggle sidebar (mobile) */}
-          <button
-            onClick={() => setSidebarOpen(v => !v)}
-            className="lg:hidden fixed bottom-6 right-6 z-30 bg-amber-500 text-white rounded-full p-3 shadow-lg"
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {!inModal && (
+            <button
+              onClick={() => setSidebarOpen(v => !v)}
+              className="lg:hidden fixed bottom-6 right-6 z-30 bg-amber-500 text-white rounded-full p-3 shadow-lg"
+            >
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          )}
 
           {/* Sidebar */}
           <aside
             className={`
-              ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-              transition-transform duration-200
-              fixed lg:static inset-y-0 left-0 z-20
-              w-72 lg:w-72 flex-shrink-0
-              bg-white lg:bg-transparent
-              lg:block
+              ${inModal
+                ? 'w-64 flex-shrink-0'
+                : `${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} transition-transform duration-200 fixed lg:static inset-y-0 left-0 z-20 w-72 lg:w-72 flex-shrink-0 bg-white dark:bg-gray-900 lg:bg-transparent lg:dark:bg-transparent lg:block`
+              }
             `}
           >
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden sticky top-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden sticky top-4">
               {/* Busca */}
-              <div className="p-3 border-b border-gray-100">
+              <div className="p-3 border-b border-gray-100 dark:border-gray-700">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
@@ -230,7 +241,7 @@ const Documentation: React.FC = () => {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Buscar na documentação..."
-                    className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
                   />
                   {search && (
                     <button
@@ -244,14 +255,14 @@ const Documentation: React.FC = () => {
               </div>
 
               {/* Seções */}
-              <nav className="overflow-y-auto max-h-[calc(100vh-320px)]">
+              <nav className={`overflow-y-auto ${inModal ? 'max-h-[calc(90vh-260px)]' : 'max-h-[calc(100vh-320px)]'}`}>
                 {filteredSections.map(section => {
                   const isExpanded = expandedSections.has(section.id);
                   return (
                     <div key={section.id}>
                       <button
                         onClick={() => toggleSection(section.id)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-amber-50 hover:text-amber-700 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-amber-300 transition-colors"
                       >
                         <span className="truncate">{section.title}</span>
                         {isExpanded ? (
@@ -262,15 +273,15 @@ const Documentation: React.FC = () => {
                       </button>
 
                       {isExpanded && (
-                        <div className="bg-gray-50">
+                        <div className="bg-gray-50 dark:bg-gray-900/50">
                           {section.pages.map(page => (
                             <button
                               key={page.id}
                               onClick={() => selectPage(section.id, page.id)}
                               className={`w-full flex items-center gap-2 pl-6 pr-4 py-2.5 text-sm transition-colors ${
                                 activePageId === page.id
-                                  ? 'bg-gradient-to-r from-amber-400/20 to-orange-400/20 text-amber-700 font-medium border-l-2 border-amber-500'
-                                  : 'text-gray-600 hover:bg-amber-50 hover:text-amber-700 border-l-2 border-transparent'
+                                  ? 'bg-gradient-to-r from-amber-400/20 to-orange-400/20 dark:from-amber-900/40 dark:to-orange-900/30 text-amber-700 dark:text-amber-300 font-medium border-l-2 border-amber-500'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-gray-700 dark:hover:text-amber-300 border-l-2 border-transparent'
                               }`}
                             >
                               <FileText className="h-3.5 w-3.5 flex-shrink-0" />
@@ -294,9 +305,9 @@ const Documentation: React.FC = () => {
           {/* Conteúdo principal */}
           <main className="flex-1 min-w-0">
             {activePage ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* Título da página */}
-                <div className="px-8 py-5 border-b border-gray-100">
+                <div className="px-8 py-5 border-b border-gray-100 dark:border-gray-700">
                   <h2 className="text-xl font-bold text-gray-800">{activePage.title}</h2>
                   {activePage.updatedAt && (
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
