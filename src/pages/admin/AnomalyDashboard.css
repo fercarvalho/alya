@@ -714,6 +714,31 @@ html.dark .modal-title {
   color: #f1f5f9;
 }
 
+/* Section containers */
+html.dark .section {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .section h2 {
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+/* Chart bars */
+html.dark .chart-label {
+  color: #e2e8f0;
+}
+
+html.dark .chart-count {
+  color: #94a3b8;
+}
+
+html.dark .chart-bar-outer {
+  background: #334155;
+}
+
+/* Top users */
 html.dark .user-item {
   background: #1e293b;
   border-color: #334155;
@@ -723,6 +748,58 @@ html.dark .user-name {
   color: #f1f5f9;
 }
 
+html.dark .user-stats,
 html.dark .user-meta {
+  color: #94a3b8;
+}
+
+/* Anomaly cards */
+html.dark .anomaly-type {
+  color: #f1f5f9;
+}
+
+html.dark .anomaly-user {
+  color: #94a3b8;
+}
+
+html.dark .anomaly-user strong {
+  color: #e2e8f0;
+}
+
+html.dark .anomaly-details {
+  background: #0f172a;
+  color: #cbd5e1;
+  border-left-color: #3b82f6;
+}
+
+html.dark .anomaly-footer {
+  color: #94a3b8;
+}
+
+html.dark .anomaly-score,
+html.dark .anomaly-time,
+html.dark .anomaly-ip {
+  color: #94a3b8;
+}
+
+/* Modal interno */
+html.dark .modal-header h3 {
+  color: #f1f5f9;
+}
+
+html.dark .modal-close {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+html.dark .modal-close:hover {
+  background: #475569;
+}
+
+html.dark .baseline-section h4 {
+  color: #e2e8f0;
+}
+
+html.dark .baseline-section p {
   color: #94a3b8;
 }

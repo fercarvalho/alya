@@ -163,18 +163,18 @@ export default function AnomalyDashboard() {
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <Activity className="h-8 w-8 text-amber-600" />
-          <h1 className="text-3xl font-bold text-amber-900">Dashboard de Anomalias</h1>
+          <h1 className="text-3xl font-bold text-amber-900 dark:text-amber-300">Dashboard de Anomalias</h1>
         </div>
-        <p className="text-gray-600">Monitoramento de comportamentos suspeitos detectados por ML</p>
+        <p className="text-gray-600 dark:text-gray-400">Monitoramento de comportamentos suspeitos detectados por ML</p>
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm mb-6">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-lg border border-amber-200 dark:border-gray-700 shadow-sm mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           {/* Título */}
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
+            <Filter className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
               FILTRE SEUS ITENS:
             </h2>
           </div>
@@ -182,7 +182,7 @@ export default function AnomalyDashboard() {
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="anomaly-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="anomaly-period-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Período
               </label>
               <select
@@ -190,7 +190,7 @@ export default function AnomalyDashboard() {
                 name="anomaly-period-filter"
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value={1}>Últimas 24 horas</option>
                 <option value={7}>Últimos 7 dias</option>
@@ -200,7 +200,7 @@ export default function AnomalyDashboard() {
             </div>
 
             <div className="flex flex-col flex-1 min-w-0">
-              <label htmlFor="anomaly-severity-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 mb-1 truncate">
+              <label htmlFor="anomaly-severity-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                 Severidade mínima
               </label>
               <select
@@ -208,7 +208,7 @@ export default function AnomalyDashboard() {
                 name="anomaly-severity-filter"
                 value={severityFilter}
                 onChange={(e) => setSeverityFilter(Number(e.target.value))}
-                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white w-full"
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
               >
                 <option value={0}>Todas</option>
                 <option value={50}>Média ou superior</option>
@@ -241,7 +241,7 @@ export default function AnomalyDashboard() {
         <div className="stat-card">
           <div className="stat-icon"><TrendingUp size={40} color="#2196F3" /></div>
           <div className="stat-content">
-            <div className="stat-value">{stats.stats.avgScore.toFixed(1)}</div>
+            <div className="stat-value">{Number(stats.stats.avgScore).toFixed(1)}</div>
             <div className="stat-label">Score Médio</div>
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function AnomalyDashboard() {
                     style={{ width: `${percentage}%` }}
                   >
                     <span className="chart-bar-text">
-                      Score: {item.avg_score.toFixed(0)}
+                      Score: {Number(item.avg_score).toFixed(0)}
                     </span>
                   </div>
                 </div>
@@ -332,7 +332,7 @@ export default function AnomalyDashboard() {
               </div>
               <div className="baseline-section">
                 <h4><BarChart3 size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />Requisições por minuto (média):</h4>
-                <p>{userBaseline.baseline.avgRequestsPerMinute.toFixed(1)}</p>
+                <p>{Number(userBaseline.baseline.avgRequestsPerMinute).toFixed(1)}</p>
               </div>
               <div className="baseline-section">
                 <h4><Globe size={16} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />IPs comuns:</h4>
