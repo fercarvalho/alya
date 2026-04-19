@@ -24,7 +24,7 @@
     "@tiptap/starter-kit": "^3.22.3",
     "axios": "^1.13.6",
     "browser-image-compression": "^2.0.2",
-    "date-fns": "^2.30.0",
+    "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.263.1",
