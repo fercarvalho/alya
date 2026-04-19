@@ -6870,7 +6870,7 @@ const AppContent: React.FC = () => {
         {/* Header */}
         <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200 dark:bg-gray-900/95 dark:border-amber-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-5 overflow-x-auto scrollbar-hide">
+            <div className="flex justify-between items-center py-3 overflow-x-auto scrollbar-hide">
               <div className="flex items-center min-w-max flex-shrink-0">
                 <img
                   src={isDemoMode ? "/app/alya-logo.png" : "/alya-logo.png"}
@@ -6945,7 +6945,7 @@ const AppContent: React.FC = () => {
                           setActiveTab(m.key as TabType);
                           setExpandedCharts([]); // Limpa todos os gráficos ao trocar de aba
                         }}
-                        className={`flex items-center px-6 pt-6 pb-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
+                        className={`flex items-center px-6 py-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
                           activeTab === m.key
                             ? "bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg"
                             : "text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-t-lg dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30"
@@ -6964,7 +6964,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Main Content - padding-top para compensar header + nav (altura dinâmica) */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[180px]">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[140px]">
         {activeTab === "dashboard" && renderDashboard()}
         {activeTab === "metas" && renderMetas()}
         {activeTab === "projecao" && (
@@ -7078,7 +7078,7 @@ const AppContent: React.FC = () => {
       {/* Modal de Produto */}
       {isProductModalOpen && (
         <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsProductModalOpen(false);
@@ -7367,7 +7367,7 @@ const AppContent: React.FC = () => {
       {/* Modal de Nova Transação */}
       {isTransactionModalOpen && (
         <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[120px] z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsTransactionModalOpen(false);
@@ -7771,7 +7771,7 @@ const AppContent: React.FC = () => {
       {/* Modal de Importar/Exportar */}
       {isImportExportModalOpen && (
         <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsImportExportModalOpen(false);
@@ -8873,7 +8873,7 @@ const AppContent: React.FC = () => {
       {/* Modal de Seleção de Período para Exportar Relatórios */}
       {isPeriodoExportModalOpen && (
         <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsPeriodoExportModalOpen(false);
@@ -8983,7 +8983,7 @@ const AppContent: React.FC = () => {
       {/* Modal de Configuração de Exportação de Transações */}
       {isExportTransacoesModalOpen && (
         <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsExportTransacoesModalOpen(false);
@@ -9118,7 +9118,7 @@ const AppContent: React.FC = () => {
       {/* Modal de Configuração de Exportação de Produtos */}
       {isExportProdutosModalOpen && (
         <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsExportProdutosModalOpen(false);

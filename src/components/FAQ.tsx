@@ -39,7 +39,7 @@ const FAQ: React.FC = () => {
   const toggle = (id: string) => setOpenId(prev => prev === id ? null : id);
 
   return (
-    <div className="p-6">
+    <div className="px-6 pb-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-500 to-orange-400 rounded-2xl shadow-lg p-6 mb-6">
         <div className="flex items-center gap-4">

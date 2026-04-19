@@ -55,7 +55,7 @@ const AdminPanel: React.FC = () => {
   ];
 
   return (
-    <div className="p-6">
+    <div className="px-6 pb-6">
       <div className="bg-gradient-to-r from-amber-500 to-orange-400 rounded-2xl shadow-lg p-6 mb-6">
         <div className="flex items-center gap-4">
           <div className="bg-white/20 rounded-xl p-3">

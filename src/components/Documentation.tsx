@@ -254,7 +254,7 @@ const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => 
   );
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="px-4 sm:px-6 pb-4 sm:pb-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-500 to-orange-400 rounded-2xl shadow-lg p-5 sm:p-6 mb-4">
         <div className="flex items-center gap-4">
