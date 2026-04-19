@@ -37,6 +37,7 @@ interface RodapeConfig {
   info_texto: string;
   info_alinhamento: 'left' | 'center' | 'right';
   copyright: string;
+  versao_sistema: string;
 }
 
 const RODAPE_DEFAULTS: RodapeConfig = {
@@ -49,6 +50,7 @@ const RODAPE_DEFAULTS: RodapeConfig = {
   info_texto: '',
   info_alinhamento: 'left',
   copyright: 'Viver de PJ. TODOS OS DIREITOS RESERVADOS',
+  versao_sistema: '',
 };
 
 // Renderiza texto com suporte a **negrito** e quebras de linha
@@ -164,6 +166,7 @@ const Footer: React.FC = () => {
           info_texto: configuracoes.info_texto || '',
           info_alinhamento: (configuracoes.info_alinhamento as RodapeConfig['info_alinhamento']) || 'left',
           copyright: configuracoes.copyright || RODAPE_DEFAULTS.copyright,
+          versao_sistema: configuracoes.versao_sistema || '',
         });
       }
 
@@ -283,29 +286,44 @@ const Footer: React.FC = () => {
           </p>
         </div>
 
-        {/* Bottom links — abaixo do copyright, separados por | */}
-        {bottomLinks.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-0 text-amber-200 text-xs">
-            {bottomLinks.map((item, idx) => (
-              <span key={item.id} className="flex items-center">
-                {item.link ? (
-                  <a
-                    href={item.link}
-                    onClick={(e) => handleBottomLinkClick(e, item.link)}
-                    target={isSpecialLink(item.link) || item.link.startsWith('mailto:') ? undefined : '_blank'}
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition-colors px-2 py-0.5 cursor-pointer"
-                  >
-                    {item.texto}
-                  </a>
-                ) : (
-                  <span className="px-2 py-0.5">{item.texto}</span>
-                )}
-                {idx < bottomLinks.length - 1 && (
-                  <span className="text-amber-400 select-none">|</span>
-                )}
-              </span>
-            ))}
+        {/* Barra inferior — links + versão */}
+        {(bottomLinks.length > 0 || config.versao_sistema) && (
+          <div className="mt-4 flex items-center text-amber-200 text-xs">
+            {/* Espaçador esquerdo para centralizar os links */}
+            <div className="flex-1" />
+
+            {/* Links centralizados */}
+            <div className="flex flex-wrap items-center justify-center gap-x-0">
+              {bottomLinks.map((item, idx) => (
+                <span key={item.id} className="flex items-center">
+                  {item.link ? (
+                    <a
+                      href={item.link}
+                      onClick={(e) => handleBottomLinkClick(e, item.link)}
+                      target={isSpecialLink(item.link) || item.link.startsWith('mailto:') ? undefined : '_blank'}
+                      rel="noopener noreferrer"
+                      className="hover:text-white transition-colors px-2 py-0.5 cursor-pointer"
+                    >
+                      {item.texto}
+                    </a>
+                  ) : (
+                    <span className="px-2 py-0.5">{item.texto}</span>
+                  )}
+                  {idx < bottomLinks.length - 1 && (
+                    <span className="text-amber-400 select-none">|</span>
+                  )}
+                </span>
+              ))}
+            </div>
+
+            {/* Versão — alinhada à direita */}
+            <div className="flex-1 flex justify-end">
+              {config.versao_sistema && (
+                <span className="text-amber-300/70 tabular-nums">
+                  v{config.versao_sistema}
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>

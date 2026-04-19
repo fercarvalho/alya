@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus, Edit2, Trash2, Save, X, AlertTriangle, GripVertical,
   Layout, Link2, Link2Off, Building2, Copyright, ChevronDown, ChevronUp,
-  AlignLeft, AlignCenter, AlignRight, Bold, FileText, Rows, Eye, EyeOff
+  AlignLeft, AlignCenter, AlignRight, Bold, FileText, Rows, Eye, EyeOff, Tag
 } from 'lucide-react';
 import {
   DndContext,
@@ -52,6 +52,7 @@ interface RodapeConfig {
   info_texto: string;
   info_alinhamento: 'left' | 'center' | 'right';
   copyright: string;
+  versao_sistema: string;
 }
 
 interface BottomLink {
@@ -62,7 +63,7 @@ interface BottomLink {
   ordem: number;
 }
 
-type FooterTab = 'colunas' | 'empresa' | 'info' | 'inferior' | 'base';
+type FooterTab = 'colunas' | 'empresa' | 'info' | 'inferior' | 'base' | 'versao';
 
 // ─── Componente sortable de link ──────────────────────────────────────────────
 
@@ -310,6 +311,7 @@ const FooterManagement: React.FC = () => {
     info_texto: '',
     info_alinhamento: 'left',
     copyright: '',
+    versao_sistema: '',
   });
   const [configOriginal, setConfigOriginal] = useState<RodapeConfig>(config);
 
@@ -378,6 +380,7 @@ const FooterManagement: React.FC = () => {
         info_texto: configuracoes?.info_texto || '',
         info_alinhamento: (configuracoes?.info_alinhamento as RodapeConfig['info_alinhamento']) || 'left',
         copyright: configuracoes?.copyright || '',
+        versao_sistema: configuracoes?.versao_sistema || '',
       };
       setConfig(cfg);
       setConfigOriginal(cfg);
@@ -808,7 +811,8 @@ const FooterManagement: React.FC = () => {
     { id: 'empresa'  as FooterTab, label: 'Empresa',          icon: Building2 },
     { id: 'info'     as FooterTab, label: 'Informações',      icon: FileText  },
     { id: 'inferior' as FooterTab, label: 'Rodapé Inferior',  icon: Copyright },
-    { id: 'base'     as FooterTab, label: 'Links de Base',    icon: Rows     },
+    { id: 'base'     as FooterTab, label: 'Links de Base',    icon: Rows      },
+    { id: 'versao'   as FooterTab, label: 'Versão',           icon: Tag       },
   ];
 
   if (isLoading) {
@@ -1232,6 +1236,75 @@ const FooterManagement: React.FC = () => {
               </SortableContext>
             </DndContext>
           )}
+        </div>
+      )}
+
+      {/* ─── ABA: VERSÃO ─────────────────────────────────────────── */}
+      {activeTab === 'versao' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Versão do Sistema
+              </label>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                Exibida no canto direito da barra inferior do rodapé. Ex: <span className="font-mono">2.0</span>, <span className="font-mono">3.1 Beta</span>, <span className="font-mono">2024.1</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400 font-mono">v</span>
+                <input
+                  type="text"
+                  value={config.versao_sistema}
+                  onChange={e => setConfig(prev => ({ ...prev, versao_sistema: e.target.value }))}
+                  placeholder="ex: 2.0 Beta"
+                  className="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-mono"
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => handleSalvarConfig('versao_sistema')}
+              disabled={config.versao_sistema === configOriginal.versao_sistema || isSavingConfig !== null}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                config.versao_sistema !== configOriginal.versao_sistema && isSavingConfig === null
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white hover:from-amber-500 hover:to-orange-500 shadow-lg'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isSavingConfig === 'versao_sistema' ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Salvar Versão
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Preview */}
+          <div>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Preview</p>
+            <div className="bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl p-5">
+              <div className="flex items-center text-xs text-amber-200">
+                <div className="flex-1" />
+                <div className="flex-1 flex justify-center gap-x-2 text-amber-200/60">
+                  <span>Política de Privacidade</span>
+                  <span className="text-amber-400">|</span>
+                  <span>Termos de Uso</span>
+                </div>
+                <div className="flex-1 flex justify-end">
+                  {config.versao_sistema ? (
+                    <span className="text-amber-300/70 font-mono">v{config.versao_sistema}</span>
+                  ) : (
+                    <span className="text-amber-200/30 italic">sem versão</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
