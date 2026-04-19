@@ -22,8 +22,8 @@ const pool = new Pool({
  * Duração dos tokens
  */
 const TOKEN_EXPIRY = {
-  ACCESS_TOKEN: "15m", // 15 minutos
-  ACCESS_TOKEN_MS: 15 * 60 * 1000,
+  ACCESS_TOKEN: "8h", // 8 horas
+  ACCESS_TOKEN_MS: 8 * 60 * 60 * 1000,
   REFRESH_TOKEN: "7d", // 7 dias
   REFRESH_TOKEN_MS: 7 * 24 * 60 * 60 * 1000,
 };
