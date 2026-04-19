@@ -498,6 +498,24 @@ const AppContent: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Estados do modal de importar extrato / fatura
+  const [isImportExtratoModalOpen, setIsImportExtratoModalOpen] = useState(false);
+  const [importType, setImportType] = useState<'extrato' | 'fatura' | null>(null);
+  const [selectedBank, setSelectedBank] = useState<string | null>(null);
+  const [extratoStep, setExtratoStep] = useState<0 | 1 | 2 | 3>(0);
+  const [extratoFile, setExtratoFile] = useState<File | null>(null);
+  const [extratoPassword, setExtratoPassword] = useState('');
+  const [isUploadingExtrato, setIsUploadingExtrato] = useState(false);
+  // Preview sandbox
+  type PreviewTx = { _id: string; date: string; description: string; value: number; type: 'Receita' | 'Despesa'; category: string; };
+  const [extratoPreview, setExtratoPreview] = useState<PreviewTx[]>([]);
+  const [isConfirmingImport, setIsConfirmingImport] = useState(false);
+  // Undo system
+  const [lastImportBatch, setLastImportBatch] = useState<string[]>([]);
+  const [showUndoToast, setShowUndoToast] = useState(false);
+  const [undoCountdown, setUndoCountdown] = useState(15);
+  const [isUndoing, setIsUndoing] = useState(false);
+
   // Estado do modal de seleção de período para exportar relatórios
   const [isPeriodoExportModalOpen, setIsPeriodoExportModalOpen] =
     useState(false);
@@ -733,6 +751,18 @@ const AppContent: React.FC = () => {
     }
   }, [metas]);
 
+  // Countdown do toast de desfazer importação
+  useEffect(() => {
+    if (!showUndoToast) return;
+    if (undoCountdown <= 0) {
+      setShowUndoToast(false);
+      setLastImportBatch([]);
+      return;
+    }
+    const timer = setTimeout(() => setUndoCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [showUndoToast, undoCountdown]);
+
   // Função para fechar modais com ESC
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -806,6 +836,17 @@ const AppContent: React.FC = () => {
           return;
         }
 
+        // Fechar modal de importar extrato se estiver aberto
+        if (isImportExtratoModalOpen) {
+          setIsImportExtratoModalOpen(false);
+          setImportType(null);
+          setSelectedBank(null);
+          setExtratoStep(0);
+          setExtratoFile(null);
+          setExtratoPassword('');
+          return;
+        }
+
         // Fechar modal de seleção de período para exportar relatórios
         if (isPeriodoExportModalOpen) {
           setIsPeriodoExportModalOpen(false);
@@ -837,6 +878,7 @@ const AppContent: React.FC = () => {
     isProductModalOpen,
     isTransactionModalOpen,
     isImportExportModalOpen,
+    isImportExtratoModalOpen,
     isPeriodoExportModalOpen,
     isExportTransacoesModalOpen,
     isExportProdutosModalOpen,
@@ -885,6 +927,14 @@ const AppContent: React.FC = () => {
         category: false,
       });
       setIsCalendarOpen(false);
+    }
+
+    // Fechar modal de importar extrato se estiver aberto
+    if (isImportExtratoModalOpen) {
+      setIsImportExtratoModalOpen(false);
+      setSelectedBank(null);
+      setExtratoStep(1);
+      setExtratoFile(null);
     }
 
     // Limpar seleções ao trocar de aba para evitar exclusões acidentais
@@ -4592,6 +4642,19 @@ const AppContent: React.FC = () => {
         </h1>
         <div className="flex gap-3">
           <button
+            onClick={() => {
+              setImportType(null);
+              setSelectedBank(null);
+              setExtratoStep(0);
+              setExtratoFile(null);
+              setIsImportExtratoModalOpen(true);
+            }}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <Upload className="h-5 w-5" />
+            Importar Extrato
+          </button>
+          <button
             onClick={() => setIsExportTransacoesModalOpen(true)}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
@@ -8148,6 +8211,665 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
+      {/* Modal de Importar Extrato Bancário */}
+      {isImportExtratoModalOpen && (
+        <div
+          className={`fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 ${extratoStep === 3 ? 'z-[70] pt-4' : 'z-50 pt-[180px]'}`}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsImportExtratoModalOpen(false);
+              setSelectedBank(null);
+              setExtratoStep(0);
+              setExtratoFile(null);
+              setExtratoPassword('');
+              setExtratoPreview([]);
+            }
+          }}
+        >
+          <div className={`bg-white dark:bg-gray-800 rounded-2xl w-full ${extratoStep === 3 ? 'max-w-4xl max-h-[calc(100vh-40px)]' : 'max-w-lg max-h-[calc(100vh-220px)]'} overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden`}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <Upload className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">
+                    {extratoStep === 0
+                      ? 'Importar lançamentos'
+                      : extratoStep === 3
+                        ? 'Revisar antes de importar'
+                        : importType === 'fatura'
+                          ? 'Importar Fatura de Cartão'
+                          : 'Importar Extrato Bancário'}
+                  </h2>
+                  <p className="text-blue-100 text-xs mt-0.5">
+                    {extratoStep === 0 && 'Escolha o tipo de arquivo que deseja importar'}
+                    {extratoStep === 1 && <>Selecione o banco · Arquivos aceitos: <span className="font-semibold">PDF</span> e <span className="font-semibold">XLSX</span></>}
+                    {extratoStep === 2 && `Passo 2 de 3 · Envie o arquivo da ${importType === 'fatura' ? 'fatura' : 'extrato'}`}
+                    {extratoStep === 3 && `Passo 3 de 3 · ${extratoPreview.length} transação${extratoPreview.length !== 1 ? 'ões' : ''} encontrada${extratoPreview.length !== 1 ? 's' : ''} · Edite, remova ou adicione antes de confirmar`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportExtratoModalOpen(false);
+                  setImportType(null);
+                  setSelectedBank(null);
+                  setExtratoStep(0);
+                  setExtratoFile(null);
+                  setExtratoPassword('');
+                  setExtratoPreview([]);
+                }}
+                className="text-white/70 hover:text-white hover:bg-white/20 p-2 rounded-full transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conteúdo */}
+            <div className="p-5">
+              {/* Passo 0 — Escolha entre extrato ou fatura */}
+              {extratoStep === 0 && (
+                <div className="flex flex-col gap-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">O que você deseja importar?</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Extrato Bancário */}
+                    <button
+                      type="button"
+                      onClick={() => { setImportType('extrato'); setExtratoStep(1); }}
+                      className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-400 hover:shadow-md transition-all duration-200 group"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
+                        <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Extrato Bancário</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Movimentações da conta corrente</p>
+                      </div>
+                    </button>
+                    {/* Fatura de Cartão */}
+                    <button
+                      type="button"
+                      onClick={() => { setImportType('fatura'); setExtratoStep(1); }}
+                      className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-purple-400 hover:shadow-md transition-all duration-200 group"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors">
+                        <svg className="w-7 h-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Fatura de Cartão</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Compras e gastos no crédito</p>
+                      </div>
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setIsImportExtratoModalOpen(false); setImportType(null); setExtratoStep(0); setExtratoFile(null); }}
+                    className="mt-1 w-full py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              {/* Passo 1 — Seleção do banco */}
+              {extratoStep === 1 && (<div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {/* Banco do Brasil */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedBank(selectedBank === 'bb' ? null : 'bb')}
+                  className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
+                    selectedBank === 'bb'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.02]'
+                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'
+                  }`}
+                >
+                  {selectedBank === 'bb' && <CheckCircle2 className="w-4 h-4 text-blue-500 absolute top-2 right-2" />}
+                  <div className="w-14 h-14 rounded-xl bg-[#003882] flex items-center justify-center overflow-hidden p-1 shadow-sm">
+                    <img
+                      src="https://logo.clearbit.com/bb.com.br"
+                      alt="Banco do Brasil"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                      }}
+                    />
+                    <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">BB</span>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">Banco do Brasil</span>
+                </button>
+
+                {/* Sicoob — desabilitado em faturas */}
+                {importType === 'fatura' ? (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      disabled
+                      className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full"
+                    >
+                      <div className="w-14 h-14 rounded-xl bg-[#007A4B] flex items-center justify-center overflow-hidden p-1 shadow-sm">
+                        <img
+                          src="https://logo.clearbit.com/sicoob.com.br"
+                          alt="Sicoob"
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                          }}
+                        />
+                        <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">SC</span>
+                      </div>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">Sicoob</span>
+                    </button>
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                      <span className="bg-gray-900/80 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap">Em desenvolvimento</span>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBank(selectedBank === 'sicoob' ? null : 'sicoob')}
+                    className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
+                      selectedBank === 'sicoob'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.02]'
+                        : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'
+                    }`}
+                  >
+                    {selectedBank === 'sicoob' && <CheckCircle2 className="w-4 h-4 text-blue-500 absolute top-2 right-2" />}
+                    <div className="w-14 h-14 rounded-xl bg-[#007A4B] flex items-center justify-center overflow-hidden p-1 shadow-sm">
+                      <img
+                        src="https://logo.clearbit.com/sicoob.com.br"
+                        alt="Sicoob"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                        }}
+                      />
+                      <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">SC</span>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">Sicoob</span>
+                  </button>
+                )}
+
+                {/* C6 Bank */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedBank(selectedBank === 'c6' ? null : 'c6')}
+                  className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
+                    selectedBank === 'c6'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.02]'
+                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'
+                  }`}
+                >
+                  {selectedBank === 'c6' && <CheckCircle2 className="w-4 h-4 text-blue-500 absolute top-2 right-2" />}
+                  <div className="w-14 h-14 rounded-xl bg-[#242424] flex items-center justify-center overflow-hidden p-1 shadow-sm">
+                    <img
+                      src="https://logo.clearbit.com/c6bank.com.br"
+                      alt="C6 Bank"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                      }}
+                    />
+                    <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">C6</span>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">C6 Bank</span>
+                </button>
+
+                {/* Mercado Pago — em desenvolvimento */}
+                <div className="relative group">
+                  <button
+                    type="button"
+                    disabled
+                    className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full"
+                  >
+                    <div className="w-14 h-14 rounded-xl bg-[#009EE3] flex items-center justify-center overflow-hidden p-1 shadow-sm">
+                      <img
+                        src="https://logo.clearbit.com/mercadopago.com.br"
+                        alt="Mercado Pago"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                        }}
+                      />
+                      <span className="hidden w-full h-full items-center justify-center text-white font-bold text-sm">MP</span>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">Mercado Pago</span>
+                  </button>
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                    <span className="bg-gray-900/80 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap">Em desenvolvimento</span>
+                  </div>
+                </div>
+
+                {/* InfinityPay — em desenvolvimento */}
+                <div className="relative group">
+                  <button
+                    type="button"
+                    disabled
+                    className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full"
+                  >
+                    <div className="w-14 h-14 rounded-xl bg-[#00C853] flex items-center justify-center overflow-hidden p-1 shadow-sm">
+                      <img
+                        src="https://logo.clearbit.com/infinitepay.io"
+                        alt="InfinityPay"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                        }}
+                      />
+                      <span className="hidden w-full h-full items-center justify-center text-white font-bold text-sm">IP</span>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">InfinityPay</span>
+                  </button>
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                    <span className="bg-gray-900/80 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap">Em desenvolvimento</span>
+                  </div>
+                </div>
+              </div>)}
+
+              {/* Rodapé passo 1 */}
+              {extratoStep === 1 && (
+                <div className="mt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBank(null);
+                      setExtratoStep(0);
+                    }}
+                    className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!selectedBank}
+                    onClick={() => setExtratoStep(2)}
+                    className={`flex-1 px-4 py-3 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${
+                      selectedBank
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white hover:from-blue-600 hover:to-blue-800 shadow-lg hover:shadow-xl'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                    Continuar
+                  </button>
+                </div>
+              )}
+
+              {/* Passo 2 — Upload do arquivo */}
+              {extratoStep === 2 && (
+                <div className="mt-4 space-y-4">
+                  {/* Tipo + Banco selecionado */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                      <span className="text-sm text-purple-700 dark:text-purple-300">
+                        Tipo: <span className="font-semibold">{importType === 'fatura' ? 'Fatura de Cartão' : 'Extrato Bancário'}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-sm text-blue-700 dark:text-blue-300">
+                        Banco: <span className="font-semibold">
+                          {{ bb: 'Banco do Brasil', sicoob: 'Sicoob', c6: 'C6 Bank', mercadopago: 'Mercado Pago', infinitypay: 'InfinityPay' }[selectedBank!]}
+                        </span>
+                      </span>
+                      <button type="button" onClick={() => { setExtratoStep(1); setExtratoFile(null); }} className="ml-auto text-blue-400 hover:text-blue-600 text-xs underline">
+                        Alterar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Área de upload */}
+                  {!extratoFile ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,.xlsx';
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) setExtratoFile(file);
+                          document.body.removeChild(input);
+                        };
+                        document.body.appendChild(input);
+                        input.click();
+                      }}
+                      className="w-full border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl p-6 flex flex-col items-center gap-2 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                    >
+                      <Upload className="w-8 h-8 text-blue-400" />
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Clique para selecionar o arquivo</span>
+                      <span className="text-xs text-gray-400">PDF ou XLSX · Máx. 10 MB</span>
+                    </button>
+                  ) : (
+                    <div className="w-full p-4 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl flex items-center gap-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-full">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-green-800 dark:text-green-300 truncate">{extratoFile.name}</p>
+                        <p className="text-xs text-green-600 dark:text-green-400">{(extratoFile.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                      <button type="button" onClick={() => setExtratoFile(null)} className="text-green-500 hover:text-green-700 p-1 rounded-full hover:bg-green-100">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Senha do PDF (opcional) */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Senha do PDF <span className="text-gray-400">(deixe em branco se não houver)</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={extratoPassword}
+                      onChange={(e) => setExtratoPassword(e.target.value)}
+                      placeholder="Senha do arquivo PDF"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                    />
+                  </div>
+
+                  {/* Botões passo 2 */}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setExtratoStep(1); setExtratoFile(null); }}
+                      className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Voltar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!extratoFile || isUploadingExtrato}
+                      onClick={async () => {
+                        if (!extratoFile || !selectedBank) return;
+                        setIsUploadingExtrato(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append('file', extratoFile);
+                          formData.append('bank', selectedBank);
+                          formData.append('importType', importType ?? 'extrato');
+                          if (extratoPassword) formData.append('password', extratoPassword);
+                          const headers: HeadersInit = {};
+                          if (token) headers['Authorization'] = `Bearer ${token}`;
+                          const response = await fetch(`${API_BASE_URL}/import/extrato`, { method: 'POST', headers, body: formData });
+                          if (response.ok) {
+                            const result = await response.json();
+                            const withIds: PreviewTx[] = (result.data ?? []).map((t: Omit<PreviewTx, '_id'>, i: number) => ({
+                              ...t,
+                              _id: `preview-${Date.now()}-${i}`,
+                            }));
+                            setExtratoPreview(withIds);
+                            setExtratoStep(3);
+                          } else {
+                            const errBody = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                            alert(`Erro ao processar arquivo: ${errBody.error || 'Tente novamente.'}`);
+                          }
+                        } catch (e) {
+                          alert(`Erro ao enviar arquivo: ${e instanceof Error ? e.message : 'Erro desconhecido'}`);
+                        } finally {
+                          setIsUploadingExtrato(false);
+                        }
+                      }}
+                      className={`flex-1 px-4 py-3 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${
+                        extratoFile && !isUploadingExtrato
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white hover:from-blue-600 hover:to-blue-800 shadow-lg hover:shadow-xl'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <Upload className="w-4 h-4" />
+                      {isUploadingExtrato ? 'Processando...' : 'Processar arquivo'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Passo 3 — Preview / Sandbox */}
+              {extratoStep === 3 && (() => {
+                const selectedIds = extratoPreview.filter(t => (t as any)._selected).map(t => t._id);
+                const allSelected = extratoPreview.length > 0 && selectedIds.length === extratoPreview.length;
+                const someSelected = selectedIds.length > 0 && !allSelected;
+                const toggleAll = () => setExtratoPreview(prev => prev.map(t => ({ ...t, _selected: !allSelected })));
+                const toggleOne = (id: string) => setExtratoPreview(prev => prev.map(t => t._id === id ? { ...t, _selected: !(t as any)._selected } : t));
+                const deleteSelected = () => setExtratoPreview(prev => prev.filter(t => !(t as any)._selected));
+
+                const totalReceita = extratoPreview.filter(t => t.type === 'Receita').reduce((s, t) => s + t.value, 0);
+                const totalDespesa = extratoPreview.filter(t => t.type === 'Despesa').reduce((s, t) => s + t.value, 0);
+                const saldo = totalReceita - totalDespesa;
+
+                return (
+                <div className="mt-2 space-y-4">
+                  {/* Totalizadores */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">Receitas</p>
+                      <p className="text-sm font-bold text-green-700 dark:text-green-300">R$ {totalReceita.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-red-600 dark:text-red-400 font-medium">Despesas</p>
+                      <p className="text-sm font-bold text-red-700 dark:text-red-300">R$ {totalDespesa.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div className={`rounded-xl p-3 text-center ${saldo >= 0 ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-orange-50 dark:bg-orange-900/20'}`}>
+                      <p className={`text-xs font-medium ${saldo >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>Saldo</p>
+                      <p className={`text-sm font-bold ${saldo >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-orange-300'}`}>{saldo < 0 ? '-' : ''}R$ {Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
+                    </div>
+                  </div>
+
+                  {/* Barra de ações em massa — aparece quando há seleção */}
+                  {selectedIds.length > 0 && (
+                    <div className="flex items-center justify-between bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-2.5">
+                      <span className="text-xs font-semibold text-red-700 dark:text-red-400">
+                        {selectedIds.length} selecionada{selectedIds.length !== 1 ? 's' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={deleteSelected}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Excluir selecionadas
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Tabela editável */}
+                  <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                          <th className="px-3 py-2 w-8">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              ref={el => { if (el) el.indeterminate = someSelected; }}
+                              onChange={toggleAll}
+                              className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer"
+                            />
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold w-28">Data</th>
+                          <th className="px-3 py-2 text-left font-semibold">Descrição</th>
+                          <th className="px-3 py-2 text-left font-semibold w-24">Valor</th>
+                          <th className="px-3 py-2 text-left font-semibold w-24">Tipo</th>
+                          <th className="px-3 py-2 text-left font-semibold w-28">Categoria</th>
+                          <th className="px-3 py-2 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {extratoPreview.map((tx) => {
+                          const isSelected = !!(tx as any)._selected;
+                          return (
+                          <tr key={tx._id} className={`transition-colors ${isSelected ? 'bg-red-50 dark:bg-red-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}>
+                            <td className="px-3 py-1 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleOne(tx._id)}
+                                className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="date"
+                                value={tx.date}
+                                onChange={(e) => setExtratoPreview(prev => prev.map(t => t._id === tx._id ? { ...t, date: e.target.value } : t))}
+                                className="w-full bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-400 rounded px-1 py-0.5 text-xs text-gray-700 dark:text-gray-300 focus:outline-none transition-colors"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={tx.description}
+                                onChange={(e) => setExtratoPreview(prev => prev.map(t => t._id === tx._id ? { ...t, description: e.target.value } : t))}
+                                className="w-full bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-400 rounded px-1 py-0.5 text-xs text-gray-700 dark:text-gray-300 focus:outline-none transition-colors"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={tx.value}
+                                onChange={(e) => setExtratoPreview(prev => prev.map(t => t._id === tx._id ? { ...t, value: parseFloat(e.target.value) || 0 } : t))}
+                                className="w-full bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-400 rounded px-1 py-0.5 text-xs text-gray-700 dark:text-gray-300 focus:outline-none transition-colors"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <button
+                                type="button"
+                                onClick={() => setExtratoPreview(prev => prev.map(t => t._id === tx._id ? { ...t, type: t.type === 'Receita' ? 'Despesa' : 'Receita' } : t))}
+                                className={`px-2 py-0.5 rounded-full text-xs font-semibold transition-colors ${tx.type === 'Receita' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-200' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 hover:bg-red-200'}`}
+                              >
+                                {tx.type}
+                              </button>
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={tx.category}
+                                onChange={(e) => setExtratoPreview(prev => prev.map(t => t._id === tx._id ? { ...t, category: e.target.value } : t))}
+                                className="w-full bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-400 rounded px-1 py-0.5 text-xs text-gray-700 dark:text-gray-300 focus:outline-none transition-colors"
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-center">
+                              <button
+                                type="button"
+                                onClick={() => setExtratoPreview(prev => prev.filter(t => t._id !== tx._id))}
+                                className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 transition-colors"
+                                title="Remover"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {extratoPreview.length === 0 && (
+                    <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-4">Nenhuma transação. Adicione manualmente abaixo.</p>
+                  )}
+
+                  {/* Adicionar nova linha */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = new Date().toISOString().split('T')[0];
+                      setExtratoPreview(prev => [...prev, { _id: `preview-new-${Date.now()}`, date: today, description: '', value: 0, type: 'Despesa', category: 'Outros' }]);
+                    }}
+                    className="w-full py-2 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-all text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar transação
+                  </button>
+
+                  {/* Ações */}
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setExtratoStep(2); setExtratoPreview([]); }}
+                      className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Voltar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={extratoPreview.length === 0 || isConfirmingImport}
+                      onClick={async () => {
+                        if (extratoPreview.length === 0) return;
+                        const label = importType === 'fatura' ? 'fatura' : 'extrato';
+                        const confirmed = window.confirm(`Confirmar a importação de ${extratoPreview.length} transação${extratoPreview.length !== 1 ? 'ões' : ''} do ${label}?\n\nEssa ação pode ser desfeita nos próximos 15 segundos após a importação.`);
+                        if (!confirmed) return;
+                        setIsConfirmingImport(true);
+                        try {
+                          const headers: HeadersInit = { 'Content-Type': 'application/json' };
+                          if (token) headers['Authorization'] = `Bearer ${token}`;
+                          const body = JSON.stringify({ transactions: extratoPreview.map(({ _id: _r, ...t }) => { const { _selected: _s, ...rest } = t as any; return rest; }) });
+                          const response = await fetch(`${API_BASE_URL}/import/extrato/confirm`, { method: 'POST', headers, body });
+                          if (response.ok) {
+                            const result = await response.json();
+                            const savedIds: string[] = (result.data ?? []).map((t: { id: string }) => t.id);
+                            if (result.data?.length) {
+                              setTransactions((prev) => [...result.data, ...prev]);
+                            }
+                            // Fechar modal
+                            setIsImportExtratoModalOpen(false);
+                            setImportType(null);
+                            setSelectedBank(null);
+                            setExtratoStep(0);
+                            setExtratoFile(null);
+                            setExtratoPassword('');
+                            setExtratoPreview([]);
+                            // Ativar toast de undo
+                            setLastImportBatch(savedIds);
+                            setUndoCountdown(15);
+                            setShowUndoToast(true);
+                          } else {
+                            const errBody = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                            alert(`Erro ao importar: ${errBody.error || 'Tente novamente.'}`);
+                          }
+                        } catch (e) {
+                          alert(`Erro ao importar: ${e instanceof Error ? e.message : 'Erro desconhecido'}`);
+                        } finally {
+                          setIsConfirmingImport(false);
+                        }
+                      }}
+                      className={`flex-1 px-4 py-3 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${
+                        extratoPreview.length > 0 && !isConfirmingImport
+                          ? 'bg-gradient-to-r from-green-500 to-green-700 text-white hover:from-green-600 hover:to-green-800 shadow-lg hover:shadow-xl'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {isConfirmingImport ? (
+                        <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Importando...</>
+                      ) : (
+                        <><CheckCircle2 className="w-4 h-4" />Confirmar importação</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Seleção de Período para Exportar Relatórios */}
       {isPeriodoExportModalOpen && (
         <div
@@ -8533,6 +9255,68 @@ const AppContent: React.FC = () => {
 
       {/* Footer dinâmico */}
       <Footer />
+
+      {/* Toast de Desfazer Importação */}
+      {showUndoToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-3 bg-gray-900 dark:bg-gray-800 text-white rounded-2xl shadow-2xl px-5 py-4 min-w-[320px] border border-gray-700">
+            {/* Countdown ring */}
+            <div className="relative flex-shrink-0">
+              <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+                <circle
+                  cx="18" cy="18" r="15" fill="none" stroke="#4ade80" strokeWidth="3"
+                  strokeDasharray={`${(undoCountdown / 15) * 94.2} 94.2`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-green-400">{undoCountdown}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold leading-tight">Importação concluída!</p>
+              <p className="text-xs text-gray-400 mt-0.5">Deseja desfazer?</p>
+            </div>
+            <button
+              type="button"
+              disabled={isUndoing}
+              onClick={async () => {
+                if (lastImportBatch.length === 0) return;
+                setIsUndoing(true);
+                try {
+                  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+                  if (token) headers['Authorization'] = `Bearer ${token}`;
+                  const response = await fetch(`${API_BASE_URL}/transactions/bulk`, {
+                    method: 'DELETE',
+                    headers,
+                    body: JSON.stringify({ ids: lastImportBatch }),
+                  });
+                  if (response.ok) {
+                    setTransactions((prev) => prev.filter((t) => !lastImportBatch.includes(String(t.id))));
+                    setShowUndoToast(false);
+                    setLastImportBatch([]);
+                  } else {
+                    alert('Não foi possível desfazer a importação. Tente excluir as transações manualmente.');
+                  }
+                } catch {
+                  alert('Erro ao desfazer a importação.');
+                } finally {
+                  setIsUndoing(false);
+                }
+              }}
+              className="px-3 py-1.5 bg-green-500 hover:bg-green-400 disabled:bg-gray-600 text-white text-xs font-bold rounded-xl transition-colors flex-shrink-0"
+            >
+              {isUndoing ? '...' : 'Desfazer'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowUndoToast(false); setLastImportBatch([]); }}
+              className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

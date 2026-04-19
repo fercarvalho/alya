@@ -13,6 +13,7 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const sgMail = require("@sendgrid/mail");
 const Database = require("./database-pg");
+const { parseExtrato } = require("./services/extratoParser");
 
 // 🔒 FASE 2: Middlewares de Segurança
 const {
@@ -2698,6 +2699,132 @@ app.post(
     }
   },
 );
+
+// Multer para extratos (PDF e XLSX)
+const uploadExtrato = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === ".pdf" || ext === ".xlsx") {
+      cb(null, true);
+    } else {
+      cb(new Error("Apenas arquivos PDF ou XLSX são permitidos!"), false);
+    }
+  },
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+
+// Rota para PRÉ-VISUALIZAR extrato bancário (parse apenas, sem salvar)
+app.post(
+  "/api/import/extrato",
+  authenticateToken,
+  uploadLimiter,
+  uploadExtrato.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhum arquivo enviado." });
+      }
+
+      const { bank } = req.body;
+      const validBanks = ["bb", "sicoob", "c6", "mercadopago", "infinitypay"];
+      if (!bank || !validBanks.includes(bank)) {
+        return res.status(400).json({ error: "Banco inválido ou não informado." });
+      }
+
+      const ext = path.extname(req.file.originalname).toLowerCase().replace(".", "");
+      const importType = req.body.importType || "extrato";
+      const password = req.body.password || null;
+      const parsed = await parseExtrato(bank, req.file.buffer, ext, importType, password);
+      console.log(`[Extrato] bank=${bank} ext=${ext} importType=${importType} → ${parsed.length} transações encontradas`);
+
+      // Retorna apenas o preview — nada é salvo no banco ainda
+      res.json({
+        success: true,
+        data: parsed,
+        count: parsed.length,
+      });
+    } catch (error) {
+      console.error("Erro ao processar extrato:", error);
+      res.status(500).json({ error: error.message || "Erro interno do servidor." });
+    }
+  },
+);
+
+// Rota para CONFIRMAR e salvar as transações do extrato após revisão
+app.post("/api/import/extrato/confirm", authenticateToken, async (req, res) => {
+  try {
+    const { transactions } = req.body;
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return res.status(400).json({ error: "Nenhuma transação para importar." });
+    }
+
+    const saved = [];
+    for (const t of transactions) {
+      try {
+        const savedT = await db.saveTransaction({ ...t, userId: req.user.id });
+        await logActivity(
+          req.user.id,
+          req.user.username,
+          "create",
+          "transactions",
+          "transaction",
+          savedT.id,
+          { before: null, after: savedT },
+        );
+        saved.push(savedT);
+      } catch (err) {
+        console.error("Erro ao salvar transação do extrato:", err);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${saved.length} transações importadas com sucesso!`,
+      data: saved,
+      count: saved.length,
+    });
+  } catch (error) {
+    console.error("Erro ao confirmar extrato:", error);
+    res.status(500).json({ error: error.message || "Erro interno do servidor." });
+  }
+});
+
+// Rota para DESFAZER importação — exclui transações em lote por IDs
+app.delete("/api/transactions/bulk", authenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Nenhum ID informado." });
+    }
+
+    let deleted = 0;
+    for (const id of ids) {
+      try {
+        const existing = await db.getTransactionById(id);
+        if (!existing) continue;
+        await db.deleteTransaction(id);
+        await logActivity(
+          req.user.id,
+          req.user.username,
+          "delete",
+          "transactions",
+          "transaction",
+          id,
+          { before: existing, after: null },
+        );
+        deleted++;
+      } catch (err) {
+        console.error(`Erro ao excluir transação ${id}:`, err);
+      }
+    }
+
+    res.json({ success: true, deleted });
+  } catch (error) {
+    console.error("Erro ao excluir transações em lote:", error);
+    res.status(500).json({ error: error.message || "Erro interno do servidor." });
+  }
+});
 
 // Rota para exportar dados
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
