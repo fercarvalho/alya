@@ -572,6 +572,7 @@ const AppContent: React.FC = () => {
     dateFrom: "", // data início
     dateTo: "", // data fim
     hasDateFilter: false, // se está usando filtro de data
+    description: "", // busca por descrição
   });
 
   const [productFilters, setProductFilters] = useState({
@@ -1259,6 +1260,15 @@ const AppContent: React.FC = () => {
   const getFilteredAndSortedTransactions = () => {
     let filtered = transactions;
 
+    // Filtro por descrição
+    if (transactionFilters.description) {
+      filtered = filtered.filter((t) =>
+        t.description
+          .toLowerCase()
+          .includes(transactionFilters.description.toLowerCase()),
+      );
+    }
+
     // Filtro por tipo
     if (transactionFilters.type) {
       filtered = filtered.filter((t) => t.type === transactionFilters.type);
@@ -1388,6 +1398,7 @@ const AppContent: React.FC = () => {
       dateFrom: "",
       dateTo: "",
       hasDateFilter: false,
+      description: "",
     });
   };
 
@@ -4620,6 +4631,38 @@ const AppContent: React.FC = () => {
 
           {/* Campos de Filtro */}
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
+            {/* Busca por descrição */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label htmlFor="transaction-description-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
+                Buscar
+              </label>
+              <div className="relative">
+                <input
+                  id="transaction-description-filter"
+                  name="transaction-description-filter"
+                  type="text"
+                  placeholder="Nome da transação..."
+                  value={transactionFilters.description}
+                  onChange={(e) =>
+                    setTransactionFilters((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full pr-7"
+                />
+                {transactionFilters.description && (
+                  <button
+                    type="button"
+                    onClick={() => setTransactionFilters((prev) => ({ ...prev, description: "" }))}
+                    className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Filtro Tipo */}
             <div className="flex flex-col flex-1 min-w-0">
               <label htmlFor="transaction-type-filter" className="text-xs sm:text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate truncate">
