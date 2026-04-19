@@ -94,7 +94,8 @@ const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => 
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // No mobile a sidebar começa fechada; no desktop ela é sempre visível via CSS
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -153,7 +154,7 @@ const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => 
     setActiveSectionId(sectionId);
     setActivePageId(pageId);
     setExpandedSections(prev => new Set([...prev, sectionId]));
-    setSidebarOpen(false); // fecha sidebar no mobile ao selecionar
+    setSidebarOpen(false); // fecha sidebar no mobile ao selecionar página
   }, []);
 
   // Filtro de busca
@@ -179,31 +180,117 @@ const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => 
     );
   }
 
+  // Sidebar reutilizável (mesmo conteúdo no mobile overlay e no desktop estático)
+  const sidebarContent = (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden h-full flex flex-col">
+      {/* Busca */}
+      <div className="p-3 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar na documentação..."
+            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Seções */}
+      <nav className="overflow-y-auto flex-1">
+        {filteredSections.map(section => {
+          const isExpanded = expandedSections.has(section.id);
+          return (
+            <div key={section.id}>
+              <button
+                onClick={() => toggleSection(section.id)}
+                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-amber-50 hover:text-amber-700 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-amber-300 transition-colors"
+              >
+                <span className="truncate">{section.title}</span>
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                )}
+              </button>
+
+              {isExpanded && (
+                <div className="bg-gray-50 dark:bg-gray-900/50">
+                  {section.pages.map(page => (
+                    <button
+                      key={page.id}
+                      onClick={() => selectPage(section.id, page.id)}
+                      className={`w-full flex items-center gap-2 pl-6 pr-4 py-2.5 text-sm transition-colors ${
+                        activePageId === page.id
+                          ? 'bg-gradient-to-r from-amber-400/20 to-orange-400/20 dark:from-amber-900/40 dark:to-orange-900/30 text-amber-700 dark:text-amber-300 font-medium border-l-2 border-amber-500'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-gray-700 dark:hover:text-amber-300 border-l-2 border-transparent'
+                      }`}
+                    >
+                      <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate text-left">{page.title}</span>
+                    </button>
+                  ))}
+                  {section.pages.length === 0 && (
+                    <p className="pl-6 py-2 text-xs text-gray-400">
+                      Nenhuma página nesta seção
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+    </div>
+  );
+
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-amber-500 to-orange-400 rounded-2xl shadow-lg p-6 mb-6">
+      <div className="bg-gradient-to-r from-amber-500 to-orange-400 rounded-2xl shadow-lg p-5 sm:p-6 mb-4">
         <div className="flex items-center gap-4">
           <div className="bg-white/20 rounded-xl p-3">
-            <BookOpen className="h-8 w-8 text-white" />
+            <BookOpen className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Documentação</h1>
-            <p className="text-white/80 text-sm mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Documentação</h1>
+            <p className="text-white/80 text-xs sm:text-sm mt-0.5">
               Guias, instruções e referências do sistema
             </p>
           </div>
         </div>
       </div>
 
+      {/* Botão flutuante — mobile only, começa no lugar e gruda abaixo do nav ao rolar */}
+      {!inModal && sections.length > 0 && (
+        <div className="lg:hidden sticky top-[185px] z-30 mb-4 pointer-events-none">
+          <button
+            onClick={() => setSidebarOpen(v => !v)}
+            className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-400 text-white rounded-full shadow-lg hover:shadow-xl hover:from-amber-600 hover:to-orange-500 active:scale-95 transition-all duration-200 text-sm font-semibold"
+          >
+            {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <span>{sidebarOpen ? 'Fechar' : 'Índice'}</span>
+          </button>
+        </div>
+      )}
+
       {sections.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-12 text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-amber-50 rounded-full p-4">
+            <div className="bg-amber-50 dark:bg-amber-900/30 rounded-full p-4">
               <FileText className="h-10 w-10 text-amber-400" />
             </div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">
             Nenhuma documentação disponível
           </h3>
           <p className="text-gray-400 text-sm">
@@ -212,103 +299,68 @@ const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => 
         </div>
       ) : (
         <div className="flex gap-4 relative">
-          {/* Botão de toggle sidebar (mobile) */}
-          {!inModal && (
-            <button
-              onClick={() => setSidebarOpen(v => !v)}
-              className="lg:hidden fixed bottom-6 right-6 z-30 bg-amber-500 text-white rounded-full p-3 shadow-lg"
-            >
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          )}
 
-          {/* Sidebar */}
-          <aside
-            className={`
-              ${inModal
-                ? 'w-64 flex-shrink-0'
-                : `${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} transition-transform duration-200 fixed lg:static inset-y-0 left-0 z-20 w-72 lg:w-72 flex-shrink-0 bg-white dark:bg-gray-900 lg:bg-transparent lg:dark:bg-transparent lg:block`
-              }
-            `}
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden sticky top-4">
-              {/* Busca */}
-              <div className="p-3 border-b border-gray-100 dark:border-gray-700">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Buscar na documentação..."
-                    className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+          {/* ── MOBILE: overlay deslizante da esquerda ── */}
+          {!inModal && (
+            <>
+              {/* Backdrop escuro */}
+              <div
+                onClick={() => setSidebarOpen(false)}
+                className={`lg:hidden fixed inset-0 z-20 bg-black/50 transition-opacity duration-300 ${
+                  sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
+              />
+
+              {/* Painel lateral deslizante */}
+              <div
+                className={`lg:hidden fixed top-0 left-0 h-full w-[280px] z-30 flex flex-col
+                  transition-all duration-300 ease-in-out
+                  ${sidebarOpen
+                    ? 'translate-x-0 opacity-100'
+                    : '-translate-x-full opacity-0 pointer-events-none'
+                  }`}
+              >
+                {/* Cabeçalho do drawer */}
+                <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-400 flex-shrink-0">
+                  <span className="text-white font-semibold text-sm">Índice</span>
+                  <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                {/* Conteúdo da sidebar */}
+                <div className="flex-1 overflow-hidden">
+                  {sidebarContent}
                 </div>
               </div>
+            </>
+          )}
 
-              {/* Seções */}
-              <nav className={`overflow-y-auto ${inModal ? 'max-h-[calc(90vh-260px)]' : 'max-h-[calc(100vh-320px)]'}`}>
-                {filteredSections.map(section => {
-                  const isExpanded = expandedSections.has(section.id);
-                  return (
-                    <div key={section.id}>
-                      <button
-                        onClick={() => toggleSection(section.id)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-amber-50 hover:text-amber-700 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-amber-300 transition-colors"
-                      >
-                        <span className="truncate">{section.title}</span>
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                        )}
-                      </button>
+          {/* ── DESKTOP: sidebar estática no flex ── */}
+          {!inModal && (
+            <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-4 self-start">
+              {sidebarContent}
+            </aside>
+          )}
 
-                      {isExpanded && (
-                        <div className="bg-gray-50 dark:bg-gray-900/50">
-                          {section.pages.map(page => (
-                            <button
-                              key={page.id}
-                              onClick={() => selectPage(section.id, page.id)}
-                              className={`w-full flex items-center gap-2 pl-6 pr-4 py-2.5 text-sm transition-colors ${
-                                activePageId === page.id
-                                  ? 'bg-gradient-to-r from-amber-400/20 to-orange-400/20 dark:from-amber-900/40 dark:to-orange-900/30 text-amber-700 dark:text-amber-300 font-medium border-l-2 border-amber-500'
-                                  : 'text-gray-600 dark:text-gray-400 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-gray-700 dark:hover:text-amber-300 border-l-2 border-transparent'
-                              }`}
-                            >
-                              <FileText className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span className="truncate text-left">{page.title}</span>
-                            </button>
-                          ))}
-                          {section.pages.length === 0 && (
-                            <p className="pl-6 py-2 text-xs text-gray-400">
-                              Nenhuma página nesta seção
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </nav>
-            </div>
-          </aside>
+          {/* Sidebar inline para modal */}
+          {inModal && (
+            <aside className="w-64 flex-shrink-0">
+              {sidebarContent}
+            </aside>
+          )}
 
           {/* Conteúdo principal */}
           <main className="flex-1 min-w-0">
             {activePage ? (
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* Título da página */}
-                <div className="px-8 py-5 border-b border-gray-100 dark:border-gray-700">
-                  <h2 className="text-xl font-bold text-gray-800">{activePage.title}</h2>
+                <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-gray-100 dark:border-gray-700">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100">
+                    {activePage.title}
+                  </h2>
                   {activePage.updatedAt && (
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -325,14 +377,14 @@ const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => 
                 {/* Corpo renderizado */}
                 <div
                   ref={contentRef}
-                  className="px-8 py-6 doc-content"
+                  className="px-5 sm:px-8 py-5 sm:py-6 doc-content"
                   dangerouslySetInnerHTML={{ __html: renderedHtml }}
                 />
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-12 text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="bg-amber-50 rounded-full p-4">
+                  <div className="bg-amber-50 dark:bg-amber-900/30 rounded-full p-4">
                     <BookOpen className="h-10 w-10 text-amber-400" />
                   </div>
                 </div>
@@ -369,7 +421,14 @@ const Documentation: React.FC<{ inModal?: boolean }> = ({ inModal = false }) => 
         .doc-content tr:nth-child(even) td { background: #f9fafb; }
         .doc-content hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
         .doc-content img { max-width: 100%; border-radius: 0.5rem; }
-        .mermaid { display: flex; justify-content: center; margin: 1.5rem 0; }
+        .mermaid { display: flex; justify-content: center; margin: 1.5rem 0; overflow-x: auto; }
+        @media (max-width: 1023px) {
+          .doc-content h1 { font-size: 1.4rem; }
+          .doc-content h2 { font-size: 1.15rem; }
+          .doc-content h3 { font-size: 1rem; }
+          .doc-content table { font-size: 0.8rem; }
+          .doc-content th, .doc-content td { padding: 0.4rem 0.5rem; }
+        }
       `}</style>
     </div>
   );

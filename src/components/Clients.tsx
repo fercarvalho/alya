@@ -36,23 +36,42 @@ const Clients: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
   const [isImportExportOpen, setIsImportExportOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const mountedRef = useRef(true)
 
   // Estados do modal de exportação de clientes
   const [isExportClientesModalOpen, setIsExportClientesModalOpen] = useState(false)
   const [exportarFiltrados, setExportarFiltrados] = useState(true)
   const [incluirResumo, setIncluirResumo] = useState(true)
 
+  // Estados de loading para operações assíncronas
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [isExportingPDF, setIsExportingPDF] = useState(false)
+
+  // Ref para estado indeterminate do checkbox "selecionar todos"
+  const selectAllRef = useRef<HTMLInputElement>(null)
+
   // filtros / ordenação
   const [sortConfig, setSortConfig] = useState<{ field: keyof Client | null, direction: 'asc' | 'desc' }>({ field: null, direction: 'asc' })
   const [filters, setFilters] = useState<{ name: string, email: string, phone: string }>({ name: '', email: '', phone: '' })
+
+  // Cleanup: marcar componente como desmontado para evitar setState após unmount
+  useEffect(() => () => { mountedRef.current = false }, [])
 
   useEffect(() => {
     const load = async () => {
       try {
         const { data } = await axios.get(`${API_BASE_URL}/clients`)
+        if (!mountedRef.current) return
         if (data.success) setClients(data.data)
       } catch (error) {
         console.error('Erro ao carregar clientes:', error)
+      } finally {
+        if (mountedRef.current) setIsLoading(false)
       }
     }
     load()
@@ -62,10 +81,10 @@ const Clients: React.FC = () => {
   useEffect(() => {
     const body = document?.body
     if (!body) return
-    if (isImportExportOpen || isModalOpen) body.classList.add('modal-open')
+    if (isImportExportOpen || isModalOpen || isExportClientesModalOpen) body.classList.add('modal-open')
     else body.classList.remove('modal-open')
     return () => { body.classList.remove('modal-open') }
-  }, [isImportExportOpen, isModalOpen])
+  }, [isImportExportOpen, isModalOpen, isExportClientesModalOpen])
 
   // Fechar modais com ESC
   useEffect(() => {
@@ -75,20 +94,23 @@ const Clients: React.FC = () => {
           setIsModalOpen(false);
           setEditing(null);
           setFormErrors({});
+          setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' });
         } else if (isImportExportOpen) {
           setIsImportExportOpen(false);
+        } else if (isExportClientesModalOpen) {
+          setIsExportClientesModalOpen(false);
         }
       }
     };
 
-    if (isModalOpen || isImportExportOpen) {
+    if (isModalOpen || isImportExportOpen || isExportClientesModalOpen) {
       document.addEventListener('keydown', handleKeyDown);
     }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isModalOpen, isImportExportOpen]);
+  }, [isModalOpen, isImportExportOpen, isExportClientesModalOpen]);
 
   const handleSort = (field: keyof Client) => {
     let direction: 'asc' | 'desc' = 'asc'
@@ -97,20 +119,22 @@ const Clients: React.FC = () => {
   }
 
   const getSortIcon = (field: keyof Client) => {
-    if (sortConfig.field !== field) return <span className="text-gray-400">↕</span>
-    return sortConfig.direction === 'asc' ? <span className="text-amber-600">↑</span> : <span className="text-amber-600">↓</span>
+    if (sortConfig.field !== field) return <span className="text-gray-400" aria-hidden="true">↕</span>
+    return sortConfig.direction === 'asc'
+      ? <span className="text-amber-600" aria-hidden="true">↑</span>
+      : <span className="text-amber-600" aria-hidden="true">↓</span>
   }
 
   const filteredAndSorted = useMemo(() => {
     let list = [...clients]
-    if (filters.name) list = list.filter(c => c.name.toLowerCase().includes(filters.name.toLowerCase()))
-    if (filters.email) list = list.filter(c => c.email.toLowerCase().includes(filters.email.toLowerCase()))
-    if (filters.phone) list = list.filter(c => c.phone.includes(filters.phone))
+    if (filters.name) list = list.filter(c => (c.name ?? '').toLowerCase().includes(filters.name.toLowerCase()))
+    if (filters.email) list = list.filter(c => (c.email ?? '').toLowerCase().includes(filters.email.toLowerCase()))
+    if (filters.phone) list = list.filter(c => (c.phone ?? '').includes(filters.phone))
 
     if (sortConfig.field) {
       list.sort((a, b) => {
-        let av: any = a[sortConfig.field!]
-        let bv: any = b[sortConfig.field!]
+        let av: any = a[sortConfig.field!] ?? ''
+        let bv: any = b[sortConfig.field!] ?? ''
         if (typeof av === 'string') { av = av.toLowerCase(); bv = String(bv).toLowerCase() }
         if (av < bv) return sortConfig.direction === 'asc' ? -1 : 1
         if (av > bv) return sortConfig.direction === 'asc' ? 1 : -1
@@ -120,9 +144,27 @@ const Clients: React.FC = () => {
     return list
   }, [clients, filters, sortConfig])
 
+  // Atualiza estado indeterminate do checkbox "selecionar todos"
+  useEffect(() => {
+    if (!selectAllRef.current) return
+    const allSelected = filteredAndSorted.length > 0 && filteredAndSorted.every(c => selectedClients.has(c.id))
+    const someSelected = filteredAndSorted.some(c => selectedClients.has(c.id))
+    selectAllRef.current.indeterminate = someSelected && !allSelected
+  }, [filteredAndSorted, selectedClients])
+
   const handleSelectAll = () => {
-    if (selectedClients.size === clients.length) setSelectedClients(new Set())
-    else setSelectedClients(new Set(clients.map(c => c.id)))
+    const allFilteredIds = filteredAndSorted.map(c => c.id)
+    if (allFilteredIds.every(id => selectedClients.has(id))) {
+      // Desselecionar apenas os visíveis (manter seleção de outros se houver)
+      setSelectedClients(prev => {
+        const s = new Set(prev)
+        allFilteredIds.forEach(id => s.delete(id))
+        return s
+      })
+    } else {
+      // Selecionar apenas os visíveis (filtrados)
+      setSelectedClients(prev => new Set([...prev, ...allFilteredIds]))
+    }
   }
 
   const handleSelect = (id: string) => {
@@ -167,37 +209,53 @@ const Clients: React.FC = () => {
       cpf: form.cpf || undefined,
       cnpj: form.cnpj || undefined
     }
+    setIsSaving(true)
     try {
       if (editing) {
         const { data } = await axios.put(`${API_BASE_URL}/clients/${editing.id}`, payload)
+        if (!mountedRef.current) return
         if (data.success) setClients(prev => prev.map(c => c.id === editing.id ? data.data : c))
       } else {
         const { data } = await axios.post(`${API_BASE_URL}/clients`, payload)
+        if (!mountedRef.current) return
         if (data.success) setClients(prev => [data.data, ...prev])
       }
+      if (!mountedRef.current) return
       setIsModalOpen(false); setEditing(null); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }); setFormErrors({})
     } catch (error) {
       console.error('Erro ao salvar:', error)
+    } finally {
+      if (mountedRef.current) setIsSaving(false)
     }
   }
 
   const deleteOne = async (id: string) => {
+    setDeletingId(id)
     try {
       const { data } = await axios.delete(`${API_BASE_URL}/clients/${id}`)
+      if (!mountedRef.current) return
       if (data.success) setClients(prev => prev.filter(c => c.id !== id))
     } catch (error) {
       console.error('Erro ao deletar cliente:', error)
+    } finally {
+      if (mountedRef.current) setDeletingId(null)
     }
   }
 
   const deleteSelected = async () => {
+    setIsDeleting(true)
     try {
       const ids = Array.from(selectedClients)
-      await axios.delete(`${API_BASE_URL}/clients`, { data: { ids } })
-      setClients(prev => prev.filter(c => !selectedClients.has(c.id)))
-      setSelectedClients(new Set())
+      const { data } = await axios.delete(`${API_BASE_URL}/clients`, { data: { ids } })
+      if (!mountedRef.current) return
+      if (data.success) {
+        setClients(prev => prev.filter(c => !selectedClients.has(c.id)))
+        setSelectedClients(new Set())
+      }
     } catch (error) {
       console.error('Erro ao deletar clientes selecionados:', error)
+    } finally {
+      if (mountedRef.current) setIsDeleting(false)
     }
   }
 
@@ -212,39 +270,56 @@ const Clients: React.FC = () => {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('type', 'clients')
+    setIsImporting(true)
     try {
       const { data } = await axios.post(`${API_BASE_URL}/import`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
+      if (!mountedRef.current) return
       if (data.success) {
         setClients(prev => [...data.data, ...prev])
         setIsImportExportOpen(false)
+        // Resetar o input para permitir reimportar o mesmo arquivo
+        if (fileInputRef.current) fileInputRef.current.value = ''
       }
     } catch (error) {
       console.error('Erro ao importar clientes:', error)
+    } finally {
+      if (mountedRef.current) setIsImporting(false)
     }
   }
 
   const handleExport = async () => {
+    setIsExporting(true)
     try {
       const response = await axios.post(`${API_BASE_URL}/export`,
-        { type: 'clients', data: clients },
+        { type: 'clients', data: filteredAndSorted },
         { responseType: 'blob' }
       )
-      const blob = new Blob([response.data])
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `clients_${new Date().toISOString().split('T')[0]}.xlsx`
       a.click()
-      URL.revokeObjectURL(url)
+      // Revogar de forma assíncrona para não corromper o download no Safari
+      setTimeout(() => URL.revokeObjectURL(url), 100)
     } catch (error) {
       console.error('Erro ao exportar clientes:', error)
+    } finally {
+      if (mountedRef.current) setIsExporting(false)
     }
   }
 
+  // Helper para escapar caracteres especiais HTML e evitar quebra de layout no PDF
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
   // Função para exportar clientes em PDF
   const exportarClientesPDF = async () => {
+    setIsExportingPDF(true)
     try {
       setIsExportClientesModalOpen(false)
 
@@ -260,7 +335,7 @@ const Clients: React.FC = () => {
       }
 
       // Calcular resumo estatístico (se habilitado)
-      let totalClientes = clientesParaExportar.length
+      const totalClientes = clientesParaExportar.length
       let clientesComCPF = 0
       let clientesComCNPJ = 0
       let clientesComEmail = 0
@@ -293,13 +368,13 @@ const Clients: React.FC = () => {
       tempElement.style.padding = '20px'
       tempElement.style.fontFamily = 'Arial, sans-serif'
 
-      // Construir informações de filtros aplicados
+      // Construir informações de filtros aplicados (com escaping para evitar injeção de HTML)
       let infoFiltros = 'Todos os clientes'
       if (exportarFiltrados) {
         const filtrosAtivos = []
-        if (filters.name) filtrosAtivos.push(`Nome: ${filters.name}`)
-        if (filters.email) filtrosAtivos.push(`Email: ${filters.email}`)
-        if (filters.phone) filtrosAtivos.push(`Telefone: ${filters.phone}`)
+        if (filters.name) filtrosAtivos.push(`Nome: ${escapeHtml(filters.name)}`)
+        if (filters.email) filtrosAtivos.push(`Email: ${escapeHtml(filters.email)}`)
+        if (filters.phone) filtrosAtivos.push(`Telefone: ${escapeHtml(filters.phone)}`)
 
         if (filtrosAtivos.length > 0) {
           infoFiltros = `Clientes filtrados: ${filtrosAtivos.join(', ')}`
@@ -356,6 +431,10 @@ const Clients: React.FC = () => {
                 <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Com Endereço</div>
                 <div style="font-size: 18px; font-weight: bold; color: #059669;">${clientesComEndereco}</div>
               </div>
+              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Sem Endereço</div>
+                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">${clientesSemEndereco}</div>
+              </div>
             </div>
           </div>
         `
@@ -379,18 +458,18 @@ const Clients: React.FC = () => {
               <tbody>
       `
 
-      // Adicionar linhas da tabela
+      // Adicionar linhas da tabela com escaping de HTML para evitar quebra de layout
       clientesParaExportar.forEach((client, index) => {
-        const documento = client.cpf || client.cnpj || '-'
+        const documento = escapeHtml(client.cpf || client.cnpj || '-')
         const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
 
         htmlContent += `
           <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 10px; color: #374151; font-weight: 500;">${client.name}</td>
+            <td style="padding: 10px; color: #374151; font-weight: 500;">${escapeHtml(client.name)}</td>
             <td style="padding: 10px; color: #6b7280;">${documento}</td>
-            <td style="padding: 10px; color: #374151;">${client.email}</td>
-            <td style="padding: 10px; color: #374151;">${client.phone}</td>
-            <td style="padding: 10px; color: #6b7280;">${client.address}</td>
+            <td style="padding: 10px; color: #374151;">${escapeHtml(client.email)}</td>
+            <td style="padding: 10px; color: #374151;">${escapeHtml(client.phone)}</td>
+            <td style="padding: 10px; color: #6b7280;">${escapeHtml(client.address)}</td>
           </tr>
         `
       })
@@ -414,25 +493,27 @@ const Clients: React.FC = () => {
       `
 
       tempElement.innerHTML = htmlContent
+      // Appendar ao body e garantir remoção mesmo em caso de erro (finally)
       document.body.appendChild(tempElement)
-
-      // Capturar o elemento como imagem
-      const canvas = await html2canvas(tempElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      })
-
-      // Remover elemento temporário
-      document.body.removeChild(tempElement)
+      let canvas: HTMLCanvasElement
+      try {
+        canvas = await html2canvas(tempElement, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        })
+      } finally {
+        // Remover elemento temporário independente de sucesso ou falha
+        if (document.body.contains(tempElement)) document.body.removeChild(tempElement)
+      }
 
       // Criar PDF
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = canvas!.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
       const imgWidth = 210
-      const pageHeight = 295
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      const pageHeight = 297  // A4 real: 297 mm
+      const imgHeight = (canvas!.height * imgWidth) / canvas!.width
       let heightLeft = imgHeight
 
       let position = 0
@@ -440,8 +521,9 @@ const Clients: React.FC = () => {
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
+      // Loop de paginação com fórmula correta
+      while (heightLeft > 0) {
+        position = -(imgHeight - heightLeft)
         pdf.addPage()
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
@@ -451,11 +533,13 @@ const Clients: React.FC = () => {
       const fileName = `Clientes_${exportarFiltrados ? 'Filtrados' : 'Completos'}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(fileName)
 
-      alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Total de clientes: ${totalClientes}${incluirResumo ? `\n• Clientes com CPF: ${clientesComCPF}\n• Clientes com CNPJ: ${clientesComCNPJ}\n• Clientes com email: ${clientesComEmail}\n• Clientes com telefone: ${clientesComTelefone}\n• Clientes com endereço: ${clientesComEndereco}` : ''}`)
+      alert(`✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Total de clientes: ${totalClientes}${incluirResumo ? `\n• Clientes com CPF: ${clientesComCPF}\n• Clientes com CNPJ: ${clientesComCNPJ}\n• Clientes com email: ${clientesComEmail}\n• Clientes sem email: ${clientesSemEmail}\n• Clientes com telefone: ${clientesComTelefone}\n• Clientes sem telefone: ${clientesSemTelefone}\n• Clientes com endereço: ${clientesComEndereco}\n• Clientes sem endereço: ${clientesSemEndereco}` : ''}`)
 
     } catch (error) {
       console.error('Erro ao exportar PDF:', error)
       alert('❌ Erro ao exportar PDF. Tente novamente.')
+    } finally {
+      if (mountedRef.current) setIsExportingPDF(false)
     }
   }
 
@@ -463,7 +547,7 @@ const Clients: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Users className="w-8 h-8 text-amber-600" />
+          <Users className="w-8 h-8 text-amber-600" aria-hidden="true" />
           Clientes
         </h1>
         <div className="flex gap-3">
@@ -471,21 +555,21 @@ const Clients: React.FC = () => {
             onClick={() => setIsExportClientesModalOpen(true)}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            <Download className="h-5 w-5" />
+            <Download className="h-5 w-5" aria-hidden="true" />
             Exportar PDF
           </button>
           <button
             onClick={() => setIsImportExportOpen(true)}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            <Download className="h-5 w-5" />
+            <Upload className="h-5 w-5" aria-hidden="true" />
             Importar/Exportar
           </button>
           <button
             onClick={() => { setEditing(null); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }); setFormErrors({}); setIsModalOpen(true) }}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-5 w-5" aria-hidden="true" />
             Novo Cliente
           </button>
         </div>
@@ -495,7 +579,7 @@ const Clients: React.FC = () => {
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-lg border border-amber-200 dark:border-gray-700 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-amber-600" />
+            <Filter className="w-5 h-5 text-amber-600" aria-hidden="true" />
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">Filtre seus itens:</h2>
           </div>
           <div className="flex items-end gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-1">
@@ -546,77 +630,91 @@ const Clients: React.FC = () => {
 
       {/* Lista */}
       <div className="space-y-4">
-        {clients.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-            <p className="text-gray-600">Nenhum cliente encontrado.</p>
-            <p className="text-gray-500 text-sm mt-2">Adicione seu primeiro cliente clicando no botão "Novo Cliente".</p>
+        {isLoading ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <p className="text-gray-500 dark:text-gray-400">Carregando clientes...</p>
+          </div>
+        ) : clients.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-300">Nenhum cliente encontrado.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Adicione seu primeiro cliente clicando no botão "Novo Cliente".</p>
+          </div>
+        ) : filteredAndSorted.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-300">Nenhum cliente encontrado com os filtros aplicados.</p>
+            <button onClick={clearFilters} className="mt-3 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 text-sm font-semibold underline">
+              Limpar filtros
+            </button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden overflow-x-auto">
-            <div className="bg-gradient-to-r from-amber-50 to-orange-100 border-b border-amber-200 p-4 min-w-max">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-100 dark:from-gray-700 dark:to-gray-700 border-b border-amber-200 dark:border-gray-600 p-4 min-w-max">
               <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 min-w-[800px]">
                 <div className="flex justify-center">
                   <input
+                    ref={selectAllRef}
                     type="checkbox"
-                    checked={clients.length > 0 && selectedClients.size === clients.length}
+                    aria-label="Selecionar todos os clientes visíveis"
+                    checked={filteredAndSorted.length > 0 && filteredAndSorted.every(c => selectedClients.has(c.id))}
                     onChange={handleSelectAll}
                     className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                   />
                 </div>
-                <button onClick={() => handleSort('name')} className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-52 sm:w-60">
-                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Nome</p>
+                <button onClick={() => handleSort('name')} aria-sort={sortConfig.field === 'name' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className="flex items-center justify-center gap-1 hover:bg-amber-100 dark:hover:bg-gray-600 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-52 sm:w-60">
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide truncate">Nome</p>
                   {getSortIcon('name')}
                 </button>
-                <button onClick={() => handleSort('email')} className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-36 sm:w-44">
-                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Email</p>
+                <button onClick={() => handleSort('email')} aria-sort={sortConfig.field === 'email' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className="flex items-center justify-center gap-1 hover:bg-amber-100 dark:hover:bg-gray-600 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-36 sm:w-44">
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide truncate">Email</p>
                   {getSortIcon('email')}
                 </button>
-                <button onClick={() => handleSort('phone')} className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-28 sm:w-32">
-                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Telefone</p>
+                <button onClick={() => handleSort('phone')} aria-sort={sortConfig.field === 'phone' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className="flex items-center justify-center gap-1 hover:bg-amber-100 dark:hover:bg-gray-600 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-28 sm:w-32">
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide truncate">Telefone</p>
                   {getSortIcon('phone')}
                 </button>
-                <button onClick={() => handleSort('address')} className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">Endereço</p>
+                <button onClick={() => handleSort('address')} aria-sort={sortConfig.field === 'address' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className="flex items-center justify-center gap-1 hover:bg-amber-100 dark:hover:bg-gray-600 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide truncate">Endereço</p>
                   {getSortIcon('address')}
                 </button>
                 <div className="flex-shrink-0 w-16 sm:w-20 flex justify-center">
-                  <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">Ações</p>
+                  <p className="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">Ações</p>
                 </div>
               </div>
             </div>
 
             {filteredAndSorted.map((c, index) => (
-              <div key={c.id} className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${index === clients.length - 1 ? 'border-b-0' : ''}`}>
+              <div key={c.id} className={`bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 hover:bg-amber-50/30 dark:hover:bg-gray-700/50 transition-all duration-200 ${index === filteredAndSorted.length - 1 ? 'border-b-0' : ''}`}>
                 <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 min-w-[800px]">
                   <div className="flex-shrink-0 text-left">
                     <input
                       type="checkbox"
+                      aria-label={`Selecionar cliente ${c.name}`}
                       checked={selectedClients.has(c.id)}
                       onChange={() => handleSelect(c.id)}
                       className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                     />
                   </div>
                   <div className="flex-shrink-0 w-52 sm:w-60 text-left">
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{c.name}</h3>
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{c.name}</h3>
                     {(c.cpf || c.cnpj) && (
-                      <p className="text-xs text-gray-500 truncate">{c.cpf || c.cnpj}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{c.cpf || c.cnpj}</p>
                     )}
                   </div>
                   <div className="flex-shrink-0 w-36 sm:w-44 text-center">
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">{c.email}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{c.email}</p>
                   </div>
                   <div className="flex-shrink-0 w-28 sm:w-32 text-center">
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">{c.phone}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{c.phone}</p>
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">{c.address}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{c.address}</p>
                   </div>
                   <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-center">
-                    <button onClick={() => { setEditing(c); setForm({ name: c.name, email: c.email, phone: c.phone, address: c.address, documentType: c.cpf ? 'cpf' : 'cnpj', cpf: c.cpf || '', cnpj: c.cnpj || '' }); setIsModalOpen(true) }} className="p-0.5 sm:p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-full transition-all duration-200" title="Editar cliente">
-                      <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <button onClick={() => { setEditing(c); setForm({ name: c.name, email: c.email, phone: c.phone, address: c.address, documentType: c.cpf ? 'cpf' : 'cnpj', cpf: c.cpf || '', cnpj: c.cnpj || '' }); setIsModalOpen(true) }} className="p-0.5 sm:p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-full transition-all duration-200" aria-label={`Editar cliente ${c.name}`} title="Editar cliente">
+                      <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3" aria-hidden="true" />
                     </button>
-                    <button onClick={() => deleteOne(c.id)} className="p-0.5 sm:p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-all duration-200" title="Excluir cliente">
-                      <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <button onClick={() => deleteOne(c.id)} disabled={deletingId === c.id} className="p-0.5 sm:p-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed" aria-label={`Excluir cliente ${c.name}`} title="Excluir cliente">
+                      <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -624,10 +722,10 @@ const Clients: React.FC = () => {
             ))}
 
             {selectedClients.size > 0 && (
-              <div className="flex justify-end p-4 bg-red-50 border-t border-red-200">
-                <button onClick={deleteSelected} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                  <Trash2 className="h-4 w-4" />
-                  Deletar Selecionado{selectedClients.size > 1 ? 's' : ''} ({selectedClients.size})
+              <div className="flex justify-end p-4 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800">
+                <button onClick={deleteSelected} disabled={isDeleting} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed">
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  {isDeleting ? 'Deletando...' : `Deletar Selecionado${selectedClients.size > 1 ? 's' : ''} (${selectedClients.size})`}
                 </button>
               </div>
             )}
@@ -637,26 +735,27 @@ const Clients: React.FC = () => {
 
       {/* Modal Novo/Editar Cliente */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50" onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setEditing(null); setFormErrors({}) } }}>
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50" onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }) } }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="modal-title-client" className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
-                  <Users className="w-6 h-6 text-amber-700" />
+                <h2 id="modal-title-client" className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Users className="w-6 h-6 text-amber-700" aria-hidden="true" />
                   {editing ? 'Editar Cliente' : 'Novo Cliente'}
                 </h2>
-                <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}) }} className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all">
-                  <X className="w-5 h-5" />
+                <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }) }} className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all" aria-label="Fechar modal">
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
             </div>
             <div className="space-y-3">
               <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label htmlFor="client-name" className="block text-sm font-semibold text-gray-700 mb-1">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="client-name"
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
@@ -671,10 +770,11 @@ const Clients: React.FC = () => {
                 )}
               </div>
               <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label htmlFor="client-email" className="block text-sm font-semibold text-gray-700 mb-1">
                   Email <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="client-email"
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
@@ -689,10 +789,11 @@ const Clients: React.FC = () => {
                 )}
               </div>
               <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label htmlFor="client-phone" className="block text-sm font-semibold text-gray-700 mb-1">
                   Telefone <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="client-phone"
                   type="text"
                   value={form.phone}
                   onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
@@ -707,10 +808,11 @@ const Clients: React.FC = () => {
                 )}
               </div>
               <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label htmlFor="client-address" className="block text-sm font-semibold text-gray-700 mb-1">
                   Endereço <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="client-address"
                   type="text"
                   value={form.address}
                   onChange={(e) => setForm(prev => ({ ...prev, address: e.target.value }))}
@@ -725,10 +827,11 @@ const Clients: React.FC = () => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label htmlFor="client-doctype" className="block text-sm font-semibold text-gray-700 mb-1">
                   Tipo de Documento <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="client-doctype"
                   value={form.documentType}
                   onChange={(e) => setForm(prev => ({
                     ...prev,
@@ -743,10 +846,11 @@ const Clients: React.FC = () => {
                 </select>
               </div>
               <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label htmlFor={`client-${form.documentType}`} className="block text-sm font-semibold text-gray-700 mb-1">
                   {form.documentType === 'cpf' ? 'CPF' : 'CNPJ'} <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id={`client-${form.documentType}`}
                   type="text"
                   value={form.documentType === 'cpf' ? form.cpf : form.cnpj}
                   onChange={(e) => setForm(prev => ({
@@ -766,8 +870,10 @@ const Clients: React.FC = () => {
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}) }} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">Cancelar</button>
-              <button onClick={saveClient} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold">Salvar</button>
+              <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }) }} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">Cancelar</button>
+              <button onClick={saveClient} disabled={isSaving} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed">
+                {isSaving ? 'Salvando...' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>
@@ -776,14 +882,14 @@ const Clients: React.FC = () => {
       {/* Modal Importar/Exportar */}
       {isImportExportOpen && (
         <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50" onClick={(e) => { if (e.target === e.currentTarget) setIsImportExportOpen(false) }}>
-          <div className="relative bg-white rounded-2xl w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200">
+          <div role="dialog" aria-modal="true" aria-labelledby="modal-title-importexport" className="relative bg-white rounded-2xl w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-b from-amber-50 to-white border-b">
               <div className="flex items-center gap-3">
-                <Upload className="w-5 h-5 text-amber-700" />
-                <h2 className="text-xl font-extrabold text-gray-800">Importar/Exportar Clientes</h2>
+                <Upload className="w-5 h-5 text-amber-700" aria-hidden="true" />
+                <h2 id="modal-title-importexport" className="text-xl font-extrabold text-gray-800">Importar/Exportar Clientes</h2>
               </div>
-              <button onClick={() => setIsImportExportOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => setIsImportExportOpen(false)} className="text-gray-400 hover:text-gray-600" aria-label="Fechar modal"><X className="w-5 h-5" aria-hidden="true" /></button>
             </div>
 
             {/* Body */}
@@ -795,28 +901,28 @@ const Clients: React.FC = () => {
                 <p className="font-bold text-amber-800 mb-1">Primeiro baixe o modelo, depois importe!</p>
                 <p className="text-amber-700 text-sm">Baixe o arquivo modelo, preencha com seus dados e depois faça o upload.</p>
                 <button onClick={downloadModel} className="mt-4 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow mx-auto">
-                  <Download className="w-4 h-4" /> Baixar Modelo de Clientes
+                  <Download className="w-4 h-4" aria-hidden="true" /> Baixar Modelo de Clientes
                 </button>
               </div>
 
               {/* Importar */}
               <div className="space-y-3">
-                <label className="block w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white cursor-pointer shadow hover:shadow-md transition-shadow text-center">
+                <label className={`block w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow hover:shadow-md transition-shadow text-center ${isImporting ? 'opacity-60 pointer-events-none cursor-not-allowed' : 'cursor-pointer'}`}>
                   <div className="px-3 py-3 flex items-center justify-center gap-2">
-                    <Upload className="w-4 h-4 opacity-90" />
+                    <Upload className="w-4 h-4 opacity-90" aria-hidden="true" />
                     <div className="text-center">
-                      <p className="text-lg font-bold leading-tight">Selecionar Arquivo</p>
+                      <p className="text-lg font-bold leading-tight">{isImporting ? 'Importando...' : 'Selecionar Arquivo'}</p>
                       <p className="text-white/90 text-xs">Carregar arquivo .xlsx</p>
                     </div>
                   </div>
-                  <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleImport} />
+                  <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleImport} disabled={isImporting} />
                 </label>
 
-                <button onClick={handleExport} className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3 py-3 text-center shadow hover:shadow-md transition-shadow">
+                <button onClick={handleExport} disabled={isExporting} className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3 py-3 text-center shadow hover:shadow-md transition-shadow disabled:opacity-60 disabled:cursor-not-allowed">
                   <div className="flex items-center justify-center gap-2">
-                    <Download className="w-4 h-4 opacity-90" />
+                    <Download className="w-4 h-4 opacity-90" aria-hidden="true" />
                     <div className="text-center">
-                      <p className="text-lg font-bold leading-tight">Exportar</p>
+                      <p className="text-lg font-bold leading-tight">{isExporting ? 'Exportando...' : 'Exportar'}</p>
                       <p className="text-white/90 text-xs">Salvar dados em arquivo</p>
                     </div>
                   </div>
@@ -844,19 +950,20 @@ const Clients: React.FC = () => {
             }
           }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div role="dialog" aria-modal="true" aria-labelledby="modal-title-exportpdf" className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
-                  <Download className="w-6 h-6 text-amber-700" />
+                <h2 id="modal-title-exportpdf" className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                  <Download className="w-6 h-6 text-amber-700" aria-hidden="true" />
                   Exportar Clientes em PDF
                 </h2>
                 <button
                   onClick={() => setIsExportClientesModalOpen(false)}
                   className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                  aria-label="Fechar modal"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -882,7 +989,9 @@ const Clients: React.FC = () => {
                   </label>
                   <p className="text-sm text-gray-600">
                     {exportarFiltrados
-                      ? 'Serão exportados apenas os clientes que estão visíveis na lista (com filtros aplicados).'
+                      ? (filters.name || filters.email || filters.phone)
+                        ? 'Serão exportados apenas os clientes visíveis na lista (com filtros aplicados).'
+                        : 'Serão exportados todos os clientes (nenhum filtro ativo no momento).'
                       : 'Todos os clientes serão exportados, independente dos filtros ativos.'}
                   </p>
                 </div>
@@ -931,9 +1040,10 @@ const Clients: React.FC = () => {
                 </button>
                 <button
                   onClick={exportarClientesPDF}
-                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl"
+                  disabled={isExportingPDF}
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Exportar PDF
+                  {isExportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
                 </button>
               </div>
             </div>

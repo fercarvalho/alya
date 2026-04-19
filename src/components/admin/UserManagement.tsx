@@ -289,31 +289,33 @@ const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-amber-900">Gerenciar Usuários</h2>
-        <div className="flex items-center gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold text-amber-900">Gerenciar Usuários</h2>
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => setShowResetAllModal(true)}
-            className="flex items-center px-4 py-2 bg-white border border-red-300 text-red-600 rounded-xl hover:bg-red-50 transition-colors text-sm font-medium"
+            className="flex items-center px-3 sm:px-4 py-2 bg-white border border-red-300 text-red-600 rounded-xl hover:bg-red-50 transition-colors text-sm font-medium"
             title="Resetar senhas de todos os usuários"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Resetar Todas as Senhas
+            <RefreshCw className="h-4 w-4 sm:mr-2 shrink-0" />
+            <span className="hidden sm:inline">Resetar Todas as Senhas</span>
           </button>
-          <div className="w-px h-6 bg-gray-200" />
+          <div className="w-px h-6 bg-gray-200 hidden sm:block" />
           <button
             onClick={() => setShowCreationTypeModal(true)}
-            className="flex items-center px-5 py-2 bg-gradient-to-r from-amber-400 to-orange-400 text-white rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg transition-all font-semibold"
+            className="flex items-center px-4 sm:px-5 py-2 bg-gradient-to-r from-amber-400 to-orange-400 text-white rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg transition-all font-semibold text-sm"
           >
-            <UserPlus className="h-5 w-5 mr-2" />
-            Novo Usuário
+            <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2 shrink-0" />
+            <span className="hidden sm:inline">Novo Usuário</span>
+            <span className="sm:hidden ml-1.5">Novo</span>
           </button>
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-4 rounded-2xl border border-amber-200 dark:border-gray-700 shadow-lg flex gap-4 items-center">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 p-3 sm:p-4 rounded-2xl border border-amber-200 dark:border-gray-700 shadow-lg flex flex-col sm:flex-row gap-3 sm:items-center">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
@@ -323,37 +325,39 @@ const UserManagement: React.FC = () => {
             placeholder="Buscar por nome, username ou email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 text-sm"
           />
         </div>
-        <select
-          id="user-role-filter"
-          name="user-role-filter"
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
-        >
-          <option value="all">Todas as funções</option>
-          <option value="superadmin">Super Admin</option>
-          <option value="admin">Admin</option>
-          <option value="user">Usuário</option>
-          <option value="guest">Convidado</option>
-        </select>
-        <select
-          id="user-status-filter"
-          name="user-status-filter"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
-        >
-          <option value="all">Todos os status</option>
-          <option value="active">Ativo</option>
-          <option value="inactive">Inativo</option>
-        </select>
+        <div className="flex gap-2 sm:gap-4">
+          <select
+            id="user-role-filter"
+            name="user-role-filter"
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 text-sm"
+          >
+            <option value="all">Todas as funções</option>
+            <option value="superadmin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="user">Usuário</option>
+            <option value="guest">Convidado</option>
+          </select>
+          <select
+            id="user-status-filter"
+            name="user-status-filter"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 text-sm"
+          >
+            <option value="all">Todos os status</option>
+            <option value="active">Ativo</option>
+            <option value="inactive">Inativo</option>
+          </select>
+        </div>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      {/* Desktop: Tabela */}
+      <div className="hidden sm:block bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-amber-50 border-b border-amber-200">
@@ -379,13 +383,9 @@ const UserManagement: React.FC = () => {
                         size="sm"
                       />
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {getUserDisplayName(u)}
-                        </div>
+                        <div className="text-sm font-medium text-gray-900">{getUserDisplayName(u)}</div>
                         <div className="text-sm text-gray-500">@{u.username}</div>
-                        {u.email && (
-                          <div className="text-xs text-gray-400">{u.email}</div>
-                        )}
+                        {u.email && <div className="text-xs text-gray-400">{u.email}</div>}
                       </div>
                     </div>
                   </td>
@@ -436,11 +436,7 @@ const UserManagement: React.FC = () => {
                             }`}
                           >
                             {mod.name}
-                            {hasAccess ? (
-                              <Eye className="inline ml-1 h-3 w-3" />
-                            ) : (
-                              <EyeOff className="inline ml-1 h-3 w-3" />
-                            )}
+                            {hasAccess ? <Eye className="inline ml-1 h-3 w-3" /> : <EyeOff className="inline ml-1 h-3 w-3" />}
                           </button>
                         );
                       })}
@@ -457,42 +453,22 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => { setEditingUser(u); setShowEditModal(true); }}
-                        className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-800 transition-colors"
-                        title="Editar Usuário"
-                      >
+                      <button onClick={() => { setEditingUser(u); setShowEditModal(true); }} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-800 transition-colors" title="Editar Usuário">
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => setUserToReset(u)}
-                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                        title="Resetar Senha"
-                      >
+                      <button onClick={() => setUserToReset(u)} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors" title="Resetar Senha">
                         <RefreshCw className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => handleUpdateUser(u.id, { isActive: !(u.isActive !== false) })}
-                        className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 hover:text-amber-800 transition-colors"
-                        title={u.isActive !== false ? 'Desativar' : 'Ativar'}
-                      >
+                      <button onClick={() => handleUpdateUser(u.id, { isActive: !(u.isActive !== false) })} className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 hover:text-amber-800 transition-colors" title={u.isActive !== false ? 'Desativar' : 'Ativar'}>
                         {u.isActive !== false ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                       </button>
                       {u.id !== currentUser?.id && currentUser?.role === 'superadmin' && u.role !== 'superadmin' && (
-                        <button
-                          onClick={() => impersonate(u.id)}
-                          className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 hover:text-purple-800 transition-colors"
-                          title={`Logar como ${u.username}`}
-                        >
+                        <button onClick={() => impersonate(u.id)} className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 hover:text-purple-800 transition-colors" title={`Logar como ${u.username}`}>
                           <LogIn className="h-4 w-4" />
                         </button>
                       )}
                       {u.id !== currentUser?.id && (
-                        <button
-                          onClick={() => handleDeleteUser(u.id)}
-                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-800 transition-colors"
-                          title="Deletar"
-                        >
+                        <button onClick={() => handleDeleteUser(u.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-800 transition-colors" title="Deletar">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       )}
@@ -510,6 +486,119 @@ const UserManagement: React.FC = () => {
             <p className="text-gray-400 text-sm">Tente ajustar os filtros</p>
           </div>
         )}
+      </div>
+
+      {/* Mobile: Cards */}
+      <div className="sm:hidden space-y-3">
+        {filteredUsers.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-12 bg-white rounded-2xl shadow-lg">
+            <UsersIcon className="w-12 h-12 text-gray-300" />
+            <p className="text-gray-500 font-medium">Nenhum usuário encontrado</p>
+            <p className="text-gray-400 text-sm">Tente ajustar os filtros</p>
+          </div>
+        ) : filteredUsers.map((u) => (
+          <div key={u.id} className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+
+            {/* Topo do card: avatar + info + status */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+              <LazyAvatar photoUrl={u.photoUrl} firstName={u.firstName} lastName={u.lastName} username={u.username} size="sm" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-gray-900 truncate">{getUserDisplayName(u)}</div>
+                <div className="text-xs text-gray-500">@{u.username}</div>
+                {u.email && <div className="text-xs text-gray-400 truncate">{u.email}</div>}
+              </div>
+              <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full ${u.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
+                {u.isActive !== false ? 'Ativo' : 'Inativo'}
+              </span>
+            </div>
+
+            {/* Função */}
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100">
+              <span className="text-xs text-gray-400 w-14 shrink-0">Função</span>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  u.role === 'superadmin' ? 'bg-violet-100 text-violet-700' :
+                  u.role === 'admin' ? 'bg-amber-100 text-amber-700' :
+                  u.role === 'user' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {u.role === 'superadmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : u.role === 'user' ? 'Usuário' : 'Convidado'}
+                </span>
+                <select
+                  value={u.role}
+                  onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
+                  className="flex-1 min-w-0 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50 text-gray-600"
+                >
+                  {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
+                  <option value="admin">Admin</option>
+                  <option value="user">Usuário</option>
+                  <option value="guest">Convidado</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Módulos */}
+            <div className="px-4 py-2.5 border-b border-gray-100">
+              <div className="text-xs text-gray-400 mb-2">Módulos</div>
+              <div className="flex flex-wrap gap-1.5">
+                {modules.filter(m => m.isActive).map((mod) => {
+                  const superadminOnly = ['activeSessions', 'anomalies', 'securityAlerts'].includes(mod.key);
+                  const isRestricted = superadminOnly && currentUser?.role !== 'superadmin';
+                  const effectiveModules = u.role === 'superadmin'
+                    ? modules.filter(m => m.isActive).map(m => m.key)
+                    : (u.modules || []);
+                  const hasAccess = effectiveModules.includes(mod.key);
+                  return (
+                    <button
+                      key={mod.id}
+                      onClick={() => !isRestricted && toggleModuleForUser(u.id, mod.key)}
+                      title={isRestricted ? 'Apenas o super administrador pode gerenciar este módulo' : undefined}
+                      className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                        isRestricted
+                          ? 'opacity-40 cursor-not-allowed ' + (hasAccess ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-700')
+                          : hasAccess
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-gray-200 text-gray-700 active:bg-gray-300'
+                      }`}
+                    >
+                      {mod.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Último login */}
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100">
+              <span className="text-xs text-gray-400 w-14 shrink-0">Últ. Login</span>
+              <span className="text-xs text-gray-700">{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Nunca'}</span>
+            </div>
+
+            {/* Ações */}
+            <div className="flex items-center justify-end gap-0.5 px-3 py-2.5">
+              <button onClick={() => { setEditingUser(u); setShowEditModal(true); }} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition-colors" title="Editar Usuário">
+                <Edit className="h-4 w-4" />
+              </button>
+              <button onClick={() => setUserToReset(u)} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors" title="Resetar Senha">
+                <RefreshCw className="h-4 w-4" />
+              </button>
+              <button onClick={() => handleUpdateUser(u.id, { isActive: !(u.isActive !== false) })} className="p-2 rounded-lg text-amber-600 hover:bg-amber-50 active:bg-amber-100 transition-colors" title={u.isActive !== false ? 'Desativar' : 'Ativar'}>
+                {u.isActive !== false ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+              </button>
+              {u.id !== currentUser?.id && currentUser?.role === 'superadmin' && u.role !== 'superadmin' && (
+                <button onClick={() => impersonate(u.id)} className="p-2 rounded-lg text-purple-600 hover:bg-purple-50 active:bg-purple-100 transition-colors" title={`Logar como ${u.username}`}>
+                  <LogIn className="h-4 w-4" />
+                </button>
+              )}
+              {u.id !== currentUser?.id && (
+                <button onClick={() => handleDeleteUser(u.id)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors" title="Deletar">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Modal de Novo Usuário */}

@@ -87,6 +87,7 @@ const DocumentationManagement: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [previewMode, setPreviewMode] = useState<'split' | 'editor' | 'preview'>('split');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Modais
@@ -145,6 +146,7 @@ const DocumentationManagement: React.FC = () => {
     setEditContent(page.content);
     setEditTitle(page.title);
     setIsDirty(false);
+    setSidebarOpen(false); // fecha drawer no mobile ao selecionar página
   };
 
   const handleContentChange = (val: string) => {
@@ -284,193 +286,190 @@ const DocumentationManagement: React.FC = () => {
     );
   }
 
-  return (
-    <div className="flex gap-4 h-[calc(100vh-300px)] min-h-[500px]">
-      {/* Sidebar de seções/páginas */}
-      <aside className="w-64 flex-shrink-0 flex flex-col gap-2">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <span className="text-sm font-semibold text-gray-700">Estrutura</span>
-            <button
-              onClick={() => setShowNewSection(true)}
-              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition-colors"
-              title="Nova seção"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+  // Conteúdo reutilizável da sidebar (desktop estático + mobile drawer)
+  const sidebarContent = (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden h-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Estrutura</span>
+        <button
+          onClick={() => setShowNewSection(true)}
+          className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition-colors"
+          title="Nova seção"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto">
+        {sections.length === 0 ? (
+          <div className="p-4 text-center text-sm text-gray-400">
+            <FileText className="h-6 w-6 mx-auto mb-1 text-gray-300" />
+            Nenhuma seção criada
           </div>
+        ) : (
+          sections.map(section => {
+            const isExpanded = expandedSections.has(section.id);
+            return (
+              <div key={section.id}>
+                <div className="flex items-center group hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors">
+                  <button
+                    onClick={() =>
+                      setExpandedSections(prev => {
+                        const n = new Set(prev);
+                        if (n.has(section.id)) n.delete(section.id); else n.add(section.id);
+                        return n;
+                      })
+                    }
+                    className="flex-1 flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 text-left"
+                  >
+                    {isExpanded
+                      ? <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      : <ChevronRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />}
+                    <span className="truncate">{section.title}</span>
+                  </button>
+                  <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setShowNewPage(section.id)} className="p-1 text-amber-500 hover:bg-amber-100 rounded" title="Nova página">
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => setEditingSection({ id: section.id, title: section.title })} className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Renomear seção">
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => setDeleteConfirm({ type: 'section', id: section.id, title: section.title })} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded" title="Deletar seção">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
 
-          <nav className="flex-1 overflow-y-auto">
-            {sections.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-400">
-                <FileText className="h-6 w-6 mx-auto mb-1 text-gray-300" />
-                Nenhuma seção criada
-              </div>
-            ) : (
-              sections.map(section => {
-                const isExpanded = expandedSections.has(section.id);
-                return (
-                  <div key={section.id}>
-                    {/* Cabeçalho da seção */}
-                    <div className="flex items-center group hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors">
-                      <button
-                        onClick={() =>
-                          setExpandedSections(prev => {
-                            const n = new Set(prev);
-                            if (n.has(section.id)) n.delete(section.id); else n.add(section.id);
-                            return n;
-                          })
-                        }
-                        className="flex-1 flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 text-left"
+                {isExpanded && (
+                  <div className="bg-gray-50 dark:bg-gray-900/50 border-l-2 border-gray-100 dark:border-gray-700 ml-3">
+                    {section.pages.map(page => (
+                      <div
+                        key={page.id}
+                        className={`flex items-center group transition-colors ${
+                          selectedPage?.id === page.id
+                            ? 'bg-amber-100 dark:bg-amber-900/30 border-l-2 border-amber-500 -ml-0.5'
+                            : 'hover:bg-amber-50 dark:hover:bg-gray-700'
+                        }`}
                       >
-                        {isExpanded
-                          ? <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                          : <ChevronRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />}
-                        <span className="truncate">{section.title}</span>
-                      </button>
-                      <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => setShowNewPage(section.id)}
-                          className="p-1 text-amber-500 hover:bg-amber-100 rounded"
-                          title="Nova página"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
+                        <button onClick={() => selectPage(page)} className="flex-1 flex items-center gap-2 pl-3 pr-2 py-2 text-sm text-left truncate">
+                          <FileText className={`h-3.5 w-3.5 flex-shrink-0 ${selectedPage?.id === page.id ? 'text-amber-600' : 'text-gray-400'}`} />
+                          <span className={`truncate ${selectedPage?.id === page.id ? 'text-amber-700 dark:text-amber-300 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
+                            {page.title}
+                          </span>
                         </button>
-                        <button
-                          onClick={() => setEditingSection({ id: section.id, title: section.title })}
-                          className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
-                          title="Renomear seção"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm({ type: 'section', id: section.id, title: section.title })}
-                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-                          title="Deletar seção"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
+                        <button onClick={() => setDeleteConfirm({ type: 'page', id: page.id, title: page.title })} className="pr-2 p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 rounded transition-opacity" title="Deletar página">
+                          <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
-                    </div>
-
-                    {/* Páginas */}
-                    {isExpanded && (
-                      <div className="bg-gray-50 dark:bg-gray-900/50 border-l-2 border-gray-100 dark:border-gray-700 ml-3">
-                        {section.pages.map(page => (
-                          <div
-                            key={page.id}
-                            className={`flex items-center group transition-colors ${
-                              selectedPage?.id === page.id
-                                ? 'bg-amber-100 dark:bg-amber-900/30 border-l-2 border-amber-500 -ml-0.5'
-                                : 'hover:bg-amber-50 dark:hover:bg-gray-700'
-                            }`}
-                          >
-                            <button
-                              onClick={() => selectPage(page)}
-                              className="flex-1 flex items-center gap-2 pl-3 pr-2 py-2 text-sm text-left truncate"
-                            >
-                              <FileText className={`h-3.5 w-3.5 flex-shrink-0 ${selectedPage?.id === page.id ? 'text-amber-600' : 'text-gray-400'}`} />
-                              <span className={`truncate ${selectedPage?.id === page.id ? 'text-amber-700 dark:text-amber-300 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
-                                {page.title}
-                              </span>
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirm({ type: 'page', id: page.id, title: page.title })}
-                              className="pr-2 p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 rounded transition-opacity"
-                              title="Deletar página"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                        {section.pages.length === 0 && (
-                          <p className="pl-4 py-2 text-xs text-gray-400 italic">Sem páginas</p>
-                        )}
-                      </div>
+                    ))}
+                    {section.pages.length === 0 && (
+                      <p className="pl-4 py-2 text-xs text-gray-400 italic">Sem páginas</p>
                     )}
                   </div>
-                );
-              })
-            )}
-          </nav>
+                )}
+              </div>
+            );
+          })
+        )}
+      </nav>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-300px)] min-h-[500px]">
+
+      {/* ── Botão flutuante sticky — mobile only ── */}
+      <div className="lg:hidden sticky top-[185px] z-30 pointer-events-none flex-shrink-0">
+        <button
+          onClick={() => setSidebarOpen(v => !v)}
+          className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-400 text-white rounded-full shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 text-sm font-semibold"
+        >
+          {sidebarOpen ? <X className="h-4 w-4" /> : <GripVertical className="h-4 w-4" />}
+          <span>{sidebarOpen ? 'Fechar' : 'Estrutura'}</span>
+        </button>
+      </div>
+
+      {/* ── MOBILE: drawer deslizante da esquerda ── */}
+      <>
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className={`lg:hidden fixed inset-0 z-20 bg-black/50 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        />
+        <div className={`lg:hidden fixed top-0 left-0 h-full w-[280px] z-30 flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none'}`}>
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-400 flex-shrink-0">
+            <span className="text-white font-semibold text-sm">Estrutura</span>
+            <button onClick={() => setSidebarOpen(false)} className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {sidebarContent}
+          </div>
         </div>
+      </>
+
+      {/* ── DESKTOP: sidebar estática ── */}
+      <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col gap-2 h-full">
+        {sidebarContent}
       </aside>
 
       {/* Editor + Preview */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {selectedPage ? (
           <>
-            {/* Toolbar do editor */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-2.5 mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
+            {/* Toolbar */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-3 sm:px-4 py-2.5 mb-3 flex flex-wrap items-center gap-2 justify-between flex-shrink-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <input
                   type="text"
                   value={editTitle}
                   onChange={e => handleTitleChange(e.target.value)}
-                  className="text-base font-semibold text-gray-800 dark:text-gray-100 border-none outline-none bg-transparent truncate max-w-sm focus:ring-0"
+                  className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100 border-none outline-none bg-transparent truncate min-w-0 focus:ring-0"
                   placeholder="Título da página"
                 />
-                {isDirty && (
-                  <span className="text-xs text-amber-500 flex-shrink-0">● não salvo</span>
-                )}
+                {isDirty && <span className="text-xs text-amber-500 flex-shrink-0">● não salvo</span>}
               </div>
-              <div className="flex items-center gap-2">
-                {/* Toggle view */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Toggle view — no mobile esconde Split */}
                 <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5 gap-0.5">
                   <button
                     onClick={() => setPreviewMode('editor')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
-                      previewMode === 'editor'
-                        ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                    }`}
+                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${previewMode === 'editor' ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                   >
                     <Code2 className="h-3.5 w-3.5" />
-                    Editor
+                    <span className="hidden sm:inline">Editor</span>
                   </button>
                   <button
                     onClick={() => setPreviewMode('split')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      previewMode === 'split'
-                        ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                    }`}
+                    className={`hidden lg:flex px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${previewMode === 'split' ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                   >
                     Split
                   </button>
                   <button
                     onClick={() => setPreviewMode('preview')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
-                      previewMode === 'preview'
-                        ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                    }`}
+                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${previewMode === 'preview' ? 'bg-white dark:bg-gray-600 text-amber-700 dark:text-amber-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                   >
                     <Eye className="h-3.5 w-3.5" />
-                    Preview
+                    <span className="hidden sm:inline">Preview</span>
                   </button>
                 </div>
                 <button
                   onClick={savePage}
                   disabled={!isDirty || isSaving}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-medium transition-colors ${
-                    isDirty && !isSaving
-                      ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm hover:shadow-md'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl text-sm font-medium transition-colors flex-shrink-0 ${isDirty && !isSaving ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm hover:shadow-md' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                 >
                   <Save className="h-3.5 w-3.5" />
-                  {isSaving ? 'Salvando...' : 'Salvar'}
+                  <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Área split-view */}
+            {/* Área de edição — split no desktop, alternado no mobile */}
             <div className="flex-1 flex gap-3 min-h-0">
               {/* Editor */}
-              {previewMode !== 'preview' && (
+              {(previewMode === 'editor' || previewMode === 'split') && (
                 <div className={`flex flex-col ${previewMode === 'split' ? 'w-1/2' : 'flex-1'} bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden`}>
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex-shrink-0">
                     <Code2 className="h-3.5 w-3.5 text-gray-400" />
                     <span className="text-xs text-gray-500 dark:text-gray-300 font-medium">Markdown + Mermaid</span>
                   </div>
@@ -485,9 +484,9 @@ const DocumentationManagement: React.FC = () => {
               )}
 
               {/* Preview */}
-              {previewMode !== 'editor' && (
+              {(previewMode === 'preview' || previewMode === 'split') && (
                 <div className={`flex flex-col ${previewMode === 'split' ? 'w-1/2' : 'flex-1'} bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden`}>
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex-shrink-0">
                     <Eye className="h-3.5 w-3.5 text-gray-400" />
                     <span className="text-xs text-gray-500 dark:text-gray-300 font-medium">Preview</span>
                   </div>
@@ -501,16 +500,16 @@ const DocumentationManagement: React.FC = () => {
             </div>
           </>
         ) : (
-          <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-center">
-            <div className="text-center">
+          <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
+            <div className="text-center px-6">
               <div className="flex justify-center mb-3">
-                <div className="bg-amber-50 rounded-full p-4">
+                <div className="bg-amber-50 dark:bg-amber-900/30 rounded-full p-4">
                   <BookOpen className="h-10 w-10 text-amber-300" />
                 </div>
               </div>
               <p className="text-gray-400 text-sm">Selecione uma página para editar</p>
               <p className="text-gray-300 text-xs mt-1">
-                ou crie uma nova seção com o botão <strong>+</strong>
+                ou abra a <strong>Estrutura</strong> e crie uma nova seção
               </p>
             </div>
           </div>

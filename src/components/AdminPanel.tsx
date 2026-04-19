@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Users, Settings, Activity, BarChart3, Shield, ShieldOff, HelpCircle, MessageSquare, BookOpen
+  Users, Settings, Activity, BarChart3, Shield, ShieldOff, HelpCircle, MessageSquare, BookOpen, Layout, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import UserManagement from './admin/UserManagement';
@@ -10,8 +10,10 @@ import Statistics from './admin/Statistics';
 import FAQManagement from './admin/FAQManagement';
 import FeedbackManagement from './admin/FeedbackManagement';
 import DocumentationManagement from './admin/DocumentationManagement';
+import FooterManagement from './admin/FooterManagement';
+import LegalManagement from './admin/LegalManagement';
 
-type AdminTab = 'users' | 'modules' | 'activity' | 'statistics' | 'faq' | 'feedbacks' | 'documentacao';
+type AdminTab = 'users' | 'modules' | 'activity' | 'statistics' | 'faq' | 'feedbacks' | 'documentacao' | 'rodape' | 'legal';
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth();
@@ -34,6 +36,11 @@ const AdminPanel: React.FC = () => {
   }
 
   const isSuperAdmin = user?.role === 'superadmin';
+  const permissoesLegais = user?.permissoesLegais || {};
+  const hasAnyLegalPermission = isSuperAdmin ||
+    permissoesLegais.termos_uso === true ||
+    permissoesLegais.politica_privacidade === true ||
+    permissoesLegais.cookies === true;
 
   const tabs = [
     { id: 'users' as AdminTab, name: 'Usuários', icon: Users },
@@ -43,6 +50,8 @@ const AdminPanel: React.FC = () => {
     { id: 'faq' as AdminTab, name: 'FAQ', icon: HelpCircle },
     { id: 'feedbacks' as AdminTab, name: 'Feedbacks', icon: MessageSquare },
     { id: 'documentacao' as AdminTab, name: 'Documentação', icon: BookOpen },
+    ...(isSuperAdmin ? [{ id: 'rodape' as AdminTab, name: 'Rodapé', icon: Layout }] : []),
+    ...(hasAnyLegalPermission ? [{ id: 'legal' as AdminTab, name: 'Legal', icon: FileText }] : []),
   ];
 
   return (
@@ -89,6 +98,8 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'faq' && <FAQManagement />}
         {activeTab === 'feedbacks' && <FeedbackManagement />}
         {activeTab === 'documentacao' && <DocumentationManagement />}
+        {activeTab === 'rodape' && <FooterManagement />}
+        {activeTab === 'legal' && <LegalManagement />}
       </div>
     </div>
   );

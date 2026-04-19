@@ -401,6 +401,161 @@ const sanitizeBody = (req, res, next) => {
   next();
 };
 
+/**
+ * Validações para conteúdo legal (Termos de Uso / Política de Privacidade)
+ * O conteúdo é HTML gerado pelo editor TipTap — não usar .escape(),
+ * a sanitização XSS é feita pelo sanitize-html no handler da rota.
+ */
+const validateLegalContent = [
+  body("conteudo")
+    .notEmpty()
+    .withMessage("Conteúdo é obrigatório")
+    .isLength({ max: 100000 })
+    .withMessage("Conteúdo muito longo (máximo 100.000 caracteres)"),
+  handleValidationErrors,
+];
+
+/**
+ * Validações para configuração do banner de cookies
+ */
+const validateCookieBannerConfig = [
+  body("titulo")
+    .notEmpty()
+    .withMessage("Título é obrigatório")
+    .trim()
+    .escape()
+    .isLength({ max: 255 })
+    .withMessage("Título muito longo (máximo 255 caracteres)"),
+  body("texto")
+    .notEmpty()
+    .withMessage("Texto do banner é obrigatório")
+    .trim()
+    .isLength({ max: 5000 })
+    .withMessage("Texto muito longo (máximo 5.000 caracteres)"),
+  body("texto_botao_aceitar")
+    .optional()
+    .trim()
+    .escape()
+    .isLength({ max: 100 })
+    .withMessage("Texto do botão muito longo (máximo 100 caracteres)"),
+  body("texto_botao_rejeitar")
+    .optional()
+    .trim()
+    .escape()
+    .isLength({ max: 100 })
+    .withMessage("Texto do botão muito longo (máximo 100 caracteres)"),
+  body("texto_botao_personalizar")
+    .optional()
+    .trim()
+    .escape()
+    .isLength({ max: 100 })
+    .withMessage("Texto do botão muito longo (máximo 100 caracteres)"),
+  body("texto_descricao_gerenciamento")
+    .optional()
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage("Descrição muito longa (máximo 2.000 caracteres)"),
+  handleValidationErrors,
+];
+
+/**
+ * Validações para categoria de cookie
+ */
+const validateCookieCategoria = [
+  body("chave")
+    .notEmpty()
+    .withMessage("Chave é obrigatória")
+    .trim()
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage("Chave deve conter apenas letras, números e underscore")
+    .isLength({ max: 100 })
+    .withMessage("Chave muito longa (máximo 100 caracteres)")
+    .escape(),
+  body("nome")
+    .notEmpty()
+    .withMessage("Nome é obrigatório")
+    .trim()
+    .escape()
+    .isLength({ max: 255 })
+    .withMessage("Nome muito longo (máximo 255 caracteres)"),
+  body("descricao")
+    .notEmpty()
+    .withMessage("Descrição é obrigatória")
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage("Descrição muito longa (máximo 2.000 caracteres)"),
+  body("ativo")
+    .optional()
+    .isBoolean()
+    .withMessage("Ativo deve ser verdadeiro ou falso"),
+  body("obrigatorio")
+    .optional()
+    .isBoolean()
+    .withMessage("Obrigatório deve ser verdadeiro ou falso"),
+  body("ordem")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Ordem deve ser um número inteiro não negativo"),
+  handleValidationErrors,
+];
+
+/**
+ * Validações para consentimento de cookies (LGPD)
+ * Garante que preferências só contenham chaves e valores booleanos permitidos
+ */
+const validateConsentimento = [
+  body("preferencias")
+    .notEmpty()
+    .withMessage("Preferências são obrigatórias")
+    .isObject()
+    .withMessage("Preferências devem ser um objeto JSON")
+    .custom((value) => {
+      const allowedKeys = /^[a-zA-Z0-9_]{1,100}$/;
+      for (const key of Object.keys(value)) {
+        if (!allowedKeys.test(key)) {
+          throw new Error(`Chave de preferência inválida: ${key}`);
+        }
+        if (typeof value[key] !== "boolean") {
+          throw new Error(`Valor da preferência '${key}' deve ser booleano`);
+        }
+      }
+      return true;
+    }),
+  body("versao_termos")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Versão dos termos deve ser um inteiro positivo"),
+  body("versao_politica")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Versão da política deve ser um inteiro positivo"),
+  handleValidationErrors,
+];
+
+/**
+ * Validações para permissões legais de um admin
+ */
+const validatePermissoesLegais = [
+  body("permissoes")
+    .notEmpty()
+    .withMessage("Permissões são obrigatórias")
+    .isObject()
+    .withMessage("Permissões devem ser um objeto JSON")
+    .custom((value) => {
+      const allowedKeys = ["termos_uso", "politica_privacidade", "cookies"];
+      for (const key of Object.keys(value)) {
+        if (!allowedKeys.includes(key)) {
+          throw new Error(`Chave de permissão inválida: ${key}. Permitidas: ${allowedKeys.join(", ")}`);
+        }
+        if (typeof value[key] !== "boolean") {
+          throw new Error(`Valor da permissão '${key}' deve ser booleano`);
+        }
+      }
+      return true;
+    }),
+  handleValidationErrors,
+];
+
 module.exports = {
   handleValidationErrors,
   validateUserRegistration,
@@ -414,4 +569,10 @@ module.exports = {
   validatePagination,
   sanitizeBody,
   sanitizeString,
+  // Legal / LGPD
+  validateLegalContent,
+  validateCookieBannerConfig,
+  validateCookieCategoria,
+  validateConsentimento,
+  validatePermissoesLegais,
 };

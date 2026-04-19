@@ -7,6 +7,12 @@ import PhotoUpload from './PhotoUpload';
 import { validateEmail } from '../utils/validation';
 import { applyPhoneMask, removePhoneMask, validatePhoneFormat } from '../utils/phoneMask';
 
+interface PermissoesLegais {
+  termos_uso?: boolean;
+  politica_privacidade?: boolean;
+  cookies?: boolean;
+}
+
 interface User {
   id: string;
   username: string;
@@ -18,6 +24,7 @@ interface User {
   role: string;
   modules?: string[];
   isActive?: boolean;
+  permissoesLegais?: PermissoesLegais;
 }
 
 interface EditarUsuarioModalProps {
@@ -44,6 +51,7 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
     modules: [] as string[],
     isActive: true
   });
+  const [permissoesLegais, setPermissoesLegais] = useState<PermissoesLegais>({});
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -66,6 +74,7 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
       setPhotoUrl(user.photoUrl || null);
       setPhotoFile(null);
       setErrors({});
+      setPermissoesLegais(user.permissoesLegais || {});
     }
   }, [isOpen, user]);
 
@@ -251,6 +260,25 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
       const result = await response.json();
       
       if (result.success) {
+        // Salvar permissões legais se o superadmin estiver editando um admin
+        // Condição: usuário sendo salvo É admin (novo ou já era) e o editor é superadmin
+        const targetIsAdmin = formData.role === 'admin' || user.role === 'admin';
+        if (currentUser?.role === 'superadmin' && targetIsAdmin && formData.role === 'admin') {
+          try {
+            const permResp = await fetch(`${API_BASE_URL}/admin/permissoes-legais/${user.id}`, {
+              method: 'PUT',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ permissoes: permissoesLegais }),
+            });
+            if (!permResp.ok) {
+              const permErr = await permResp.json().catch(() => ({}));
+              console.error('Erro ao salvar permissões legais:', permErr.error || `HTTP ${permResp.status}`);
+              // Não bloqueia o fluxo principal — dados do usuário já foram salvos
+            }
+          } catch (e) {
+            console.error('Erro ao salvar permissões legais:', e);
+          }
+        }
         setErrors({});
         onSuccess();
         onClose();
@@ -459,6 +487,48 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
               </select>
             </div>
           </div>
+
+          {/* Permissões Legais (apenas superadmin editando um admin) */}
+          {currentUser?.role === 'superadmin' && formData.role === 'admin' && (
+            <div className="border border-amber-200 dark:border-amber-700 rounded-xl p-4 bg-amber-50/30 dark:bg-amber-900/10">
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                <span className="text-amber-500">⚖️</span> Permissões Legais (LGPD)
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Defina quais seções de conteúdo legal este administrador pode editar.
+              </p>
+              <div className="space-y-2">
+                {[
+                  { key: 'termos_uso', label: 'Editar Termos de Uso' },
+                  { key: 'politica_privacidade', label: 'Editar Política de Privacidade' },
+                  { key: 'cookies', label: 'Editar Configurações de Cookies' },
+                ].map(perm => (
+                  <label key={perm.key} className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={!!(permissoesLegais as any)[perm.key]}
+                        onChange={e => setPermissoesLegais(prev => ({ ...prev, [perm.key]: e.target.checked }))}
+                        className="sr-only"
+                      />
+                      <div className={`w-9 h-5 rounded-full transition-colors ${
+                        (permissoesLegais as any)[perm.key]
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                          : 'bg-gray-200 dark:bg-gray-700'
+                      }`}>
+                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                          (permissoesLegais as any)[perm.key] ? 'translate-x-4' : 'translate-x-0.5'
+                        }`} />
+                      </div>
+                    </div>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+                      {perm.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Botões */}
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">

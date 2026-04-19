@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy, useMemo } from "react";
+import React, { useState, useEffect, Suspense, lazy, useMemo, useRef, useCallback } from "react";
 import {
   Home,
   DollarSign,
@@ -67,6 +67,7 @@ const Roadmap = lazy(() => import("./components/Roadmap"));
 const FAQ = lazy(() => import("./components/FAQ"));
 // Lazy load Documentação
 const Documentation = lazy(() => import("./components/Documentation"));
+import Footer from "./components/Footer";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
 import { useModules } from "./hooks/useModules";
@@ -206,11 +207,15 @@ const AppContent: React.FC = () => {
       headers["Authorization"] = `Bearer ${token}`;
     }
     const response = await fetch(`${API_BASE_URL}/transactions`, { headers });
-    const result = await response.json();
     if (response.status === 401 || response.status === 403) {
       logout();
       return [];
     }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+    const result = await response.json();
     return result.success ? result.data : [];
   };
 
@@ -227,6 +232,10 @@ const AppContent: React.FC = () => {
     if (response.status === 401 || response.status === 403) {
       logout();
       return null;
+    }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
     }
     const result = await response.json();
     return result.success ? result.data : null;
@@ -246,6 +255,10 @@ const AppContent: React.FC = () => {
       logout();
       return null;
     }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
     const result = await response.json();
     return result.success ? result.data : null;
   };
@@ -262,6 +275,10 @@ const AppContent: React.FC = () => {
     if (response.status === 401 || response.status === 403) {
       logout();
       return false;
+    }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
     }
     const result = await response.json();
     return result.success;
@@ -281,6 +298,10 @@ const AppContent: React.FC = () => {
       logout();
       return false;
     }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
     const result = await response.json();
     return result.success;
   };
@@ -292,11 +313,15 @@ const AppContent: React.FC = () => {
       headers["Authorization"] = `Bearer ${token}`;
     }
     const response = await fetch(`${API_BASE_URL}/products`, { headers });
-    const result = await response.json();
     if (response.status === 401 || response.status === 403) {
       logout();
       return [];
     }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+    const result = await response.json();
     return result.success ? result.data : [];
   };
 
@@ -307,7 +332,6 @@ const AppContent: React.FC = () => {
       headers["Authorization"] = `Bearer ${token}`;
     }
     const response = await fetch(`${API_BASE_URL}/projection`, { headers });
-    const result = await response.json();
     if (response.status === 401 || response.status === 403) {
       // 401: token inválido/expirado -> logout
       // 403: pode ser permissão (ex.: módulo não liberado) -> não deslogar; apenas tratar como indisponível
@@ -316,6 +340,11 @@ const AppContent: React.FC = () => {
       }
       return null;
     }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+    const result = await response.json();
     return result.success ? result.data : null;
   };
 
@@ -332,6 +361,10 @@ const AppContent: React.FC = () => {
     if (response.status === 401 || response.status === 403) {
       logout();
       return null;
+    }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
     }
     const result = await response.json();
     return result.success ? result.data : null;
@@ -351,6 +384,10 @@ const AppContent: React.FC = () => {
       logout();
       return null;
     }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
     const result = await response.json();
     return result.success ? result.data : null;
   };
@@ -367,6 +404,10 @@ const AppContent: React.FC = () => {
     if (response.status === 401 || response.status === 403) {
       logout();
       return false;
+    }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
     }
     const result = await response.json();
     return result.success;
@@ -385,6 +426,10 @@ const AppContent: React.FC = () => {
     if (response.status === 401 || response.status === 403) {
       logout();
       return false;
+    }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
     }
     const result = await response.json();
     return result.success;
@@ -468,6 +513,13 @@ const AppContent: React.FC = () => {
     useState(false);
   const [exportarFiltrados, setExportarFiltrados] = useState(true);
   const [incluirResumoProdutos, setIncluirResumoProdutos] = useState(true);
+
+  // Estado de geração de PDF (desabilita botões durante geração)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  // Refs para estado indeterminate nos Select All checkboxes
+  const selectAllTransactionsRef = useRef<HTMLInputElement>(null);
+  const selectAllProductsRef = useRef<HTMLInputElement>(null);
   const [transactionForm, setTransactionForm] = useState({
     date: new Date().toISOString().split("T")[0], // Data atual por padrão
     description: "",
@@ -497,8 +549,15 @@ const AppContent: React.FC = () => {
     null,
   );
 
-  // Estados para ordenação
-  const [sortConfig, setSortConfig] = useState<{
+  // Estados para ordenação (separados por aba para evitar conflito de ícones)
+  const [transactionSortConfig, setTransactionSortConfig] = useState<{
+    field: string | null;
+    direction: "asc" | "desc";
+  }>({
+    field: null,
+    direction: "asc",
+  });
+  const [productSortConfig, setProductSortConfig] = useState<{
     field: string | null;
     direction: "asc" | "desc";
   }>({
@@ -541,6 +600,8 @@ const AppContent: React.FC = () => {
       return;
     }
 
+    let mounted = true;
+
     const loadData = async () => {
       try {
         const [transactionsData, productsData, projectionData] =
@@ -549,17 +610,64 @@ const AppContent: React.FC = () => {
             fetchProducts(),
             fetchProjectionSnapshot(),
           ]);
+        if (!mounted) return;
         setTransactions(transactionsData);
         setProducts(productsData);
         setProjectionSnapshot(projectionData);
       } catch (error) {
+        if (!mounted) return;
         console.error("Erro ao carregar dados:", error);
       }
     };
 
     loadData();
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user]);
+
+  // Sincronizar consentimento de cookies com o banco (LGPD)
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const syncConsent = async () => {
+      try {
+        const stored = localStorage.getItem('cookieConsent');
+        if (!stored) return;
+
+        const prefs = JSON.parse(stored);
+
+        // Buscar versões atuais dos documentos legais
+        const [termosRes, politicaRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/termos-uso`).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE_URL}/politica-privacidade`).then(r => r.json()).catch(() => null),
+        ]);
+
+        const versaoTermos = termosRes?.data?.versao ?? 1;
+        const versaoPolitica = politicaRes?.data?.versao ?? 1;
+
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        };
+
+        await fetch(`${API_BASE_URL}/cookie-consentimento`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            preferencias: prefs,
+            versao_termos: versaoTermos,
+            versao_politica: versaoPolitica,
+          }),
+        });
+      } catch (e) {
+        // Não bloquear a aplicação se a sincronização falhar
+        console.error('[LGPD] Falha ao sincronizar consentimento de cookies com o servidor:', e);
+      }
+    };
+
+    syncConsent();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user?.id]);
 
   // Atualizar snapshot da Projeção ao entrar em abas que dependem das metas.
   // (Metas é derivado diretamente do Faturamento Total da Projeção.)
@@ -567,17 +675,22 @@ const AppContent: React.FC = () => {
     if (!token || !user) return;
     if (activeTab !== "metas" && activeTab !== "dashboard") return;
 
+    let mounted = true;
+
     const refreshProjection = async () => {
       try {
         const projectionData = await fetchProjectionSnapshot();
+        if (!mounted) return;
         setProjectionSnapshot(projectionData);
       } catch (error) {
+        if (!mounted) return;
         // silenciar (Metas tem fallback)
         console.error("Erro ao atualizar projeção:", error);
       }
     };
 
     refreshProjection();
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, token, user]);
 
@@ -691,6 +804,24 @@ const AppContent: React.FC = () => {
           setSelectedFile(null);
           return;
         }
+
+        // Fechar modal de seleção de período para exportar relatórios
+        if (isPeriodoExportModalOpen) {
+          setIsPeriodoExportModalOpen(false);
+          return;
+        }
+
+        // Fechar modal de exportação de transações
+        if (isExportTransacoesModalOpen) {
+          setIsExportTransacoesModalOpen(false);
+          return;
+        }
+
+        // Fechar modal de exportação de produtos
+        if (isExportProdutosModalOpen) {
+          setIsExportProdutosModalOpen(false);
+          return;
+        }
       }
     };
 
@@ -705,6 +836,9 @@ const AppContent: React.FC = () => {
     isProductModalOpen,
     isTransactionModalOpen,
     isImportExportModalOpen,
+    isPeriodoExportModalOpen,
+    isExportTransacoesModalOpen,
+    isExportProdutosModalOpen,
   ]);
 
   // Fechar modais ao mudar de guia
@@ -751,6 +885,10 @@ const AppContent: React.FC = () => {
       });
       setIsCalendarOpen(false);
     }
+
+    // Limpar seleções ao trocar de aba para evitar exclusões acidentais
+    setSelectedTransactions(new Set());
+    setSelectedProducts(new Set());
   }, [activeTab]);
 
   // Resetar aba ao mudar de usuário (impersonação)
@@ -770,6 +908,29 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener("alya:navigate", handler);
   }, []);
 
+
+  // Indeterminate nos Select All checkboxes (guard: só executa quando logado)
+  useEffect(() => {
+    if (isLoading || !user) return;
+    const el = selectAllTransactionsRef.current;
+    if (!el) return;
+    const filtered = getFilteredAndSortedTransactions();
+    const someSelected = filtered.some((t) => selectedTransactions.has(t.id));
+    const allSelected = filtered.length > 0 && filtered.every((t) => selectedTransactions.has(t.id));
+    el.indeterminate = someSelected && !allSelected;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTransactions, transactions, transactionFilters, transactionSortConfig, isLoading, user]);
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+    const el = selectAllProductsRef.current;
+    if (!el) return;
+    const filtered = getFilteredAndSortedProducts();
+    const someSelected = filtered.some((p) => selectedProducts.has(p.id));
+    const allSelected = filtered.length > 0 && filtered.every((p) => selectedProducts.has(p.id));
+    el.indeterminate = someSelected && !allSelected;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProducts, products, productFilters, productSortConfig, isLoading, user]);
 
   // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
   if (isLoading) {
@@ -963,10 +1124,12 @@ const AppContent: React.FC = () => {
   };
 
   const handleSelectAllProducts = () => {
-    if (selectedProducts.size === products.length) {
+    const filtered = getFilteredAndSortedProducts();
+    const allSelected = filtered.length > 0 && filtered.every((p) => selectedProducts.has(p.id));
+    if (allSelected) {
       setSelectedProducts(new Set());
     } else {
-      setSelectedProducts(new Set(products.map((p) => p.id)));
+      setSelectedProducts(new Set(filtered.map((p) => p.id)));
     }
   };
 
@@ -1008,10 +1171,12 @@ const AppContent: React.FC = () => {
   };
 
   const handleSelectAllTransactions = () => {
-    if (selectedTransactions.size === transactions.length) {
+    const filtered = getFilteredAndSortedTransactions();
+    const allSelected = filtered.length > 0 && filtered.every((t) => selectedTransactions.has(t.id));
+    if (allSelected) {
       setSelectedTransactions(new Set());
     } else {
-      setSelectedTransactions(new Set(transactions.map((t) => t.id)));
+      setSelectedTransactions(new Set(filtered.map((t) => t.id)));
     }
   };
 
@@ -1041,26 +1206,51 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Funções de ordenação
+  // Funções de ordenação — separadas por aba
   const handleSort = (field: string) => {
-    let direction: "asc" | "desc" = "asc";
+    setTransactionSortConfig((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
-    if (sortConfig.field === field && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-
-    setSortConfig({ field, direction });
+  const handleProductSort = (field: string) => {
+    setProductSortConfig((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc",
+    }));
   };
 
   const getSortIcon = (field: string) => {
-    if (sortConfig.field !== field) {
-      return <span className="text-gray-400">↕</span>;
+    if (transactionSortConfig.field !== field) {
+      return <span className="text-gray-400" aria-hidden="true">↕</span>;
     }
-    return sortConfig.direction === "asc" ? (
-      <span className="text-amber-600">↑</span>
+    return transactionSortConfig.direction === "asc" ? (
+      <span className="text-amber-600" aria-hidden="true">↑</span>
     ) : (
-      <span className="text-amber-600">↓</span>
+      <span className="text-amber-600" aria-hidden="true">↓</span>
     );
+  };
+
+  const getTransactionSortAriaSort = (field: string): "ascending" | "descending" | "none" => {
+    if (transactionSortConfig.field !== field) return "none";
+    return transactionSortConfig.direction === "asc" ? "ascending" : "descending";
+  };
+
+  const getProductSortIcon = (field: string) => {
+    if (productSortConfig.field !== field) {
+      return <span className="text-gray-400" aria-hidden="true">↕</span>;
+    }
+    return productSortConfig.direction === "asc" ? (
+      <span className="text-amber-600" aria-hidden="true">↑</span>
+    ) : (
+      <span className="text-amber-600" aria-hidden="true">↓</span>
+    );
+  };
+
+  const getProductSortAriaSort = (field: string): "ascending" | "descending" | "none" => {
+    if (productSortConfig.field !== field) return "none";
+    return productSortConfig.direction === "asc" ? "ascending" : "descending";
   };
 
   // Removido: funções de ordenação não utilizadas (agora usamos filtros + ordenação combinada)
@@ -1100,16 +1290,16 @@ const AppContent: React.FC = () => {
     }
 
     // Aplicar ordenação
-    if (!sortConfig.field) return filtered;
+    if (!transactionSortConfig.field) return filtered;
 
     return filtered.sort((a, b) => {
-      let aValue: any = a[sortConfig.field as keyof NewTransaction];
-      let bValue: any = b[sortConfig.field as keyof NewTransaction];
+      let aValue: any = a[transactionSortConfig.field as keyof NewTransaction];
+      let bValue: any = b[transactionSortConfig.field as keyof NewTransaction];
 
-      if (sortConfig.field === "date") {
+      if (transactionSortConfig.field === "date") {
         aValue = parseLocalDate(aValue).getTime();
         bValue = parseLocalDate(bValue).getTime();
-      } else if (sortConfig.field === "value") {
+      } else if (transactionSortConfig.field === "value") {
         aValue = Number(aValue);
         bValue = Number(bValue);
       } else if (typeof aValue === "string") {
@@ -1118,10 +1308,10 @@ const AppContent: React.FC = () => {
       }
 
       if (aValue < bValue) {
-        return sortConfig.direction === "asc" ? -1 : 1;
+        return transactionSortConfig.direction === "asc" ? -1 : 1;
       }
       if (aValue > bValue) {
-        return sortConfig.direction === "asc" ? 1 : -1;
+        return transactionSortConfig.direction === "asc" ? 1 : -1;
       }
       return 0;
     });
@@ -1161,17 +1351,17 @@ const AppContent: React.FC = () => {
     }
 
     // Aplicar ordenação
-    if (!sortConfig.field) return filtered;
+    if (!productSortConfig.field) return filtered;
 
     return filtered.sort((a, b) => {
-      let aValue: any = a[sortConfig.field as keyof Product];
-      let bValue: any = b[sortConfig.field as keyof Product];
+      let aValue: any = a[productSortConfig.field as keyof Product];
+      let bValue: any = b[productSortConfig.field as keyof Product];
 
       if (
-        sortConfig.field === "price" ||
-        sortConfig.field === "cost" ||
-        sortConfig.field === "stock" ||
-        sortConfig.field === "sold"
+        productSortConfig.field === "price" ||
+        productSortConfig.field === "cost" ||
+        productSortConfig.field === "stock" ||
+        productSortConfig.field === "sold"
       ) {
         aValue = Number(aValue);
         bValue = Number(bValue);
@@ -1181,10 +1371,10 @@ const AppContent: React.FC = () => {
       }
 
       if (aValue < bValue) {
-        return sortConfig.direction === "asc" ? -1 : 1;
+        return productSortConfig.direction === "asc" ? -1 : 1;
       }
       if (aValue > bValue) {
-        return sortConfig.direction === "asc" ? 1 : -1;
+        return productSortConfig.direction === "asc" ? 1 : -1;
       }
       return 0;
     });
@@ -2210,7 +2400,7 @@ const AppContent: React.FC = () => {
                     `R$ ${(typeof value === "number" ? value : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
                     "",
                   ]}
-                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
+                  contentStyle={{ backgroundColor: isDark ? "#1f2937" : "#fff", border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`, borderRadius: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", color: isDark ? "#f3f4f6" : "#111827" }}
                 />
               )}
               {hasData && (
@@ -2278,7 +2468,9 @@ const AppContent: React.FC = () => {
           {(() => {
             const pctMeta = metaFaturamentoMes > 0 ? (totalReceitasMes / metaFaturamentoMes) * 100 : 0;
             const variacaoMes = totalReceitasMes - metaFaturamentoMes;
-            const emDia = pctMeta >= (new Date().getDate() / 31) * 100;
+            const hoje = new Date();
+            const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+            const emDia = pctMeta >= (hoje.getDate() / diasNoMes) * 100;
             return (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3">
@@ -2766,7 +2958,7 @@ const AppContent: React.FC = () => {
                           }`}
                         >
                           {isReceita(transacao.type) ? "+" : "-"}R${" "}
-                          {transacao.value.toLocaleString("pt-BR", {
+                          {(Number(transacao.value) || 0).toLocaleString("pt-BR", {
                             minimumFractionDigits: 2,
                           })}
                         </p>
@@ -3483,23 +3675,23 @@ const AppContent: React.FC = () => {
             {/* Quadrante Financeiro Anual */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-800 dark:to-gray-800 p-6 rounded-2xl shadow-lg border border-purple-200 dark:border-gray-700">
               <div className="space-y-4">
-                {/* REFORÇO DE CAIXA */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
+                {/* REFORÇO DE CAIXA — TODO: implementar cálculo de reforço de caixa */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700 opacity-50" title="Funcionalidade em desenvolvimento">
                   <span className="font-bold text-purple-800 text-lg">
                     REFORÇO DE CAIXA
                   </span>
-                  <span className="font-bold text-purple-900 text-lg">
-                    R$ 0,00
+                  <span className="font-bold text-purple-900 text-lg text-xs font-normal italic">
+                    Em breve
                   </span>
                 </div>
 
-                {/* SAÍDA DE CAIXA */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
+                {/* SAÍDA DE CAIXA — TODO: implementar cálculo de saída de caixa */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700 opacity-50" title="Funcionalidade em desenvolvimento">
                   <span className="font-bold text-purple-800 text-lg">
                     SAÍDA DE CAIXA
                   </span>
-                  <span className="font-bold text-purple-900 text-lg">
-                    R$ 0,00
+                  <span className="font-bold text-purple-900 text-lg text-xs font-normal italic">
+                    Em breve
                   </span>
                 </div>
 
@@ -4162,6 +4354,7 @@ const AppContent: React.FC = () => {
 
   // Função para exportar transações em PDF
   const exportarTransacoesPDF = async () => {
+    setIsGeneratingPDF(true);
     try {
       setIsExportTransacoesModalOpen(false);
 
@@ -4213,11 +4406,11 @@ const AppContent: React.FC = () => {
           filtrosAtivos.push(`Categoria: ${transactionFilters.category}`);
         if (transactionFilters.dateFrom)
           filtrosAtivos.push(
-            `De: ${new Date(transactionFilters.dateFrom).toLocaleDateString("pt-BR")}`,
+            `De: ${formatDateToDisplay(transactionFilters.dateFrom)}`,
           );
         if (transactionFilters.dateTo)
           filtrosAtivos.push(
-            `Até: ${new Date(transactionFilters.dateTo).toLocaleDateString("pt-BR")}`,
+            `Até: ${formatDateToDisplay(transactionFilters.dateTo)}`,
           );
 
         if (filtrosAtivos.length > 0) {
@@ -4285,7 +4478,7 @@ const AppContent: React.FC = () => {
       // Adicionar linhas da tabela
       transacoesParaExportar.forEach((transaction, index) => {
         const dataFormatada = formatDateToDisplay(transaction.date);
-        const valorFormatado = transaction.value.toLocaleString("pt-BR", {
+        const valorFormatado = (Number(transaction.value) || 0).toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
         });
         const tipoCor = isReceita(transaction.type) ? "#10b981" : "#ef4444";
@@ -4373,6 +4566,8 @@ const AppContent: React.FC = () => {
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
       alert("❌ Erro ao exportar PDF. Tente novamente.");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -4564,9 +4759,9 @@ const AppContent: React.FC = () => {
       {/* Lista de Transações */}
       <div className="space-y-4">
         {transactions.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-            <p className="text-gray-600">Nenhuma transação encontrada.</p>
-            <p className="text-gray-500 text-sm mt-2">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400">Nenhuma transação encontrada.</p>
+            <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
               Adicione sua primeira transação clicando no botão "Nova
               Transação".
             </p>
@@ -4595,16 +4790,18 @@ const AppContent: React.FC = () => {
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
-                    checked={
-                      transactions.length > 0 &&
-                      selectedTransactions.size === transactions.length
-                    }
+                    ref={selectAllTransactionsRef}
+                    checked={(() => {
+                      const f = getFilteredAndSortedTransactions();
+                      return f.length > 0 && f.every((t) => selectedTransactions.has(t.id));
+                    })()}
                     onChange={handleSelectAllTransactions}
                     className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                   />
                 </div>
                 <button
                   onClick={() => handleSort("date")}
+                  aria-sort={getTransactionSortAriaSort("date")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">
@@ -4614,6 +4811,7 @@ const AppContent: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleSort("description")}
+                  aria-sort={getTransactionSortAriaSort("description")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">
@@ -4623,6 +4821,7 @@ const AppContent: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleSort("type")}
+                  aria-sort={getTransactionSortAriaSort("type")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">
@@ -4632,6 +4831,7 @@ const AppContent: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleSort("category")}
+                  aria-sort={getTransactionSortAriaSort("category")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">
@@ -4641,6 +4841,7 @@ const AppContent: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleSort("value")}
+                  aria-sort={getTransactionSortAriaSort("value")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-28 sm:w-32"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide whitespace-nowrap">
@@ -4656,11 +4857,16 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            {getFilteredAndSortedTransactions().map((transaction, index) => (
+            {getFilteredAndSortedTransactions().length === 0 && transactions.length > 0 && (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                Nenhuma transação corresponde aos filtros aplicados.
+              </div>
+            )}
+            {getFilteredAndSortedTransactions().map((transaction, index, arr) => (
               <div
                 key={transaction.id}
                 className={`bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-all duration-200 ${
-                  index === transactions.length - 1 ? "border-b-0" : ""
+                  index === arr.length - 1 ? "border-b-0" : ""
                 }`}
               >
                 <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
@@ -4718,7 +4924,7 @@ const AppContent: React.FC = () => {
                       }`}
                     >
                       {isReceita(transaction.type) ? "+" : "-"}R${" "}
-                      {transaction.value.toLocaleString("pt-BR", {
+                      {(Number(transaction.value) || 0).toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
@@ -4771,6 +4977,7 @@ const AppContent: React.FC = () => {
 
   // Função para exportar produtos em PDF
   const exportarProdutosPDF = async () => {
+    setIsGeneratingPDF(true);
     try {
       setIsExportProdutosModalOpen(false);
 
@@ -4960,10 +5167,10 @@ const AppContent: React.FC = () => {
 
       // Adicionar linhas da tabela
       produtosParaExportar.forEach((product, index) => {
-        const precoFormatado = product.price.toLocaleString("pt-BR", {
+        const precoFormatado = (Number(product.price) || 0).toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
         });
-        const custoFormatado = product.cost.toLocaleString("pt-BR", {
+        const custoFormatado = (Number(product.cost) || 0).toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
         });
 
@@ -5060,6 +5267,8 @@ const AppContent: React.FC = () => {
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
       alert("❌ Erro ao exportar PDF. Tente novamente.");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -5221,9 +5430,9 @@ const AppContent: React.FC = () => {
       {/* Lista de Produtos */}
       <div className="space-y-4">
         {products.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-            <p className="text-gray-600">Nenhum produto encontrado.</p>
-            <p className="text-gray-500 text-sm mt-2">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400">Nenhum produto encontrado.</p>
+            <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
               Adicione seu primeiro produto clicando no botão "Novo Produto".
             </p>
           </div>
@@ -5235,67 +5444,74 @@ const AppContent: React.FC = () => {
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
-                    checked={
-                      products.length > 0 &&
-                      selectedProducts.size === products.length
-                    }
+                    ref={selectAllProductsRef}
+                    checked={(() => {
+                      const f = getFilteredAndSortedProducts();
+                      return f.length > 0 && f.every((p) => selectedProducts.has(p.id));
+                    })()}
                     onChange={handleSelectAllProducts}
                     className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                   />
                 </div>
                 <button
-                  onClick={() => handleSort("name")}
+                  onClick={() => handleProductSort("name")}
+                  aria-sort={getProductSortAriaSort("name")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-1 min-w-0"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">
                     Nome
                   </p>
-                  {getSortIcon("name")}
+                  {getProductSortIcon("name")}
                 </button>
                 <button
-                  onClick={() => handleSort("category")}
+                  onClick={() => handleProductSort("category")}
+                  aria-sort={getProductSortAriaSort("category")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide truncate">
                     Categoria
                   </p>
-                  {getSortIcon("category")}
+                  {getProductSortIcon("category")}
                 </button>
                 <button
-                  onClick={() => handleSort("price")}
+                  onClick={() => handleProductSort("price")}
+                  aria-sort={getProductSortAriaSort("price")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-20 sm:w-24"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">
                     Preço
                   </p>
-                  {getSortIcon("price")}
+                  {getProductSortIcon("price")}
                 </button>
                 <button
-                  onClick={() => handleSort("cost")}
+                  onClick={() => handleProductSort("cost")}
+                  aria-sort={getProductSortAriaSort("cost")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">
                     Custo
                   </p>
-                  {getSortIcon("cost")}
+                  {getProductSortIcon("cost")}
                 </button>
                 <button
-                  onClick={() => handleSort("stock")}
+                  onClick={() => handleProductSort("stock")}
+                  aria-sort={getProductSortAriaSort("stock")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">
                     Estoque
                   </p>
-                  {getSortIcon("stock")}
+                  {getProductSortIcon("stock")}
                 </button>
                 <button
-                  onClick={() => handleSort("sold")}
+                  onClick={() => handleProductSort("sold")}
+                  aria-sort={getProductSortAriaSort("sold")}
                   className="flex items-center justify-center gap-1 hover:bg-amber-100 rounded px-1 sm:px-2 py-1 transition-colors flex-shrink-0 w-16 sm:w-20"
                 >
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">
                     Vendidos
                   </p>
-                  {getSortIcon("sold")}
+                  {getProductSortIcon("sold")}
                 </button>
                 <div className="flex-shrink-0 w-16 sm:w-20 flex justify-center">
                   <p className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wide">
@@ -5305,11 +5521,16 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            {getFilteredAndSortedProducts().map((product, index) => (
+            {getFilteredAndSortedProducts().length === 0 && products.length > 0 && (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                Nenhum produto corresponde aos filtros aplicados.
+              </div>
+            )}
+            {getFilteredAndSortedProducts().map((product, index, arr) => (
               <div
                 key={product.id}
-                className={`bg-white border-b border-gray-100 p-4 hover:bg-amber-50/30 transition-all duration-200 ${
-                  index === products.length - 1 ? "border-b-0" : ""
+                className={`bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-all duration-200 ${
+                  index === arr.length - 1 ? "border-b-0" : ""
                 }`}
               >
                 <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
@@ -5340,7 +5561,7 @@ const AppContent: React.FC = () => {
                   <div className="flex-shrink-0 w-20 sm:w-24 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-green-600 truncate">
                       R${" "}
-                      {product.price.toLocaleString("pt-BR", {
+                      {(Number(product.price) || 0).toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
@@ -5350,7 +5571,7 @@ const AppContent: React.FC = () => {
                   <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                     <p className="text-xs sm:text-sm md:text-lg font-bold text-orange-600 truncate">
                       R${" "}
-                      {product.cost.toLocaleString("pt-BR", {
+                      {(Number(product.cost) || 0).toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
@@ -5436,6 +5657,7 @@ const AppContent: React.FC = () => {
 
   // Função para exportar relatórios em PDF
   const exportarRelatoriosPDF = async (periodoSelecionado: string) => {
+    setIsGeneratingPDF(true);
     try {
       setIsPeriodoExportModalOpen(false);
 
@@ -5780,6 +6002,8 @@ const AppContent: React.FC = () => {
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
       alert("❌ Erro ao exportar PDF. Tente novamente.");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -6226,6 +6450,7 @@ const AppContent: React.FC = () => {
 
   // Função para exportar dados do mês selecionado em PDF
   const exportarMetasPDF = async () => {
+    setIsGeneratingPDF(true);
     try {
       const mesSelecionado = mesesMetas.find(
         (mes) => mes.indice === selectedMonth,
@@ -6408,6 +6633,8 @@ const AppContent: React.FC = () => {
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
       alert("❌ Erro ao exportar PDF. Tente novamente.");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -6428,7 +6655,8 @@ const AppContent: React.FC = () => {
           <div className="flex gap-3">
             <button
               onClick={exportarMetasPDF}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+              disabled={isGeneratingPDF}
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               <Download className="h-5 w-5" />
               Exportar PDF
@@ -6875,10 +7103,11 @@ const AppContent: React.FC = () => {
             >
               {/* Nome do Produto */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="product-name" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Nome do Produto <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="product-name"
                   type="text"
                   name="name"
                   required
@@ -6895,10 +7124,11 @@ const AppContent: React.FC = () => {
 
               {/* Categoria */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="product-category" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Categoria <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="product-category"
                   type="text"
                   name="category"
                   required
@@ -6915,10 +7145,11 @@ const AppContent: React.FC = () => {
 
               {/* Preço de Venda */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="product-price" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Preço de Venda (R$) <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="product-price"
                   type="number"
                   name="price"
                   step="0.01"
@@ -6937,10 +7168,11 @@ const AppContent: React.FC = () => {
 
               {/* Custo */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="product-cost" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Custo (R$)
                 </label>
                 <input
+                  id="product-cost"
                   type="number"
                   name="cost"
                   step="0.01"
@@ -6954,10 +7186,11 @@ const AppContent: React.FC = () => {
 
               {/* Estoque */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="product-stock" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Estoque
                 </label>
                 <input
+                  id="product-stock"
                   type="number"
                   name="stock"
                   min="0"
@@ -6970,10 +7203,11 @@ const AppContent: React.FC = () => {
 
               {/* Quantidade Vendida */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="product-sold" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Quantidade Vendida
                 </label>
                 <input
+                  id="product-sold"
                   type="number"
                   name="sold"
                   min="0"
@@ -7153,11 +7387,12 @@ const AppContent: React.FC = () => {
             >
               {/* Data */}
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="tx-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Data <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
+                    id="tx-date"
                     type="text"
                     name="date"
                     value={
@@ -7209,11 +7444,12 @@ const AppContent: React.FC = () => {
 
               {/* Descrição */}
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="tx-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descrição <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
+                    id="tx-description"
                     type="text"
                     name="description"
                     value={transactionForm.description}
@@ -7250,11 +7486,12 @@ const AppContent: React.FC = () => {
 
               {/* Valor */}
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="tx-value" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Valor (R$) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
+                    id="tx-value"
                     type="number"
                     name="value"
                     value={transactionForm.value}
@@ -7293,11 +7530,12 @@ const AppContent: React.FC = () => {
 
               {/* Tipo */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="tx-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tipo <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
+                    id="tx-type"
                     name="type"
                     value={transactionForm.type}
                     onChange={handleTransactionInputChange}
@@ -7336,11 +7574,12 @@ const AppContent: React.FC = () => {
 
               {/* Categoria */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="tx-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Categoria <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
+                    id="tx-category"
                     name="category"
                     value={transactionForm.category}
                     onChange={handleTransactionInputChange}
@@ -7493,7 +7732,7 @@ const AppContent: React.FC = () => {
                         a.download = `modelo-${importExportType === "transactions" ? "transacoes" : "produtos"}.xlsx`;
                         document.body.appendChild(a);
                         a.click();
-                        window.URL.revokeObjectURL(url);
+                        setTimeout(() => window.URL.revokeObjectURL(url), 150);
                         document.body.removeChild(a);
 
                         alert(
@@ -7542,7 +7781,7 @@ const AppContent: React.FC = () => {
                       a.download = filename;
                       document.body.appendChild(a);
                       a.click();
-                      window.URL.revokeObjectURL(url);
+                      setTimeout(() => window.URL.revokeObjectURL(url), 150);
                       document.body.removeChild(a);
 
                       alert(
@@ -7667,7 +7906,7 @@ const AppContent: React.FC = () => {
                       a.download = `${importExportType === "transactions" ? "transacoes" : "produtos"}_${new Date().toISOString().split("T")[0]}.xlsx`;
                       document.body.appendChild(a);
                       a.click();
-                      window.URL.revokeObjectURL(url);
+                      setTimeout(() => window.URL.revokeObjectURL(url), 150);
                       document.body.removeChild(a);
 
                       alert(
@@ -7687,11 +7926,12 @@ const AppContent: React.FC = () => {
                     setIsUploading(false);
                   }
                 }}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+                disabled={isUploading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <Download className="h-6 w-6" />
                 <div className="text-left">
-                  <div className="font-bold">Exportar</div>
+                  <div className="font-bold">{isUploading ? "Exportando..." : "Exportar"}</div>
                   <div className="text-sm opacity-90">
                     Salvar dados em arquivo
                   </div>
@@ -7785,18 +8025,12 @@ const AppContent: React.FC = () => {
                               createdAt: new Date(),
                             },
                           ];
-                          setTransactions((prev) => [
-                            ...prev,
-                            ...mockTransactions,
-                          ]);
                           const storage = getStorage();
-                          storage.setItem(
-                            "transactions",
-                            JSON.stringify([
-                              ...transactions,
-                              ...mockTransactions,
-                            ]),
-                          );
+                          setTransactions((prev) => {
+                            const updated = [...prev, ...mockTransactions];
+                            storage.setItem("transactions", JSON.stringify(updated));
+                            return updated;
+                          });
                           alert(
                             `Arquivo "${selectedFile.name}" processado localmente!\n\n${mockTransactions.length} transações adicionadas como exemplo.`,
                           );
@@ -7821,12 +8055,12 @@ const AppContent: React.FC = () => {
                               sold: 8,
                             },
                           ];
-                          setProducts((prev) => [...prev, ...mockProducts]);
                           const storage = getStorage();
-                          storage.setItem(
-                            "products",
-                            JSON.stringify([...products, ...mockProducts]),
-                          );
+                          setProducts((prev) => {
+                            const updated = [...prev, ...mockProducts];
+                            storage.setItem("products", JSON.stringify(updated));
+                            return updated;
+                          });
                           alert(
                             `Arquivo "${selectedFile.name}" processado localmente!\n\n${mockProducts.length} produtos adicionados como exemplo.`,
                           );
@@ -7907,7 +8141,8 @@ const AppContent: React.FC = () => {
               <div className="grid grid-cols-1 gap-3">
                 <button
                   onClick={() => exportarRelatoriosPDF("Semana")}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                  disabled={isGeneratingPDF}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-amber-600" />
@@ -7918,7 +8153,8 @@ const AppContent: React.FC = () => {
 
                 <button
                   onClick={() => exportarRelatoriosPDF("Mês")}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                  disabled={isGeneratingPDF}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-amber-600" />
@@ -7929,7 +8165,8 @@ const AppContent: React.FC = () => {
 
                 <button
                   onClick={() => exportarRelatoriosPDF("Trimestre")}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                  disabled={isGeneratingPDF}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-amber-600" />
@@ -7942,7 +8179,8 @@ const AppContent: React.FC = () => {
 
                 <button
                   onClick={() => exportarRelatoriosPDF("Ano")}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                  disabled={isGeneratingPDF}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border-2 border-amber-200 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-amber-600" />
@@ -7953,7 +8191,8 @@ const AppContent: React.FC = () => {
 
                 <button
                   onClick={() => exportarRelatoriosPDF("Todos")}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-2 border-amber-400 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-semibold"
+                  disabled={isGeneratingPDF}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-2 border-amber-400 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   <div className="flex items-center gap-3">
                     <BarChart3 className="w-5 h-5" />
@@ -8077,17 +8316,13 @@ const AppContent: React.FC = () => {
                       {transactionFilters.dateFrom && (
                         <li>
                           • Data início:{" "}
-                          {new Date(
-                            transactionFilters.dateFrom,
-                          ).toLocaleDateString("pt-BR")}
+                          {formatDateToDisplay(transactionFilters.dateFrom)}
                         </li>
                       )}
                       {transactionFilters.dateTo && (
                         <li>
                           • Data fim:{" "}
-                          {new Date(
-                            transactionFilters.dateTo,
-                          ).toLocaleDateString("pt-BR")}
+                          {formatDateToDisplay(transactionFilters.dateTo)}
                         </li>
                       )}
                     </ul>
@@ -8104,9 +8339,10 @@ const AppContent: React.FC = () => {
                 </button>
                 <button
                   onClick={exportarTransacoesPDF}
-                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl"
+                  disabled={isGeneratingPDF}
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Exportar PDF
+                  {isGeneratingPDF ? "Gerando..." : "Exportar PDF"}
                 </button>
               </div>
             </div>
@@ -8241,9 +8477,10 @@ const AppContent: React.FC = () => {
                 </button>
                 <button
                   onClick={exportarProdutosPDF}
-                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl"
+                  disabled={isGeneratingPDF}
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Exportar PDF
+                  {isGeneratingPDF ? "Gerando..." : "Exportar PDF"}
                 </button>
               </div>
             </div>
@@ -8251,96 +8488,8 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="bg-gradient-to-r from-amber-600 to-orange-600 text-white py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center mb-3">
-                <img
-                  src={isDemoMode ? "/app/logo_rodape.png" : "/logo_rodape.png"}
-                  alt="Viver de PJ Logo"
-                  className="h-12 w-12 mr-2 object-contain"
-                />
-                <div>
-                  <span className="text-base font-bold">Viver de PJ</span>
-                  <p className="text-amber-100 text-sm">
-                    Ecosistema de Empreendedorismo
-                  </p>
-                </div>
-              </div>
-              <p className="text-amber-100 text-sm">
-                Sistema de Gestão Inteligente por Viver de PJ. A Viver de PJ é um
-                ecosistema completo de gestão e educação para Empreeendedores.
-                <br />
-                <br />
-                Autor: 41.748.511 Fernando Carvalho Gomes dos Santos.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Contato</h3>
-              <div className="space-y-2 text-amber-100">
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2" />
-                  <a
-                    href="https://wa.me/5511971039181?text=Oi%20Sofia%2C%20tudo%20bem%3F%20Vim%20pelo%20site%20da%20Alya%20e%20fiquei%20interessado%20pelo%20trabalho%20da%20Viver%20de%20PJ%20e%20gostaria%20de%20saber%20mais%20informa%C3%A7%C3%B5es"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition-colors"
-                  >
-                    (11) 97103-9181
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="h-4 w-4 mr-2" />
-                  <a
-                    href="mailto:vem@viverdepj.com.br"
-                    className="hover:text-white transition-colors"
-                  >
-                    vem@viverdepj.com.br
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Globe className="h-4 w-4 mr-2" />
-                  <a
-                    href="https://viverdepj.com.br"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition-colors"
-                  >
-                    viverdepj.com.br
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Map className="h-4 w-4 mr-2" />
-                  <span>São Paulo, SP</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Serviços</h3>
-              <div className="space-y-2 text-amber-100">
-                <p>Consultoria Estratégica de Negócios</p>
-                <p>Sistema de Gestão</p>
-                <p>Sistema Financeiro</p>
-                <p>CRM</p>
-                <p>IA Financeira</p>
-                <p>IA de Atendimento</p>
-                <p>IA para Negócios</p>
-                <p>Benefícios Corporativos</p>
-                <p>Contabilidade para Empresas</p>
-                <p>BPO Financeiro</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-amber-500 mt-8 pt-8 text-center text-amber-100">
-            <p>&copy; 2026 Viver de PJ. TODOS OS DIREITOS RESERVADOS</p>
-          </div>
-        </div>
-      </footer>
+      {/* Footer dinâmico */}
+      <Footer />
     </div>
   );
 };

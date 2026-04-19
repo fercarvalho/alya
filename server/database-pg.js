@@ -51,7 +51,15 @@ function parseDate(dateStr) {
 }
 
 function parseUser(row) {
+  // Preservar as chaves do JSONB permissoes_legais antes do toCamelCase recursivo.
+  // toCamelCase converte chaves aninhadas (ex: termos_uso → termosUso), o que
+  // quebraria as verificações de permissão que usam snake_case como identificadores.
+  const rawPermissoesLegais = row.permissoes_legais ?? null;
   const u = toCamelCase(row);
+  // Restaurar o JSONB com as chaves originais (snake_case)
+  u.permissoesLegais = (rawPermissoesLegais && typeof rawPermissoesLegais === 'object')
+    ? rawPermissoesLegais
+    : (typeof rawPermissoesLegais === 'string' ? JSON.parse(rawPermissoesLegais) : {});
   if (u.address && typeof u.address === 'object' && u.address !== null) return u;
   if (typeof u.address === 'string') {
     try {
@@ -89,6 +97,7 @@ class Database extends FileDatabase {
       connectionTimeoutMillis: 2000,
     });
     this._ensurePgDefaults();
+    this._ensureLegalDefaults();
   }
 
   /** Não criar arquivos JSON; o backend usa apenas PostgreSQL. */
@@ -2237,6 +2246,873 @@ class Database extends FileDatabase {
       await this.pool.query(
         `UPDATE doc_pages SET ordem = $1, updated_at = $2 WHERE id = $3`,
         [i, now, ids[i]]
+      );
+    }
+  }
+
+  // ========== RODAPÉ ==========
+
+  async obterRodapeCompleto() {
+    const [confRes, colunasRes, linksRes, bottomRes] = await Promise.all([
+      this.pool.query(`SELECT chave, valor FROM rodape_configuracoes`),
+      this.pool.query(`SELECT * FROM rodape_colunas ORDER BY ordem ASC, created_at ASC`),
+      this.pool.query(`SELECT * FROM rodape_links ORDER BY ordem ASC, created_at ASC`),
+      this.pool.query(`SELECT * FROM rodape_bottom_links ORDER BY ordem ASC, created_at ASC`).catch(() => ({ rows: [] })),
+    ]);
+
+    const configuracoes = {};
+    for (const row of confRes.rows) {
+      configuracoes[row.chave] = row.valor;
+    }
+
+    const linksMap = {};
+    for (const link of linksRes.rows) {
+      if (!linksMap[link.coluna_id]) linksMap[link.coluna_id] = [];
+      linksMap[link.coluna_id].push({
+        id: link.id,
+        coluna_id: link.coluna_id,
+        texto: link.texto,
+        link: link.link,
+        ehLink: link.eh_link,
+        ordem: link.ordem,
+      });
+    }
+
+    const colunas = colunasRes.rows.map(col => ({
+      id: col.id,
+      titulo: col.titulo,
+      ordem: col.ordem,
+      links: linksMap[col.id] || [],
+    }));
+
+    const bottomLinks = bottomRes.rows.map(row => ({
+      id: row.id,
+      texto: row.texto,
+      link: row.link,
+      ativo: row.ativo,
+      ordem: row.ordem,
+    }));
+
+    return { configuracoes, colunas, bottomLinks };
+  }
+
+  async obterRodapeConfiguracoes() {
+    const r = await this.pool.query(`SELECT chave, valor FROM rodape_configuracoes`);
+    const obj = {};
+    for (const row of r.rows) obj[row.chave] = row.valor;
+    return obj;
+  }
+
+  async atualizarRodapeConfig(chave, valor) {
+    const now = new Date().toISOString();
+    const r = await this.pool.query(
+      `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (chave) DO UPDATE SET valor = $2, updated_at = $3
+       RETURNING *`,
+      [chave, valor, now]
+    );
+    return r.rows[0];
+  }
+
+  async obterRodapeColunas() {
+    const r = await this.pool.query(
+      `SELECT * FROM rodape_colunas ORDER BY ordem ASC, created_at ASC`
+    );
+    return r.rows.map(row => toCamelCase(row));
+  }
+
+  async criarRodapeColuna(titulo) {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+    const ordemRes = await this.pool.query(
+      `SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM rodape_colunas`
+    );
+    const ordem = ordemRes.rows[0].prox;
+    const r = await this.pool.query(
+      `INSERT INTO rodape_colunas (id, titulo, ordem, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $4) RETURNING *`,
+      [id, titulo, ordem, now]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarRodapeColuna(id, titulo) {
+    const now = new Date().toISOString();
+    const r = await this.pool.query(
+      `UPDATE rodape_colunas SET titulo = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
+      [titulo, now, id]
+    );
+    if (r.rows.length === 0) throw new Error('Coluna não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async deletarRodapeColuna(id) {
+    const r = await this.pool.query(
+      `DELETE FROM rodape_colunas WHERE id = $1 RETURNING *`, [id]
+    );
+    if (r.rows.length === 0) throw new Error('Coluna não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarOrdemColunas(colunaIds) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < colunaIds.length; i++) {
+      await this.pool.query(
+        `UPDATE rodape_colunas SET ordem = $1, updated_at = $2 WHERE id = $3`,
+        [i, now, colunaIds[i]]
+      );
+    }
+  }
+
+  async obterRodapeLinks() {
+    const r = await this.pool.query(
+      `SELECT rl.*, rc.titulo AS coluna_titulo
+       FROM rodape_links rl
+       LEFT JOIN rodape_colunas rc ON rl.coluna_id = rc.id
+       ORDER BY rc.ordem ASC, rl.ordem ASC, rl.created_at ASC`
+    );
+    return r.rows.map(row => ({
+      id: row.id,
+      colunaId: row.coluna_id,
+      texto: row.texto,
+      link: row.link,
+      ehLink: row.eh_link,
+      ordem: row.ordem,
+      colunaTitulo: row.coluna_titulo,
+    }));
+  }
+
+  async criarRodapeLink({ coluna_id, texto, link, eh_link }) {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+    const ordemRes = await this.pool.query(
+      `SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM rodape_links WHERE coluna_id = $1`,
+      [coluna_id]
+    );
+    const ordem = ordemRes.rows[0].prox;
+    const ehLink = eh_link !== undefined ? eh_link : (link && link.trim() !== '');
+    const linkVal = ehLink ? (link || '') : '';
+    const r = await this.pool.query(
+      `INSERT INTO rodape_links (id, coluna_id, texto, link, eh_link, ordem, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7) RETURNING *`,
+      [id, coluna_id, texto, linkVal, ehLink, ordem, now]
+    );
+    return {
+      id: r.rows[0].id,
+      colunaId: r.rows[0].coluna_id,
+      texto: r.rows[0].texto,
+      link: r.rows[0].link,
+      ehLink: r.rows[0].eh_link,
+      ordem: r.rows[0].ordem,
+    };
+  }
+
+  async atualizarRodapeLink(id, { texto, link, eh_link, coluna_id }) {
+    const now = new Date().toISOString();
+    const fields = [];
+    const values = [id];
+    if (texto !== undefined) { values.push(texto); fields.push(`texto = $${values.length}`); }
+    if (eh_link !== undefined) { values.push(eh_link); fields.push(`eh_link = $${values.length}`); }
+    if (link !== undefined || eh_link === false) {
+      const linkVal = eh_link === false ? '' : (link || '');
+      values.push(linkVal); fields.push(`link = $${values.length}`);
+    }
+    if (coluna_id !== undefined) { values.push(coluna_id); fields.push(`coluna_id = $${values.length}`); }
+    values.push(now); fields.push(`updated_at = $${values.length}`);
+    const r = await this.pool.query(
+      `UPDATE rodape_links SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+    if (r.rows.length === 0) throw new Error('Link não encontrado');
+    return {
+      id: r.rows[0].id,
+      colunaId: r.rows[0].coluna_id,
+      texto: r.rows[0].texto,
+      link: r.rows[0].link,
+      ehLink: r.rows[0].eh_link,
+      ordem: r.rows[0].ordem,
+    };
+  }
+
+  async deletarRodapeLink(id) {
+    const r = await this.pool.query(
+      `DELETE FROM rodape_links WHERE id = $1 RETURNING *`, [id]
+    );
+    if (r.rows.length === 0) throw new Error('Link não encontrado');
+    return r.rows[0];
+  }
+
+  async atualizarOrdemLinks(linkIds) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < linkIds.length; i++) {
+      await this.pool.query(
+        `UPDATE rodape_links SET ordem = $1, updated_at = $2 WHERE id = $3`,
+        [i, now, linkIds[i]]
+      );
+    }
+  }
+
+  // ============================================================
+  // LEGAL / LGPD — Termos de Uso, Política de Privacidade,
+  //                Cookies e Consentimentos
+  // ============================================================
+
+  /** Inicializa tabelas e dados padrão para módulo legal */
+  async _ensureLegalDefaults() {
+    try {
+      // Tabela: termos_uso
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS termos_uso (
+          id SERIAL PRIMARY KEY,
+          conteudo TEXT NOT NULL DEFAULT '',
+          versao INTEGER DEFAULT 1,
+          updated_by VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Tabela: politica_privacidade
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS politica_privacidade (
+          id SERIAL PRIMARY KEY,
+          conteudo TEXT NOT NULL DEFAULT '',
+          versao INTEGER DEFAULT 1,
+          updated_by VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Tabela: cookie_banner_config
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS cookie_banner_config (
+          id SERIAL PRIMARY KEY,
+          titulo VARCHAR(255) NOT NULL DEFAULT 'Política de Cookies',
+          texto TEXT NOT NULL DEFAULT '',
+          texto_botao_aceitar VARCHAR(100) DEFAULT 'Aceitar Todos',
+          texto_botao_rejeitar VARCHAR(100) DEFAULT 'Rejeitar Todos',
+          texto_botao_personalizar VARCHAR(100) DEFAULT 'Personalizar',
+          texto_descricao_gerenciamento TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Tabela: cookie_categorias
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS cookie_categorias (
+          id SERIAL PRIMARY KEY,
+          chave VARCHAR(100) UNIQUE NOT NULL,
+          nome VARCHAR(255) NOT NULL,
+          descricao TEXT NOT NULL,
+          ativo BOOLEAN DEFAULT TRUE,
+          obrigatorio BOOLEAN DEFAULT FALSE,
+          ordem INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Tabela: cookie_consentimentos
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS cookie_consentimentos (
+          id SERIAL PRIMARY KEY,
+          user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+          preferencias JSONB NOT NULL,
+          versao_termos INTEGER DEFAULT 1,
+          versao_politica INTEGER DEFAULT 1,
+          ip_address VARCHAR(45),
+          user_agent TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id)
+        )
+      `);
+      await this.pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_consentimentos_user ON cookie_consentimentos(user_id)
+      `);
+
+      // Coluna permissoes_legais na tabela users
+      await this.pool.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS permissoes_legais JSONB DEFAULT '{}'
+      `);
+
+      // Dados padrão: cookie_banner_config
+      const bannerRes = await this.pool.query('SELECT COUNT(*) FROM cookie_banner_config');
+      if (parseInt(bannerRes.rows[0].count, 10) === 0) {
+        await this.pool.query(`
+          INSERT INTO cookie_banner_config
+            (titulo, texto, texto_botao_aceitar, texto_botao_rejeitar, texto_botao_personalizar, texto_descricao_gerenciamento)
+          VALUES ($1, $2, $3, $4, $5, $6)
+        `, [
+          'Política de Cookies e Privacidade',
+          'Utilizamos cookies para melhorar sua experiência, analisar o uso do sistema e garantir segurança. Ao continuar, você concorda com nossa Política de Privacidade e Termos de Uso, em conformidade com a LGPD (Lei 13.709/2018).',
+          'Aceitar Todos',
+          'Rejeitar Todos',
+          'Personalizar',
+          'Escolha quais tipos de cookies que deseja aceitar. Os cookies necessários são sempre ativados, pois são essenciais para o funcionamento seguro do sistema.',
+        ]);
+      }
+
+      // Dados padrão: cookie_categorias
+      const categDefaults = [
+        { chave: 'necessary', nome: 'Cookies Necessários', descricao: 'Essenciais para o funcionamento e segurança do sistema. Não podem ser desativados.', ativo: true, obrigatorio: true, ordem: 1 },
+        { chave: 'analytics', nome: 'Cookies de Análise', descricao: 'Nos ajudam a entender como o sistema é utilizado, coletando informações de forma anônima para melhorar a experiência.', ativo: true, obrigatorio: false, ordem: 2 },
+        { chave: 'preferences', nome: 'Cookies de Preferências', descricao: 'Permitem que o sistema lembre suas configurações, como tema (claro/escuro) e preferências de exibição.', ativo: true, obrigatorio: false, ordem: 3 },
+      ];
+      for (const cat of categDefaults) {
+        await this.pool.query(`
+          INSERT INTO cookie_categorias (chave, nome, descricao, ativo, obrigatorio, ordem)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (chave) DO NOTHING
+        `, [cat.chave, cat.nome, cat.descricao, cat.ativo, cat.obrigatorio, cat.ordem]);
+      }
+
+      // Dados padrão: termos_uso
+      const termosRes = await this.pool.query('SELECT COUNT(*) FROM termos_uso');
+      if (parseInt(termosRes.rows[0].count, 10) === 0) {
+        const termosConteudo = `<h1>Termos de Uso</h1>
+<p>Última atualização: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+<p>Bem-vindo ao <strong>Alya</strong>. Ao acessar ou utilizar este sistema, você concorda com os presentes Termos de Uso. Leia-os atentamente antes de prosseguir.</p>
+
+<h2>1. Aceitação dos Termos</h2>
+<p>O uso do sistema Alya implica na aceitação integral e irrestrita destes Termos de Uso. Caso não concorde com qualquer disposição, você não deve utilizar o sistema. O acesso é concedido exclusivamente mediante autorização prévia do administrador responsável.</p>
+
+<h2>2. Descrição do Sistema</h2>
+<p>O <strong>Alya</strong> é um sistema de gestão financeira e operacional desenvolvido para apoiar a administração de negócios. As funcionalidades disponíveis incluem:</p>
+<ul>
+<li><strong>Financeiro:</strong> controle de receitas, despesas, fluxo de caixa e DRE (Demonstração do Resultado do Exercício);</li>
+<li><strong>Produtos e Estoque:</strong> cadastro, gestão de preços, custos e margens;</li>
+<li><strong>Clientes:</strong> cadastro e relacionamento com clientes;</li>
+<li><strong>Projeções:</strong> modelagem de cenários financeiros e metas;</li>
+<li><strong>Relatórios:</strong> geração de documentos financeiros em PDF e Excel;</li>
+<li><strong>Integração Nuvemshop:</strong> sincronização de pedidos, produtos e clientes com a plataforma de e-commerce;</li>
+<li><strong>Administração:</strong> gestão de usuários, permissões, segurança e auditoria.</li>
+</ul>
+<p>As funcionalidades disponíveis para cada usuário dependem das permissões atribuídas pelo administrador do sistema.</p>
+
+<h2>3. Cadastro, Acesso e Segurança da Conta</h2>
+<p>O acesso ao sistema é realizado exclusivamente por convite do administrador. Ao receber acesso, o usuário deve:</p>
+<ul>
+<li>Alterar a senha temporária no primeiro acesso;</li>
+<li>Utilizar uma senha segura com no mínimo 10 caracteres;</li>
+<li>Manter suas credenciais em sigilo, não compartilhando com terceiros;</li>
+<li>Comunicar imediatamente ao administrador qualquer suspeita de acesso não autorizado;</li>
+<li>Encerrar a sessão ao término do uso, especialmente em dispositivos compartilhados.</li>
+</ul>
+<p>O sistema monitora sessões ativas por dispositivo, com registro de IP e geolocalização para fins de segurança. O administrador pode encerrar sessões remotamente em caso de comprometimento.</p>
+
+<h2>4. Responsabilidades do Usuário</h2>
+<p>O usuário é responsável por:</p>
+<ul>
+<li>Utilizar o sistema exclusivamente para fins legítimos relacionados às atividades do negócio;</li>
+<li>Inserir informações verdadeiras, precisas e atualizadas;</li>
+<li>Respeitar a confidencialidade dos dados financeiros e de clientes acessados pelo sistema;</li>
+<li>Não realizar operações que possam comprometer a integridade, disponibilidade ou segurança do sistema;</li>
+<li>Reportar qualquer falha, vulnerabilidade ou comportamento anômalo ao administrador;</li>
+<li>Cumprir a legislação vigente, em especial a LGPD (Lei 13.709/2018), no tratamento de dados pessoais acessados pelo sistema.</li>
+</ul>
+
+<h2>5. Usos Expressamente Proibidos</h2>
+<p>É vedado ao usuário:</p>
+<ul>
+<li>Tentar acessar áreas, dados ou funcionalidades não autorizadas pelo perfil de acesso atribuído;</li>
+<li>Realizar engenharia reversa, descompilar ou modificar qualquer componente do sistema;</li>
+<li>Utilizar o sistema para fins ilícitos, fraudes ou atividades que violem direitos de terceiros;</li>
+<li>Inserir dados maliciosos, scripts, vírus ou qualquer código que comprometa a segurança do sistema;</li>
+<li>Exportar, copiar ou transferir dados do sistema para fins alheios à atividade do negócio;</li>
+<li>Compartilhar credenciais de acesso com pessoas não autorizadas;</li>
+<li>Realizar testes de carga, varreduras ou ataques de qualquer natureza contra a infraestrutura do sistema.</li>
+</ul>
+<p>A tentativa de violação de segurança é registrada no log de auditoria e pode resultar no bloqueio imediato da conta e responsabilização legal.</p>
+
+<h2>6. Dados Pessoais e Privacidade</h2>
+<p>O tratamento de dados pessoais no sistema Alya é regido pela <strong>Política de Privacidade</strong>, disponível neste mesmo sistema, em conformidade com a LGPD (Lei 13.709/2018). Os dados pessoais de clientes inseridos no sistema são de responsabilidade do usuário que os inseriu e da organização controladora dos dados.</p>
+<p>O administrador do sistema é responsável por garantir que apenas pessoas autorizadas tenham acesso a dados sensíveis, como CPF, dados financeiros e informações de contato de clientes.</p>
+
+<h2>7. Auditoria e Monitoramento</h2>
+<p>O sistema registra automaticamente todas as ações realizadas pelos usuários em um log de auditoria, incluindo:</p>
+<ul>
+<li>Criação, edição e exclusão de registros;</li>
+<li>Tentativas de acesso (com sucesso ou falha);</li>
+<li>Alterações de permissões e configurações;</li>
+<li>Exportações e importações de dados.</li>
+</ul>
+<p>Esses registros são mantidos por até <strong>2 (dois) anos</strong> e podem ser utilizados para fins de segurança, auditoria interna e cumprimento de obrigações legais.</p>
+
+<h2>8. Integrações com Terceiros</h2>
+<p>O sistema pode se integrar a plataformas externas, como a <strong>Nuvemshop</strong> (e-commerce) e o <strong>SendGrid</strong> (envio de e-mails). O uso dessas integrações está sujeito às políticas e termos de serviço de cada plataforma. O usuário é responsável por garantir que a utilização das integrações esteja em conformidade com a legislação aplicável.</p>
+
+<h2>9. Propriedade Intelectual</h2>
+<p>O sistema Alya, incluindo seu código-fonte, design, logotipas, estrutura, funcionalidades e documentação, é de propriedade exclusiva de seus desenvolvedor(es). É vedada qualquer reprodução, distribuição ou uso comercial sem autorização expressa e por escrito.</p>
+<p>Os dados inseridos pelos usuários permanecem de propriedade da organização que utiliza o sistema. O desenvolvedor do Alya não reivindica propriedade sobre os dados operacionais e financeiros inseridos.</p>
+
+<h2>10. Disponibilidade e Limitação de Responsabilidade</h2>
+<p>O sistema é disponibilizado no estado em que se encontra. Não são garantidas disponibilidade ininterrupta, ausência de erros ou adequação para finalidades específicas além das documentadas. Em nenhuma hipótese o desenvolvedor será responsável por danos indiretos, perda de dados decorrente de uso indevido, ou decisões financeiras tomadas com base nas informações do sistema.</p>
+<p>É responsabilidade do administrador manter backups regulares dos dados e garantir que o ambiente de acesso ao sistema seja seguro.</p>
+
+<h2>11. Suspensão e Encerramento de Acesso</h2>
+<p>O administrador pode suspender ou encerrar o acesso de qualquer usuário a qualquer momento, especialmente em caso de:</p>
+<ul>
+<li>Violação destes Termos de Uso;</li>
+<li>Suspeita de comprometimento de credenciais;</li>
+<li>Encerramento do vínculo com a organização;</li>
+<li>Solicitação do próprio usuário.</li>
+</ul>
+<p>Após o encerramento do acesso, os dados inseridos pelo usuário permanecem no sistema sob responsabilidade da organização.</p>
+
+<h2>12. Alterações nestes Termos</h2>
+<p>Estes Termos de Uso podem ser atualizados a qualquer momento pelo administrador do sistema. As alterações entram em vigor imediatamente após a publicação da nova versão. O uso continuado do sistema após a publicação de alterações implica na aceitação dos novos termos.</p>
+
+<h2>13. Lei Aplicável e Foro</h2>
+<p>Estes Termos de Uso são regidos pela legislação brasileira, em especial o Código Civil (Lei 10.406/2002), o Marco Civil da Internet (Lei 12.965/2014) e a LGPD (Lei 13.709/2018). Fica eleito o foro da comarca da sede da organização para dirimir quaisquer controvérsias.</p>
+
+<h2>14. Contato</h2>
+<p>Dúvidas sobre estes Termos de Uso devem ser encaminhadas ao administrador do sistema ou ao responsável pela proteção de dados (DPO) da organização.</p>`;
+
+        await this.pool.query(
+          `INSERT INTO termos_uso (conteudo, versao, created_at, updated_at) VALUES ($1, 1, NOW(), NOW())`,
+          [termosConteudo]
+        );
+      }
+
+      // Dados padrão: politica_privacidade
+      const politicaRes = await this.pool.query('SELECT COUNT(*) FROM politica_privacidade');
+      if (parseInt(politicaRes.rows[0].count, 10) === 0) {
+        const politicaConteudo = `<h1>Política de Privacidade</h1>
+<p>Última atualização: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+<p>Esta Política de Privacidade descreve como o sistema <strong>Alya</strong> coleta, utiliza, armazena e protege os dados pessoais de seus usuários e dos dados de clientes inseridos no sistema, em conformidade com a <strong>Lei Geral de Proteção de Dados Pessoais — LGPD (Lei 13.709/2018)</strong>.</p>
+
+<h2>1. Identificação do Controlador de Dados</h2>
+<p>O <strong>controlador dos dados</strong> é a organização ou pessoa jurídica que contrata e opera o sistema Alya para fins de gestão financeira e operacional. O sistema Alya é a ferramenta tecnológica utilizada pelo controlador para o tratamento dos dados.</p>
+<p>Para identificar o controlador responsável pelos seus dados, entre em contato com o administrador do sistema da organização à qual você está vinculado.</p>
+
+<h2>2. Dados Pessoais Tratados</h2>
+<p>O sistema Alya trata as seguintes categorias de dados pessoais:</p>
+
+<h3>2.1. Dados de Usuários do Sistema</h3>
+<ul>
+<li><strong>Dados de identificação:</strong> nome de usuário (login), nome completo, e-mail, telefone, CPF, data de nascimento, gênero e cargo;</li>
+<li><strong>Dados de acesso:</strong> senha (armazenada exclusivamente em formato de hash irreversível bcrypt), tokens de sessão e tokens de recuperação de senha;</li>
+<li><strong>Dados de perfil:</strong> fotografia de perfil (opcional) e endereço completo (opcional);</li>
+<li><strong>Dados de uso e segurança:</strong> endereço IP, User-Agent do navegador, geolocalização da sessão (país e cidade), dispositivo, sistema operacional e horários de acesso.</li>
+</ul>
+
+<h3>2.2. Dados de Clientes Cadastrados no Sistema</h3>
+<ul>
+<li>Nome completo, e-mail, telefone, endereço, CPF e CNPJ (quando aplicável);</li>
+<li>Esses dados são inseridos pelos usuários do sistema no exercício das atividades de gestão de relacionamento com clientes.</li>
+</ul>
+
+<h3>2.3. Dados Financeiros e Operacionais</h3>
+<ul>
+<li>Transações financeiras (receitas e despesas), produtos, estoque, metas, projeções e demonstrativos de resultado;</li>
+<li>Dados de pedidos, produtos e clientes sincronizados com a plataforma Nuvemshop (quando a integração estiver ativa).</li>
+</ul>
+
+<h3>2.4. Dados de Consentimento e Auditoria</h3>
+<ul>
+<li>Preferências de cookies, versão dos documentos legais aceitos, endereço IP e User-Agent no momento do consentimento;</li>
+<li>Registros de auditoria de todas as ações realizadas no sistema (criações, edições, exclusões, acessos).</li>
+</ul>
+
+<h2>3. Finalidade e Base Legal do Tratamento</h2>
+<p>Os dados pessoais são tratados com as seguintes finalidades e bases legais previstas no Art. 7º da LGPD:</p>
+<ul>
+<li><strong>Autenticação e segurança de acesso</strong> — base legal: legítimo interesse e execução de contrato (Art. 7º, V);</li>
+<li><strong>Gestão financeira e operacional do negócio</strong> — base legal: execução de contrato (Art. 7º, V);</li>
+<li><strong>Gestão de relacionamento com clientes (CRM)</strong> — base legal: legítimo interesse do controlador (Art. 7º, IX);</li>
+<li><strong>Envio de e-mails transacionais</strong> (recuperação de senha, convites, alertas de segurança) — base legal: legítimo interesse (Art. 7º, IX);</li>
+<li><strong>Monitoramento de segurança e detecção de anomalias</strong> — base legal: legítimo interesse para prevenção de fraudes (Art. 7º, IX);</li>
+<li><strong>Registro de auditoria</strong> para fins de conformidade legal e segurança — base legal: cumprimento de obrigação legal (Art. 7º, II) e legítimo interesse (Art. 7º, IX);</li>
+<li><strong>Cumprimento da LGPD</strong> e demais obrigações regulatórias — base legal: cumprimento de obrigação legal (Art. 7º, II).</li>
+</ul>
+<p>O sistema <strong>não realiza</strong> tratamento de dados pessoais para fins de publicidade, perfilamento comportamental ou venda de dados a terceiros.</p>
+
+<h2>4. Proteção e Segurança dos Dados</h2>
+<p>O sistema Alya implementa medidas técnicas e organizacionais robustas para proteger os dados pessoais tratados:</p>
+
+<h3>4.1. Criptografia e Proteção em Repouso</h3>
+<ul>
+<li><strong>AES-256-GCM:</strong> dados sensíveis de clientes (CPF, e-mail, telefone, endereço) são armazenados com criptografia simétrica de 256 bits com autenticação de integridade;</li>
+<li><strong>Bcrypt (cost factor 10):</strong> senhas dos usuários são armazenadas exclusivamente como hash irreversível — o sistema nunca armazena ou transmite senhas em texto claro;</li>
+<li><strong>Hashing SHA-256:</strong> campos utilizados em buscas (como CPF) possuem hash separado para permitir pesquisa sem expor o dado original;</li>
+<li><strong>Mascaramento:</strong> dados sensíveis são exibidos parcialmente na interface (ex.: CPF exibe apenas os 2 últimos dígitos).</li>
+</ul>
+
+<h3>4.2. Segurança no Transporte</h3>
+<ul>
+<li><strong>HTTPS com HSTS:</strong> toda comunicação entre o navegador e o servidor é criptografada via TLS;</li>
+<li><strong>Tokens JWT de curta duração:</strong> tokens de acesso expiram em 15 minutos; tokens de atualização expiram em 7 dias com rotação automática;</li>
+<li><strong>Headers de segurança (Helmet.js):</strong> Content Security Policy (CSP), X-Frame-Options, X-Content-Type-Options e Referrer-Policy são aplicados em todas as respostas.</li>
+</ul>
+
+<h3>4.3. Controle de Acesso</h3>
+<ul>
+<li><strong>RBAC (Role-Based Access Control):</strong> três níveis de acesso (usuário, administrador, superadministrador) com permissões granulares por módulo;</li>
+<li><strong>Rate limiting:</strong> limite de requisições por IP para prevenir ataques de força bruta e enumeração;</li>
+<li><strong>Bloqueio automático:</strong> contas são bloqueadas após tentativas excessivas de login;</li>
+<li><strong>Gerenciamento de sessões:</strong> usuários podem visualizar e encerrar sessões ativas em qualquer dispositivo.</li>
+</ul>
+
+<h3>4.4. Monitoramento e Detecção de Ameaças</h3>
+<ul>
+<li><strong>Detecção de anomalias:</strong> análise estatística em tempo real identifica comportamentos anômalos (volume incomum, horários suspeitos, múltiplos países);</li>
+<li><strong>Alertas de segurança:</strong> notificações automáticas por e-mail em caso de múltiplas tentativas de login falhas, acesso de novo país, detecção de injeção SQL ou XSS;</li>
+<li><strong>Log de auditoria completo:</strong> todas as operações são registradas com usuário, IP, User-Agent e detalhes da ação, retidos por 2 anos;</li>
+<li><strong>Validação e sanitização de entradas:</strong> todos os dados recebidos pelo servidor são validados e sanitizados antes do processamento.</li>
+</ul>
+
+<h2>5. Compartilhamento de Dados com Terceiros</h2>
+<p>O sistema Alya pode compartilhar dados pessoais com os seguintes terceiros, exclusivamente para as finalidades descritas:</p>
+<ul>
+<li><strong>SendGrid (Twilio):</strong> provedor de envio de e-mails transacionais. Recebe endereços de e-mail e conteúdo das mensagens para envio de notificações de segurança, recuperação de senha e convites. Política de privacidade: <a href="https://www.twilio.com/en-us/legal/privacy">twilio.com/legal/privacy</a>;</li>
+<li><strong>Nuvemshop:</strong> plataforma de e-commerce. Quando a integração estiver ativa, dados de pedidos, produtos e clientes são sincronizados bidirecionalmente. Política de privacidade: <a href="https://www.nuvemshop.com.br/politica-de-privacidade">nuvemshop.com.br/politica-de-privacidade</a>;</li>
+<li><strong>BrasilAPI / ViaCEP:</strong> APIs públicas utilizadas exclusivamente para autopreenchimento de endereço a partir do CEP. Nenhum dado pessoal é enviado a essas APIs.</li>
+</ul>
+<p>O sistema <strong>não vende, cede ou compartilha</strong> dados pessoais com terceiros para fins comerciais, publicitários ou de qualquer natureza diversa das descritas acima.</p>
+
+<h2>6. Cookies e Tecnologias de Rastreamento</h2>
+<p>O sistema utiliza cookies e armazenamento local (localStorage) para as seguintes finalidades:</p>
+<ul>
+<li><strong>Cookies Necessários (obrigatórios):</strong> tokens de autenticação (JWT) e identificadores de sessão, essenciais para o funcionamento seguro do sistema. Não podem ser desativados;</li>
+<li><strong>Cookies de Preferências (opcionais):</strong> configurações de interface, como tema claro/escuro, que melhoram a experiência de uso;</li>
+<li><strong>Cookies de Análise (opcionais):</strong> informações anônimas de uso para melhoria do sistema.</li>
+</ul>
+<p>O consentimento para cookies não obrigatórios é coletado antes do login, podendo ser alterado a qualquer momento. O registro de consentimento inclui data, versão dos documentos aceitos, IP e User-Agent, em conformidade com o Art. 7º, I da LGPD.</p>
+
+<h2>7. Retenção dos Dados</h2>
+<ul>
+<li><strong>Dados de usuários ativos:</strong> mantidos enquanto a conta estiver ativa;</li>
+<li><strong>Dados de usuários inativos/removidos:</strong> excluídos ou anonimizados em até 90 dias após a desativação da conta, salvo obrigação legal de retenção;</li>
+<li><strong>Logs de auditoria e segurança:</strong> retidos por até <strong>2 (dois) anos</strong> para fins de segurança e conformidade legal;</li>
+<li><strong>Tokens de recuperação de senha e convites:</strong> excluídos automaticamente após utilização ou expiração;</li>
+<li><strong>Registros de consentimento:</strong> mantidos pelo período necessário para demonstrar conformidade com a LGPD.</li>
+</ul>
+
+<h2>8. Direitos do Titular dos Dados (LGPD, Art. 18)</h2>
+<p>Na condição de titular de dados pessoais, você possui os seguintes direitos garantidos pela LGPD:</p>
+<ul>
+<li><strong>Confirmação e acesso:</strong> saber se seus dados são tratados e obter cópia dos dados pessoais mantidos no sistema;</li>
+<li><strong>Correção:</strong> solicitar a atualização de dados incompletos, inexatos ou desatualizados;</li>
+<li><strong>Anonimização, bloqueio ou eliminação:</strong> solicitar a anonimização ou eliminação de dados desnecessários ou tratados em desconformidade com a LGPD;</li>
+<li><strong>Portabilidade:</strong> solicitar a transferência dos seus dados a outro controlador, em formato interoperável;</li>
+<li><strong>Eliminação dos dados:</strong> solicitar a exclusão dos dados tratados com base no consentimento, salvo hipóteses legais de retenção;</li>
+<li><strong>Revogação do consentimento:</strong> revogar o consentimento para o tratamento de dados, sem prejuízo à legalidade dos tratamentos realizados anteriormente;</li>
+<li><strong>Oposição:</strong> opor-se a tratamentos realizados com base em legítimo interesse, quando houver fundamento;</li>
+<li><strong>Informação sobre compartilhamento:</strong> obter informações sobre os terceiros com os quais seus dados foram compartilhados.</li>
+</ul>
+<p>Para exercer seus direitos, entre em contato com o administrador do sistema ou com o Encarregado de Dados (DPO) da organização.</p>
+
+<h2>9. Transferência Internacional de Dados</h2>
+<p>Alguns serviços utilizados pelo sistema possuem infraestrutura fora do Brasil:</p>
+<ul>
+<li><strong>SendGrid (Twilio):</strong> infraestrutura nos Estados Unidos, com proteções contratuais adequadas (Standard Contractual Clauses — SCCs);</li>
+<li><strong>Nuvemshop:</strong> empresa com operações na América Latina, sujeita a legislações de proteção de dados compatíveis com a LGPD.</li>
+</ul>
+<p>As transferências são realizadas com as salvaguardas previstas nos Arts. 33 a 36 da LGPD.</p>
+
+<h2>10. Encarregado de Proteção de Dados (DPO)</h2>
+<p>A organização controladora dos dados deve nomear um Encarregado de Proteção de Dados (DPO), conforme previsto no Art. 41 da LGPD. Para consultas, solicitações de direitos ou notificações relacionadas a dados pessoais tratados neste sistema, entre em contato com o administrador responsável pela organização.</p>
+<p>A Autoridade Nacional de Proteção de Dados (ANPD) pode ser contatada pelo site: <a href="https://www.gov.br/anpd">gov.br/anpd</a>.</p>
+
+<h2>11. Incidentes de Segurança</h2>
+<p>Em caso de incidente de segurança que possa acarretar risco ou dano relevante aos titulares de dados, o controlador comunicará o fato à ANPD e aos titulares afetados em prazo razoável, conforme exigido pelo Art. 48 da LGPD, com as informações sobre a natureza dos dados afetados, os titulares envolvidos, as medidas técnicas adotadas e os riscos relacionados ao incidente.</p>
+
+<h2>12. Alterações nesta Política</h2>
+<p>Esta Política de Privacidade pode ser atualizada periodicamente para refletir alterações nas práticas de tratamento de dados ou na legislação vigente. Toda atualização é versionada e registrada no sistema. Recomendamos a leitura periódica deste documento. O uso continuado do sistema após a publicação de uma nova versão implica na aceitação das alterações.</p>
+
+<h2>13. Contato</h2>
+<p>Para exercer seus direitos como titular de dados, esclarecer dúvidas sobre esta Política ou reportar incidentes de segurança, entre em contato com o administrador do sistema. As solicitações serão respondidas em até <strong>15 (quinze) dias úteis</strong>, conforme prazo estabelecido pela ANPD.</p>`;
+
+        await this.pool.query(
+          `INSERT INTO politica_privacidade (conteudo, versao, created_at, updated_at) VALUES ($1, 1, NOW(), NOW())`,
+          [politicaConteudo]
+        );
+      }
+
+      console.log('✅ Módulo Legal (LGPD) inicializado no PostgreSQL.');
+    } catch (err) {
+      console.error('Erro ao inicializar módulo legal:', err.message);
+    }
+  }
+
+  // --- Termos de Uso ---
+
+  async obterTermosUso() {
+    const r = await this.pool.query(
+      `SELECT conteudo, versao, updated_at FROM termos_uso ORDER BY id DESC LIMIT 1`
+    );
+    if (r.rows.length === 0) return { conteudo: '', versao: 1, updatedAt: null };
+    return toCamelCase(r.rows[0]);
+  }
+
+  async obterTermosUsoAdmin() {
+    const r = await this.pool.query(
+      `SELECT t.id, t.conteudo, t.versao, t.created_at, t.updated_at,
+              u.username AS updated_by_username
+       FROM termos_uso t
+       LEFT JOIN users u ON u.id = t.updated_by
+       ORDER BY t.id DESC LIMIT 1`
+    );
+    if (r.rows.length === 0) return { conteudo: '', versao: 1, updatedAt: null, updatedByUsername: null };
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarTermosUso(conteudo, userId) {
+    const now = new Date().toISOString();
+    const existing = await this.pool.query('SELECT id, versao FROM termos_uso ORDER BY id DESC LIMIT 1');
+    if (existing.rows.length === 0) {
+      await this.pool.query(
+        `INSERT INTO termos_uso (conteudo, versao, updated_by, created_at, updated_at)
+         VALUES ($1, 1, $2, $3, $3)`,
+        [conteudo, userId, now]
+      );
+      return { versao: 1 };
+    }
+    const novaVersao = existing.rows[0].versao + 1;
+    await this.pool.query(
+      `UPDATE termos_uso SET conteudo = $1, versao = $2, updated_by = $3, updated_at = $4
+       WHERE id = $5`,
+      [conteudo, novaVersao, userId, now, existing.rows[0].id]
+    );
+    return { versao: novaVersao };
+  }
+
+  // --- Política de Privacidade ---
+
+  async obterPoliticaPrivacidade() {
+    const r = await this.pool.query(
+      `SELECT conteudo, versao, updated_at FROM politica_privacidade ORDER BY id DESC LIMIT 1`
+    );
+    if (r.rows.length === 0) return { conteudo: '', versao: 1, updatedAt: null };
+    return toCamelCase(r.rows[0]);
+  }
+
+  async obterPoliticaPrivacidadeAdmin() {
+    const r = await this.pool.query(
+      `SELECT p.id, p.conteudo, p.versao, p.created_at, p.updated_at,
+              u.username AS updated_by_username
+       FROM politica_privacidade p
+       LEFT JOIN users u ON u.id = p.updated_by
+       ORDER BY p.id DESC LIMIT 1`
+    );
+    if (r.rows.length === 0) return { conteudo: '', versao: 1, updatedAt: null, updatedByUsername: null };
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarPoliticaPrivacidade(conteudo, userId) {
+    const now = new Date().toISOString();
+    const existing = await this.pool.query('SELECT id, versao FROM politica_privacidade ORDER BY id DESC LIMIT 1');
+    if (existing.rows.length === 0) {
+      await this.pool.query(
+        `INSERT INTO politica_privacidade (conteudo, versao, updated_by, created_at, updated_at)
+         VALUES ($1, 1, $2, $3, $3)`,
+        [conteudo, userId, now]
+      );
+      return { versao: 1 };
+    }
+    const novaVersao = existing.rows[0].versao + 1;
+    await this.pool.query(
+      `UPDATE politica_privacidade SET conteudo = $1, versao = $2, updated_by = $3, updated_at = $4
+       WHERE id = $5`,
+      [conteudo, novaVersao, userId, now, existing.rows[0].id]
+    );
+    return { versao: novaVersao };
+  }
+
+  // --- Cookie Banner Config ---
+
+  async obterCookieBannerConfig() {
+    const r = await this.pool.query(
+      `SELECT * FROM cookie_banner_config ORDER BY id DESC LIMIT 1`
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarCookieBannerConfig({ titulo, texto, texto_botao_aceitar, texto_botao_rejeitar, texto_botao_personalizar, texto_descricao_gerenciamento }) {
+    const now = new Date().toISOString();
+    const existing = await this.pool.query('SELECT id FROM cookie_banner_config ORDER BY id DESC LIMIT 1');
+    if (existing.rows.length === 0) {
+      const r = await this.pool.query(
+        `INSERT INTO cookie_banner_config
+           (titulo, texto, texto_botao_aceitar, texto_botao_rejeitar, texto_botao_personalizar, texto_descricao_gerenciamento, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [titulo, texto, texto_botao_aceitar, texto_botao_rejeitar, texto_botao_personalizar, texto_descricao_gerenciamento, now]
+      );
+      return toCamelCase(r.rows[0]);
+    }
+    const r = await this.pool.query(
+      `UPDATE cookie_banner_config SET
+         titulo = $1, texto = $2, texto_botao_aceitar = $3, texto_botao_rejeitar = $4,
+         texto_botao_personalizar = $5, texto_descricao_gerenciamento = $6, updated_at = $7
+       WHERE id = $8 RETURNING *`,
+      [titulo, texto, texto_botao_aceitar, texto_botao_rejeitar, texto_botao_personalizar, texto_descricao_gerenciamento, now, existing.rows[0].id]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  // --- Cookie Categorias ---
+
+  async obterCookieCategorias(apenasAtivas = false) {
+    const where = apenasAtivas ? 'WHERE ativo = true' : '';
+    const r = await this.pool.query(
+      `SELECT * FROM cookie_categorias ${where} ORDER BY ordem ASC, id ASC`
+    );
+    return r.rows.map(row => toCamelCase(row));
+  }
+
+  async criarCookieCategoria({ chave, nome, descricao, ativo = true, obrigatorio = false, ordem = 0 }) {
+    const now = new Date().toISOString();
+    const r = await this.pool.query(
+      `INSERT INTO cookie_categorias (chave, nome, descricao, ativo, obrigatorio, ordem, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7) RETURNING *`,
+      [chave, nome, descricao, ativo, obrigatorio, ordem, now]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async atualizarCookieCategoria(id, { nome, descricao, ativo, obrigatorio, ordem }) {
+    const now = new Date().toISOString();
+    const fields = [];
+    const values = [id];
+    if (nome !== undefined) { values.push(nome); fields.push(`nome = $${values.length}`); }
+    if (descricao !== undefined) { values.push(descricao); fields.push(`descricao = $${values.length}`); }
+    if (ativo !== undefined) { values.push(ativo); fields.push(`ativo = $${values.length}`); }
+    if (obrigatorio !== undefined) { values.push(obrigatorio); fields.push(`obrigatorio = $${values.length}`); }
+    if (ordem !== undefined) { values.push(ordem); fields.push(`ordem = $${values.length}`); }
+    values.push(now); fields.push(`updated_at = $${values.length}`);
+    if (fields.length === 1) throw new Error('Nenhum campo para atualizar');
+    const r = await this.pool.query(
+      `UPDATE cookie_categorias SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+    if (r.rows.length === 0) throw new Error('Categoria não encontrada');
+    return toCamelCase(r.rows[0]);
+  }
+
+  async deletarCookieCategoria(id) {
+    // Não permite deletar categorias obrigatórias
+    const check = await this.pool.query(
+      'SELECT id, obrigatorio FROM cookie_categorias WHERE id = $1', [id]
+    );
+    if (check.rows.length === 0) return null;
+    if (check.rows[0].obrigatorio) return null; // sinaliza que não pode deletar
+    const r = await this.pool.query(
+      'DELETE FROM cookie_categorias WHERE id = $1 RETURNING *', [id]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  // --- Consentimentos LGPD ---
+
+  async obterConsentimentoUsuario(userId) {
+    const r = await this.pool.query(
+      `SELECT * FROM cookie_consentimentos WHERE user_id = $1`, [userId]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async salvarConsentimentoUsuario(userId, preferencias, versaoTermos, versaoPolitica, ipAddress, userAgent) {
+    const now = new Date().toISOString();
+    const r = await this.pool.query(
+      `INSERT INTO cookie_consentimentos
+         (user_id, preferencias, versao_termos, versao_politica, ip_address, user_agent, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+       ON CONFLICT (user_id) DO UPDATE SET
+         preferencias = EXCLUDED.preferencias,
+         versao_termos = EXCLUDED.versao_termos,
+         versao_politica = EXCLUDED.versao_politica,
+         ip_address = EXCLUDED.ip_address,
+         user_agent = EXCLUDED.user_agent,
+         updated_at = EXCLUDED.updated_at
+       RETURNING *`,
+      [userId, JSON.stringify(preferencias), versaoTermos || 1, versaoPolitica || 1, ipAddress, userAgent ? userAgent.substring(0, 500) : null, now]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  // --- Permissões Legais ---
+
+  async obterPermissoesLegais(userId) {
+    const r = await this.pool.query(
+      `SELECT permissoes_legais FROM users WHERE id = $1`, [userId]
+    );
+    if (r.rows.length === 0) return null;
+    return r.rows[0].permissoes_legais || {};
+  }
+
+  async atualizarPermissoesLegais(userId, permissoes) {
+    const now = new Date().toISOString();
+    const r = await this.pool.query(
+      `UPDATE users SET permissoes_legais = $1, updated_at = $2 WHERE id = $3 RETURNING id, username, permissoes_legais`,
+      [JSON.stringify(permissoes), now, userId]
+    );
+    if (r.rows.length === 0) throw new Error('Usuário não encontrado');
+    return toCamelCase(r.rows[0]);
+  }
+
+  // ========== RODAPÉ — BOTTOM LINKS ==========
+
+  async obterRodapeBottomLinksAdmin() {
+    const r = await this.pool.query(
+      `SELECT * FROM rodape_bottom_links ORDER BY ordem ASC, created_at ASC`
+    );
+    return r.rows.map(row => ({
+      id: row.id, texto: row.texto, link: row.link, ativo: row.ativo, ordem: row.ordem,
+    }));
+  }
+
+  async criarRodapeBottomLink({ texto, link, ativo }) {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+    const ordemRes = await this.pool.query(
+      `SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM rodape_bottom_links`
+    );
+    const ordem = ordemRes.rows[0].prox;
+    const r = await this.pool.query(
+      `INSERT INTO rodape_bottom_links (id, texto, link, ativo, ordem, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING *`,
+      [id, texto, link || '', ativo !== false, ordem, now]
+    );
+    const row = r.rows[0];
+    return { id: row.id, texto: row.texto, link: row.link, ativo: row.ativo, ordem: row.ordem };
+  }
+
+  async atualizarRodapeBottomLink(id, { texto, link, ativo }) {
+    const now = new Date().toISOString();
+    const fields = [];
+    const values = [id];
+    if (texto !== undefined) { values.push(texto); fields.push(`texto = $${values.length}`); }
+    if (link  !== undefined) { values.push(link);  fields.push(`link = $${values.length}`); }
+    if (ativo !== undefined) { values.push(ativo); fields.push(`ativo = $${values.length}`); }
+    values.push(now); fields.push(`updated_at = $${values.length}`);
+    const r = await this.pool.query(
+      `UPDATE rodape_bottom_links SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+    if (r.rows.length === 0) throw new Error('Link não encontrado');
+    const row = r.rows[0];
+    return { id: row.id, texto: row.texto, link: row.link, ativo: row.ativo, ordem: row.ordem };
+  }
+
+  async deletarRodapeBottomLink(id) {
+    const r = await this.pool.query(
+      `DELETE FROM rodape_bottom_links WHERE id = $1 RETURNING *`, [id]
+    );
+    if (r.rows.length === 0) throw new Error('Link não encontrado');
+    return r.rows[0];
+  }
+
+  async atualizarOrdemBottomLinks(linkIds) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < linkIds.length; i++) {
+      await this.pool.query(
+        `UPDATE rodape_bottom_links SET ordem = $1, updated_at = $2 WHERE id = $3`,
+        [i, now, linkIds[i]]
       );
     }
   }

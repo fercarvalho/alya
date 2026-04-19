@@ -41,7 +41,14 @@ const {
   validatePasswordRecovery,
   validatePasswordReset,
   sanitizeBody,
+  validateLegalContent,
+  validateCookieBannerConfig,
+  validateCookieCategoria,
+  validateConsentimento,
+  validatePermissoesLegais,
 } = require("./middleware/validation");
+
+const sanitizeHtml = require("sanitize-html");
 
 const { logAudit, AUDIT_OPERATIONS, AUDIT_STATUS } = require("./utils/audit");
 
@@ -711,6 +718,23 @@ const requireSuperAdmin = (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware de permissão legal granular (LGPD).
+ * Permite acesso ao superadmin OU a admins com permissão específica configurada.
+ * @param {'termos_uso'|'politica_privacidade'|'cookies'} tipo
+ */
+const requireLegalPermission = (tipo) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Não autenticado." });
+  }
+  const { role, permissoes_legais } = req.user;
+  if (role === "superadmin") return next();
+  if (role === "admin" && permissoes_legais && permissoes_legais[tipo] === true) return next();
+  return res.status(403).json({
+    error: "Acesso negado. Você não possui permissão para esta operação legal.",
+  });
+};
+
 // 🔒 FASE 3: Função de geração de senha melhorada
 // Agora usa generateSecurePassword() que garante requisitos de complexidade
 const generateRandomPassword = () => {
@@ -923,7 +947,12 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 
     // 🔒 FASE 3: Access token de curta duração (15 minutos)
     const accessToken = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        permissoes_legais: user.permissoesLegais || {},
+      },
       JWT_SECRET,
       { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN },
     );
@@ -1066,6 +1095,7 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
         lastLogin: safeUser.lastLogin,
+        permissoesLegais: safeUser.permissoesLegais || {},
       },
     };
 
@@ -1196,12 +1226,19 @@ app.post("/api/auth/refresh", authLimiter, async (req, res) => {
         .json({ error: "Refresh token inválido ou expirado" });
     }
 
-    // Gerar novo access token
+    // Gerar novo access token — buscar permissões atuais do usuário no banco
+    let permissoesLegaisRefresh = {};
+    try {
+      const userRefresh = await db.getUserById(tokenData.userId);
+      permissoesLegaisRefresh = userRefresh?.permissoesLegais || {};
+    } catch (_e) { /* não bloqueia o refresh se falhar */ }
+
     const newAccessToken = jwt.sign(
       {
         id: tokenData.userId,
         username: tokenData.username,
         role: tokenData.role,
+        permissoes_legais: permissoesLegaisRefresh,
       },
       JWT_SECRET,
       { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN },
@@ -1893,6 +1930,7 @@ app.post("/api/auth/verify", authenticateToken, async (req, res) => {
         modules: safeUser.modules || [],
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
         lastLogin: safeUser.lastLogin,
+        permissoesLegais: safeUser.permissoesLegais || {},
       },
     });
   } catch (error) {
@@ -4828,6 +4866,220 @@ app.delete('/api/admin/faq/:id', authenticateToken, requireAdmin, async (req, re
 // Rotas da integração Nuvemshop (autenticadas)
 app.use("/api/nuvemshop", createNuvemshopRouter(db, authenticateToken));
 
+// ─── RODAPÉ ───────────────────────────────────────────────────────────────────
+
+// GET /api/rodape — público (sem autenticação)
+app.get('/api/rodape', async (req, res) => {
+  try {
+    const data = await db.obterRodapeCompleto();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/admin/rodape — dados completos para o admin
+app.get('/api/admin/rodape', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const data = await db.obterRodapeCompleto();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/rodape/config/:chave — atualizar configuração
+app.put('/api/admin/rodape/config/:chave', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { valor } = req.body;
+    if (valor === undefined) {
+      return res.status(400).json({ success: false, error: 'Campo valor é obrigatório' });
+    }
+    const item = await db.atualizarRodapeConfig(req.params.chave, valor);
+    await logActivity(req.user, 'update', 'RodapeConfig', req.params.chave, { valor });
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/rodape/colunas/ordem — reordenar colunas (ANTES de /:id)
+app.put('/api/admin/rodape/colunas/ordem', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { colunaIds } = req.body;
+    if (!Array.isArray(colunaIds)) {
+      return res.status(400).json({ success: false, error: 'colunaIds deve ser um array' });
+    }
+    await db.atualizarOrdemColunas(colunaIds);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/rodape/colunas — criar nova coluna
+app.post('/api/admin/rodape/colunas', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { titulo } = req.body;
+    if (!titulo || !titulo.trim()) {
+      return res.status(400).json({ success: false, error: 'Título é obrigatório' });
+    }
+    const coluna = await db.criarRodapeColuna(titulo.trim());
+    await logActivity(req.user, 'create', 'RodapeColuna', coluna.id, { titulo: coluna.titulo });
+    res.status(201).json({ success: true, data: coluna });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/rodape/colunas/:id — atualizar coluna
+app.put('/api/admin/rodape/colunas/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { titulo } = req.body;
+    if (!titulo || !titulo.trim()) {
+      return res.status(400).json({ success: false, error: 'Título é obrigatório' });
+    }
+    const coluna = await db.atualizarRodapeColuna(req.params.id, titulo.trim());
+    await logActivity(req.user, 'update', 'RodapeColuna', req.params.id, { titulo });
+    res.json({ success: true, data: coluna });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/admin/rodape/colunas/:id — deletar coluna (cascade links)
+app.delete('/api/admin/rodape/colunas/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const coluna = await db.deletarRodapeColuna(req.params.id);
+    await logActivity(req.user, 'delete', 'RodapeColuna', req.params.id, { titulo: coluna.titulo });
+    res.json({ success: true, data: coluna });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/rodape/links/ordem — reordenar links (ANTES de /:id)
+app.put('/api/admin/rodape/links/ordem', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { linkIds } = req.body;
+    if (!Array.isArray(linkIds)) {
+      return res.status(400).json({ success: false, error: 'linkIds deve ser um array' });
+    }
+    await db.atualizarOrdemLinks(linkIds);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/rodape/links — criar novo link
+app.post('/api/admin/rodape/links', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { coluna_id, texto, link, eh_link } = req.body;
+    if (!coluna_id || !texto || !texto.trim()) {
+      return res.status(400).json({ success: false, error: 'coluna_id e texto são obrigatórios' });
+    }
+    if (eh_link && (!link || !link.trim())) {
+      return res.status(400).json({ success: false, error: 'URL é obrigatória quando é um link' });
+    }
+    const item = await db.criarRodapeLink({ coluna_id, texto: texto.trim(), link: link || '', eh_link: !!eh_link });
+    await logActivity(req.user, 'create', 'RodapeLink', item.id, { texto: item.texto });
+    res.status(201).json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/rodape/links/:id — atualizar link
+app.put('/api/admin/rodape/links/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { texto, link, eh_link, coluna_id } = req.body;
+    if (eh_link && (!link || !link.trim())) {
+      return res.status(400).json({ success: false, error: 'URL é obrigatória quando é um link' });
+    }
+    const item = await db.atualizarRodapeLink(req.params.id, { texto, link, eh_link, coluna_id });
+    await logActivity(req.user, 'update', 'RodapeLink', req.params.id, { texto });
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/admin/rodape/links/:id — deletar link
+app.delete('/api/admin/rodape/links/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const item = await db.deletarRodapeLink(req.params.id);
+    await logActivity(req.user, 'delete', 'RodapeLink', req.params.id, { texto: item.texto });
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── RODAPÉ — BOTTOM LINKS ────────────────────────────────────────────────────
+
+// GET /api/admin/rodape/bottom-links — listar (admin)
+app.get('/api/admin/rodape/bottom-links', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const data = await db.obterRodapeBottomLinksAdmin();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/rodape/bottom-links/ordem — reordenar (ANTES de /:id)
+app.put('/api/admin/rodape/bottom-links/ordem', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { linkIds } = req.body;
+    if (!Array.isArray(linkIds)) {
+      return res.status(400).json({ success: false, error: 'linkIds deve ser um array' });
+    }
+    await db.atualizarOrdemBottomLinks(linkIds);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/rodape/bottom-links — criar
+app.post('/api/admin/rodape/bottom-links', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { texto, link, ativo } = req.body;
+    if (!texto || !texto.trim()) {
+      return res.status(400).json({ success: false, error: 'Texto é obrigatório' });
+    }
+    const item = await db.criarRodapeBottomLink({ texto: texto.trim(), link: link || '', ativo: ativo !== false });
+    await logActivity(req.user, 'create', 'RodapeBottomLink', item.id, { texto: item.texto });
+    res.status(201).json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/admin/rodape/bottom-links/:id — atualizar
+app.put('/api/admin/rodape/bottom-links/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { texto, link, ativo } = req.body;
+    const item = await db.atualizarRodapeBottomLink(req.params.id, { texto, link, ativo });
+    await logActivity(req.user, 'update', 'RodapeBottomLink', req.params.id, { texto });
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/admin/rodape/bottom-links/:id — deletar
+app.delete('/api/admin/rodape/bottom-links/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const item = await db.deletarRodapeBottomLink(req.params.id);
+    await logActivity(req.user, 'delete', 'RodapeBottomLink', req.params.id, { texto: item.texto });
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================================
 // DOCUMENTAÇÃO
 // ============================================================
@@ -5141,6 +5393,359 @@ app.post('/api/admin/feedbacks/:id/aceitar', authenticateToken, requireSuperAdmi
   } catch (error) {
     console.error('Erro ao aceitar feedback:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================
+// LEGAL / LGPD — Termos de Uso, Política de Privacidade,
+//                Cookies e Consentimentos
+// ============================================================
+
+// Configuração do sanitize-html para conteúdo HTML do editor TipTap
+const legalSanitizeConfig = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+    'h1', 'h2', 'h3', 'u', 's', 'mark',
+  ]),
+  allowedAttributes: { '*': ['class'] },
+  disallowedTagsMode: 'discard',
+};
+
+// --- Rotas Públicas (sem autenticação) ---
+
+// GET /api/termos-uso
+app.get('/api/termos-uso', generalLimiter, async (req, res) => {
+  try {
+    const data = await db.obterTermosUso();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter termos de uso:', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar termos de uso.' });
+  }
+});
+
+// GET /api/politica-privacidade
+app.get('/api/politica-privacidade', generalLimiter, async (req, res) => {
+  try {
+    const data = await db.obterPoliticaPrivacidade();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter política de privacidade:', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar política de privacidade.' });
+  }
+});
+
+// GET /api/cookie-banner-config
+app.get('/api/cookie-banner-config', generalLimiter, async (req, res) => {
+  try {
+    const data = await db.obterCookieBannerConfig();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter configuração do banner de cookies:', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar configuração de cookies.' });
+  }
+});
+
+// GET /api/cookie-categorias — apenas categorias ativas
+app.get('/api/cookie-categorias', generalLimiter, async (req, res) => {
+  try {
+    const data = await db.obterCookieCategorias(true);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter categorias de cookies:', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar categorias de cookies.' });
+  }
+});
+
+// --- Rotas Autenticadas (usuário logado) ---
+
+// POST /api/cookie-consentimento — salvar consentimento LGPD
+app.post('/api/cookie-consentimento', authenticateToken, createLimiter, validateConsentimento, async (req, res) => {
+  try {
+    const { preferencias, versao_termos, versao_politica } = req.body;
+    const userId = req.user.id;
+    const ipAddress = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    const data = await db.salvarConsentimentoUsuario(
+      userId, preferencias, versao_termos, versao_politica, ipAddress, userAgent
+    );
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_CONSENTIMENTO_UPDATE,
+      userId,
+      username: req.user.username,
+      ipAddress,
+      userAgent,
+      details: { preferencias, versao_termos, versao_politica },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao salvar consentimento:', error);
+    res.status(500).json({ success: false, error: 'Erro ao registrar consentimento.' });
+  }
+});
+
+// GET /api/cookie-consentimento — obter consentimento do usuário logado
+app.get('/api/cookie-consentimento', authenticateToken, async (req, res) => {
+  try {
+    const data = await db.obterConsentimentoUsuario(req.user.id);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter consentimento:', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar consentimento.' });
+  }
+});
+
+// --- Rotas Admin — Termos de Uso ---
+
+// GET /api/admin/termos-uso
+app.get('/api/admin/termos-uso', authenticateToken, requireLegalPermission('termos_uso'), async (req, res) => {
+  try {
+    const data = await db.obterTermosUsoAdmin();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter termos (admin):', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar termos de uso.' });
+  }
+});
+
+// PUT /api/admin/termos-uso
+app.put('/api/admin/termos-uso', authenticateToken, requireLegalPermission('termos_uso'), validateLegalContent, async (req, res) => {
+  try {
+    let { conteudo } = req.body;
+    // Sanitizar HTML do TipTap para prevenir XSS
+    conteudo = sanitizeHtml(conteudo, legalSanitizeConfig);
+
+    const result = await db.atualizarTermosUso(conteudo, req.user.id);
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_TERMOS_UPDATE,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { versao: result.versao, tamanho: conteudo.length },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Erro ao atualizar termos de uso:', error);
+    res.status(500).json({ success: false, error: 'Erro ao salvar termos de uso.' });
+  }
+});
+
+// --- Rotas Admin — Política de Privacidade ---
+
+// GET /api/admin/politica-privacidade
+app.get('/api/admin/politica-privacidade', authenticateToken, requireLegalPermission('politica_privacidade'), async (req, res) => {
+  try {
+    const data = await db.obterPoliticaPrivacidadeAdmin();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter política (admin):', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar política de privacidade.' });
+  }
+});
+
+// PUT /api/admin/politica-privacidade
+app.put('/api/admin/politica-privacidade', authenticateToken, requireLegalPermission('politica_privacidade'), validateLegalContent, async (req, res) => {
+  try {
+    let { conteudo } = req.body;
+    conteudo = sanitizeHtml(conteudo, legalSanitizeConfig);
+
+    const result = await db.atualizarPoliticaPrivacidade(conteudo, req.user.id);
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_POLITICA_UPDATE,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { versao: result.versao, tamanho: conteudo.length },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Erro ao atualizar política de privacidade:', error);
+    res.status(500).json({ success: false, error: 'Erro ao salvar política de privacidade.' });
+  }
+});
+
+// --- Rotas Admin — Cookie Banner Config ---
+
+// GET /api/admin/cookie-banner-config
+app.get('/api/admin/cookie-banner-config', authenticateToken, requireLegalPermission('cookies'), async (req, res) => {
+  try {
+    const data = await db.obterCookieBannerConfig();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter config do banner (admin):', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar configuração do banner.' });
+  }
+});
+
+// PUT /api/admin/cookie-banner-config
+app.put('/api/admin/cookie-banner-config', authenticateToken, requireLegalPermission('cookies'), validateCookieBannerConfig, async (req, res) => {
+  try {
+    const { titulo, texto, texto_botao_aceitar, texto_botao_rejeitar, texto_botao_personalizar, texto_descricao_gerenciamento } = req.body;
+    const data = await db.atualizarCookieBannerConfig({
+      titulo, texto, texto_botao_aceitar, texto_botao_rejeitar,
+      texto_botao_personalizar, texto_descricao_gerenciamento,
+    });
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_COOKIES_CONFIG_UPDATE,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { titulo },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao atualizar config do banner:', error);
+    res.status(500).json({ success: false, error: 'Erro ao salvar configuração do banner.' });
+  }
+});
+
+// --- Rotas Admin — Cookie Categorias ---
+
+// GET /api/admin/cookie-categorias — todas (incluindo inativas)
+app.get('/api/admin/cookie-categorias', authenticateToken, requireLegalPermission('cookies'), async (req, res) => {
+  try {
+    const data = await db.obterCookieCategorias(false);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Erro ao obter categorias (admin):', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar categorias de cookies.' });
+  }
+});
+
+// POST /api/admin/cookie-categorias
+app.post('/api/admin/cookie-categorias', authenticateToken, requireLegalPermission('cookies'), validateCookieCategoria, async (req, res) => {
+  try {
+    const { chave, nome, descricao, ativo, obrigatorio, ordem } = req.body;
+    const data = await db.criarCookieCategoria({ chave, nome, descricao, ativo, obrigatorio, ordem });
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_COOKIES_CATEGORIA_CREATE,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { chave, nome },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.status(201).json({ success: true, data });
+  } catch (error) {
+    if (error.code === '23505') { // unique_violation
+      return res.status(409).json({ success: false, error: 'Já existe uma categoria com essa chave.' });
+    }
+    console.error('Erro ao criar categoria:', error);
+    res.status(500).json({ success: false, error: 'Erro ao criar categoria de cookie.' });
+  }
+});
+
+// PUT /api/admin/cookie-categorias/:id
+app.put('/api/admin/cookie-categorias/:id', authenticateToken, requireLegalPermission('cookies'), async (req, res) => {
+  try {
+    const { nome, descricao, ativo, obrigatorio, ordem } = req.body;
+    const data = await db.atualizarCookieCategoria(req.params.id, { nome, descricao, ativo, obrigatorio, ordem });
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_COOKIES_CATEGORIA_UPDATE,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { id: req.params.id, nome },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    if (error.message === 'Categoria não encontrada') {
+      return res.status(404).json({ success: false, error: error.message });
+    }
+    console.error('Erro ao atualizar categoria:', error);
+    res.status(500).json({ success: false, error: 'Erro ao atualizar categoria de cookie.' });
+  }
+});
+
+// DELETE /api/admin/cookie-categorias/:id
+app.delete('/api/admin/cookie-categorias/:id', authenticateToken, requireLegalPermission('cookies'), async (req, res) => {
+  try {
+    const deleted = await db.deletarCookieCategoria(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        error: 'Categoria não encontrada ou não pode ser removida (obrigatória).',
+      });
+    }
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_COOKIES_CATEGORIA_DELETE,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { id: req.params.id },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, data: deleted });
+  } catch (error) {
+    console.error('Erro ao deletar categoria:', error);
+    res.status(500).json({ success: false, error: 'Erro ao deletar categoria de cookie.' });
+  }
+});
+
+// --- Rotas Superadmin — Permissões Legais Granulares ---
+
+// GET /api/admin/permissoes-legais/:userId
+app.get('/api/admin/permissoes-legais/:userId', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const permissoes = await db.obterPermissoesLegais(req.params.userId);
+    if (permissoes === null) {
+      return res.status(404).json({ success: false, error: 'Usuário não encontrado.' });
+    }
+    res.json({ success: true, data: permissoes });
+  } catch (error) {
+    console.error('Erro ao obter permissões legais:', error);
+    res.status(500).json({ success: false, error: 'Erro ao carregar permissões.' });
+  }
+});
+
+// PUT /api/admin/permissoes-legais/:userId
+app.put('/api/admin/permissoes-legais/:userId', authenticateToken, requireSuperAdmin, validatePermissoesLegais, async (req, res) => {
+  try {
+    const { permissoes } = req.body;
+    const data = await db.atualizarPermissoesLegais(req.params.userId, permissoes);
+
+    await logAudit({
+      operation: AUDIT_OPERATIONS.LEGAL_PERMISSAO_UPDATE,
+      userId: req.user.id,
+      username: req.user.username,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { targetUserId: req.params.userId, permissoes },
+      status: AUDIT_STATUS.SUCCESS,
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    if (error.message === 'Usuário não encontrado') {
+      return res.status(404).json({ success: false, error: error.message });
+    }
+    console.error('Erro ao atualizar permissões legais:', error);
+    res.status(500).json({ success: false, error: 'Erro ao salvar permissões.' });
   }
 });
 

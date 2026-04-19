@@ -1119,7 +1119,10 @@ const Roadmap = () => {
             const itensOrfaos = itens.filter(i => !statusKeys.has(i.status));
             const totalCols = colunas.length + (itensOrfaos.length > 0 ? 1 : 0);
             return (
-          <div className="grid gap-4 h-full" style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}>
+          <div
+            className="flex gap-4 h-full overflow-x-auto snap-x snap-mandatory pb-2 md:grid md:overflow-visible"
+            style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
+          >
             {colunas.map(coluna => {
               const cfg = dynamicStatusConfig[coluna.key] || { label: coluna.label, Icon: Tag, color: coluna.cor, bg: coluna.corFundo };
               const { Icon } = cfg;
@@ -1130,7 +1133,7 @@ const Roadmap = () => {
               return (
                 <div
                   key={coluna.key}
-                  className={`flex flex-col rounded-2xl border-2 transition-all min-h-0
+                  className={`flex flex-col rounded-2xl border-2 transition-all min-h-0 flex-shrink-0 w-[82vw] md:w-auto snap-start
                     ${isOver ? 'border-amber-400 bg-amber-50/80 shadow-lg shadow-amber-100 dark:bg-amber-900/20'
                       : isColDragOver ? 'border-gray-400 bg-gray-50/80 dark:bg-gray-700/80'
                       : isDark ? 'border-gray-700 bg-gray-800/60 shadow-sm' : 'border-gray-200/60 bg-white/60 shadow-sm'}`}
@@ -1233,7 +1236,7 @@ const Roadmap = () => {
             })}
             {/* Coluna catch-all para tarefas com status sem coluna correspondente */}
             {itensOrfaos.length > 0 && (
-              <div className={`flex flex-col rounded-2xl border-2 border-dashed shadow-sm min-h-0 ${isDark ? 'border-gray-600 bg-gray-800/60' : 'border-gray-300 bg-gray-50/60'}`}>
+              <div className={`flex flex-col rounded-2xl border-2 border-dashed shadow-sm min-h-0 flex-shrink-0 w-[82vw] md:w-auto snap-start ${isDark ? 'border-gray-600 bg-gray-800/60' : 'border-gray-300 bg-gray-50/60'}`}>
                 <div className={`flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b ${isDark ? 'border-gray-700 bg-gray-700/80' : 'border-gray-200 bg-gray-100/80'}`}>
                   <div className={`p-1.5 rounded-lg shadow-sm ${isDark ? 'bg-gray-600/70' : 'bg-white/70'}`}>
                     <Tag size={14} className="text-gray-500 dark:text-gray-400" />
