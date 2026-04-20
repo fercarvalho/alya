@@ -1022,7 +1022,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const tab = (e as CustomEvent<{ tab: string }>).detail?.tab;
-      if (tab) setActiveTab(tab as TabType);
+      if (tab) { setActiveTab(tab as TabType); window.scrollTo({ top: 0, behavior: "instant" }); }
     };
     window.addEventListener("alya:navigate", handler);
     return () => window.removeEventListener("alya:navigate", handler);
@@ -3104,7 +3104,7 @@ const AppContent: React.FC = () => {
 
             <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-800 border-t border-gray-100 dark:border-gray-700">
               <button
-                onClick={() => setActiveTab("transactions")}
+                onClick={() => { setActiveTab("transactions"); window.scrollTo({ top: 0, behavior: "instant" }); }}
                 className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-700 dark:to-indigo-800 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 dark:hover:from-blue-600 dark:hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 group"
               >
                 <DollarSign className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
@@ -7013,6 +7013,7 @@ const AppContent: React.FC = () => {
                         onClick={() => {
                           setActiveTab(m.key as TabType);
                           setExpandedCharts([]); // Limpa todos os gráficos ao trocar de aba
+                          window.scrollTo({ top: 0, behavior: "instant" });
                         }}
                         className={`flex items-center px-6 py-4 text-sm font-medium rounded-t-xl transition-all duration-300 whitespace-nowrap ${
                           activeTab === m.key
