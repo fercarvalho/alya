@@ -32,8 +32,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Separar React e React DOM
-          'react-vendor': ['react', 'react-dom'],
           // Separar bibliotecas de gráficos (Recharts é grande)
           'charts-vendor': ['recharts'],
           // Separar bibliotecas de PDF (jspdf e html2canvas são grandes)

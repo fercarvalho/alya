@@ -65,8 +65,7 @@ const SecurityAlerts = lazy(() => import("./pages/admin/SecurityAlerts"));
 const Roadmap = lazy(() => import("./components/Roadmap"));
 // Lazy load FAQ
 const FAQ = lazy(() => import("./components/FAQ"));
-// Lazy load Documentação
-const Documentation = lazy(() => import("./components/Documentation"));
+import Documentation from "./components/Documentation";
 import Footer from "./components/Footer";
 import CommitVersionModal from "./components/CommitVersionModal";
 import VersaoNovaModal from "./components/VersaoNovaModal";
@@ -7081,15 +7080,7 @@ const AppContent: React.FC = () => {
           </Suspense>
         )}
         {activeTab === "documentacao" && (
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center h-64">
-                <div className="text-gray-500">Carregando Documentação...</div>
-              </div>
-            }
-          >
-            <Documentation />
-          </Suspense>
+          <Documentation />
         )}
         {activeTab === "admin" && (
           <Suspense
