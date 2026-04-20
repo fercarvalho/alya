@@ -8444,15 +8444,15 @@ const AppContent: React.FC = () => {
                     <BankBtn id="infinitypay" label="InfinityPay"    bg="#00C853"  domain="infinitepay.io"     initials="IP" />
                     <BankBtn id="sicoob"     label="Sicoob"          bg="#007A4B"  domain="sicoob.com.br"      initials="SC" disabledInFatura />
 
-                    {/* ── Em desenvolvimento (ordem alfabética) ── */}
-                    <DevBtn label="Banco Inter"  bg="#FF8700" domain="bancointer.com"   initials="IN" />
-                    <DevBtn label="Banco Safra"  bg="#1B3F7A" domain="safra.com.br"     initials="SF" />
-                    <DevBtn label="Bradesco"     bg="#CC092F" domain="bradesco.com.br"  initials="BD" />
-                    <DevBtn label="BTG Pactual"  bg="#003366" domain="btgpactual.com"   initials="BTG" />
+                    {/* ── Em desenvolvimento (ordem alfabética, ignorando "Banco") ── */}
+                    <DevBtn label="Bradesco"     bg="#CC092F" domain="bradesco.com.br"   initials="BD" />
+                    <DevBtn label="BTG Pactual"  bg="#003366" domain="btgpactual.com"    initials="BTG" />
+                    <DevBtn label="Banco Inter"  bg="#FF8700" domain="bancointer.com"    initials="IN" />
                     <DevBtn label="Mercado Pago" bg="#009EE3" domain="mercadopago.com.br" initials="MP" />
-                    <DevBtn label="Nubank"       bg="#9C44DC" domain="nubank.com.br"    initials="NU" />
-                    <DevBtn label="Santander"    bg="#EA1D25" domain="santander.com.br" initials="SN" />
-                    <DevBtn label="XP"           bg="#1A1A1A" domain="xpi.com.br"       initials="XP" />
+                    <DevBtn label="Nubank"       bg="#9C44DC" domain="nubank.com.br"     initials="NU" />
+                    <DevBtn label="Banco Safra"  bg="#1B3F7A" domain="safra.com.br"      initials="SF" />
+                    <DevBtn label="Santander"    bg="#EA1D25" domain="santander.com.br"  initials="SN" />
+                    <DevBtn label="XP"           bg="#1A1A1A" domain="xpi.com.br"        initials="XP" />
                   </div>
                 );
               })()}
