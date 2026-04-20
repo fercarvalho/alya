@@ -68,6 +68,8 @@ const FAQ = lazy(() => import("./components/FAQ"));
 // Lazy load Documentação
 const Documentation = lazy(() => import("./components/Documentation"));
 import Footer from "./components/Footer";
+import CommitVersionModal from "./components/CommitVersionModal";
+import VersaoNovaModal from "./components/VersaoNovaModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
 import { useModules } from "./hooks/useModules";
@@ -610,6 +612,20 @@ const AppContent: React.FC = () => {
   const [periodoRelatorio, setPeriodoRelatorio] = useState<"semana" | "mes" | "trimestre" | "ano">("mes");
   const [periodoOffset, setPeriodoOffset] = useState(0);
 
+  // Commit pendente (superadmin)
+  const [commitPendente, setCommitPendente] = useState<{
+    commitHash: string;
+    versaoAtual: string;
+    mensagem: string;
+    data: string;
+  } | null>(null);
+
+  // Notificação de nova versão (outros usuários)
+  const [versaoNova, setVersaoNova] = useState<{
+    versao: string;
+    texto: string;
+  } | null>(null);
+
   // ⚠️ TODOS OS useEffect DEVEM ESTAR AQUI, ANTES DOS RETURNS CONDICIONAIS
 
   // Carregar dados do banco de dados
@@ -642,6 +658,59 @@ const AppContent: React.FC = () => {
     loadData();
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user]);
+
+  // Verificar commit pendente quando superadmin faz login
+  useEffect(() => {
+    if (!token || !user || user.role !== 'superadmin') return;
+    let cancelled = false;
+
+    const checkCommit = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/rodape/commit-pendente`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (json.success && json.data?.pendente && !cancelled) {
+          setCommitPendente({
+            commitHash: json.data.commitHash,
+            versaoAtual: json.data.versaoAtual || '',
+            mensagem: json.data.mensagem || '',
+            data: json.data.data || '',
+          });
+        }
+      } catch {
+        // silently ignore — não crítico
+      }
+    };
+
+    checkCommit();
+    return () => { cancelled = true; };
+  }, [token, user]);
+
+  // Verificar notificação de nova versão (usuários não-superadmin)
+  useEffect(() => {
+    if (!token || !user || user.role === 'superadmin') return;
+    let cancelled = false;
+
+    const checkVersao = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/notificacao-versao`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (json.success && json.data?.notificar && !cancelled) {
+          setVersaoNova({ versao: json.data.versao, texto: json.data.texto });
+        }
+      } catch {
+        // silently ignore
+      }
+    };
+
+    checkVersao();
+    return () => { cancelled = true; };
   }, [token, user]);
 
   // Sincronizar consentimento de cookies com o banco (LGPD)
@@ -9255,6 +9324,59 @@ const AppContent: React.FC = () => {
 
       {/* Footer dinâmico */}
       <Footer />
+
+      {/* Modal de confirmação de commit pendente (somente superadmin) */}
+      {commitPendente && (
+        <CommitVersionModal
+          commitHash={commitPendente.commitHash}
+          versaoAtual={commitPendente.versaoAtual}
+          mensagemOriginal={commitPendente.mensagem}
+          data={commitPendente.data}
+          onClose={() => setCommitPendente(null)}
+          onConfirm={async ({ action, novaVersao, mensagem, data, rolesNotificados }) => {
+            const res = await fetch(`${API_BASE_URL}/api/admin/rodape/confirmar-commit`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                action,
+                novaVersao,
+                commitHash: commitPendente.commitHash,
+                mensagem,
+                data,
+                rolesNotificados,
+              }),
+            });
+            if (!res.ok) throw new Error('Falha na requisição');
+            setCommitPendente(null);
+            window.dispatchEvent(new Event('rodape-updated'));
+          }}
+        />
+      )}
+
+      {/* Modal de nova versão para usuários */}
+      {versaoNova && (
+        <VersaoNovaModal
+          versao={versaoNova.versao}
+          texto={versaoNova.texto}
+          onClose={async () => {
+            const versao = versaoNova.versao;
+            setVersaoNova(null);
+            try {
+              await fetch(`${API_BASE_URL}/api/notificacao-versao/vista`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ versao }),
+              });
+            } catch { /* silently ignore */ }
+          }}
+        />
+      )}
 
       {/* Toast de Desfazer Importação */}
       {showUndoToast && (

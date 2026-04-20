@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Mail, Globe, Map } from 'lucide-react';
+import { Phone, Mail, Globe, Map, X } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { API_BASE_URL } from '../config/api';
 import TermosUsoModal from './TermosUsoModal';
 import PoliticaPrivacidadeModal from './PoliticaPrivacidadeModal';
@@ -38,6 +39,7 @@ interface RodapeConfig {
   info_alinhamento: 'left' | 'center' | 'right';
   copyright: string;
   versao_sistema: string;
+  notas_versao: string;
 }
 
 const RODAPE_DEFAULTS: RodapeConfig = {
@@ -51,6 +53,7 @@ const RODAPE_DEFAULTS: RodapeConfig = {
   info_alinhamento: 'left',
   copyright: 'Viver de PJ. TODOS OS DIREITOS RESERVADOS',
   versao_sistema: '',
+  notas_versao: '',
 };
 
 // Renderiza texto com suporte a **negrito** e quebras de linha
@@ -122,6 +125,7 @@ const Footer: React.FC = () => {
   const [bottomLinks, setBottomLinks] = useState<BottomLink[]>([]);
   const [showTermos, setShowTermos] = useState(false);
   const [showPolitica, setShowPolitica] = useState(false);
+  const [showNotas, setShowNotas] = useState(false);
 
   // Intercepta cliques nos links especiais do rodapé inferior
   const handleBottomLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string) => {
@@ -148,6 +152,14 @@ const Footer: React.FC = () => {
     link.includes('privacy-policy') ||
     link.includes('termos-uso');
 
+  // Fechar modal de notas com Esc
+  useEffect(() => {
+    if (!showNotas) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowNotas(false); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [showNotas]);
+
   const carregarRodape = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/rodape`);
@@ -167,6 +179,7 @@ const Footer: React.FC = () => {
           info_alinhamento: (configuracoes.info_alinhamento as RodapeConfig['info_alinhamento']) || 'left',
           copyright: configuracoes.copyright || RODAPE_DEFAULTS.copyright,
           versao_sistema: configuracoes.versao_sistema || '',
+          notas_versao: configuracoes.notas_versao || '',
         });
       }
 
@@ -319,9 +332,18 @@ const Footer: React.FC = () => {
             {/* Versão — alinhada à direita */}
             <div className="flex-1 flex justify-end">
               {config.versao_sistema && (
-                <span className="text-amber-300/70 tabular-nums">
-                  v{config.versao_sistema}
-                </span>
+                config.notas_versao ? (
+                  <button
+                    onClick={() => setShowNotas(true)}
+                    className="text-amber-300/70 tabular-nums hover:text-amber-200 transition-colors cursor-pointer"
+                  >
+                    v{config.versao_sistema}
+                  </button>
+                ) : (
+                  <span className="text-amber-300/70 tabular-nums">
+                    v{config.versao_sistema}
+                  </span>
+                )
               )}
             </div>
           </div>
@@ -331,6 +353,42 @@ const Footer: React.FC = () => {
 
     <TermosUsoModal isOpen={showTermos} onClose={() => setShowTermos(false)} />
     <PoliticaPrivacidadeModal isOpen={showPolitica} onClose={() => setShowPolitica(false)} />
+
+    {/* Modal de Notas da Versão */}
+    {showNotas && (
+      <div
+        className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
+        onClick={() => setShowNotas(false)}
+      >
+        <div
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-2xl max-h-[68vh] flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">
+                Notas da Versão
+              </h3>
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                v{config.versao_sistema}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowNotas(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {/* Conteúdo */}
+          <div
+            className="overflow-y-auto flex-1 px-6 py-5 prose-legal text-sm text-gray-700 dark:text-gray-300 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(config.notas_versao) }}
+          />
+        </div>
+      </div>
+    )}
   </>
   );
 };

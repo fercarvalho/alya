@@ -5207,6 +5207,74 @@ app.delete('/api/admin/rodape/bottom-links/:id', authenticateToken, requireSuper
   }
 });
 
+// ─── RODAPÉ — COMMIT PENDENTE ─────────────────────────────────────────────────
+
+// GET /api/admin/rodape/commit-pendente — verifica se há commit novo a confirmar
+app.get('/api/admin/rodape/commit-pendente', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const data = await db.obterCommitPendente();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/admin/rodape/confirmar-commit — superadmin decide manter versão ou criar nova
+app.post('/api/admin/rodape/confirmar-commit', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { action, novaVersao, commitHash, mensagem, data } = req.body;
+    if (!action || !['manter', 'nova_versao'].includes(action)) {
+      return res.status(400).json({ success: false, error: 'action inválida' });
+    }
+    if (action === 'nova_versao' && !novaVersao?.trim()) {
+      return res.status(400).json({ success: false, error: 'novaVersao é obrigatória' });
+    }
+    if (!commitHash) {
+      return res.status(400).json({ success: false, error: 'commitHash é obrigatório' });
+    }
+    if (!mensagem?.trim()) {
+      return res.status(400).json({ success: false, error: 'mensagem é obrigatória' });
+    }
+    const rolesNotificados = Array.isArray(req.body.rolesNotificados) ? req.body.rolesNotificados : [];
+    const result = await db.confirmarCommit({
+      action,
+      novaVersao: novaVersao?.trim(),
+      commitHash,
+      mensagem: mensagem.trim(),
+      data: data || new Date().toLocaleDateString('pt-BR'),
+      rolesNotificados,
+    });
+    await logActivity(req.user, 'update', 'RodapeVersao', 'commit', { action, novaVersao, commitHash });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── NOTIFICAÇÃO DE NOVA VERSÃO (para usuários comuns) ───────────────────────
+
+// GET /api/notificacao-versao — verifica se há nova versão a notificar para o usuário logado
+app.get('/api/notificacao-versao', authenticateToken, async (req, res) => {
+  try {
+    const data = await db.obterNotificacaoVersao(req.user.id, req.user.role);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/notificacao-versao/vista — marca que o usuário já viu a notificação
+app.post('/api/notificacao-versao/vista', authenticateToken, async (req, res) => {
+  try {
+    const { versao } = req.body;
+    if (!versao) return res.status(400).json({ success: false, error: 'versao é obrigatória' });
+    await db.marcarVersaoVista(req.user.id, versao);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================================
 // DOCUMENTAÇÃO
 // ============================================================

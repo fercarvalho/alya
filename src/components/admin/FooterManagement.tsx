@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 import {
   Plus, Edit2, Trash2, Save, X, AlertTriangle, GripVertical,
   Layout, Link2, Link2Off, Building2, Copyright, ChevronDown, ChevronUp,
@@ -53,6 +55,7 @@ interface RodapeConfig {
   info_alinhamento: 'left' | 'center' | 'right';
   copyright: string;
   versao_sistema: string;
+  notas_versao: string;
 }
 
 interface BottomLink {
@@ -64,6 +67,68 @@ interface BottomLink {
 }
 
 type FooterTab = 'colunas' | 'empresa' | 'info' | 'inferior' | 'base' | 'versao';
+
+// ─── Editor Rich Text (TipTap) ────────────────────────────────────────────────
+
+const TipTapEditor: React.FC<{ content: string; onChange: (html: string) => void }> = ({ content, onChange }) => {
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content,
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      attributes: {
+        class: 'min-h-[280px] px-4 py-3 text-sm text-gray-800 dark:text-gray-200 focus:outline-none leading-relaxed',
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || '', { emitUpdate: false });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
+
+  if (!editor) return null;
+
+  const ToolBtn: React.FC<{ onClick: () => void; active?: boolean; title: string; children: React.ReactNode }> = ({ onClick, active, title, children }) => (
+    <button
+      type="button"
+      onMouseDown={e => { e.preventDefault(); onClick(); }}
+      title={title}
+      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+        active
+          ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
+          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+      }`}
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-900">
+      <div className="flex flex-wrap gap-1 px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+        <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Negrito"><strong>N</strong></ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Itálico"><em>I</em></ToolBtn>
+        <div className="w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Título 1">H1</ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Título 2">H2</ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Título 3">H3</ToolBtn>
+        <div className="w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+        <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Lista">• Lista</ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Lista numerada">1. Lista</ToolBtn>
+        <div className="w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+        <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citação">❝</ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} active={false} title="Divisor">─</ToolBtn>
+        <div className="w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+        <ToolBtn onClick={() => editor.chain().focus().undo().run()} active={false} title="Desfazer">↩</ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().redo().run()} active={false} title="Refazer">↪</ToolBtn>
+      </div>
+      <EditorContent editor={editor} />
+    </div>
+  );
+};
 
 // ─── Componente sortable de link ──────────────────────────────────────────────
 
@@ -312,6 +377,7 @@ const FooterManagement: React.FC = () => {
     info_alinhamento: 'left',
     copyright: '',
     versao_sistema: '',
+    notas_versao: '',
   });
   const [configOriginal, setConfigOriginal] = useState<RodapeConfig>(config);
 
@@ -381,6 +447,7 @@ const FooterManagement: React.FC = () => {
         info_alinhamento: (configuracoes?.info_alinhamento as RodapeConfig['info_alinhamento']) || 'left',
         copyright: configuracoes?.copyright || '',
         versao_sistema: configuracoes?.versao_sistema || '',
+        notas_versao: configuracoes?.notas_versao || '',
       };
       setConfig(cfg);
       setConfigOriginal(cfg);
@@ -1241,16 +1308,18 @@ const FooterManagement: React.FC = () => {
 
       {/* ─── ABA: VERSÃO ─────────────────────────────────────────── */}
       {activeTab === 'versao' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <div className="mb-4">
+        <div className="space-y-8">
+
+          {/* Número da versão */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Versão do Sistema
               </label>
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
                 Exibida no canto direito da barra inferior do rodapé. Ex: <span className="font-mono">2.0</span>, <span className="font-mono">3.1 Beta</span>, <span className="font-mono">2024.1</span>
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-4">
                 <span className="text-sm text-gray-400 font-mono">v</span>
                 <input
                   type="text"
@@ -1260,51 +1329,88 @@ const FooterManagement: React.FC = () => {
                   className="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-mono"
                 />
               </div>
+              <button
+                onClick={() => handleSalvarConfig('versao_sistema')}
+                disabled={config.versao_sistema === configOriginal.versao_sistema || isSavingConfig !== null}
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  config.versao_sistema !== configOriginal.versao_sistema && isSavingConfig === null
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white hover:from-amber-500 hover:to-orange-500 shadow-lg'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isSavingConfig === 'versao_sistema' ? (
+                  <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Salvando...</>
+                ) : (
+                  <><Save className="h-4 w-4" />Salvar Versão</>
+                )}
+              </button>
             </div>
-            <button
-              onClick={() => handleSalvarConfig('versao_sistema')}
-              disabled={config.versao_sistema === configOriginal.versao_sistema || isSavingConfig !== null}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
-                config.versao_sistema !== configOriginal.versao_sistema && isSavingConfig === null
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white hover:from-amber-500 hover:to-orange-500 shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isSavingConfig === 'versao_sistema' ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Salvar Versão
-                </>
-              )}
-            </button>
-          </div>
 
-          {/* Preview */}
-          <div>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Preview</p>
-            <div className="bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl p-5">
-              <div className="flex items-center text-xs text-amber-200">
-                <div className="flex-1" />
-                <div className="flex-1 flex justify-center gap-x-2 text-amber-200/60">
-                  <span>Política de Privacidade</span>
-                  <span className="text-amber-400">|</span>
-                  <span>Termos de Uso</span>
-                </div>
-                <div className="flex-1 flex justify-end">
-                  {config.versao_sistema ? (
-                    <span className="text-amber-300/70 font-mono">v{config.versao_sistema}</span>
-                  ) : (
-                    <span className="text-amber-200/30 italic">sem versão</span>
-                  )}
+            {/* Preview da barra */}
+            <div>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Preview da barra</p>
+              <div className="bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl p-5">
+                <div className="flex items-center text-xs text-amber-200">
+                  <div className="flex-1" />
+                  <div className="flex-1 flex justify-center gap-x-2 text-amber-200/60">
+                    <span>Política de Privacidade</span>
+                    <span className="text-amber-400">|</span>
+                    <span>Termos de Uso</span>
+                  </div>
+                  <div className="flex-1 flex justify-end">
+                    {config.versao_sistema ? (
+                      <span className="text-amber-300/70 font-mono underline decoration-dotted cursor-pointer">
+                        v{config.versao_sistema}
+                      </span>
+                    ) : (
+                      <span className="text-amber-200/30 italic">sem versão</span>
+                    )}
+                  </div>
                 </div>
               </div>
+              {config.versao_sistema && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                  {config.notas_versao
+                    ? '✓ Com notas — versão será clicável no rodapé'
+                    : '○ Sem notas — versão aparece como texto simples'}
+                </p>
+              )}
             </div>
           </div>
+
+          {/* Notas da versão */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Notas da Versão
+                </label>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  Quando preenchido, a versão no rodapé vira um link que abre um modal com este conteúdo.
+                </p>
+              </div>
+              <button
+                onClick={() => handleSalvarConfig('notas_versao')}
+                disabled={config.notas_versao === configOriginal.notas_versao || isSavingConfig !== null}
+                className={`flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  config.notas_versao !== configOriginal.notas_versao && isSavingConfig === null
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white hover:from-amber-500 hover:to-orange-500 shadow-lg'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isSavingConfig === 'notas_versao' ? (
+                  <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Salvando...</>
+                ) : (
+                  <><Save className="h-4 w-4" />Salvar Notas</>
+                )}
+              </button>
+            </div>
+            <TipTapEditor
+              content={config.notas_versao}
+              onChange={html => setConfig(prev => ({ ...prev, notas_versao: html }))}
+            />
+          </div>
+
         </div>
       )}
 

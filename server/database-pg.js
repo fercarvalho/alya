@@ -3116,6 +3116,172 @@ class Database extends FileDatabase {
       );
     }
   }
+
+  // ========== RODAPÉ — COMMIT PENDENTE ==========
+
+  /**
+   * Verifica se há um commit novo que ainda não foi confirmado pelo superadmin.
+   * Retorna { pendente: bool, commitHash, mensagem }
+   */
+  async obterCommitPendente() {
+    const r = await this.pool.query(
+      `SELECT chave, valor FROM rodape_configuracoes
+       WHERE chave IN ('ultimo_commit_inserido','ultimo_commit_confirmado','ultimo_commit_msg','ultimo_commit_data','versao_sistema')`
+    );
+    const obj = {};
+    for (const row of r.rows) obj[row.chave] = row.valor;
+
+    const inserido   = obj['ultimo_commit_inserido']  || null;
+    const confirmado = obj['ultimo_commit_confirmado'] || null;
+    const versao     = obj['versao_sistema'] || '';
+    const msg        = obj['ultimo_commit_msg']  || '';
+    const data       = obj['ultimo_commit_data'] || '';
+
+    const pendente = inserido && inserido !== confirmado;
+    return { pendente: !!pendente, commitHash: inserido, versaoAtual: versao, mensagem: msg, data };
+  }
+
+  /**
+   * Confirma o commit pendente.
+   * action:           'manter' | 'nova_versao'
+   * novaVersao:       string (somente quando action = 'nova_versao')
+   * mensagem:         texto editado pelo superadmin
+   * data:             data do commit (DD/MM/YYYY)
+   * commitHash:       hash do commit
+   * rolesNotificados: string[] (roles que receberão notificação)
+   */
+  async confirmarCommit({ action, novaVersao, mensagem, data, commitHash, rolesNotificados = [] }) {
+    const now = new Date().toISOString();
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Marca como confirmado
+      await client.query(
+        `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
+         VALUES ('ultimo_commit_confirmado', $1, $2)
+         ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
+        [commitHash, now]
+      );
+
+      // Monta o item HTML com o texto (possivelmente editado)
+      const novoItem = `<li><strong>${data}</strong> — ${mensagem}</li>`;
+
+      const notasRes = await client.query(
+        `SELECT valor FROM rodape_configuracoes WHERE chave = 'notas_versao'`
+      );
+      let notas = notasRes.rows.length > 0 ? (notasRes.rows[0].valor || '') : '';
+
+      if (action === 'nova_versao' && novaVersao) {
+        // Atualiza a versão do sistema
+        await client.query(
+          `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
+           VALUES ('versao_sistema', $1, $2)
+           ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
+          [novaVersao, now]
+        );
+
+        // Cria nova seção no topo das notas com o marcador e o novo item
+        const novaSecao = `<h2>Versão ${novaVersao}</h2>\n<h3>📋 Atualizações</h3>\n<ul>\n<!--COMMITS-->\n${novoItem}\n</ul>\n<hr>\n`;
+        if (notas.includes('<h2>')) {
+          notas = notas.replace('<h2>', novaSecao + '<h2>');
+        } else {
+          notas = novaSecao + notas;
+        }
+
+        // Configura notificação para os usuários dos roles selecionados
+        await client.query(
+          `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
+           VALUES ('versao_notificada', $1, $2)
+           ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
+          [novaVersao, now]
+        );
+        await client.query(
+          `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
+           VALUES ('versao_notificada_roles', $1, $2)
+           ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
+          [JSON.stringify(rolesNotificados), now]
+        );
+        await client.query(
+          `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
+           VALUES ('versao_notificada_texto', $1, $2)
+           ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
+          [mensagem, now]
+        );
+
+        // Remove visualizações anteriores dessa versão (em caso de re-lançamento)
+        await client.query(
+          `DELETE FROM versao_notificacoes_vistas WHERE versao = $1`,
+          [novaVersao]
+        ).catch(() => {}); // silencia se a tabela ainda não existir
+
+      } else {
+        // Mantém versão atual: insere o item logo após <!--COMMITS-->
+        if (notas.includes('<!--COMMITS-->')) {
+          notas = notas.replace('<!--COMMITS-->', `<!--COMMITS-->\n${novoItem}`);
+        } else {
+          notas = `<ul>\n<!--COMMITS-->\n${novoItem}\n</ul>\n` + notas;
+        }
+      }
+
+      await client.query(
+        `UPDATE rodape_configuracoes SET valor = $1, updated_at = $2 WHERE chave = 'notas_versao'`,
+        [notas, now]
+      );
+
+      await client.query('COMMIT');
+      return { ok: true };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Verifica se o usuário precisa ver a notificação de nova versão.
+   */
+  async obterNotificacaoVersao(userId, userRole) {
+    const r = await this.pool.query(
+      `SELECT chave, valor FROM rodape_configuracoes
+       WHERE chave IN ('versao_notificada', 'versao_notificada_roles', 'versao_notificada_texto')`
+    );
+    const obj = {};
+    for (const row of r.rows) obj[row.chave] = row.valor;
+
+    const versao = obj['versao_notificada'] || '';
+    if (!versao) return { notificar: false };
+
+    let roles = [];
+    try { roles = JSON.parse(obj['versao_notificada_roles'] || '[]'); } catch { roles = []; }
+    if (!roles.includes(userRole)) return { notificar: false };
+
+    // Verifica se o usuário já viu
+    const visto = await this.pool.query(
+      `SELECT 1 FROM versao_notificacoes_vistas WHERE user_id = $1 AND versao = $2`,
+      [userId, versao]
+    ).catch(() => ({ rows: [] }));
+
+    if (visto.rows.length > 0) return { notificar: false };
+
+    return {
+      notificar: true,
+      versao,
+      texto: obj['versao_notificada_texto'] || '',
+    };
+  }
+
+  /**
+   * Marca que o usuário já viu a notificação de nova versão.
+   */
+  async marcarVersaoVista(userId, versao) {
+    await this.pool.query(
+      `INSERT INTO versao_notificacoes_vistas (user_id, versao)
+       VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [userId, versao]
+    ).catch(() => {}); // silencia se a tabela ainda não existir
+  }
 }
 
 module.exports = Database;
