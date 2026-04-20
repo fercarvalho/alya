@@ -667,7 +667,7 @@ const AppContent: React.FC = () => {
 
     const checkCommit = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/admin/rodape/commit-pendente`, {
+        const res = await fetch(`${API_BASE_URL}/admin/rodape/commit-pendente`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok || cancelled) return;
@@ -696,7 +696,7 @@ const AppContent: React.FC = () => {
 
     const checkVersao = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/notificacao-versao`, {
+        const res = await fetch(`${API_BASE_URL}/notificacao-versao`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok || cancelled) return;
@@ -9334,7 +9334,7 @@ const AppContent: React.FC = () => {
           data={commitPendente.data}
           onClose={() => setCommitPendente(null)}
           onConfirm={async ({ action, novaVersao, mensagem, data, rolesNotificados }) => {
-            const res = await fetch(`${API_BASE_URL}/api/admin/rodape/confirmar-commit`, {
+            const res = await fetch(`${API_BASE_URL}/admin/rodape/confirmar-commit`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -9365,7 +9365,7 @@ const AppContent: React.FC = () => {
             const versao = versaoNova.versao;
             setVersaoNova(null);
             try {
-              await fetch(`${API_BASE_URL}/api/notificacao-versao/vista`, {
+              await fetch(`${API_BASE_URL}/notificacao-versao/vista`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
