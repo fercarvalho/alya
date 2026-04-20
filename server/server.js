@@ -4065,16 +4065,23 @@ app.post(
 
       const user = await db.saveUser(newUser);
 
-      // Criar convite de usuário (expira em 7 dias)
-      const invite = await db.createUserInvite(
-        user.id,
-        tempPasswordHash,
-        7,
-        req.user.id,
-      );
+      // Criar convite de usuário (expira em 7 dias) — falha não bloqueia criação
+      let invite = null;
+      let inviteWarning = null;
+      try {
+        invite = await db.createUserInvite(
+          user.id,
+          tempPasswordHash,
+          7,
+          req.user.id,
+        );
+      } catch (inviteError) {
+        console.error("Erro ao criar convite (usuário criado com sucesso):", inviteError);
+        inviteWarning = "Usuário criado com sucesso, mas não foi possível gerar o token de convite. SendGrid pode não estar configurado.";
+      }
 
-      // Enviar email com credenciais (se SendGrid configurado)
-      if (SENDGRID_API_KEY && user.email) {
+      // Enviar email com credenciais (se SendGrid configurado e convite gerado)
+      if (invite && SENDGRID_API_KEY && user.email && !user.email.endsWith('@temp.local')) {
         const inviteLink = `${process.env.FRONTEND_URL || "https://alya.sistemas.viverdepj.com.br"}/login?invite=${invite.inviteToken}`;
 
         const msg = {
@@ -4130,11 +4137,16 @@ app.post(
       res.json({
         success: true,
         data: safeUser,
-        invite: {
-          token: invite.inviteToken,
-          expiresAt: invite.expiresAt,
-          tempPassword: SENDGRID_API_KEY ? undefined : tempPassword, // Só retornar se não enviou email
-        },
+        warning: inviteWarning || undefined,
+        invite: invite
+          ? {
+              token: invite.inviteToken,
+              expiresAt: invite.expiresAt,
+              tempPassword: SENDGRID_API_KEY ? undefined : tempPassword,
+            }
+          : {
+              tempPassword, // Retornar senha sempre que não houver invite
+            },
       });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });

@@ -162,6 +162,10 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
         throw new Error(result.error || 'Erro ao criar usuário');
       }
 
+      if (result.warning) {
+        setError(`⚠️ ${result.warning}`);
+      }
+
       onSuccess(result);
       // Modal será fechado pelo handler que chama o UserCreatedModal
     } catch (err: any) {
@@ -212,8 +216,8 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
           <div className="space-y-6">
             {/* Erro */}
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{error}</p>
+              <div className={`p-4 border rounded-lg ${error.startsWith('⚠️') ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                <p className={`text-sm ${error.startsWith('⚠️') ? 'text-amber-800' : 'text-red-800'}`}>{error}</p>
               </div>
             )}
 
