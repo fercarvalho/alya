@@ -76,11 +76,11 @@ const CommitVersionModal: React.FC<Props> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-start justify-center pt-[120px] z-50 px-4 overflow-y-auto"
+      className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-start justify-center pt-[120px] z-50 px-4"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg my-4"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg my-4 max-h-[calc(100vh-140px)] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -107,7 +107,7 @@ const CommitVersionModal: React.FC<Props> = ({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-5">
+        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
 
           {/* ── Seção: versão ── */}
           <div className="space-y-2">
