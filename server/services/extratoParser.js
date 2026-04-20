@@ -62,17 +62,81 @@ function skipBB(line) {
   return BB_SKIP.some((re) => re.test(line.trim()));
 }
 
-// Formato real do extrato BB (pdftotext -layout):
-//   Linha de data:   "DD/MM/YYYY" no início (pode ter texto depois, ex: "Pix - Enviado")
-//   Linha de valor:  "   <lote>   <doc>   <descrição opcional>   <valor> (+/-)"
-//   Linha de descr:  linha indentada sem lote/doc logo após, quando desc estava vazia
-//
-// Valor usa (+) = crédito / (-) = débito
+// ── BB Formato 1 ─────────────────────────────────────────────────────────────
+// "Consultas - Extrato de conta corrente"
+// Colunas: Dt.balancete  Ag  Lote  Hist  Histórico  Documento  Valor D/C  [Saldo D/C]
+// Sinal: D = Débito (Despesa), C = Crédito (Receita)
+// Detectado por: presença de "Dt. balancete" ou "Dt. movimento" no cabeçalho
+
+const BB1_LINE_RE  = /^(\d{2}\/\d{2}\/\d{4})\s+\d+\s+\d+\s+\d+\s+(.+)\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s+([DC])(?:\s+\d{1,3}(?:\.\d{3})*,\d{2}\s+[DC])?\s*$/;
+const BB1_SKIP_RE  = /saldo\s+anterior|s\s*a\s*l\s*d\s*o|lançamentos|dt\.\s*balanc|dt\.\s*movim|a\s+conta\s+nao\s+foi|seguro\s+empresarial|observa[çc]|protecao|contrate|sac\s+0800|ouvidoria|transação\s+efetuada|serviço\s+de\s+atendimento|para\s+deficientes|^-{3,}|^\*{3}/i;
+
+function parseBBFormat1(text) {
+  const lines = text.split("\n");
+  const transactions = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trim = line.trim();
+
+    if (!trim || BB1_SKIP_RE.test(trim)) { i++; continue; }
+
+    const m = BB1_LINE_RE.exec(line);
+    if (!m) { i++; continue; }
+
+    const date  = parseDate(m[1]);
+    const side  = m[4];                  // 'D' ou 'C'
+    const value = parseMoney(m[3]);
+    const type  = side === "C" ? "Receita" : "Despesa";
+
+    // Remove número de documento do final da descrição (ex: " 890.691.200.298.465")
+    let desc = m[2].replace(/\s+\d{1,3}(?:\.\d{3})+\s*$/, "").trim();
+
+    if (BB1_SKIP_RE.test(desc) || /^saldo/i.test(desc)) { i++; continue; }
+
+    // Verifica linha de continuação (ex: "EMPRESARIAL ELO", "IMP GEOTECN")
+    const next = (lines[i + 1] || "").trim();
+    if (
+      next &&
+      !/^\d{2}\/\d{2}\/\d{4}/.test(next) &&
+      !BB1_LINE_RE.test(lines[i + 1] || "") &&
+      !BB1_SKIP_RE.test(next) &&
+      !/^-{3}/.test(next) &&
+      !/^\*/.test(next)
+    ) {
+      // Limpa prefixo de data de operação Pix (ex: "16/03 09:27 37965... IMP GEOTECN")
+      const cleanNext = next.replace(/^\d{2}\/\d{2}\s+\d{2}:\d{2}\s+\S+\s+/, "").trim();
+      if (cleanNext) desc = `${desc} — ${cleanNext}`;
+      i++;
+    }
+
+    if (date && value > 0) {
+      transactions.push({
+        date,
+        description: desc || "Sem descrição",
+        value,
+        type,
+        category: type,
+      });
+    }
+
+    i++;
+  }
+
+  return transactions;
+}
+
+// ── BB Formato 2 ─────────────────────────────────────────────────────────────
+// "Extrato de Conta Corrente" (app/internet banking)
+// Data em linha própria, depois "   Lote   Doc   Descrição   Valor (+/-)"
+// Detectado por: ausência de "Dt. balancete"
+
 const BB_VALUE_LINE_RE = /^\s+(\d+)\s+(\d+)\s+(.*?)\s{2,}(\d{1,3}(?:\.\d{3})*,\d{2})\s*\(([+-])\)\s*$/;
 const BB_DATE_LINE_RE  = /^(\d{2}\/\d{2}\/\d{4})/;
 const BB_SKIP_LINE_RE  = /saldo\s+(anterior|do\s+dia)|resumo\s+do\s+período/i;
 
-function parseBBLayout(text) {
+function parseBBFormat2(text) {
   const lines = text.split("\n");
   const transactions = [];
   let currentDate = null;
@@ -81,7 +145,7 @@ function parseBBLayout(text) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // ── Linha de data ──────────────────────────────────────────────
+    // Linha de data
     const dateMatch = BB_DATE_LINE_RE.exec(line);
     if (dateMatch) {
       const raw = dateMatch[1];
@@ -92,35 +156,24 @@ function parseBBLayout(text) {
 
     if (!currentDate) { i++; continue; }
 
-    // ── Linha de valor (lote + doc + descrição opcional + valor) ───
     const vm = BB_VALUE_LINE_RE.exec(line);
     if (!vm) { i++; continue; }
 
-    // Ignorar linhas de saldo
     if (BB_SKIP_LINE_RE.test(line)) { i++; continue; }
 
-    const rawValue = vm[4];
-    const sign     = vm[5];          // '+' crédito / '-' débito
-    const value    = parseMoney(rawValue);
-    const type     = sign === "+" ? "Receita" : "Despesa";
-    let   desc     = vm[3].trim();   // descrição inline (pode estar vazia)
+    const value = parseMoney(vm[4]);
+    const type  = vm[5] === "+" ? "Receita" : "Despesa";
+    let   desc  = vm[3].trim();
 
-    // Se a descrição inline estava vazia, busca na próxima linha
     if (!desc) {
       const next = lines[i + 1] || "";
       const nextTrim = next.trim();
-      if (
-        nextTrim &&
-        !BB_DATE_LINE_RE.test(next) &&
-        !BB_VALUE_LINE_RE.test(next) &&
-        !BB_SKIP_LINE_RE.test(nextTrim)
-      ) {
+      if (nextTrim && !BB_DATE_LINE_RE.test(next) && !BB_VALUE_LINE_RE.test(next) && !BB_SKIP_LINE_RE.test(nextTrim)) {
         desc = nextTrim;
-        i++; // consome a linha de descrição
+        i++;
       }
     }
 
-    // Limpa prefixos de data de operação na descrição (ex: "28/02 07:02 ")
     desc = desc.replace(/^\d{2}\/\d{2}\s+\d{2}:\d{2}\s+/, "").trim();
 
     if (value > 0 && currentDate) {
@@ -137,6 +190,16 @@ function parseBBLayout(text) {
   }
 
   return transactions;
+}
+
+// ── Dispatcher BB ─────────────────────────────────────────────────────────────
+// Detecta automaticamente o formato pelo cabeçalho do PDF
+
+function parseBBLayout(text) {
+  if (/Dt\.\s*balancete|Dt\.\s*movimento/i.test(text)) {
+    return parseBBFormat1(text);
+  }
+  return parseBBFormat2(text);
 }
 
 // ─── Sicoob ───────────────────────────────────────────────────────────────────
@@ -586,6 +649,140 @@ function parseFaturaC6PDF(text) {
   return transactions;
 }
 
+// ─── InfinityPay Extrato ──────────────────────────────────────────────────────
+//
+// Formato: "Relatório de movimentações" (CloudWalk / InfinityPay)
+// Colunas: Data  Hora  Tipo de transação  Nome  Detalhe  Valor (R$)
+// Data: "DD Mmm, YYYY" — só na 1ª linha de cada bloco de dia
+// Valor: "+929,67" ou "-42,49" — sinal define Receita/Despesa
+
+const IP_MONTHS_MAP = {
+  jan:"01", fev:"02", mar:"03", abr:"04", mai:"05", jun:"06",
+  jul:"07", ago:"08", set:"09", out:"10", nov:"11", dez:"12",
+};
+
+// Linha de data: "06 Jan, 2026" ou "23 Mar, 2026" no início da linha
+const IP_DATE_RE   = /^(\d{2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez),?\s+(\d{4})/i;
+// Hora dentro da linha
+const IP_TIME_RE   = /\b\d{2}:\d{2}\b/;
+// Valor no final da linha: [+-]NNNN,NN (sem espaço após sinal)
+const IP_VALUE_RE  = /([+-]\d{1,3}(?:\.\d{3})*,\d{2})\s*$/;
+// Linhas a ignorar
+const IP_SKIP_RE   = /saldo\s+do\s+dia|saldo\s+(inicial|final\s+do)|total\s+de\s+(entrada|saída|saida)|^data\s+hora|relatório|cloudwalk|central\s+de\s+ajuda|página\s+\d|r\$\s+\d/i;
+
+function parseIPDate(line) {
+  const m = IP_DATE_RE.exec(line.trim());
+  if (!m) return null;
+  const month = IP_MONTHS_MAP[m[2].toLowerCase()];
+  return `${m[3]}-${month}-${m[1].padStart(2, "0")}`;
+}
+
+function parseInfinityPayPDF(text) {
+  const lines = text.split("\n");
+  const transactions = [];
+  let currentDate = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line  = lines[i];
+    const trim  = line.trim();
+
+    if (!trim || IP_SKIP_RE.test(trim)) continue;
+
+    // ── Detecta data no início da linha ───────────────────────────
+    const dateAttempt = parseIPDate(trim);
+    if (dateAttempt) currentDate = dateAttempt;
+
+    if (!currentDate) continue;
+
+    // ── A linha deve ter horário e valor para ser transação ────────
+    if (!IP_TIME_RE.test(line)) continue;
+
+    const valueMatch = IP_VALUE_RE.exec(line);
+    if (!valueMatch) continue;
+
+    const rawValue = valueMatch[1];           // ex: "+929,67"
+    const sign     = rawValue[0];             // '+' ou '-'
+    const value    = parseMoney(rawValue.slice(1));
+    if (value === 0) continue;
+
+    const type = sign === "+" ? "Receita" : "Despesa";
+
+    // ── Extrai descrição ───────────────────────────────────────────
+    // Remove data (se houver), hora, valor do final → sobra: "Tipo   Nome   Detalhe"
+    let work = line
+      .replace(IP_VALUE_RE, "")
+      .replace(/^\s*\d{2}\s+(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez),?\s+\d{4}\s*/i, "")
+      .replace(/^\s*\d{2}:\d{2}\s+/, "")
+      .trim();
+
+    // Divide em colunas separadas por 2+ espaços
+    const cols = work.split(/\s{2,}/).map(c => c.trim()).filter(Boolean);
+    // cols[0] = Tipo de transação, cols[1] = Nome, cols[2+] = Detalhe
+
+    let desc = "";
+    if (cols.length >= 2) {
+      const tipo = cols[0].toLowerCase();
+      const nome = cols[1];
+
+      if (tipo === "pix") {
+        // Remove prefixo "Pix " e possível número de conta logo após
+        desc = nome
+          .replace(/^Pix\s+/i, "")
+          .replace(/^\d{1,3}(?:\.\d{3})*\s+/, "") // remove código ex: "22.486.736 "
+          .trim();
+      } else if (/depósito de vendas|deposito de vendas/i.test(tipo)) {
+        desc = "Depósito InfinityPay";
+      } else if (/empréstimo inteligente|emprestimo inteligente/i.test(tipo)) {
+        desc = "Empréstimo InfinityPay";
+      } else if (/iof/i.test(tipo)) {
+        desc = "IOF Empréstimo InfinityPay";
+      } else if (/cancelamento/i.test(tipo)) {
+        desc = "Cancelamento de venda InfinityPay";
+      } else if (/transação|transacao/i.test(tipo)) {
+        desc = nome; // ex: "Reembolso"
+      } else {
+        desc = nome || cols[0];
+      }
+    } else if (cols.length === 1) {
+      desc = cols[0];
+    }
+
+    // Caso a descrição esteja vazia, verifica se a próxima linha é
+    // continuação do nome (multi-linha, ex: "BEBIDAS LTDA" separado)
+    if (!desc) {
+      const next = (lines[i + 1] || "").trim();
+      if (next && !IP_TIME_RE.test(next) && !IP_VALUE_RE.test(next) && !IP_SKIP_RE.test(next) && !IP_DATE_RE.test(next)) {
+        desc = next;
+        i++;
+      }
+    }
+
+    // Complementa nomes quebrados em duas linhas (ex: "CASARIA SALVADOR..." na linha seguinte)
+    const next = (lines[i + 1] || "").trim();
+    if (
+      next &&
+      !IP_TIME_RE.test(next) &&
+      !IP_VALUE_RE.test(next) &&
+      !IP_SKIP_RE.test(next) &&
+      !IP_DATE_RE.test(next) &&
+      /^[A-ZÁÉÍÓÚÀÃÕ]/.test(next)
+    ) {
+      desc = `${desc} ${next}`.trim();
+      i++;
+    }
+
+    transactions.push({
+      date: currentDate,
+      description: desc || "InfinityPay",
+      value,
+      type,
+      category: type,
+    });
+  }
+
+  return transactions;
+}
+
 // ─── Dispatcher principal ─────────────────────────────────────────────────────
 
 async function parseExtrato(bank, buffer, ext, importType = "extrato", password = null) {
@@ -621,6 +818,17 @@ async function parseExtrato(bank, buffer, ext, importType = "extrato", password 
       return result;
     }
     throw new Error("C6 Bank: somente PDF é suportado no momento.");
+  }
+  if (bank === "infinitepay") {
+    if (ext === "pdf") {
+      const text = pdfToLayoutText(buffer, password);
+      const result = parseInfinityPayPDF(text);
+      if (result.length === 0) {
+        console.log("[Parser DEBUG] InfinityPay texto bruto (primeiras 80 linhas):\n" + text.split("\n").slice(0, 80).join("\n"));
+      }
+      return result;
+    }
+    throw new Error("InfinityPay: somente PDF é suportado no momento.");
   }
   throw new Error(`Banco "${bank}" ainda não possui parser implementado.`);
 }

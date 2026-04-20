@@ -8389,164 +8389,73 @@ const AppContent: React.FC = () => {
               )}
 
               {/* Passo 1 — Seleção do banco */}
-              {extratoStep === 1 && (<div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {/* Banco do Brasil */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedBank(selectedBank === 'bb' ? null : 'bb')}
-                  className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
-                    selectedBank === 'bb'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.02]'
-                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'
-                  }`}
-                >
-                  {selectedBank === 'bb' && <CheckCircle2 className="w-4 h-4 text-blue-500 absolute top-2 right-2" />}
-                  <div className="w-14 h-14 rounded-xl bg-[#003882] flex items-center justify-center overflow-hidden p-1 shadow-sm">
-                    <img
-                      src="https://logo.clearbit.com/bb.com.br"
-                      alt="Banco do Brasil"
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                        (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                      }}
-                    />
-                    <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">BB</span>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">Banco do Brasil</span>
-                </button>
-
-                {/* Sicoob — desabilitado em faturas */}
-                {importType === 'fatura' ? (
-                  <div className="relative group">
-                    <button
-                      type="button"
-                      disabled
-                      className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full"
-                    >
-                      <div className="w-14 h-14 rounded-xl bg-[#007A4B] flex items-center justify-center overflow-hidden p-1 shadow-sm">
-                        <img
-                          src="https://logo.clearbit.com/sicoob.com.br"
-                          alt="Sicoob"
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                            (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                          }}
-                        />
-                        <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">SC</span>
+              {extratoStep === 1 && (() => {
+                // Helper para botão ativo
+                const BankBtn = ({ id, label, bg, domain, initials, disabledInFatura = false }: { id: string; label: string; bg: string; domain: string; initials: string; disabledInFatura?: boolean }) => {
+                  const isDisabled = disabledInFatura && importType === 'fatura';
+                  if (isDisabled) return (
+                    <div className="relative group">
+                      <button type="button" disabled className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full">
+                        <div className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden p-1 shadow-sm" style={{ backgroundColor: bg }}>
+                          <img src={`https://logo.clearbit.com/${domain}`} alt={label} className="w-full h-full object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.nextSibling as HTMLElement).style.display='flex'; }} />
+                          <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xs">{initials}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">{label}</span>
+                      </button>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                        <span className="bg-gray-900/80 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap">Em desenvolvimento</span>
                       </div>
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">Sicoob</span>
+                    </div>
+                  );
+                  return (
+                    <button type="button" onClick={() => setSelectedBank(selectedBank === id ? null : id)}
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${selectedBank === id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.02]' : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'}`}>
+                      {selectedBank === id && <CheckCircle2 className="w-4 h-4 text-blue-500 absolute top-2 right-2" />}
+                      <div className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden p-1 shadow-sm" style={{ backgroundColor: bg }}>
+                        <img src={`https://logo.clearbit.com/${domain}`} alt={label} className="w-full h-full object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.nextSibling as HTMLElement).style.display='flex'; }} />
+                        <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xs">{initials}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">{label}</span>
+                    </button>
+                  );
+                };
+
+                // Helper para botão em desenvolvimento
+                const DevBtn = ({ label, bg, domain, initials }: { label: string; bg: string; domain: string; initials: string }) => (
+                  <div className="relative group">
+                    <button type="button" disabled className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full">
+                      <div className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden p-1 shadow-sm" style={{ backgroundColor: bg }}>
+                        <img src={`https://logo.clearbit.com/${domain}`} alt={label} className="w-full h-full object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.nextSibling as HTMLElement).style.display='flex'; }} />
+                        <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xs">{initials}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">{label}</span>
                     </button>
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                       <span className="bg-gray-900/80 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap">Em desenvolvimento</span>
                     </div>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBank(selectedBank === 'sicoob' ? null : 'sicoob')}
-                    className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
-                      selectedBank === 'sicoob'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.02]'
-                        : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'
-                    }`}
-                  >
-                    {selectedBank === 'sicoob' && <CheckCircle2 className="w-4 h-4 text-blue-500 absolute top-2 right-2" />}
-                    <div className="w-14 h-14 rounded-xl bg-[#007A4B] flex items-center justify-center overflow-hidden p-1 shadow-sm">
-                      <img
-                        src="https://logo.clearbit.com/sicoob.com.br"
-                        alt="Sicoob"
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                        }}
-                      />
-                      <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">SC</span>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">Sicoob</span>
-                  </button>
-                )}
+                );
 
-                {/* C6 Bank */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedBank(selectedBank === 'c6' ? null : 'c6')}
-                  className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
-                    selectedBank === 'c6'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md scale-[1.02]'
-                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'
-                  }`}
-                >
-                  {selectedBank === 'c6' && <CheckCircle2 className="w-4 h-4 text-blue-500 absolute top-2 right-2" />}
-                  <div className="w-14 h-14 rounded-xl bg-[#242424] flex items-center justify-center overflow-hidden p-1 shadow-sm">
-                    <img
-                      src="https://logo.clearbit.com/c6bank.com.br"
-                      alt="C6 Bank"
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                        (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                      }}
-                    />
-                    <span className="hidden w-full h-full items-center justify-center text-white font-bold text-xl">C6</span>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">C6 Bank</span>
-                </button>
+                return (
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {/* ── Ativos (ordem alfabética) ── */}
+                    <BankBtn id="bb"         label="Banco do Brasil" bg="#003882"  domain="bb.com.br"          initials="BB" />
+                    <BankBtn id="c6"         label="C6 Bank"         bg="#242424"  domain="c6bank.com.br"      initials="C6" />
+                    <BankBtn id="infinitypay" label="InfinityPay"    bg="#00C853"  domain="infinitepay.io"     initials="IP" />
+                    <BankBtn id="sicoob"     label="Sicoob"          bg="#007A4B"  domain="sicoob.com.br"      initials="SC" disabledInFatura />
 
-                {/* Mercado Pago — em desenvolvimento */}
-                <div className="relative group">
-                  <button
-                    type="button"
-                    disabled
-                    className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full"
-                  >
-                    <div className="w-14 h-14 rounded-xl bg-[#009EE3] flex items-center justify-center overflow-hidden p-1 shadow-sm">
-                      <img
-                        src="https://logo.clearbit.com/mercadopago.com.br"
-                        alt="Mercado Pago"
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                        }}
-                      />
-                      <span className="hidden w-full h-full items-center justify-center text-white font-bold text-sm">MP</span>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">Mercado Pago</span>
-                  </button>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                    <span className="bg-gray-900/80 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap">Em desenvolvimento</span>
+                    {/* ── Em desenvolvimento (ordem alfabética) ── */}
+                    <DevBtn label="Banco Inter"  bg="#FF8700" domain="bancointer.com"   initials="IN" />
+                    <DevBtn label="Banco Safra"  bg="#1B3F7A" domain="safra.com.br"     initials="SF" />
+                    <DevBtn label="Bradesco"     bg="#CC092F" domain="bradesco.com.br"  initials="BD" />
+                    <DevBtn label="BTG Pactual"  bg="#003366" domain="btgpactual.com"   initials="BTG" />
+                    <DevBtn label="Mercado Pago" bg="#009EE3" domain="mercadopago.com.br" initials="MP" />
+                    <DevBtn label="Nubank"       bg="#9C44DC" domain="nubank.com.br"    initials="NU" />
+                    <DevBtn label="Santander"    bg="#EA1D25" domain="santander.com.br" initials="SN" />
+                    <DevBtn label="XP"           bg="#1A1A1A" domain="xpi.com.br"       initials="XP" />
                   </div>
-                </div>
-
-                {/* InfinityPay — em desenvolvimento */}
-                <div className="relative group">
-                  <button
-                    type="button"
-                    disabled
-                    className="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 opacity-60 cursor-not-allowed w-full"
-                  >
-                    <div className="w-14 h-14 rounded-xl bg-[#00C853] flex items-center justify-center overflow-hidden p-1 shadow-sm">
-                      <img
-                        src="https://logo.clearbit.com/infinitepay.io"
-                        alt="InfinityPay"
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                        }}
-                      />
-                      <span className="hidden w-full h-full items-center justify-center text-white font-bold text-sm">IP</span>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center leading-tight">InfinityPay</span>
-                  </button>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                    <span className="bg-gray-900/80 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap">Em desenvolvimento</span>
-                  </div>
-                </div>
-              </div>)}
+                );
+              })()}
 
               {/* Rodapé passo 1 */}
               {extratoStep === 1 && (
