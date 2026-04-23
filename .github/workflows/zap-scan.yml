@@ -32,7 +32,7 @@ jobs:
         run: cd server && npm ci
 
       - name: Start PostgreSQL
-        uses: ikalnytskyi/action-setup-postgres@v4
+        uses: ikalnytskyi/action-setup-postgres@v8
         with:
           username: alya_user
           password: test_password
