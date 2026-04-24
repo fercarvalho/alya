@@ -37,6 +37,7 @@ const Login: React.FC = () => {
   // Demo register
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [demoNome, setDemoNome] = useState('');
+  const [demoUsername, setDemoUsername] = useState('');
   const [demoEmail, setDemoEmail] = useState('');
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState('');
@@ -205,13 +206,17 @@ const Login: React.FC = () => {
 
   const handleDemoRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDemoLoading(true);
     setDemoError('');
+    if (demoUsername !== 'teste_nuvemshop') {
+      setDemoError('Nome de usuário inválido. Apenas o usuário "teste_nuvemshop" pode usar este cadastro.');
+      return;
+    }
+    setDemoLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/demo-register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: demoNome, username: 'teste_nuvemshop', email: demoEmail }),
+        body: JSON.stringify({ nome: demoNome, username: demoUsername, email: demoEmail }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -227,6 +232,7 @@ const Login: React.FC = () => {
       // Fecha modal de cadastro e mostra modal de senha temporária
       setShowDemoModal(false);
       setDemoNome('');
+      setDemoUsername('');
       setDemoEmail('');
       setDemoTempPassword(data.tempPassword);
       setShowDemoPasswordModal(true);
@@ -451,7 +457,7 @@ const Login: React.FC = () => {
             <div className="text-center pt-1">
               <button
                 type="button"
-                onClick={() => { setShowDemoModal(true); setDemoError(''); }}
+                onClick={() => { setShowDemoModal(true); setDemoNome(''); setDemoUsername(''); setDemoEmail(''); setDemoError(''); }}
                 className="text-xs text-gray-400 dark:text-slate-600 hover:text-amber-600 dark:hover:text-amber-400 transition-colors hover:underline underline-offset-2"
               >
                 Criar nova conta
@@ -658,7 +664,7 @@ const Login: React.FC = () => {
       {showDemoModal && (
         <div
           className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4"
-          onClick={() => setShowDemoModal(false)}
+          onClick={() => { setShowDemoModal(false); setDemoUsername(''); setDemoNome(''); setDemoEmail(''); setDemoError(''); }}
         >
           <div
             className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm p-8"
@@ -689,10 +695,24 @@ const Login: React.FC = () => {
                 <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Nome de usuário</label>
                 <input
                   type="text"
-                  value="teste_nuvemshop"
-                  readOnly
-                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-slate-500 text-sm font-mono cursor-not-allowed"
+                  value={demoUsername}
+                  onChange={e => { setDemoUsername(e.target.value); setDemoError(''); }}
+                  placeholder="Digite o nome de usuário"
+                  required
+                  className={`w-full px-4 py-3 border rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-mono focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                    demoUsername && demoUsername !== 'teste_nuvemshop'
+                      ? 'border-red-400 focus:ring-red-400'
+                      : demoUsername === 'teste_nuvemshop'
+                      ? 'border-green-400 focus:ring-green-400'
+                      : 'border-gray-200 dark:border-gray-700 focus:ring-amber-400'
+                  }`}
                 />
+                {demoUsername && demoUsername !== 'teste_nuvemshop' && (
+                  <p className="text-xs text-red-500 mt-1">Apenas "teste_nuvemshop" é permitido.</p>
+                )}
+                {demoUsername === 'teste_nuvemshop' && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">✓ Usuário válido</p>
+                )}
               </div>
 
               <div>
@@ -716,7 +736,7 @@ const Login: React.FC = () => {
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setShowDemoModal(false)}
+                  onClick={() => { setShowDemoModal(false); setDemoUsername(''); setDemoNome(''); setDemoEmail(''); setDemoError(''); }}
                   className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                 >
                   Cancelar
