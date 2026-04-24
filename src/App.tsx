@@ -8432,8 +8432,8 @@ const AppContent: React.FC = () => {
                     {/* ── Ativos (ordem alfabética) ── */}
                     <BankBtn id="bb"          label="Banco do Brasil" bg="#003882"  domain="bb.com.br"           initials="BB" />
                     <BankBtn id="c6"          label="C6 Bank"         bg="#242424"  domain="c6bank.com.br"       initials="C6" />
-                    <BankBtn id="infinitypay" label="InfinityPay"     bg="#00C853"  domain="infinitepay.io"      initials="IP" />
-                    <BankBtn id="mercadopago" label="Mercado Pago"    bg="#009EE3"  domain="mercadopago.com.br"  initials="MP" />
+                    <BankBtn id="infinitypay" label="InfinityPay"     bg="#00C853"  domain="infinitepay.io"      initials="IP" disabledInFatura />
+                    <BankBtn id="mercadopago" label="Mercado Pago"    bg="#009EE3"  domain="mercadopago.com.br"  initials="MP" disabledInFatura />
                     <BankBtn id="sicoob"      label="Sicoob"          bg="#007A4B"  domain="sicoob.com.br"       initials="SC" disabledInFatura />
 
                     {/* ── Em desenvolvimento (ordem alfabética, ignorando "Banco") ── */}
