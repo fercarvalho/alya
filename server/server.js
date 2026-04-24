@@ -775,6 +775,74 @@ const getDefaultModulesForRole = (role) => {
 
 // 🔒 Rate Limiters movidos para ./middleware/security.js
 
+// ─── Cadastro Demo (apenas teste_nuvemshop) ─────────────────────────────────
+app.post("/api/auth/demo-register", async (req, res) => {
+  try {
+    const { nome, username, email } = req.body;
+
+    if (!nome || !username || !email) {
+      return res.status(400).json({ success: false, error: "Nome, usuário e e-mail são obrigatórios." });
+    }
+
+    if (username !== "teste_nuvemshop") {
+      return res.status(403).json({ success: false, error: "Este cadastro é exclusivo para o usuário teste_nuvemshop." });
+    }
+
+    // Se já existe, remove para permitir recadastro limpo
+    const existing = await db.getUserByUsername("teste_nuvemshop");
+    if (existing) {
+      await db.deleteUser(existing.id);
+    }
+
+    // Gera senha temporária
+    const tempPassword = generateRandomPassword();
+    const hashedPassword = bcrypt.hashSync(tempPassword, 10);
+
+    // Cria o usuário (lastLogin = now para não exigir fluxo de convite no login)
+    const newUser = await db.saveUser({
+      username: "teste_nuvemshop",
+      firstName: nome,
+      email: email,
+      password: hashedPassword,
+      role: "user",
+      modules: getDefaultModulesForRole("user"),
+      isActive: true,
+      lastLogin: new Date().toISOString(),
+    });
+
+    // Gera JWT
+    const accessToken = jwt.sign(
+      { id: newUser.id, username: newUser.username, role: newUser.role, permissoes_legais: {} },
+      JWT_SECRET,
+      { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN }
+    );
+
+    const { token: refreshToken } = await createRefreshToken({
+      userId: newUser.id,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers["user-agent"],
+    });
+
+    return res.json({
+      success: true,
+      accessToken,
+      refreshToken,
+      tempPassword,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        firstName: newUser.firstName,
+        email: newUser.email,
+        role: newUser.role,
+        modules: newUser.modules,
+      },
+    });
+  } catch (err) {
+    console.error("[demo-register] Erro:", err);
+    return res.status(500).json({ success: false, error: "Erro ao criar conta de demonstração." });
+  }
+});
+
 // Rotas de Autenticação
 app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
   try {
@@ -5235,7 +5303,7 @@ app.get('/api/admin/rodape/commit-pendente', authenticateToken, requireSuperAdmi
 app.post('/api/admin/rodape/confirmar-commit', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { action, novaVersao, commitHash, mensagem, data } = req.body;
-    if (!action || !['manter', 'nova_versao'].includes(action)) {
+    if (!action || !['manter', 'nova_versao', 'ignorar'].includes(action)) {
       return res.status(400).json({ success: false, error: 'action inválida' });
     }
     if (action === 'nova_versao' && !novaVersao?.trim()) {
@@ -5244,7 +5312,7 @@ app.post('/api/admin/rodape/confirmar-commit', authenticateToken, requireSuperAd
     if (!commitHash) {
       return res.status(400).json({ success: false, error: 'commitHash é obrigatório' });
     }
-    if (!mensagem?.trim()) {
+    if (action !== 'ignorar' && !mensagem?.trim()) {
       return res.status(400).json({ success: false, error: 'mensagem é obrigatória' });
     }
     const rolesNotificados = Array.isArray(req.body.rolesNotificados) ? req.body.rolesNotificados : [];

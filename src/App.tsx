@@ -9234,6 +9234,24 @@ const AppContent: React.FC = () => {
           mensagemOriginal={commitPendente.mensagem}
           data={commitPendente.data}
           onClose={() => setCommitPendente(null)}
+          onIgnore={async () => {
+            const res = await fetch(`${API_BASE_URL}/admin/rodape/confirmar-commit`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                action: 'ignorar',
+                commitHash: commitPendente.commitHash,
+                mensagem: '',
+                data: commitPendente.data,
+                rolesNotificados: [],
+              }),
+            });
+            if (!res.ok) throw new Error('Falha na requisição');
+            setCommitPendente(null);
+          }}
           onConfirm={async ({ action, novaVersao, mensagem, data, rolesNotificados }) => {
             const res = await fetch(`${API_BASE_URL}/admin/rodape/confirmar-commit`, {
               method: 'POST',

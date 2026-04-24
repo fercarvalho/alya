@@ -3164,6 +3164,12 @@ class Database extends FileDatabase {
         [commitHash, now]
       );
 
+      // Se ignorar, apenas marca como confirmado sem tocar nas notas
+      if (action === 'ignorar') {
+        await client.query('COMMIT');
+        return { ok: true };
+      }
+
       // Monta o item HTML com o texto (possivelmente editado)
       const novoItem = `<li><strong>${data}</strong> — ${mensagem}</li>`;
 

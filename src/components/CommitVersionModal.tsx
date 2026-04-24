@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GitCommit, Tag, X, Check, Pencil, Bell } from 'lucide-react';
+import { GitCommit, Tag, X, Check, Pencil, Bell, Trash2 } from 'lucide-react';
 
 const ROLES_DISPONIVEIS = [
   { value: 'admin', label: 'Administradores' },
@@ -19,6 +19,7 @@ interface Props {
     data: string;
     rolesNotificados: string[];
   }) => Promise<void>;
+  onIgnore: () => Promise<void>;
   onClose: () => void;
 }
 
@@ -28,6 +29,7 @@ const CommitVersionModal: React.FC<Props> = ({
   mensagemOriginal,
   data,
   onConfirm,
+  onIgnore,
   onClose,
 }) => {
   const [choice, setChoice] = useState<'manter' | 'nova_versao'>('manter');
@@ -35,6 +37,7 @@ const CommitVersionModal: React.FC<Props> = ({
   const [mensagem, setMensagem] = useState(mensagemOriginal);
   const [rolesNotificados, setRolesNotificados] = useState<string[]>(['admin', 'user', 'guest']);
   const [loading, setLoading] = useState(false);
+  const [ignoring, setIgnoring] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -246,25 +249,46 @@ const CommitVersionModal: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+          {/* Esquerda: ignorar */}
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            onClick={async () => {
+              setIgnoring(true);
+              try { await onIgnore(); } catch { setIgnoring(false); }
+            }}
+            disabled={ignoring || loading}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-60"
           >
-            Depois
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-60"
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            {ignoring ? (
+              <div className="w-3.5 h-3.5 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
             ) : (
-              <Check className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             )}
-            Salvar nas notas
+            Ignorar alterações
           </button>
+
+          {/* Direita: depois + salvar */}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              disabled={ignoring || loading}
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-60"
+            >
+              Depois
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={loading || ignoring}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-60"
+            >
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              Salvar nas notas
+            </button>
+          </div>
         </div>
       </div>
     </div>
