@@ -580,7 +580,8 @@ const FATURA_C6_SKIP = [
   /^débito\s+automático/i,
   /^limite\s+(total|de\s+cartão|de\s+saque)/i,
   /^total\s+a\s+pagar/i,
-  /^inclusao\s+de\s+pagamento/i,   // créditos/pagamentos — ignorar
+  /^inclusao\s+de\s+pagamento/i,   // crédito: "Inclusao de Pagamento"
+  /^pagamento\s+fatura/i,          // crédito: "Pagamento Fatura QR CODE", etc.
   /^\s*$/,
 ];
 
@@ -783,6 +784,121 @@ function parseInfinityPayPDF(text) {
   return transactions;
 }
 
+// ─── Mercado Pago ─────────────────────────────────────────────────────────────
+//
+// Formato: "EXTRATO DE CONTA" (Mercado Pago Instituição de Pagamento Ltda.)
+// Colunas: Data | Descrição | ID da operação | Valor | Saldo
+// Data: DD-MM-YYYY
+// Valor: "R$ 246,03" (positivo = Receita) ou "R$ -4,50" (negativo = Despesa)
+//
+// Estrutura por grupo de transação:
+//   [linhas pré-desc (indentadas, sem data)]
+//   DD-MM-YYYY  [desc inline?]  [ID 8+ dígitos]  R$ VALOR  R$ SALDO
+//   [linhas pós-desc (indentadas, sem data)]
+//   [linha(s) em branco  ← separa grupos]
+//
+// Observação: a descrição pode estar dividida em até 3 partes:
+//   pré-linhas + inline na linha da data + pós-linhas
+
+const MP_DATE_RE = /^\s*(\d{2}-\d{2}-\d{4})\b/;
+// Captura primeiro valor monetário da linha (pode ser negativo)
+const MP_VALUE_RE = /R\$\s*(-?\d{1,3}(?:\.\d{3})*,\d{2})/;
+const MP_SKIP_RE = /EXTRATO\s+DE\s+CONTA|CPF\/CNPJ|Periodo:|Entradas:|Sa[íi]das:|Saldo\s+(inicial|final)|DETALHE\s+DOS\s+MOVIMENTOS|^\s*Data\s+Descri|^\s*\d+\/\d+\s*$|Data\s+de\s+gera[çc][aã]o|Mercado\s+Pago\s+Institui|0800\s+\d|Voc[êe]\s+tem\s+alguma|Encontre\s+nossos|SAC\b|ouvidoria|portal\s+de\s+ajuda/i;
+
+function parseMercadoPagoPDF(text) {
+  const lines = text.split("\n");
+  const transactions = [];
+
+  let state    = "BETWEEN"; // "BETWEEN" | "IN_GROUP"
+  let preParts = [];
+  let current  = null;
+
+  const finalizeTransaction = () => {
+    if (current) {
+      transactions.push(current);
+      current = null;
+    }
+    preParts = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Linhas de cabeçalho/rodapé — ignorar completamente
+    if (MP_SKIP_RE.test(trimmed)) continue;
+
+    // Linha em branco → fecha grupo de transação
+    if (!trimmed) {
+      if (state === "IN_GROUP") {
+        finalizeTransaction();
+        state = "BETWEEN";
+      }
+      continue;
+    }
+
+    // Linha com conteúdo — garante que estamos em IN_GROUP
+    if (state === "BETWEEN") state = "IN_GROUP";
+
+    const dateMatch = MP_DATE_RE.exec(line);
+    if (dateMatch) {
+      // ── Linha de data ───────────────────────────────────────────
+      const [d, m, y] = dateMatch[1].split("-");
+      const date = `${y}-${m}-${d}`;
+
+      // Tudo antes do primeiro "R$" contém: data + desc inline + ID
+      const firstRS = line.indexOf("R$");
+      const beforeValue = firstRS !== -1 ? line.slice(0, firstRS) : line;
+
+      // Extrai o primeiro valor (R$ X,XX) → esse é o valor da transação
+      // O segundo R$ é o saldo — ignoramos
+      const valueMatch = MP_VALUE_RE.exec(line);
+      let value = 0;
+      if (valueMatch) {
+        value = parseMoney(valueMatch[1]);
+      }
+
+      // Descrição inline: remove a data e IDs numéricos longos (≥ 8 dígitos)
+      const inlineDesc = beforeValue
+        .slice(dateMatch[0].length)
+        .replace(/\b\d{8,}\b/g, "")
+        .trim();
+
+      const descParts = [...preParts];
+      if (inlineDesc) descParts.push(inlineDesc);
+      preParts = [];
+
+      current = {
+        date,
+        value,
+        type: value >= 0 ? "Receita" : "Despesa",
+        descParts,
+      };
+    } else {
+      // ── Linha sem data ──────────────────────────────────────────
+      if (current) {
+        // Pós-descrição da transação atual
+        current.descParts.push(trimmed);
+      } else {
+        // Pré-descrição da próxima transação
+        preParts.push(trimmed);
+      }
+    }
+  }
+
+  // Finaliza última transação caso o arquivo não termine com linha em branco
+  if (current) transactions.push(current);
+
+  return transactions
+    .filter(t => t.value !== 0)
+    .map(t => ({
+      date:        t.date,
+      description: t.descParts.join(" ").replace(/\s+/g, " ").trim() || "Mercado Pago",
+      value:       Math.abs(t.value),
+      type:        t.type,
+      category:    t.type,
+    }));
+}
+
 // ─── Dispatcher principal ─────────────────────────────────────────────────────
 
 async function parseExtrato(bank, buffer, ext, importType = "extrato", password = null) {
@@ -819,7 +935,7 @@ async function parseExtrato(bank, buffer, ext, importType = "extrato", password 
     }
     throw new Error("C6 Bank: somente PDF é suportado no momento.");
   }
-  if (bank === "infinitepay") {
+  if (bank === "infinitypay") {
     if (ext === "pdf") {
       const text = pdfToLayoutText(buffer, password);
       const result = parseInfinityPayPDF(text);
@@ -829,6 +945,17 @@ async function parseExtrato(bank, buffer, ext, importType = "extrato", password 
       return result;
     }
     throw new Error("InfinityPay: somente PDF é suportado no momento.");
+  }
+  if (bank === "mercadopago") {
+    if (ext === "pdf") {
+      const text = pdfToLayoutText(buffer, password);
+      const result = parseMercadoPagoPDF(text);
+      if (result.length === 0) {
+        console.log("[Parser DEBUG] MercadoPago texto bruto (primeiras 80 linhas):\n" + text.split("\n").slice(0, 80).join("\n"));
+      }
+      return result;
+    }
+    throw new Error("Mercado Pago: somente PDF é suportado no momento.");
   }
   throw new Error(`Banco "${bank}" ainda não possui parser implementado.`);
 }
