@@ -61,6 +61,7 @@ interface AuthContextType {
   isImpersonating: boolean;
   impersonate: (userId: string) => Promise<void>;
   stopImpersonating: () => void;
+  setUserAndToken: (user: User, accessToken: string, refreshToken: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -405,6 +406,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.dispatchEvent(new CustomEvent("auth:impersonation-changed"));
   };
 
+  const setUserAndToken = (newUser: User, newAccessToken: string, newRefreshToken: string) => {
+    setUser(newUser);
+    setAccessToken(newAccessToken);
+    setRefreshToken(newRefreshToken);
+    localStorage.setItem('accessToken', newAccessToken);
+    localStorage.setItem('refreshToken', newRefreshToken);
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -419,6 +428,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isImpersonating,
     impersonate,
     stopImpersonating,
+    setUserAndToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

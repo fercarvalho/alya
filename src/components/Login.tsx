@@ -34,6 +34,16 @@ const Login: React.FC = () => {
   const [showResetarSenhaModal, setShowResetarSenhaModal] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
 
+  // Demo register
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [demoNome, setDemoNome] = useState('');
+  const [demoEmail, setDemoEmail] = useState('');
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState('');
+  const [demoTempPassword, setDemoTempPassword] = useState('');
+  const [demoPasswordCopied, setDemoPasswordCopied] = useState(false);
+  const [showDemoPasswordModal, setShowDemoPasswordModal] = useState(false);
+
   // FAQ
   const [faqItems, setFaqItems] = useState<FaqItem[]>([]);
   const [showFaqModal, setShowFaqModal] = useState(false);
@@ -114,7 +124,7 @@ const Login: React.FC = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showFaqModal, showDocsModal]);
 
-  const { login, completeFirstLogin } = useAuth();
+  const { login, completeFirstLogin, setUserAndToken } = useAuth();
 
   const isDemoMode = typeof window !== 'undefined' && (
     import.meta.env.VITE_DEMO_MODE === 'true' ||
@@ -191,6 +201,40 @@ const Login: React.FC = () => {
     setShowPasswordModal(false);
     setPasswordCopied(false);
     await completeFirstLogin();
+  };
+
+  const handleDemoRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDemoLoading(true);
+    setDemoError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/demo-register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: demoNome, username: 'teste_nuvemshop', email: demoEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setDemoError(data.error || 'Erro ao criar conta.');
+        setDemoLoading(false);
+        return;
+      }
+      // Armazena token e usuário (igual ao login normal)
+      const storage = localStorage;
+      storage.setItem('accessToken', data.accessToken);
+      if (data.refreshToken) storage.setItem('refreshToken', data.refreshToken);
+      setUserAndToken(data.user, data.accessToken, data.refreshToken);
+      // Fecha modal de cadastro e mostra modal de senha temporária
+      setShowDemoModal(false);
+      setDemoNome('');
+      setDemoEmail('');
+      setDemoTempPassword(data.tempPassword);
+      setShowDemoPasswordModal(true);
+    } catch {
+      setDemoError('Erro de conexão. Tente novamente.');
+    } finally {
+      setDemoLoading(false);
+    }
   };
 
   return (
@@ -402,6 +446,17 @@ const Login: React.FC = () => {
                 </span>
               ) : 'Entrar'}
             </button>
+
+            {/* Link cadastro demo */}
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => { setShowDemoModal(true); setDemoError(''); }}
+                className="text-xs text-gray-400 dark:text-slate-600 hover:text-amber-600 dark:hover:text-amber-400 transition-colors hover:underline underline-offset-2"
+              >
+                Criar nova conta
+              </button>
+            </div>
           </form>
         </div>
 
@@ -594,6 +649,152 @@ const Login: React.FC = () => {
               className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-amber-600 hover:to-amber-700 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-200"
             >
               Entendi, continuar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal Cadastro Demo ─── */}
+      {showDemoModal && (
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          onClick={() => setShowDemoModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm p-8"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-center mb-6">
+              <div className="mx-auto w-14 h-14 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center mb-4">
+                <User className="w-7 h-7 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Criar nova conta</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Preencha os dados para criar sua conta</p>
+            </div>
+
+            <form onSubmit={handleDemoRegister} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Nome completo</label>
+                <input
+                  type="text"
+                  value={demoNome}
+                  onChange={e => setDemoNome(e.target.value)}
+                  placeholder="Seu nome"
+                  required
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">Nome de usuário</label>
+                <input
+                  type="text"
+                  value="teste_nuvemshop"
+                  readOnly
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-slate-500 text-sm font-mono cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1.5">E-mail</label>
+                <input
+                  type="email"
+                  value={demoEmail}
+                  onChange={e => setDemoEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  required
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition"
+                />
+              </div>
+
+              {demoError && (
+                <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
+                  <p className="text-sm text-red-600 dark:text-red-400">{demoError}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={demoLoading}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold shadow-lg shadow-amber-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {demoLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Criando...
+                    </span>
+                  ) : 'Criar conta'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal Senha Temporária (pós-cadastro demo) ─── */}
+      {showDemoPasswordModal && (
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md border border-gray-200/50 dark:border-gray-700/50">
+            <div className="text-center mb-6">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full flex items-center justify-center mb-4">
+                <Lock className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Conta criada com sucesso!</h2>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Esta é a sua senha temporária de acesso</p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Senha temporária
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={demoTempPassword}
+                  readOnly
+                  className="w-full px-4 py-3 border-2 border-amber-500 rounded-xl bg-amber-50 dark:bg-amber-900/20 font-mono text-lg font-bold text-gray-900 dark:text-white pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(demoTempPassword);
+                    setDemoPasswordCopied(true);
+                    setTimeout(() => setDemoPasswordCopied(false), 2000);
+                  }}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  title="Copiar senha"
+                >
+                  {demoPasswordCopied
+                    ? <Check className="h-5 w-5 text-green-600" />
+                    : <Copy className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                  }
+                </button>
+              </div>
+              {demoPasswordCopied && <p className="text-green-600 text-sm mt-2">Senha copiada!</p>}
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6">
+              <p className="text-amber-800 dark:text-amber-300 text-sm">
+                <strong>⚠️ Importante:</strong> Anote esta senha. Você precisará dela para fazer login novamente com este usuário.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowDemoPasswordModal(false)}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/25 transition-all duration-200"
+            >
+              Entendi, continuar para o sistema
             </button>
           </div>
         </div>
