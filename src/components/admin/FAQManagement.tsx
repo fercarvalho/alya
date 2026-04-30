@@ -379,18 +379,18 @@ const FAQManagement: React.FC = () => {
           className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={e => { if (e.target === e.currentTarget && !isSaving) setShowModal(false); }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-lg max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-lg max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-900 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-gray-700 rounded-t-2xl">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
-                  <HelpCircle className="w-6 h-6 text-amber-700" />
+                <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                  <HelpCircle className="w-6 h-6 text-amber-700 dark:text-amber-400" />
                   {editingItem ? 'Editar Pergunta' : 'Nova Pergunta'}
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
                   disabled={isSaving}
-                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 p-2 rounded-full transition-all"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -400,7 +400,7 @@ const FAQManagement: React.FC = () => {
             {/* Campos */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                   Pergunta <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -409,11 +409,11 @@ const FAQManagement: React.FC = () => {
                   onChange={e => setPergunta(e.target.value)}
                   placeholder="Ex: Como funciona o sistema de relatórios?"
                   disabled={isSaving}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm disabled:opacity-50"
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm disabled:opacity-50"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                   Resposta <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -422,29 +422,29 @@ const FAQManagement: React.FC = () => {
                   placeholder="Descreva a resposta de forma clara e objetiva..."
                   rows={5}
                   disabled={isSaving}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm resize-none disabled:opacity-50"
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm resize-none disabled:opacity-50"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                   Visibilidade
                 </label>
                 <VisibilitySelector value={visibility} onChange={setVisibility} disabled={isSaving} />
               </div>
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
             </div>
 
             {/* Botões */}
-            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 mt-4">
+            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
                 disabled={isSaving}
-                className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -477,18 +477,18 @@ const FAQManagement: React.FC = () => {
           className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[180px]"
           onClick={e => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}
         >
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-200/50 text-center">
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-200/50 dark:border-gray-700 text-center">
             <div className="flex justify-center mb-4">
-              <div className="bg-red-100 rounded-full p-4">
-                <AlertTriangle className="h-8 w-8 text-red-500" />
+              <div className="bg-red-100 dark:bg-red-900/30 rounded-full p-4">
+                <AlertTriangle className="h-8 w-8 text-red-500 dark:text-red-400" />
               </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmar Exclusão</h3>
-            <p className="text-gray-500 text-sm mb-6">Esta ação não pode ser desfeita.</p>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Confirmar Exclusão</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancelar
               </button>

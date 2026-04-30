@@ -595,7 +595,7 @@ const DocumentationManagement: React.FC = () => {
       {/* Modal: Nova Seção */}
       {showNewSection && (
         <div
-          className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-[70] px-4 pb-4 pt-[120px]"
           onClick={e => e.target === e.currentTarget && setShowNewSection(false)}
         >
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
@@ -642,7 +642,7 @@ const DocumentationManagement: React.FC = () => {
       {/* Modal: Nova Página */}
       {showNewPage && (
         <div
-          className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-[70] px-4 pb-4 pt-[120px]"
           onClick={e => e.target === e.currentTarget && setShowNewPage(null)}
         >
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
@@ -678,7 +678,7 @@ const DocumentationManagement: React.FC = () => {
       {/* Modal: Editar Seção */}
       {editingSection && (
         <div
-          className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-[70] px-4 pb-4 pt-[120px]"
           onClick={e => e.target === e.currentTarget && setEditingSection(null)}
         >
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
@@ -726,7 +726,7 @@ const DocumentationManagement: React.FC = () => {
 
       {/* Modal: Confirmar Delete */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-[70] px-4 pb-4 pt-[120px]">
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-red-100 rounded-full p-2">
