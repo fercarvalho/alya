@@ -4999,10 +4999,18 @@ app.use((error, req, res, next) => {
 
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
 
-// GET /api/faq — autenticado; filtra por visibility conforme role do usuário
+// GET /api/faq — público; decodifica token se presente para filtrar por role
 app.get('/api/faq', async (req, res) => {
+  let userRole = 'guest';
   try {
-    const userRole = req.user?.role || 'guest';
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      userRole = decoded.role || 'guest';
+    }
+  } catch {}
+  try {
     const items = await db.obterFAQ(userRole);
     res.json({ success: true, data: items });
   } catch (error) {

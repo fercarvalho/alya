@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HelpCircle, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { HelpCircle, ChevronDown, ChevronUp, Search, ShieldCheck } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +8,7 @@ interface FAQItem {
   pergunta: string;
   resposta: string;
   ordem: number;
+  visibility: 'todos' | 'usuarios' | 'admins';
 }
 
 const FAQ: React.FC = () => {
@@ -98,24 +99,40 @@ const FAQ: React.FC = () => {
           {itemsFiltrados.map(item => (
             <div
               key={item.id}
-              className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"
+              className={`rounded-2xl border shadow-sm overflow-hidden ${
+                item.visibility === 'admins'
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-white border-gray-200'
+              }`}
             >
               <button
                 onClick={() => toggle(item.id)}
-                className="w-full flex items-center justify-between gap-4 p-5 text-left hover:bg-amber-50/50 transition-colors"
+                className={`w-full flex items-center justify-between gap-4 p-5 text-left transition-colors ${
+                  item.visibility === 'admins'
+                    ? 'hover:bg-red-100/60'
+                    : 'hover:bg-amber-50/50'
+                }`}
               >
-                <span className="font-semibold text-gray-900 text-sm leading-snug">
-                  {item.pergunta}
-                </span>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="font-semibold text-gray-900 text-sm leading-snug">
+                    {item.pergunta}
+                  </span>
+                  {item.visibility === 'admins' && (
+                    <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                      <ShieldCheck className="h-3 w-3" />
+                      Admin
+                    </span>
+                  )}
+                </div>
                 {openId === item.id ? (
-                  <ChevronUp className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                  <ChevronUp className={`h-5 w-5 flex-shrink-0 ${item.visibility === 'admins' ? 'text-red-400' : 'text-amber-500'}`} />
                 ) : (
                   <ChevronDown className="h-5 w-5 text-gray-400 flex-shrink-0" />
                 )}
               </button>
               {openId === item.id && (
-                <div className="px-5 pb-5 pt-0 border-t border-amber-100">
-                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap pt-4">
+                <div className={`px-5 pb-5 pt-0 border-t ${item.visibility === 'admins' ? 'border-red-200' : 'border-amber-100'}`}>
+                  <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap pt-4">
                     {item.resposta}
                   </p>
                 </div>
