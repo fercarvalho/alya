@@ -3195,24 +3195,13 @@ class Database extends FileDatabase {
           notas = novaSecao + notas;
         }
 
-        // Configura notificação para os usuários dos roles selecionados
+        // Insere o lançamento no histórico de notificações (carrossel mostra
+        // todas as pendentes para usuários que não entraram entre versões)
         await client.query(
-          `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
-           VALUES ('versao_notificada', $1, $2)
-           ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
-          [novaVersao, now]
-        );
-        await client.query(
-          `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
-           VALUES ('versao_notificada_roles', $1, $2)
-           ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
-          [JSON.stringify(rolesNotificados), now]
-        );
-        await client.query(
-          `INSERT INTO rodape_configuracoes (chave, valor, updated_at)
-           VALUES ('versao_notificada_texto', $1, $2)
-           ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = $2`,
-          [mensagem, now]
+          `INSERT INTO versao_notificacoes (versao, texto, roles, criado_em)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (versao) DO UPDATE SET texto = $2, roles = $3, criado_em = $4`,
+          [novaVersao, mensagem, JSON.stringify(rolesNotificados), now]
         );
 
         // Remove visualizações anteriores dessa versão (em caso de re-lançamento)
@@ -3250,32 +3239,25 @@ class Database extends FileDatabase {
    */
   async obterNotificacaoVersao(userId, userRole) {
     const r = await this.pool.query(
-      `SELECT chave, valor FROM rodape_configuracoes
-       WHERE chave IN ('versao_notificada', 'versao_notificada_roles', 'versao_notificada_texto')`
-    );
-    const obj = {};
-    for (const row of r.rows) obj[row.chave] = row.valor;
-
-    const versao = obj['versao_notificada'] || '';
-    if (!versao) return { notificar: false };
-
-    let roles = [];
-    try { roles = JSON.parse(obj['versao_notificada_roles'] || '[]'); } catch { roles = []; }
-    if (!roles.includes(userRole)) return { notificar: false };
-
-    // Verifica se o usuário já viu
-    const visto = await this.pool.query(
-      `SELECT 1 FROM versao_notificacoes_vistas WHERE user_id = $1 AND versao = $2`,
-      [userId, versao]
+      `SELECT n.versao, n.texto, n.roles, n.criado_em
+         FROM versao_notificacoes n
+         LEFT JOIN versao_notificacoes_vistas v
+           ON v.versao = n.versao AND v.user_id = $1
+        WHERE v.versao IS NULL
+        ORDER BY n.criado_em ASC`,
+      [userId]
     ).catch(() => ({ rows: [] }));
 
-    if (visto.rows.length > 0) return { notificar: false };
+    const versoes = [];
+    for (const row of r.rows) {
+      let roles = [];
+      try { roles = JSON.parse(row.roles || '[]'); } catch { roles = []; }
+      if (!roles.includes(userRole)) continue;
+      versoes.push({ versao: row.versao, texto: row.texto || '', criadoEm: row.criado_em });
+    }
 
-    return {
-      notificar: true,
-      versao,
-      texto: obj['versao_notificada_texto'] || '',
-    };
+    if (versoes.length === 0) return { notificar: false, versoes: [] };
+    return { notificar: true, versoes };
   }
 
   /**
