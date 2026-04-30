@@ -5333,7 +5333,7 @@ app.post('/api/admin/rodape/confirmar-commit', authenticateToken, requireSuperAd
       data: data || new Date().toLocaleDateString('pt-BR'),
       rolesNotificados,
     });
-    await logActivity(req.user, 'update', 'RodapeVersao', 'commit', { action, novaVersao, commitHash });
+    await logActivity(req.user.id, req.user.username, 'update', 'admin', 'rodape_versao', commitHash, { action, novaVersao });
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
