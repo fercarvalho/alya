@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Edit2, Trash2, ChevronUp, ChevronDown, Eye, EyeOff,
-  HelpCircle, Save, X, AlertTriangle
+  HelpCircle, Save, X, AlertTriangle, Globe, Users, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+
+type Visibility = 'todos' | 'usuarios' | 'admins';
 
 interface FAQItem {
   id: string;
@@ -12,8 +14,101 @@ interface FAQItem {
   resposta: string;
   ativo: boolean;
   ordem: number;
+  visibility: Visibility;
   createdAt: string;
   updatedAt: string;
+}
+
+const VISIBILITY_OPTIONS: {
+  value: Visibility;
+  label: string;
+  desc: string;
+  Icon: React.ElementType;
+  badge: string;
+  badgeCls: string;
+}[] = [
+  {
+    value: 'todos',
+    label: 'Todos',
+    desc: 'Visível para qualquer visitante',
+    Icon: Globe,
+    badge: 'Público',
+    badgeCls: 'bg-green-100 text-green-700',
+  },
+  {
+    value: 'usuarios',
+    label: 'Usuários',
+    desc: 'Apenas para usuários autenticados',
+    Icon: Users,
+    badge: 'Usuários',
+    badgeCls: 'bg-amber-100 text-amber-700',
+  },
+  {
+    value: 'admins',
+    label: 'Admins',
+    desc: 'Somente administradores',
+    Icon: ShieldCheck,
+    badge: 'Admin',
+    badgeCls: 'bg-red-100 text-red-700',
+  },
+];
+
+function VisibilityBadge({ visibility }: { visibility: Visibility }) {
+  if (!visibility || visibility === 'todos') return null;
+  const opt = VISIBILITY_OPTIONS.find(o => o.value === visibility);
+  if (!opt) return null;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${opt.badgeCls}`}>
+      <opt.Icon className="h-3 w-3" />
+      {opt.badge}
+    </span>
+  );
+}
+
+function VisibilitySelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: Visibility;
+  onChange: (v: Visibility) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      {VISIBILITY_OPTIONS.map(opt => (
+        <label
+          key={opt.value}
+          className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+            value === opt.value
+              ? 'border-amber-500 bg-amber-50'
+              : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50/40'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <input
+            type="radio"
+            name="visibility"
+            value={opt.value}
+            checked={value === opt.value}
+            onChange={() => !disabled && onChange(opt.value)}
+            className="sr-only"
+          />
+          <div className={`p-1.5 rounded-lg ${value === opt.value ? 'bg-amber-100' : 'bg-gray-100'}`}>
+            <opt.Icon className={`h-4 w-4 ${value === opt.value ? 'text-amber-600' : 'text-gray-500'}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-semibold ${value === opt.value ? 'text-amber-800' : 'text-gray-700'}`}>
+              {opt.label}
+            </p>
+            <p className="text-xs text-gray-500">{opt.desc}</p>
+          </div>
+          {value === opt.value && (
+            <div className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+          )}
+        </label>
+      ))}
+    </div>
+  );
 }
 
 const FAQManagement: React.FC = () => {
@@ -24,6 +119,7 @@ const FAQManagement: React.FC = () => {
   const [editingItem, setEditingItem] = useState<FAQItem | null>(null);
   const [pergunta, setPergunta] = useState('');
   const [resposta, setResposta] = useState('');
+  const [visibility, setVisibility] = useState<Visibility>('todos');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -68,6 +164,7 @@ const FAQManagement: React.FC = () => {
     setEditingItem(null);
     setPergunta('');
     setResposta('');
+    setVisibility('todos');
     setError('');
     setShowModal(true);
   };
@@ -76,6 +173,7 @@ const FAQManagement: React.FC = () => {
     setEditingItem(item);
     setPergunta(item.pergunta);
     setResposta(item.resposta);
+    setVisibility(item.visibility || 'todos');
     setError('');
     setShowModal(true);
   };
@@ -94,7 +192,7 @@ const FAQManagement: React.FC = () => {
       const res = await fetch(url, {
         method,
         headers: authHeaders,
-        body: JSON.stringify({ pergunta: pergunta.trim(), resposta: resposta.trim() }),
+        body: JSON.stringify({ pergunta: pergunta.trim(), resposta: resposta.trim(), visibility }),
       });
       const result = await res.json();
       if (result.success) {
@@ -230,15 +328,18 @@ const FAQManagement: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <p className="font-semibold text-gray-900 leading-snug">{item.pergunta}</p>
-                  <span
-                    className={`flex-shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                      item.ativo
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {item.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <VisibilityBadge visibility={item.visibility} />
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        item.ativo
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {item.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-gray-500 text-sm line-clamp-2">{item.resposta}</p>
               </div>
@@ -323,6 +424,12 @@ const FAQManagement: React.FC = () => {
                   disabled={isSaving}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm resize-none disabled:opacity-50"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Visibilidade
+                </label>
+                <VisibilitySelector value={visibility} onChange={setVisibility} disabled={isSaving} />
               </div>
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">

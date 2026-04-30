@@ -111,9 +111,29 @@ class Database extends FileDatabase {
           id VARCHAR(255) PRIMARY KEY,
           title VARCHAR(500) NOT NULL,
           ordem INTEGER DEFAULT 0,
+          visibility VARCHAR(20) DEFAULT 'todos',
           created_at TIMESTAMP,
           updated_at TIMESTAMP
         )
+      `);
+      // Migrações para bancos existentes
+      await this.pool.query(`ALTER TABLE doc_sections ADD COLUMN IF NOT EXISTS visibility VARCHAR(20) DEFAULT 'todos'`);
+      // Migra admin_only → visibility se a coluna ainda existir
+      await this.pool.query(`
+        DO $$ BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='doc_sections' AND column_name='admin_only') THEN
+            UPDATE doc_sections SET visibility = 'admins' WHERE admin_only = true AND visibility = 'todos';
+          END IF;
+        END $$
+      `);
+      // Migração da tabela faq
+      await this.pool.query(`ALTER TABLE faq ADD COLUMN IF NOT EXISTS visibility VARCHAR(20) DEFAULT 'todos'`);
+      await this.pool.query(`
+        DO $$ BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='faq' AND column_name='admin_only') THEN
+            UPDATE faq SET visibility = 'admins' WHERE admin_only = true AND visibility = 'todos';
+          END IF;
+        END $$
       `);
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS doc_pages (
@@ -1998,10 +2018,22 @@ class Database extends FileDatabase {
 
   // ========== FAQ ==========
 
-  async obterFAQ() {
+  // Retorna os valores de visibility permitidos para cada role
+  _visibilityFor(userRole) {
+    if (userRole === 'admin' || userRole === 'superadmin') return ['todos', 'usuarios', 'admins'];
+    if (userRole === 'user') return ['todos', 'usuarios'];
+    return ['todos']; // guest
+  }
+
+  async obterFAQ(userRole = 'guest') {
     try {
+      const allowed = this._visibilityFor(userRole);
+      const placeholders = allowed.map((_, i) => `$${i + 1}`).join(', ');
       const r = await this.pool.query(
-        `SELECT * FROM faq WHERE ativo = true ORDER BY ordem ASC, created_at ASC`
+        `SELECT id, pergunta, resposta, ordem, visibility FROM faq
+         WHERE ativo = true AND visibility IN (${placeholders})
+         ORDER BY ordem ASC, created_at ASC`,
+        allowed
       );
       return r.rows.map(row => toCamelCase(row));
     } catch (e) {
@@ -2022,28 +2054,34 @@ class Database extends FileDatabase {
     }
   }
 
-  async criarFAQ({ pergunta, resposta }) {
+  async criarFAQ({ pergunta, resposta, visibility = 'todos' }) {
     const id = this.generateId();
     const now = new Date().toISOString();
+    const validVisibility = ['todos', 'usuarios', 'admins'].includes(visibility) ? visibility : 'todos';
     const ordemRes = await this.pool.query(
       'SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM faq'
     );
     const ordem = ordemRes.rows[0].prox;
     const r = await this.pool.query(
-      `INSERT INTO faq (id, pergunta, resposta, ativo, ordem, created_at, updated_at)
-       VALUES ($1, $2, $3, true, $4, $5, $5) RETURNING *`,
-      [id, pergunta, resposta, ordem, now]
+      `INSERT INTO faq (id, pergunta, resposta, ativo, ordem, visibility, created_at, updated_at)
+       VALUES ($1, $2, $3, true, $4, $5, $6, $6) RETURNING *`,
+      [id, pergunta, resposta, ordem, validVisibility, now]
     );
     return toCamelCase(r.rows[0]);
   }
 
-  async atualizarFAQ(id, { pergunta, resposta, ativo }) {
+  async atualizarFAQ(id, { pergunta, resposta, ativo, visibility }) {
     const fields = [];
     const values = [id];
     let i = 2;
-    if (pergunta !== undefined) { fields.push(`pergunta = $${i++}`); values.push(pergunta); }
-    if (resposta !== undefined) { fields.push(`resposta = $${i++}`); values.push(resposta); }
-    if (ativo !== undefined)    { fields.push(`ativo = $${i++}`);    values.push(ativo); }
+    if (pergunta !== undefined)   { fields.push(`pergunta = $${i++}`);   values.push(pergunta); }
+    if (resposta !== undefined)   { fields.push(`resposta = $${i++}`);   values.push(resposta); }
+    if (ativo !== undefined)      { fields.push(`ativo = $${i++}`);      values.push(ativo); }
+    if (visibility !== undefined) {
+      const v = ['todos', 'usuarios', 'admins'].includes(visibility) ? visibility : 'todos';
+      fields.push(`visibility = $${i++}`);
+      values.push(v);
+    }
     fields.push(`updated_at = $${i++}`);
     values.push(new Date().toISOString());
     const r = await this.pool.query(
@@ -2141,9 +2179,12 @@ class Database extends FileDatabase {
 
   // ========== DOCUMENTAÇÃO ==========
 
-  async obterDocumentacao() {
+  async obterDocumentacao(userRole = 'guest') {
+    const allowed = this._visibilityFor(userRole);
+    const placeholders = allowed.map((_, i) => `$${i + 1}`).join(', ');
     const sectionsRes = await this.pool.query(
-      `SELECT * FROM doc_sections ORDER BY ordem ASC, created_at ASC`
+      `SELECT * FROM doc_sections WHERE visibility IN (${placeholders}) ORDER BY ordem ASC, created_at ASC`,
+      allowed
     );
     const pagesRes = await this.pool.query(
       `SELECT * FROM doc_pages ORDER BY ordem ASC, created_at ASC`
@@ -2156,26 +2197,38 @@ class Database extends FileDatabase {
     });
   }
 
-  async criarDocSection({ title }) {
+  async criarDocSection({ title, visibility = 'todos' }) {
     const id = this.generateId();
     const now = new Date().toISOString();
+    const validVisibility = ['todos', 'usuarios', 'admins'].includes(visibility) ? visibility : 'todos';
     const ordemRes = await this.pool.query(
       `SELECT COALESCE(MAX(ordem), -1) + 1 AS prox FROM doc_sections`
     );
     const ordem = ordemRes.rows[0].prox;
     const r = await this.pool.query(
-      `INSERT INTO doc_sections (id, title, ordem, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $4) RETURNING *`,
-      [id, title, ordem, now]
+      `INSERT INTO doc_sections (id, title, ordem, visibility, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $5) RETURNING *`,
+      [id, title, ordem, validVisibility, now]
     );
     return toCamelCase(r.rows[0]);
   }
 
-  async atualizarDocSection(id, { title }) {
+  async atualizarDocSection(id, { title, visibility }) {
     const now = new Date().toISOString();
+    const fields = [];
+    const values = [id];
+    let i = 2;
+    if (title !== undefined)      { fields.push(`title = $${i++}`);      values.push(title); }
+    if (visibility !== undefined) {
+      const v = ['todos', 'usuarios', 'admins'].includes(visibility) ? visibility : 'todos';
+      fields.push(`visibility = $${i++}`);
+      values.push(v);
+    }
+    fields.push(`updated_at = $${i++}`);
+    values.push(now);
     const r = await this.pool.query(
-      `UPDATE doc_sections SET title = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
-      [title, now, id]
+      `UPDATE doc_sections SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+      values
     );
     if (r.rows.length === 0) throw new Error('Seção não encontrada');
     return toCamelCase(r.rows[0]);

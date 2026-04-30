@@ -4999,10 +4999,11 @@ app.use((error, req, res, next) => {
 
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
 
-// GET /api/faq — público (sem autenticação), apenas itens ativos
+// GET /api/faq — autenticado; filtra por visibility conforme role do usuário
 app.get('/api/faq', async (req, res) => {
   try {
-    const items = await db.obterFAQ();
+    const userRole = req.user?.role || 'guest';
+    const items = await db.obterFAQ(userRole);
     res.json({ success: true, data: items });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -5022,11 +5023,11 @@ app.get('/api/admin/faq', authenticateToken, requireAdmin, async (req, res) => {
 // POST /api/admin/faq — criar novo item
 app.post('/api/admin/faq', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { pergunta, resposta } = req.body;
+    const { pergunta, resposta, visibility } = req.body;
     if (!pergunta || !pergunta.trim() || !resposta || !resposta.trim()) {
       return res.status(400).json({ success: false, error: 'Pergunta e resposta são obrigatórias' });
     }
-    const item = await db.criarFAQ({ pergunta: pergunta.trim(), resposta: resposta.trim() });
+    const item = await db.criarFAQ({ pergunta: pergunta.trim(), resposta: resposta.trim(), visibility: visibility || 'todos' });
     await logActivity(req.user, 'create', 'FAQ', item.id, { pergunta: item.pergunta });
     res.status(201).json({ success: true, data: item });
   } catch (error) {
@@ -5359,20 +5360,21 @@ app.post('/api/notificacao-versao/vista', authenticateToken, async (req, res) =>
 // DOCUMENTAÇÃO
 // ============================================================
 
-// GET /api/documentation/public — sem autenticação (para página de login)
+// GET /api/documentation/public — sem autenticação (somente seções públicas)
 app.get('/api/documentation/public', async (req, res) => {
   try {
-    const data = await db.obterDocumentacao();
+    const data = await db.obterDocumentacao('guest');
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// GET /api/documentation — público (todos os usuários autenticados)
+// GET /api/documentation — filtra seções conforme role do usuário autenticado
 app.get('/api/documentation', authenticateToken, async (req, res) => {
   try {
-    const data = await db.obterDocumentacao();
+    const userRole = req.user?.role || 'guest';
+    const data = await db.obterDocumentacao(userRole);
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -5382,11 +5384,11 @@ app.get('/api/documentation', authenticateToken, async (req, res) => {
 // POST /api/admin/documentation/sections — criar seção
 app.post('/api/admin/documentation/sections', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { title } = req.body;
+    const { title, visibility } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ success: false, error: 'Título é obrigatório' });
     }
-    const section = await db.criarDocSection({ title: title.trim() });
+    const section = await db.criarDocSection({ title: title.trim(), visibility: visibility || 'todos' });
     await logActivity(req.user, 'create', 'DocSection', section.id, { title: section.title });
     res.status(201).json({ success: true, data: section });
   } catch (error) {
@@ -5409,12 +5411,12 @@ app.put('/api/admin/documentation/sections/reorder', authenticateToken, requireA
 // PUT /api/admin/documentation/sections/:id — atualizar seção
 app.put('/api/admin/documentation/sections/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { title } = req.body;
-    if (!title || !title.trim()) {
-      return res.status(400).json({ success: false, error: 'Título é obrigatório' });
+    const { title, visibility } = req.body;
+    if (title !== undefined && !title?.trim()) {
+      return res.status(400).json({ success: false, error: 'Título não pode ser vazio' });
     }
-    const section = await db.atualizarDocSection(req.params.id, { title: title.trim() });
-    await logActivity(req.user, 'update', 'DocSection', req.params.id, { title });
+    const section = await db.atualizarDocSection(req.params.id, { title: title?.trim(), visibility });
+    await logActivity(req.user, 'update', 'DocSection', req.params.id, { title, visibility });
     res.json({ success: true, data: section });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

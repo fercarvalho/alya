@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   BookOpen, Plus, Trash2, Edit2, ChevronRight, ChevronDown,
-  FileText, Save, X, Eye, Code2, GripVertical, AlertTriangle
+  FileText, Save, X, Eye, Code2, GripVertical, AlertTriangle,
+  Globe, Users, ShieldCheck
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,11 +18,79 @@ interface DocPage {
   updatedAt: string;
 }
 
+type Visibility = 'todos' | 'usuarios' | 'admins';
+
 interface DocSection {
   id: string;
   title: string;
   order: number;
+  visibility: Visibility;
   pages: DocPage[];
+}
+
+const VISIBILITY_OPTIONS: {
+  value: Visibility;
+  label: string;
+  desc: string;
+  Icon: React.ElementType;
+  dotCls: string;
+}[] = [
+  { value: 'todos',    label: 'Todos',    desc: 'Visível para qualquer visitante',      Icon: Globe,       dotCls: 'text-green-500' },
+  { value: 'usuarios', label: 'Usuários', desc: 'Apenas para usuários autenticados',    Icon: Users,       dotCls: 'text-amber-500' },
+  { value: 'admins',   label: 'Admins',   desc: 'Somente administradores',              Icon: ShieldCheck, dotCls: 'text-red-500'   },
+];
+
+function VisibilityDot({ visibility }: { visibility?: Visibility }) {
+  if (!visibility || visibility === 'todos') return null;
+  const opt = VISIBILITY_OPTIONS.find(o => o.value === visibility);
+  if (!opt) return null;
+  return <opt.Icon className={`h-3 w-3 flex-shrink-0 ${opt.dotCls}`} title={opt.label} />;
+}
+
+function VisibilitySelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: Visibility;
+  onChange: (v: Visibility) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      {VISIBILITY_OPTIONS.map(opt => (
+        <label
+          key={opt.value}
+          className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+            value === opt.value
+              ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-400'
+              : 'border-gray-200 dark:border-gray-600 hover:border-amber-300 hover:bg-amber-50/40'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <input
+            type="radio"
+            name="doc-section-visibility"
+            value={opt.value}
+            checked={value === opt.value}
+            onChange={() => !disabled && onChange(opt.value)}
+            className="sr-only"
+          />
+          <div className={`p-1.5 rounded-lg ${value === opt.value ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-gray-100 dark:bg-gray-700'}`}>
+            <opt.Icon className={`h-4 w-4 ${value === opt.value ? 'text-amber-600' : 'text-gray-500 dark:text-gray-400'}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-semibold ${value === opt.value ? 'text-amber-800 dark:text-amber-300' : 'text-gray-700 dark:text-gray-200'}`}>
+              {opt.label}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{opt.desc}</p>
+          </div>
+          {value === opt.value && (
+            <div className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+          )}
+        </label>
+      ))}
+    </div>
+  );
 }
 
 declare global {
@@ -93,6 +162,7 @@ const DocumentationManagement: React.FC = () => {
   // Modais
   const [showNewSection, setShowNewSection] = useState(false);
   const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [newSectionVisibility, setNewSectionVisibility] = useState<Visibility>('todos');
   const [showNewPage, setShowNewPage] = useState<string | null>(null); // sectionId
   const [newPageTitle, setNewPageTitle] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -100,7 +170,7 @@ const DocumentationManagement: React.FC = () => {
     id: string;
     title: string;
   } | null>(null);
-  const [editingSection, setEditingSection] = useState<{ id: string; title: string } | null>(null);
+  const [editingSection, setEditingSection] = useState<{ id: string; title: string; visibility: Visibility } | null>(null);
 
   const headers = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
@@ -194,7 +264,7 @@ const DocumentationManagement: React.FC = () => {
     const res = await fetch(`${API_BASE_URL}/admin/documentation/sections`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({ title: newSectionTitle.trim() }),
+      body: JSON.stringify({ title: newSectionTitle.trim(), visibility: newSectionVisibility }),
     });
     const result = await res.json();
     if (result.success) {
@@ -202,21 +272,26 @@ const DocumentationManagement: React.FC = () => {
       setExpandedSections(prev => new Set([...prev, result.data.id]));
     }
     setNewSectionTitle('');
+    setNewSectionVisibility('todos');
     setShowNewSection(false);
   };
 
-  // Atualizar título de seção
-  const updateSectionTitle = async () => {
+  // Atualizar seção (título e/ou visibilidade)
+  const updateSection = async () => {
     if (!editingSection || !editingSection.title.trim()) return;
     const res = await fetch(`${API_BASE_URL}/admin/documentation/sections/${editingSection.id}`, {
       method: 'PUT',
       headers: headers(),
-      body: JSON.stringify({ title: editingSection.title.trim() }),
+      body: JSON.stringify({ title: editingSection.title.trim(), visibility: editingSection.visibility }),
     });
     const result = await res.json();
     if (result.success) {
       setSections(prev =>
-        prev.map(s => s.id === editingSection.id ? { ...s, title: editingSection.title.trim() } : s)
+        prev.map(s =>
+          s.id === editingSection.id
+            ? { ...s, title: editingSection.title.trim(), visibility: editingSection.visibility }
+            : s
+        )
       );
     }
     setEditingSection(null);
@@ -326,12 +401,13 @@ const DocumentationManagement: React.FC = () => {
                       ? <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                       : <ChevronRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />}
                     <span className="truncate">{section.title}</span>
+                    <VisibilityDot visibility={section.visibility} />
                   </button>
                   <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => setShowNewPage(section.id)} className="p-1 text-amber-500 hover:bg-amber-100 rounded" title="Nova página">
                       <Plus className="h-3.5 w-3.5" />
                     </button>
-                    <button onClick={() => setEditingSection({ id: section.id, title: section.title })} className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Renomear seção">
+                    <button onClick={() => setEditingSection({ id: section.id, title: section.title, visibility: section.visibility || 'todos' })} className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Editar seção">
                       <Edit2 className="h-3.5 w-3.5" />
                     </button>
                     <button onClick={() => setDeleteConfirm({ type: 'section', id: section.id, title: section.title })} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded" title="Deletar seção">
@@ -522,21 +598,32 @@ const DocumentationManagement: React.FC = () => {
           className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={e => e.target === e.currentTarget && setShowNewSection(false)}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-base font-bold text-gray-800 mb-4">Nova Seção</h3>
-            <input
-              autoFocus
-              type="text"
-              value={newSectionTitle}
-              onChange={e => setNewSectionTitle(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && createSection()}
-              placeholder="Nome da seção"
-              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
-            />
-            <div className="flex gap-2 justify-end">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 px-6 py-4 border-b border-amber-200/50 dark:border-amber-700/50">
+              <h3 className="text-base font-bold text-amber-800 dark:text-amber-300">Nova Seção</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Nome da seção</label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newSectionTitle}
+                  onChange={e => setNewSectionTitle(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && createSection()}
+                  placeholder="Nome da seção"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Visibilidade</label>
+                <VisibilitySelector value={newSectionVisibility} onChange={setNewSectionVisibility} />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end px-6 pb-5">
               <button
-                onClick={() => { setShowNewSection(false); setNewSectionTitle(''); }}
-                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl"
+                onClick={() => { setShowNewSection(false); setNewSectionTitle(''); setNewSectionVisibility('todos'); }}
+                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
               >
                 Cancelar
               </button>
@@ -588,31 +675,45 @@ const DocumentationManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: Renomear Seção */}
+      {/* Modal: Editar Seção */}
       {editingSection && (
         <div
           className="fixed inset-0 bg-amber-900/30 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={e => e.target === e.currentTarget && setEditingSection(null)}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-base font-bold text-gray-800 mb-4">Renomear Seção</h3>
-            <input
-              autoFocus
-              type="text"
-              value={editingSection.title}
-              onChange={e => setEditingSection({ ...editingSection, title: e.target.value })}
-              onKeyDown={e => e.key === 'Enter' && updateSectionTitle()}
-              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4 bg-white dark:!bg-gray-700 dark:text-gray-100"
-            />
-            <div className="flex gap-2 justify-end">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 px-6 py-4 border-b border-amber-200/50 dark:border-amber-700/50">
+              <h3 className="text-base font-bold text-amber-800 dark:text-amber-300">Editar Seção</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Nome da seção</label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={editingSection.title}
+                  onChange={e => setEditingSection({ ...editingSection, title: e.target.value })}
+                  onKeyDown={e => e.key === 'Enter' && updateSection()}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Visibilidade</label>
+                <VisibilitySelector
+                  value={editingSection.visibility}
+                  onChange={v => setEditingSection({ ...editingSection, visibility: v })}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end px-6 pb-5">
               <button
                 onClick={() => setEditingSection(null)}
-                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl"
+                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
               >
                 Cancelar
               </button>
               <button
-                onClick={updateSectionTitle}
+                onClick={updateSection}
                 disabled={!editingSection.title.trim()}
                 className="px-4 py-2 text-sm text-white bg-gradient-to-r from-amber-400 to-orange-400 rounded-xl disabled:opacity-50"
               >
