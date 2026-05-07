@@ -5296,22 +5296,22 @@ app.delete('/api/admin/rodape/bottom-links/:id', authenticateToken, requireSuper
   }
 });
 
-// ─── RODAPÉ — COMMIT PENDENTE ─────────────────────────────────────────────────
+// ─── RODAPÉ — COMMITS PENDENTES (FILA / CARROSSEL) ────────────────────────────
 
-// GET /api/admin/rodape/commit-pendente — verifica se há commit novo a confirmar
-app.get('/api/admin/rodape/commit-pendente', authenticateToken, requireSuperAdmin, async (req, res) => {
+// GET /api/admin/rodape/commits-pendentes — fila completa para o carrossel
+app.get('/api/admin/rodape/commits-pendentes', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const data = await db.obterCommitPendente();
+    const data = await db.obterCommitsPendentes();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// POST /api/admin/rodape/confirmar-commit — superadmin decide manter versão ou criar nova
+// POST /api/admin/rodape/confirmar-commit — superadmin processa um commit do carrossel
 app.post('/api/admin/rodape/confirmar-commit', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { action, novaVersao, commitHash, mensagem, data } = req.body;
+    const { action, novaVersao, commitHash, mensagem, data, manterSessionId } = req.body;
     if (!action || !['manter', 'nova_versao', 'ignorar'].includes(action)) {
       return res.status(400).json({ success: false, error: 'action inválida' });
     }
@@ -5329,9 +5329,10 @@ app.post('/api/admin/rodape/confirmar-commit', authenticateToken, requireSuperAd
       action,
       novaVersao: novaVersao?.trim(),
       commitHash,
-      mensagem: mensagem.trim(),
+      mensagem: mensagem ? mensagem.trim() : '',
       data: data || new Date().toLocaleDateString('pt-BR'),
       rolesNotificados,
+      manterSessionId,
     });
     await logActivity(req.user.id, req.user.username, 'update', 'admin', 'rodape_versao', commitHash, { action, novaVersao });
     res.json({ success: true, data: result });
