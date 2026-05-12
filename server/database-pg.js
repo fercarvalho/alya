@@ -1509,7 +1509,7 @@ class Database extends FileDatabase {
       const arr = this.normalizeMonthArray(base.prevYear?.mktComponents?.[c.id], 0);
       for (let i = 0; i < 12; i++) mktTotalsBase[i] += arr[i];
     }
-    const mktPrevAuto = this.normalizeMonthArray(mktTotalsBase, 0);
+    const mktPrevAuto = this.normalizeMonthArray(mktTotalsBase.map(v => v * percentFactor(growth.minimo)), 0);
     const mktTotalsPrevisto = applyOverride(mktPrevAuto, base.manualOverrides?.mktPrevistoManual);
     const mktTotalsMedio = applyOverride(mktTotalsBase.map(v => v * percentFactor(growth.medio)), base.manualOverrides?.mktMedioManual);
     const mktTotalsMaximo = applyOverride(mktTotalsBase.map(v => v * percentFactor(growth.maximo)), base.manualOverrides?.mktMaximoManual);

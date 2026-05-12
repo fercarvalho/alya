@@ -441,16 +441,26 @@ function processTransactions(worksheet) {
       // Tratar datas do Excel (podem ser serial numbers, Date objects ou strings)
       let dateFormatted;
       if (rawDate instanceof Date) {
-        dateFormatted = rawDate.toISOString().split("T")[0];
+        // Usar getFullYear/getMonth/getDate para evitar conversão UTC (off-by-one em BRT)
+        const d = rawDate;
+        dateFormatted = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       } else if (typeof rawDate === "number") {
         // Serial number do Excel
         const d = XLSX.SSF.parse_date_code(rawDate);
         dateFormatted = `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
       } else if (rawDate) {
-        const d = new Date(rawDate);
-        dateFormatted = isNaN(d.getTime())
-          ? new Date().toISOString().split("T")[0]
-          : d.toISOString().split("T")[0];
+        const dateStr = rawDate.toString().trim();
+        // Formato brasileiro DD/MM/AAAA — new Date() interpretaria como MM/DD (troca dia/mês)
+        const brMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (brMatch) {
+          const [, day, month, year] = brMatch;
+          dateFormatted = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+        } else {
+          const d = new Date(dateStr);
+          dateFormatted = isNaN(d.getTime())
+            ? new Date().toISOString().split("T")[0]
+            : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        }
       } else {
         dateFormatted = new Date().toISOString().split("T")[0];
       }
