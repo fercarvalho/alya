@@ -515,6 +515,7 @@ const AppContent: React.FC = () => {
   const [lastImportBatch, setLastImportBatch] = useState<string[]>([]);
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [undoCountdown, setUndoCountdown] = useState(15);
+  const [undoMaxCountdown, setUndoMaxCountdown] = useState(15);
   const [isUndoing, setIsUndoing] = useState(false);
 
   // Estado do modal de seleção de período para exportar relatórios
@@ -8154,16 +8155,25 @@ const AppContent: React.FC = () => {
                               ...prev,
                               ...result.data,
                             ]);
+                            // Ativar toast de undo com 30 segundos
+                            const savedIds: string[] = result.data.map((t: { id: string }) => String(t.id));
+                            setLastImportBatch(savedIds);
+                            setUndoMaxCountdown(30);
+                            setUndoCountdown(30);
+                            setShowUndoToast(true);
                           } else if (
                             importExportType === "products" &&
                             result.data?.length
                           ) {
                             setProducts((prev) => [...prev, ...result.data]);
+                            alert(
+                              `Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || "Dados processados com sucesso."}`,
+                            );
+                          } else {
+                            alert(
+                              `Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || "Dados processados com sucesso."}`,
+                            );
                           }
-
-                          alert(
-                            `Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || "Dados processados com sucesso."}`,
-                          );
                         } else {
                           const error = await response.text();
                           console.error("Erro do servidor:", error);
@@ -8816,6 +8826,7 @@ const AppContent: React.FC = () => {
                             setExtratoPreview([]);
                             // Ativar toast de undo
                             setLastImportBatch(savedIds);
+                            setUndoMaxCountdown(15);
                             setUndoCountdown(15);
                             setShowUndoToast(true);
                           } else {
@@ -9294,7 +9305,7 @@ const AppContent: React.FC = () => {
                 <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
                 <circle
                   cx="18" cy="18" r="15" fill="none" stroke="#4ade80" strokeWidth="3"
-                  strokeDasharray={`${(undoCountdown / 15) * 94.2} 94.2`}
+                  strokeDasharray={`${(undoCountdown / undoMaxCountdown) * 94.2} 94.2`}
                   strokeLinecap="round"
                 />
               </svg>
