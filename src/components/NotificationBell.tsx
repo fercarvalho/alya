@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell, Check, EyeOff, Trash2, CheckCheck, Eraser } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { authedFetch } from '../utils/authedFetch'
@@ -28,6 +29,29 @@ const NotificationBell: React.FC = () => {
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
   const [resolving, setResolving] = useState<{ transactionId: string; description: string } | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
+  // Posição fixed do dropdown — calculada do bounding rect do botão, pra
+  // escapar do stacking context do container fixed do header (que prendia
+  // o dropdown atrás da nav bar mesmo com z-index alto).
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) return
+    const updatePos = () => {
+      const rect = buttonRef.current!.getBoundingClientRect()
+      setDropdownPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    updatePos()
+    window.addEventListener('resize', updatePos)
+    window.addEventListener('scroll', updatePos, true)
+    return () => {
+      window.removeEventListener('resize', updatePos)
+      window.removeEventListener('scroll', updatePos, true)
+    }
+  }, [open])
 
   const fetchNotifications = useCallback(async () => {
     if (!token) return
@@ -52,10 +76,18 @@ const NotificationBell: React.FC = () => {
   useEffect(() => {
     if (!open) return
     const onClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (buttonRef.current?.contains(target)) return
+      if (dropdownRef.current?.contains(target)) return
+      setOpen(false)
     }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
     window.addEventListener('mousedown', onClick)
-    return () => window.removeEventListener('mousedown', onClick)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mousedown', onClick)
+      window.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
   const markRead = async (id: string) => {
@@ -127,24 +159,28 @@ const NotificationBell: React.FC = () => {
 
   return (
     <>
-      <div className="relative" ref={dropdownRef}>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="relative p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          title="Notificações"
-          aria-label="Notificações"
-        >
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </button>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="relative p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        title="Notificações"
+        aria-label="Notificações"
+      >
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
 
-        {open && (
-          <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[10000] flex flex-col overflow-hidden">
+      {open && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{ position: 'fixed', top: dropdownPos.top, right: dropdownPos.right }}
+          className="w-96 max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[10000] flex flex-col overflow-hidden"
+        >
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -216,9 +252,9 @@ const NotificationBell: React.FC = () => {
                 </ul>
               )}
             </div>
-          </div>
-        )}
-      </div>
+          </div>,
+        document.body
+      )}
 
       <ResolveTransactionModal
         transactionId={resolving?.transactionId || null}
