@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { X, Plus, Edit, Trash2, ToggleLeft, ToggleRight, ArrowRight, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { authedFetch } from '../../utils/authedFetch'
 
 const API_BASE_URL = '/api'
 
@@ -78,6 +80,7 @@ const emptyForm: FormState = {
 }
 
 const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChanged }) => {
+  const { token } = useAuth()
   const [rules, setRules] = useState<TransactionRule[]>([])
   const [perms, setPerms] = useState<RulePermissions>({ canCreate: false, canEdit: false, canDelete: false })
   const [loading, setLoading] = useState(false)
@@ -91,16 +94,17 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
   const [deletePrompt, setDeletePrompt] = useState<{ rule: TransactionRule; affected: DeleteAffectedTx[] } | null>(null)
 
   const refresh = useCallback(async () => {
+    if (!token) return
     setLoading(true)
     try {
-      const r = await fetch(`${API_BASE_URL}/transaction-rules`, { credentials: 'include' })
+      const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules`)
       const j = await r.json()
       if (j.success) {
         setRules(j.data || [])
         if (j.permissions) setPerms(j.permissions)
       }
     } finally { setLoading(false) }
-  }, [])
+  }, [token])
 
   useEffect(() => { if (isOpen) refresh() }, [isOpen, refresh])
 
@@ -183,17 +187,15 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
       const body = JSON.stringify(payload)
       let savedRule: TransactionRule | null = null
       if (editing) {
-        const r = await fetch(`${API_BASE_URL}/transaction-rules/${editing.id}`, {
-          method: 'PUT', credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }, body,
+        const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${editing.id}`, {
+          method: 'PUT', body,
         })
         const j = await r.json()
         if (!j.success) { alert(j.error || 'Falha ao salvar regra'); return }
         savedRule = j.data
       } else {
-        const r = await fetch(`${API_BASE_URL}/transaction-rules`, {
-          method: 'POST', credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }, body,
+        const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules`, {
+          method: 'POST', body,
         })
         const j = await r.json()
         if (!j.success) { alert(j.error || 'Falha ao criar regra'); return }
@@ -203,9 +205,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
       setView('list'); setEditing(null)
 
       if (savedRule) {
-        const prev = await fetch(`${API_BASE_URL}/transaction-rules/preview`, {
-          method: 'POST', credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+        const prev = await authedFetch(token, `${API_BASE_URL}/transaction-rules/preview`, {
+          method: 'POST',
           body: JSON.stringify({
             descriptionContains: savedRule.descriptionContains,
             minValue: savedRule.minValue,
@@ -227,9 +228,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
 
   const toggleActive = async (rule: TransactionRule) => {
     if (!perms.canEdit) return
-    const r = await fetch(`${API_BASE_URL}/transaction-rules/${rule.id}`, {
-      method: 'PUT', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+    const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${rule.id}`, {
+      method: 'PUT',
       body: JSON.stringify({ isActive: !rule.isActive }),
     })
     const j = await r.json()
@@ -245,9 +245,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
     reordered.splice(target, 0, moved)
     setRules(reordered)
     try {
-      const r = await fetch(`${API_BASE_URL}/transaction-rules/reorder`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/reorder`, {
+        method: 'POST',
         body: JSON.stringify({ orderedIds: reordered.map((rr) => rr.id) }),
       })
       const j = await r.json()
@@ -257,9 +256,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
 
   const startDelete = async (rule: TransactionRule) => {
     if (!perms.canDelete) return
-    const r = await fetch(`${API_BASE_URL}/transaction-rules/preview`, {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+    const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/preview`, {
+      method: 'POST',
       body: JSON.stringify({
         descriptionContains: rule.descriptionContains,
         minValue: rule.minValue,
@@ -276,9 +274,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
     if (!deletePrompt) return
     setSubmitting(true)
     try {
-      const r = await fetch(`${API_BASE_URL}/transaction-rules/${deletePrompt.rule.id}`, {
-        method: 'DELETE', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${deletePrompt.rule.id}`, {
+        method: 'DELETE',
         body: JSON.stringify({ transactionAction }),
       })
       const j = await r.json()
@@ -293,9 +290,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
     if (!retroPreview) return
     setSubmitting(true)
     try {
-      const r = await fetch(`${API_BASE_URL}/transaction-rules/${retroPreview.ruleId}/apply-retroactive`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${retroPreview.ruleId}/apply-retroactive`, {
+        method: 'POST',
         body: JSON.stringify({ excludedTransactionIds: Array.from(retroPreview.excluded) }),
       })
       const j = await r.json()
@@ -310,9 +306,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
     if (retroPreview.matches.length === 0) { setRetroPreview(null); return }
     setSubmitting(true)
     try {
-      const r = await fetch(`${API_BASE_URL}/transaction-rules/${retroPreview.ruleId}/mark-pending-retroactive`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${retroPreview.ruleId}/mark-pending-retroactive`, {
+        method: 'POST',
         body: JSON.stringify({ transactionIds: retroPreview.matches.map((t) => t.id) }),
       })
       const j = await r.json()

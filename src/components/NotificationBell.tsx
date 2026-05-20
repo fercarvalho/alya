@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Bell, Check, EyeOff, Trash2, CheckCheck, Eraser } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { authedFetch } from '../utils/authedFetch'
 import ResolveTransactionModal from './modals/ResolveTransactionModal'
 
 const API_BASE_URL = '/api'
@@ -19,6 +21,7 @@ interface Notification {
 }
 
 const NotificationBell: React.FC = () => {
+  const { token } = useAuth()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -27,8 +30,9 @@ const NotificationBell: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement | null>(null)
 
   const fetchNotifications = useCallback(async () => {
+    if (!token) return
     try {
-      const r = await fetch(`${API_BASE_URL}/notifications`, { credentials: 'include' })
+      const r = await authedFetch(token, `${API_BASE_URL}/notifications`)
       const j = await r.json()
       if (j.success) {
         setItems(j.data || [])
@@ -37,7 +41,7 @@ const NotificationBell: React.FC = () => {
     } catch {
       // silencioso (rede)
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     fetchNotifications()
@@ -56,7 +60,7 @@ const NotificationBell: React.FC = () => {
 
   const markRead = async (id: string) => {
     try {
-      await fetch(`${API_BASE_URL}/notifications/${id}/read`, { method: 'PATCH', credentials: 'include' })
+      await authedFetch(token, `${API_BASE_URL}/notifications/${id}/read`, { method: 'PATCH' })
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
       setUnreadCount((c) => Math.max(0, c - 1))
     } catch {}
@@ -64,7 +68,7 @@ const NotificationBell: React.FC = () => {
 
   const markAllRead = async () => {
     try {
-      await fetch(`${API_BASE_URL}/notifications/read-all`, { method: 'PATCH', credentials: 'include' })
+      await authedFetch(token, `${API_BASE_URL}/notifications/read-all`, { method: 'PATCH' })
       setItems((prev) => prev.map((n) => ({ ...n, isRead: true })))
       setUnreadCount(0)
     } catch {}
@@ -73,7 +77,7 @@ const NotificationBell: React.FC = () => {
   // "Limpar" = esconde do sino mas mantém no banco
   const clearOne = async (id: string) => {
     try {
-      await fetch(`${API_BASE_URL}/notifications/${id}/clear`, { method: 'PATCH', credentials: 'include' })
+      await authedFetch(token, `${API_BASE_URL}/notifications/${id}/clear`, { method: 'PATCH' })
       setItems((prev) => {
         const removed = prev.find((n) => n.id === id)
         if (removed && !removed.isRead) setUnreadCount((c) => Math.max(0, c - 1))
@@ -84,7 +88,7 @@ const NotificationBell: React.FC = () => {
 
   const clearAll = async () => {
     try {
-      await fetch(`${API_BASE_URL}/notifications/clear-all`, { method: 'PATCH', credentials: 'include' })
+      await authedFetch(token, `${API_BASE_URL}/notifications/clear-all`, { method: 'PATCH' })
       setItems([])
       setUnreadCount(0)
     } catch {}
@@ -93,7 +97,7 @@ const NotificationBell: React.FC = () => {
   // "Excluir" = remove do banco
   const deleteOne = async (id: string) => {
     try {
-      await fetch(`${API_BASE_URL}/notifications/${id}`, { method: 'DELETE', credentials: 'include' })
+      await authedFetch(token, `${API_BASE_URL}/notifications/${id}`, { method: 'DELETE' })
       setItems((prev) => {
         const removed = prev.find((n) => n.id === id)
         if (removed && !removed.isRead) setUnreadCount((c) => Math.max(0, c - 1))
@@ -104,7 +108,7 @@ const NotificationBell: React.FC = () => {
 
   const deleteAll = async () => {
     try {
-      await fetch(`${API_BASE_URL}/notifications`, { method: 'DELETE', credentials: 'include' })
+      await authedFetch(token, `${API_BASE_URL}/notifications`, { method: 'DELETE' })
       setItems([])
       setUnreadCount(0)
       setConfirmDeleteAll(false)
@@ -140,7 +144,7 @@ const NotificationBell: React.FC = () => {
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 flex flex-col overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[10000] flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">

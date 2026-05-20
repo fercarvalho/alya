@@ -43,6 +43,7 @@ import {
   HelpCircle,
   BookOpen,
   Settings,
+  MoreHorizontal,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
@@ -582,6 +583,26 @@ const AppContent: React.FC = () => {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [resolveTarget, setResolveTarget] = useState<{ id: string; description: string } | null>(null);
   const [showHiddenTransactions, setShowHiddenTransactions] = useState(false);
+  // Dropdown "Ações" no toolbar de Transações
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isActionsMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
+        setIsActionsMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsActionsMenuOpen(false);
+    };
+    window.addEventListener('mousedown', onClick);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onClick);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isActionsMenuOpen]);
 
   // Estados do modal de exportação de produtos
   const [isExportProdutosModalOpen, setIsExportProdutosModalOpen] =
@@ -4780,45 +4801,71 @@ const AppContent: React.FC = () => {
           <DollarSign className="w-8 h-8 text-green-600" />
           Transações
         </h1>
-        <div className="flex gap-3 flex-wrap">
-          <button
-            onClick={() => {
-              setImportType(null);
-              setSelectedBank(null);
-              setExtratoStep(0);
-              setExtratoFile(null);
-              setIsImportExtratoModalOpen(true);
-            }}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <Upload className="h-5 w-5" />
-            Importar Extrato
-          </button>
-          <button
-            onClick={() => setIsExportTransacoesModalOpen(true)}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <Download className="h-5 w-5" />
-            Exportar PDF
-          </button>
-          <button
-            onClick={() => {
-              setImportExportType("transactions");
-              setIsImportExportModalOpen(true);
-            }}
-            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <Download className="h-5 w-5" />
-            Importar/Exportar
-          </button>
-          <button
-            onClick={() => setIsRulesModalOpen(true)}
-            className="flex items-center gap-3 px-6 py-3 bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 font-semibold rounded-xl border-2 border-amber-500 hover:bg-amber-50 dark:hover:bg-slate-700 shadow-md transition-all duration-200"
-            title="Conjunto de regras automáticas para classificação de transações"
-          >
-            <Settings className="h-5 w-5" />
-            Conjunto de Regras
-          </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {/* Dropdown "Ações" — agrupa importar/exportar/regras */}
+          <div className="relative" ref={actionsMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsActionsMenuOpen((o) => !o)}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white hover:bg-amber-50 text-amber-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-amber-300 font-semibold rounded-xl border-2 border-amber-500 hover:border-amber-600 dark:border-amber-400 shadow-sm transition-all duration-200"
+              aria-haspopup="menu"
+              aria-expanded={isActionsMenuOpen}
+              title="Mais ações"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+              <span className="hidden sm:inline">Ações</span>
+            </button>
+
+            {isActionsMenuOpen && (
+              <div role="menu" className="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-40 overflow-hidden">
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setImportType(null);
+                    setSelectedBank(null);
+                    setExtratoStep(0);
+                    setExtratoFile(null);
+                    setIsImportExtratoModalOpen(true);
+                    setIsActionsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                >
+                  <Upload className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  Importar Extrato
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => { setIsExportTransacoesModalOpen(true); setIsActionsMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                >
+                  <Download className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  Exportar PDF
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setImportExportType("transactions");
+                    setIsImportExportModalOpen(true);
+                    setIsActionsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                >
+                  <Download className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  Importar / Exportar Excel
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => { setIsRulesModalOpen(true); setIsActionsMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border-t border-gray-100 dark:border-gray-700"
+                >
+                  <Settings className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  Conjunto de Regras
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Botão primário: Nova Transação */}
           <button
             onClick={() => setIsTransactionModalOpen(true)}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold rounded-xl hover:from-amber-500 hover:to-orange-500 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
@@ -9477,7 +9524,9 @@ const AppContent: React.FC = () => {
         onClose={() => setIsRulesModalOpen(false)}
         onRulesChanged={() => {
           // Recarrega transações para refletir regras aplicadas retroativamente
-          fetch(`${API_BASE_URL}/transactions`, { credentials: 'include' })
+          const headers: HeadersInit = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          fetch(`${API_BASE_URL}/transactions`, { headers })
             .then((r) => r.json())
             .then((j) => { if (j.success) setTransactions(j.data || []); })
             .catch(() => {});
@@ -9489,7 +9538,9 @@ const AppContent: React.FC = () => {
         description={resolveTarget?.description}
         onClose={() => setResolveTarget(null)}
         onResolved={() => {
-          fetch(`${API_BASE_URL}/transactions`, { credentials: 'include' })
+          const headers: HeadersInit = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          fetch(`${API_BASE_URL}/transactions`, { headers })
             .then((r) => r.json())
             .then((j) => { if (j.success) setTransactions(j.data || []); })
             .catch(() => {});

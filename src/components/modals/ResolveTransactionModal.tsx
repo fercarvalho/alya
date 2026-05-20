@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, Check, X as XIcon } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { authedFetch } from '../../utils/authedFetch'
 
 const API_BASE_URL = '/api'
 
@@ -30,17 +32,19 @@ interface Props {
 }
 
 const ResolveTransactionModal: React.FC<Props> = ({ transactionId, description, onClose, onResolved }) => {
+  const { token } = useAuth()
   const [candidates, setCandidates] = useState<RuleCandidate[] | null>(null)
   const [loading, setLoading] = useState(false)
 
   const loadCandidates = useCallback(async (txId: string) => {
+    if (!token) return
     setLoading(true)
     try {
-      const r = await fetch(`${API_BASE_URL}/transactions/${txId}/candidates`, { credentials: 'include' })
+      const r = await authedFetch(token, `${API_BASE_URL}/transactions/${txId}/candidates`)
       const j = await r.json()
       let list: RuleCandidate[] = (j.success ? j.data : []) || []
       if (list.length === 0) {
-        const rr = await fetch(`${API_BASE_URL}/transaction-rules`, { credentials: 'include' })
+        const rr = await authedFetch(token, `${API_BASE_URL}/transaction-rules`)
         const jj = await rr.json()
         if (jj.success) list = (jj.data || []).filter((rule: { isActive: boolean }) => rule.isActive)
       }
@@ -48,7 +52,7 @@ const ResolveTransactionModal: React.FC<Props> = ({ transactionId, description, 
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     if (!transactionId) { setCandidates(null); return }
@@ -66,9 +70,8 @@ const ResolveTransactionModal: React.FC<Props> = ({ transactionId, description, 
     if (!transactionId) return
     setLoading(true)
     try {
-      const r = await fetch(`${API_BASE_URL}/transactions/${transactionId}/resolve-confirmation`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const r = await authedFetch(token, `${API_BASE_URL}/transactions/${transactionId}/resolve-confirmation`, {
+        method: 'POST',
         body: JSON.stringify({ ruleId }),
       })
       const j = await r.json()

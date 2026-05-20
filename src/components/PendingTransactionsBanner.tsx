@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { authedFetch } from '../utils/authedFetch'
 import BulkResolveModal from './modals/BulkResolveModal'
 
 const API_BASE_URL = '/api'
@@ -11,18 +13,20 @@ const POLL_INTERVAL_MS = 45_000
  * Clicar em "Confirmar agora" abre o BulkResolveModal direto.
  */
 const PendingTransactionsBanner: React.FC = () => {
+  const { token } = useAuth()
   const [count, setCount] = useState(0)
   const [open, setOpen] = useState(false)
 
   const refresh = useCallback(async () => {
+    if (!token) return
     try {
-      const r = await fetch(`${API_BASE_URL}/transactions/pending`, { credentials: 'include' })
+      const r = await authedFetch(token, `${API_BASE_URL}/transactions/pending`)
       const j = await r.json()
       if (j.success) setCount(j.data?.length || 0)
     } catch {
       // silencioso
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     refresh()

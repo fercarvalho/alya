@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { X, Check, AlertCircle } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { authedFetch } from '../../utils/authedFetch'
 
 const API_BASE_URL = '/api'
 
@@ -39,15 +41,17 @@ interface Props {
 }
 
 const BulkResolveModal: React.FC<Props> = ({ isOpen, onClose, onResolved }) => {
+  const { token } = useAuth()
   const [items, setItems] = useState<PendingTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [decisions, setDecisions] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
+    if (!token) return
     setLoading(true)
     try {
-      const r = await fetch(`${API_BASE_URL}/transactions/pending`, { credentials: 'include' })
+      const r = await authedFetch(token, `${API_BASE_URL}/transactions/pending`)
       const j = await r.json()
       if (j.success) {
         const data: PendingTransaction[] = j.data || []
@@ -59,7 +63,7 @@ const BulkResolveModal: React.FC<Props> = ({ isOpen, onClose, onResolved }) => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     if (!isOpen) return
@@ -87,9 +91,8 @@ const BulkResolveModal: React.FC<Props> = ({ isOpen, onClose, onResolved }) => {
           ruleId: decisions[t.id] === '__keep__' ? null : decisions[t.id],
         }))
       if (resolutions.length === 0) { onClose(); return }
-      const r = await fetch(`${API_BASE_URL}/transactions/resolve-confirmation-bulk`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const r = await authedFetch(token, `${API_BASE_URL}/transactions/resolve-confirmation-bulk`, {
+        method: 'POST',
         body: JSON.stringify({ resolutions }),
       })
       const j = await r.json()
