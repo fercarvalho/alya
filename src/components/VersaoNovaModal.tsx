@@ -82,7 +82,7 @@ const VersaoNovaModal: React.FC<Props> = ({ versoes, onConfirm, onClose }) => {
         {/* Body */}
         <div className="px-6 py-5">
           <p className="text-sm font-medium text-gray-700 mb-2">O que há de novo:</p>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 min-h-[80px]">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 min-h-[80px] max-h-[40vh] overflow-y-auto">
             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{atual.texto}</p>
           </div>
           <p className="text-xs text-gray-400 mt-3">
