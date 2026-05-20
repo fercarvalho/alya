@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, DollarSign, Download, FileText, Filter, BarCh
 import { parseLocalDate } from '../utils/dateUtils'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
+import PendingTransactionsBanner from './PendingTransactionsBanner'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -11,8 +12,9 @@ interface Transaction {
   date: string
   description: string
   value: number
-  type: 'Receita' | 'Despesa'
+  type: 'Receita' | 'Despesa' | 'Transferência entre contas' | 'A confirmar'
   category: string
+  isHidden?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -164,8 +166,8 @@ const DRE: React.FC = () => {
 
   // Gerar DRE para um conjunto de transações
   const generateDRE = useCallback((transactions: Transaction[]): DRERow[] => {
-    const receitas = transactions.filter(t => isReceita(t.type))
-    const despesas = transactions.filter(t => isDespesa(t.type))
+    const receitas = transactions.filter(t => isReceita(t.type) && !t.isHidden)
+    const despesas = transactions.filter(t => isDespesa(t.type) && !t.isHidden)
 
     const totalReceitas = receitas.reduce((sum, t) => sum + safeVal(t.value), 0)
     const totalDespesas = despesas.reduce((sum, t) => sum + safeVal(t.value), 0)
@@ -478,6 +480,7 @@ const DRE: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <PendingTransactionsBanner />
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

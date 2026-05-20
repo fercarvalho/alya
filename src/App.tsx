@@ -42,11 +42,16 @@ import {
   ShoppingBag,
   HelpCircle,
   BookOpen,
+  Settings,
 } from "lucide-react";
 import Clients from "./components/Clients";
 import DRE from "./components/DRE";
 import Login from "./components/Login";
 import MenuUsuario from "./components/MenuUsuario";
+import NotificationBell from "./components/NotificationBell";
+import PendingTransactionsBanner from "./components/PendingTransactionsBanner";
+import TransactionRulesModal from "./components/modals/TransactionRulesModal";
+import ResolveTransactionModal from "./components/modals/ResolveTransactionModal";
 import ImpersonationBanner from "./components/ImpersonationBanner";
 import FeedbackButton from "./components/FeedbackButton";
 import ThemeToggle from "./components/ThemeToggle";
@@ -97,15 +102,60 @@ import {
   ReferenceLine,
 } from "recharts";
 
+type TransactionType =
+  | "Receita"
+  | "Despesa"
+  | "Transferência entre contas"
+  | "A confirmar";
+
 interface NewTransaction {
   id: string;
   date: string;
   description: string;
   value: number;
-  type: "Receita" | "Despesa";
+  type: TransactionType;
   category: string;
+  subcategory?: string;
+  appliedRuleId?: string | null;
+  originalType?: string | null;
+  originalCategory?: string | null;
+  originalSubcategory?: string | null;
+  needsConfirmation?: boolean;
+  isHidden?: boolean;
   createdAt: Date;
 }
+
+// Estilos por tipo (badge + valor + sinal). Tipos novos:
+//   - 'Transferência entre contas' (azul, neutro em DRE/Dashboard)
+//   - 'A confirmar' (roxo — sinal universal de atenção pendente)
+const TRANSACTION_TYPE_STYLES: Record<
+  TransactionType,
+  { badge: string; valueText: string; sign: "+" | "-" | "" }
+> = {
+  Receita: {
+    badge:
+      "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+    valueText: "text-green-600",
+    sign: "+",
+  },
+  Despesa: {
+    badge: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    valueText: "text-red-600",
+    sign: "-",
+  },
+  "Transferência entre contas": {
+    badge:
+      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    valueText: "text-blue-600",
+    sign: "",
+  },
+  "A confirmar": {
+    badge:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+    valueText: "text-purple-600",
+    sign: "",
+  },
+};
 
 interface Product {
   id: string;
@@ -527,6 +577,11 @@ const AppContent: React.FC = () => {
     useState(false);
   const [exportarFiltradas, setExportarFiltradas] = useState(true);
   const [incluirResumo, setIncluirResumo] = useState(true);
+
+  // Estados de regras automáticas (migration 015)
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+  const [resolveTarget, setResolveTarget] = useState<{ id: string; description: string } | null>(null);
+  const [showHiddenTransactions, setShowHiddenTransactions] = useState(false);
 
   // Estados do modal de exportação de produtos
   const [isExportProdutosModalOpen, setIsExportProdutosModalOpen] =
@@ -1388,6 +1443,11 @@ const AppContent: React.FC = () => {
   const getFilteredAndSortedTransactions = () => {
     let filtered = transactions;
 
+    // Filtro: oculta transações com is_hidden por padrão (toggle abaixo dos filtros)
+    if (!showHiddenTransactions) {
+      filtered = filtered.filter((t) => !t.isHidden);
+    }
+
     // Filtro por descrição
     if (transactionFilters.description) {
       filtered = filtered.filter((t) =>
@@ -2054,10 +2114,10 @@ const AppContent: React.FC = () => {
         return m === month && y === year;
       });
       const receitas = monthTransactions
-        .filter((t) => isReceita(t.type))
+        .filter((t) => isReceita(t.type) && !t.isHidden)
         .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
       const despesas = monthTransactions
-        .filter((t) => isDespesa(t.type))
+        .filter((t) => isDespesa(t.type) && !t.isHidden)
         .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
       return {
         receitas,
@@ -2163,10 +2223,10 @@ const AppContent: React.FC = () => {
 
     // Dados trimestrais (usando dados reais das transações)
     const totalReceitasTrimestre = transacoesTrimestre
-      .filter((t) => isReceita(t.type))
+      .filter((t) => isReceita(t.type) && !t.isHidden)
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
     const totalDespesasTrimestre = transacoesTrimestre
-      .filter((t) => isDespesa(t.type))
+      .filter((t) => isDespesa(t.type) && !t.isHidden)
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
     const lucroLiquidoTrimestre =
       totalReceitasTrimestre - totalDespesasTrimestre;
@@ -2185,10 +2245,10 @@ const AppContent: React.FC = () => {
 
     // Dados anuais (usando dados reais das transações)
     const totalReceitasAno = transacoesAno
-      .filter((t) => isReceita(t.type))
+      .filter((t) => isReceita(t.type) && !t.isHidden)
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
     const totalDespesasAno = transacoesAno
-      .filter((t) => isDespesa(t.type))
+      .filter((t) => isDespesa(t.type) && !t.isHidden)
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
     const lucroLiquidoAno = totalReceitasAno - totalDespesasAno;
 
@@ -2563,6 +2623,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="space-y-8">
         {demoBanner}
+        <PendingTransactionsBanner />
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <BarChart3 className="w-8 h-8 text-blue-600" />
@@ -3780,10 +3841,10 @@ const AppContent: React.FC = () => {
     });
 
     const totalReceitasAno = transacoesDoAno
-      .filter((t) => isReceita(t.type))
+      .filter((t) => isReceita(t.type) && !t.isHidden)
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
     const totalDespesasAno = transacoesDoAno
-      .filter((t) => isDespesa(t.type))
+      .filter((t) => isDespesa(t.type) && !t.isHidden)
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
 
     // Metas totais do ano (valores da projeção)
@@ -4515,11 +4576,11 @@ const AppContent: React.FC = () => {
 
       if (incluirResumo) {
         totalReceitas = transacoesParaExportar
-          .filter((t) => isReceita(t.type))
+          .filter((t) => isReceita(t.type) && !t.isHidden)
           .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
 
         totalDespesas = transacoesParaExportar
-          .filter((t) => isDespesa(t.type))
+          .filter((t) => isDespesa(t.type) && !t.isHidden)
           .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
 
         saldo = totalReceitas - totalDespesas;
@@ -4713,12 +4774,13 @@ const AppContent: React.FC = () => {
   // Render Transactions
   const renderTransactions = () => (
     <div className="space-y-6">
+      <PendingTransactionsBanner />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <DollarSign className="w-8 h-8 text-green-600" />
           Transações
         </h1>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => {
               setImportType(null);
@@ -4748,6 +4810,14 @@ const AppContent: React.FC = () => {
           >
             <Download className="h-5 w-5" />
             Importar/Exportar
+          </button>
+          <button
+            onClick={() => setIsRulesModalOpen(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 font-semibold rounded-xl border-2 border-amber-500 hover:bg-amber-50 dark:hover:bg-slate-700 shadow-md transition-all duration-200"
+            title="Conjunto de regras automáticas para classificação de transações"
+          >
+            <Settings className="h-5 w-5" />
+            Conjunto de Regras
           </button>
           <button
             onClick={() => setIsTransactionModalOpen(true)}
@@ -4825,8 +4895,30 @@ const AppContent: React.FC = () => {
                 <option value="">Todos os tipos</option>
                 <option value="Receita">Receitas</option>
                 <option value="Despesa">Despesas</option>
+                <option value="Transferência entre contas">Transferências</option>
+                <option value="A confirmar">A confirmar</option>
               </select>
             </div>
+
+            {/* Toggle: Mostrar ocultas (só aparece se houver alguma) */}
+            {(() => {
+              const hiddenCount = transactions.filter((t) => t.isHidden).length;
+              if (hiddenCount === 0) return null;
+              return (
+                <div className="flex flex-col flex-shrink-0">
+                  <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">&nbsp;</label>
+                  <label className="flex items-center gap-2 px-3 py-2 border border-amber-300 dark:border-gray-600 rounded-md cursor-pointer bg-white dark:!bg-gray-700 text-xs sm:text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={showHiddenTransactions}
+                      onChange={(e) => setShowHiddenTransactions(e.target.checked)}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    Mostrar ocultas ({hiddenCount})
+                  </label>
+                </div>
+              );
+            })()}
 
             {/* Filtro Categoria */}
             <div className="flex flex-col flex-1 min-w-0">
@@ -5046,12 +5138,17 @@ const AppContent: React.FC = () => {
                 Nenhuma transação corresponde aos filtros aplicados.
               </div>
             )}
-            {getFilteredAndSortedTransactions().map((transaction, index, arr) => (
+            {getFilteredAndSortedTransactions().map((transaction, index, arr) => {
+              const txType = (transaction.type as TransactionType) in TRANSACTION_TYPE_STYLES
+                ? (transaction.type as TransactionType)
+                : (isReceita(transaction.type) ? 'Receita' : 'Despesa') as TransactionType;
+              const style = TRANSACTION_TYPE_STYLES[txType];
+              return (
               <div
                 key={transaction.id}
                 className={`bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-all duration-200 ${
                   index === arr.length - 1 ? "border-b-0" : ""
-                }`}
+                } ${transaction.isHidden ? "opacity-50" : ""}`}
               >
                 <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3 w-full">
                   {/* Checkbox */}
@@ -5074,21 +5171,41 @@ const AppContent: React.FC = () => {
                   {/* Descrição */}
                   <div className="flex-1 min-w-0 text-left">
                     <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
+                      {transaction.isHidden && (
+                        <span
+                          className="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-gray-200"
+                          title="Ocultada por regra"
+                        >
+                          OCULTA
+                        </span>
+                      )}
                       {transaction.description}
                     </h3>
                   </div>
 
                   {/* Tipo */}
                   <div className="flex-shrink-0 w-16 sm:w-20 text-center">
-                    <span
-                      className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium ${
-                        isReceita(transaction.type)
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {transaction.type}
-                    </span>
+                    {transaction.type === "A confirmar" ? (
+                      <button
+                        onClick={() =>
+                          setResolveTarget({
+                            id: transaction.id,
+                            description: transaction.description,
+                          })
+                        }
+                        className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:ring-2 hover:ring-purple-400 ${style.badge}`}
+                        title="Clique para confirmar esta transação"
+                      >
+                        {transaction.type}
+                      </button>
+                    ) : (
+                      <span
+                        className={`px-0.5 sm:px-1 py-0.5 rounded-full text-xs font-medium ${style.badge}`}
+                        title={transaction.type}
+                      >
+                        {transaction.type}
+                      </span>
+                    )}
                   </div>
 
                   {/* Categoria */}
@@ -5101,13 +5218,9 @@ const AppContent: React.FC = () => {
                   {/* Valor */}
                   <div className="flex-shrink-0 w-28 sm:w-32 text-center">
                     <p
-                      className={`text-xs sm:text-sm md:text-lg font-bold whitespace-nowrap ${
-                        isReceita(transaction.type)
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
+                      className={`text-xs sm:text-sm md:text-lg font-bold whitespace-nowrap ${style.valueText}`}
                     >
-                      {isReceita(transaction.type) ? "+" : "-"}R${" "}
+                      {style.sign}R${" "}
                       {(Number(transaction.value) || 0).toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
@@ -5152,7 +5265,8 @@ const AppContent: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -6965,6 +7079,7 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-4 min-w-max flex-shrink-0 ml-4">
+                <NotificationBell />
                 <MenuUsuario />
                 <button
                   onClick={logout}
@@ -9356,6 +9471,30 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       )}
+
+      <TransactionRulesModal
+        isOpen={isRulesModalOpen}
+        onClose={() => setIsRulesModalOpen(false)}
+        onRulesChanged={() => {
+          // Recarrega transações para refletir regras aplicadas retroativamente
+          fetch(`${API_BASE_URL}/transactions`, { credentials: 'include' })
+            .then((r) => r.json())
+            .then((j) => { if (j.success) setTransactions(j.data || []); })
+            .catch(() => {});
+        }}
+      />
+
+      <ResolveTransactionModal
+        transactionId={resolveTarget?.id || null}
+        description={resolveTarget?.description}
+        onClose={() => setResolveTarget(null)}
+        onResolved={() => {
+          fetch(`${API_BASE_URL}/transactions`, { credentials: 'include' })
+            .then((r) => r.json())
+            .then((j) => { if (j.success) setTransactions(j.data || []); })
+            .catch(() => {});
+        }}
+      />
     </div>
   );
 };

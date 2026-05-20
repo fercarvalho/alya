@@ -52,6 +52,10 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
     isActive: true
   });
   const [permissoesLegais, setPermissoesLegais] = useState<PermissoesLegais>({});
+  // Permissões granulares para regras de transação (migration 015)
+  const [rulePerms, setRulePerms] = useState<{ canCreate: boolean; canEdit: boolean; canDelete: boolean; isAdminBypass?: boolean }>(
+    { canCreate: false, canEdit: false, canDelete: false }
+  );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -75,6 +79,14 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
       setPhotoFile(null);
       setErrors({});
       setPermissoesLegais(user.permissoesLegais || {});
+      // Fetch permissões granulares para regras
+      fetch(`${API_BASE_URL}/users/${user.id}/rule-permissions`, { credentials: 'include' })
+        .then((r) => r.json())
+        .then((j) => {
+          if (j.success) setRulePerms(j.data);
+          else setRulePerms({ canCreate: false, canEdit: false, canDelete: false });
+        })
+        .catch(() => setRulePerms({ canCreate: false, canEdit: false, canDelete: false }));
     }
   }, [isOpen, user]);
 
@@ -277,6 +289,23 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
             }
           } catch (e) {
             console.error('Erro ao salvar permissões legais:', e);
+          }
+        }
+        // Salvar permissões granulares de regras (apenas para usuários não-admin —
+        // admin/superadmin têm bypass e não precisam de linha em user_rule_permissions)
+        if (!rulePerms.isAdminBypass && formData.role !== 'admin' && formData.role !== 'superadmin') {
+          try {
+            await fetch(`${API_BASE_URL}/users/${user.id}/rule-permissions`, {
+              method: 'PUT',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                canCreate: rulePerms.canCreate,
+                canEdit:   rulePerms.canEdit,
+                canDelete: rulePerms.canDelete,
+              }),
+            });
+          } catch (e) {
+            console.error('Erro ao salvar permissões de regras:', e);
           }
         }
         setErrors({});
@@ -529,6 +558,54 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Permissões de Regras de Transação (migration 015) */}
+          <div className="border border-amber-200 dark:border-amber-700 rounded-xl p-4 bg-amber-50/30 dark:bg-amber-900/10">
+            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+              <span className="text-amber-500">⚙️</span> Permissões de Regras de Transação
+            </h4>
+            {(formData.role === 'admin' || formData.role === 'superadmin') ? (
+              <p className="text-xs text-gray-600 dark:text-gray-400 bg-amber-100/50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg p-3">
+                Admins e superadmins têm controle total sobre regras automaticamente — não é necessário configurar aqui.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Conceda poderes específicos para gerenciar regras automáticas de transações.
+                </p>
+                <div className="space-y-2">
+                  {[
+                    { key: 'canCreate', label: 'Criar regras' },
+                    { key: 'canEdit',   label: 'Editar regras' },
+                    { key: 'canDelete', label: 'Excluir regras' },
+                  ].map((perm) => (
+                    <label key={perm.key} className="flex items-center gap-3 cursor-pointer group">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={!!(rulePerms as any)[perm.key]}
+                          onChange={(e) => setRulePerms((prev) => ({ ...prev, [perm.key]: e.target.checked }))}
+                          className="sr-only"
+                        />
+                        <div className={`w-9 h-5 rounded-full transition-colors ${
+                          (rulePerms as any)[perm.key]
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                            : 'bg-gray-200 dark:bg-gray-700'
+                        }`}>
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                            (rulePerms as any)[perm.key] ? 'translate-x-4' : 'translate-x-0.5'
+                          }`} />
+                        </div>
+                      </div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+                        {perm.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Botões */}
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">

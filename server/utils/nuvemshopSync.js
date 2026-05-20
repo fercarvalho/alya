@@ -2,6 +2,7 @@
 
 const nuvemshopService = require('../services/nuvemshopService');
 const { encrypt } = require('./encryption');
+const { applyRulesAndPersist } = require('./applyTransactionRules');
 
 /**
  * Converte o valor de um pedido Nuvemshop para float em reais.
@@ -72,13 +73,17 @@ async function syncOrders(db, userId, token, storeId, since) {
 
       const orderDate = order.paid_at || order.created_at || new Date().toISOString();
 
-      const transaction = await db.saveTransaction({
+      const savedTx = await db.saveTransaction({
         date: orderDate.split('T')[0],
         description: `Pedido #${order.number} - Nuvemshop`,
         value: parseOrderValue(order.total),
         type: 'Receita',
         category: 'Venda Online',
       });
+      // Aplica regras automáticas (manda actingUserId pra criar notificação
+      // pendente, se houver conflito). saveSyncMap usa o ID original — que não
+      // muda mesmo se a transação for reclassificada pela regra.
+      const { transaction } = await applyRulesAndPersist(db, savedTx, { actingUserId: userId });
 
       await db.saveSyncMap(userId, 'order', order.id, transaction.id);
       imported++;

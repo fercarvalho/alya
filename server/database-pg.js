@@ -298,9 +298,19 @@ class Database extends FileDatabase {
     const now = new Date().toISOString();
     const date = parseDate(transaction.date) || now.split('T')[0];
     const r = await this.pool.query(
-      `INSERT INTO transactions (id, date, description, value, type, category, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [id, date, transaction.description || '', parseFloat(transaction.value) || 0, transaction.type || 'Outros', transaction.category || null, now, now]
+      `INSERT INTO transactions (id, date, description, value, type, category, subcategory, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        id,
+        date,
+        transaction.description || '',
+        parseFloat(transaction.value) || 0,
+        transaction.type || 'Outros',
+        transaction.category || null,
+        transaction.subcategory || null,
+        now,
+        now,
+      ]
     );
     const t = toCamelCase(r.rows[0]);
     t.date = formatDateForApi(t.date);
@@ -316,9 +326,18 @@ class Database extends FileDatabase {
         value = COALESCE($4, value),
         type = COALESCE($5, type),
         category = COALESCE($6, category),
+        subcategory = COALESCE($7, subcategory),
         updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 RETURNING *`,
-      [id, date, data.description, data.value != null ? parseFloat(data.value) : null, data.type, data.category]
+      [
+        id,
+        date,
+        data.description,
+        data.value != null ? parseFloat(data.value) : null,
+        data.type,
+        data.category,
+        data.subcategory,
+      ]
     );
     if (r.rows.length === 0) throw new Error('Transação não encontrada');
     const t = toCamelCase(r.rows[0]);
@@ -342,6 +361,500 @@ class Database extends FileDatabase {
   async deleteMultipleTransactions(ids) {
     const r = await this.pool.query('DELETE FROM transactions WHERE id = ANY($1)', [ids]);
     return r.rowCount > 0;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Regras automáticas de transações (migration 015)
+  // ════════════════════════════════════════════════════════════════════════════
+
+  async getAllTransactionRules() {
+    try {
+      const r = await this.pool.query(
+        'SELECT * FROM transaction_rules ORDER BY sort_order ASC, created_at ASC'
+      );
+      return toCamelCase(r.rows);
+    } catch (e) {
+      console.error('Erro ao ler regras:', e);
+      return [];
+    }
+  }
+
+  async getActiveTransactionRules() {
+    try {
+      const r = await this.pool.query(
+        'SELECT * FROM transaction_rules WHERE is_active = TRUE ORDER BY sort_order ASC, created_at ASC'
+      );
+      return toCamelCase(r.rows);
+    } catch (e) {
+      console.error('Erro ao ler regras ativas:', e);
+      return [];
+    }
+  }
+
+  async getTransactionRuleById(id) {
+    const r = await this.pool.query('SELECT * FROM transaction_rules WHERE id = $1', [id]);
+    return r.rows[0] ? toCamelCase(r.rows[0]) : null;
+  }
+
+  async saveTransactionRule(rule) {
+    const id = this.generateId();
+    const orderRes = await this.pool.query(
+      'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM transaction_rules'
+    );
+    const nextOrder = rule.sortOrder ?? orderRes.rows[0].next;
+    const r = await this.pool.query(
+      `INSERT INTO transaction_rules
+         (id, name, description_contains, action_type, action_value, set_category, set_subcategory,
+          hide_transaction, min_value, max_value, match_type, is_active, sort_order, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING *`,
+      [
+        id,
+        rule.name,
+        rule.descriptionContains,
+        rule.actionType || 'change_type',
+        rule.actionValue || null,
+        rule.setCategory || null,
+        rule.setSubcategory || null,
+        !!rule.hideTransaction,
+        rule.minValue ?? null,
+        rule.maxValue ?? null,
+        rule.matchType || null,
+        rule.isActive !== false,
+        nextOrder,
+        rule.createdBy || null,
+      ]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async updateTransactionRule(id, updates) {
+    const existing = await this.getTransactionRuleById(id);
+    if (!existing) throw new Error('Regra não encontrada');
+    const pick = (key, fallback) =>
+      Object.prototype.hasOwnProperty.call(updates, key) ? updates[key] : fallback;
+
+    const r = await this.pool.query(
+      `UPDATE transaction_rules SET
+         name = $2,
+         description_contains = $3,
+         action_type = $4,
+         action_value = $5,
+         set_category = $6,
+         set_subcategory = $7,
+         hide_transaction = $8,
+         min_value = $9,
+         max_value = $10,
+         match_type = $11,
+         is_active = $12,
+         sort_order = $13,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [
+        id,
+        updates.name ?? existing.name,
+        updates.descriptionContains ?? existing.descriptionContains,
+        updates.actionType ?? existing.actionType,
+        pick('actionValue', existing.actionValue),
+        pick('setCategory', existing.setCategory),
+        pick('setSubcategory', existing.setSubcategory),
+        Object.prototype.hasOwnProperty.call(updates, 'hideTransaction')
+          ? !!updates.hideTransaction
+          : existing.hideTransaction,
+        pick('minValue', existing.minValue),
+        pick('maxValue', existing.maxValue),
+        pick('matchType', existing.matchType),
+        updates.isActive ?? existing.isActive,
+        updates.sortOrder ?? existing.sortOrder,
+      ]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async deleteTransactionRule(id) {
+    const r = await this.pool.query(
+      'DELETE FROM transaction_rules WHERE id = $1 RETURNING id',
+      [id]
+    );
+    if (r.rowCount === 0) throw new Error('Regra não encontrada');
+    return true;
+  }
+
+  async reorderTransactionRules(orderedIds) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (let i = 0; i < orderedIds.length; i++) {
+        await client.query(
+          'UPDATE transaction_rules SET sort_order = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          [i, orderedIds[i]]
+        );
+      }
+      await client.query('COMMIT');
+      return true;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  // ── Aplicação de regras ─────────────────────────────────────────────────────
+
+  /**
+   * Avalia uma transação contra todas as regras ATIVAS. Função pura: não
+   * persiste nada. Caller decide o que fazer com o resultado.
+   */
+  async evaluateRulesForTransaction(transaction) {
+    const rules = await this.getActiveTransactionRules();
+    const description = (transaction.description || '').toLowerCase();
+    if (!description) return { matched: [], rules };
+    const absValue = Math.abs(parseFloat(transaction.value) || 0);
+    const txType = transaction.type;
+
+    const matched = rules.filter((r) => {
+      const needle = (r.descriptionContains || '').toLowerCase().trim();
+      if (!needle) return false;
+      if (!description.includes(needle)) return false;
+      if (r.minValue != null && absValue < parseFloat(r.minValue)) return false;
+      if (r.maxValue != null && absValue > parseFloat(r.maxValue)) return false;
+      if (r.matchType && r.matchType !== txType) return false;
+      return true;
+    });
+
+    return { matched, rules };
+  }
+
+  async applyRuleToTransaction(transactionId, ruleId) {
+    const rule = await this.getTransactionRuleById(ruleId);
+    if (!rule) throw new Error('Regra não encontrada');
+    const txRes = await this.pool.query('SELECT * FROM transactions WHERE id = $1', [transactionId]);
+    const tx = txRes.rows[0];
+    if (!tx) throw new Error('Transação não encontrada');
+
+    // Se a transação está pendente, parte dos valores originais antes de aplicar
+    // a regra; caso contrário, parte do estado atual.
+    const isPending = tx.needs_confirmation === true || tx.type === 'A confirmar';
+    const baseType        = isPending ? (tx.original_type        || tx.type)        : tx.type;
+    const baseCategory    = isPending ? (tx.original_category    || tx.category)    : tx.category;
+    const baseSubcategory = isPending ? (tx.original_subcategory || tx.subcategory) : tx.subcategory;
+
+    const newType        = rule.actionValue     ? rule.actionValue     : baseType;
+    const newCategory    = rule.setCategory     ? rule.setCategory     : baseCategory;
+    const newSubcategory = rule.setSubcategory  ? rule.setSubcategory  : baseSubcategory;
+    const newHidden      = rule.hideTransaction ? true                 : tx.is_hidden;
+
+    // Preserva original_* apenas na primeira aplicação
+    const originalType        = tx.original_type        || tx.type;
+    const originalCategory    = tx.original_category    || tx.category;
+    const originalSubcategory = tx.original_subcategory || tx.subcategory;
+
+    const r = await this.pool.query(
+      `UPDATE transactions SET
+         type = $1,
+         category = $2,
+         subcategory = $3,
+         is_hidden = $4,
+         applied_rule_id = $5,
+         original_type = $6,
+         original_category = $7,
+         original_subcategory = $8,
+         needs_confirmation = FALSE,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $9
+       RETURNING *`,
+      [newType, newCategory, newSubcategory, newHidden, ruleId, originalType, originalCategory, originalSubcategory, transactionId]
+    );
+    await this.clearTransactionRuleCandidates(transactionId);
+    const out = toCamelCase(r.rows[0]);
+    out.date = formatDateForApi(out.date);
+    return out;
+  }
+
+  async revertTransactionRule(transactionId) {
+    const r = await this.pool.query(
+      `UPDATE transactions SET
+         type = COALESCE(original_type, type),
+         category = COALESCE(original_category, category),
+         subcategory = COALESCE(original_subcategory, subcategory),
+         is_hidden = FALSE,
+         applied_rule_id = NULL,
+         original_type = NULL,
+         original_category = NULL,
+         original_subcategory = NULL,
+         needs_confirmation = FALSE,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [transactionId]
+    );
+    if (r.rowCount === 0) throw new Error('Transação não encontrada');
+    await this.clearTransactionRuleCandidates(transactionId);
+    const out = toCamelCase(r.rows[0]);
+    out.date = formatDateForApi(out.date);
+    return out;
+  }
+
+  async markTransactionPendingConfirmation(transactionId, candidateRuleIds) {
+    const txRes = await this.pool.query('SELECT * FROM transactions WHERE id = $1', [transactionId]);
+    const tx = txRes.rows[0];
+    if (!tx) throw new Error('Transação não encontrada');
+    const originalType        = tx.original_type        || tx.type;
+    const originalCategory    = tx.original_category    || tx.category;
+    const originalSubcategory = tx.original_subcategory || tx.subcategory;
+
+    const r = await this.pool.query(
+      `UPDATE transactions SET
+         type = 'A confirmar',
+         applied_rule_id = NULL,
+         original_type = $1,
+         original_category = $2,
+         original_subcategory = $3,
+         needs_confirmation = TRUE,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING *`,
+      [originalType, originalCategory, originalSubcategory, transactionId]
+    );
+    await this.saveTransactionRuleCandidates(transactionId, candidateRuleIds);
+    const out = toCamelCase(r.rows[0]);
+    out.date = formatDateForApi(out.date);
+    return out;
+  }
+
+  // ── Candidatos ──────────────────────────────────────────────────────────────
+
+  async saveTransactionRuleCandidates(transactionId, ruleIds) {
+    if (!ruleIds || ruleIds.length === 0) return;
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM transaction_rule_candidates WHERE transaction_id = $1', [transactionId]);
+      for (const ruleId of ruleIds) {
+        await client.query(
+          `INSERT INTO transaction_rule_candidates (transaction_id, rule_id)
+           VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [transactionId, ruleId]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getTransactionRuleCandidates(transactionId) {
+    const r = await this.pool.query(
+      `SELECT r.* FROM transaction_rules r
+         INNER JOIN transaction_rule_candidates c ON c.rule_id = r.id
+        WHERE c.transaction_id = $1
+        ORDER BY r.sort_order ASC, r.created_at ASC`,
+      [transactionId]
+    );
+    return toCamelCase(r.rows);
+  }
+
+  async clearTransactionRuleCandidates(transactionId) {
+    await this.pool.query(
+      'DELETE FROM transaction_rule_candidates WHERE transaction_id = $1',
+      [transactionId]
+    );
+  }
+
+  // ── Preview retroativo ──────────────────────────────────────────────────────
+
+  /**
+   * Dada uma condição (descrição contém + faixa de valor + tipo casado),
+   * retorna transações existentes que dariam match. Cada item vem com info
+   * se já está governada por outra regra.
+   */
+  async previewRuleMatches({ descriptionContains, minValue = null, maxValue = null, matchType = null, excludeRuleId = null }) {
+    const needle = (descriptionContains || '').trim();
+    if (!needle) return [];
+    const params = [`%${needle}%`, excludeRuleId];
+    let whereExtras = '';
+    if (minValue != null) { params.push(parseFloat(minValue)); whereExtras += ` AND ABS(t.value) >= $${params.length}`; }
+    if (maxValue != null) { params.push(parseFloat(maxValue)); whereExtras += ` AND ABS(t.value) <= $${params.length}`; }
+    if (matchType)        { params.push(matchType);            whereExtras += ` AND t.type = $${params.length}`; }
+
+    const r = await this.pool.query(
+      `SELECT t.*, r.id AS existing_rule_id, r.name AS existing_rule_name
+         FROM transactions t
+         LEFT JOIN transaction_rules r ON r.id = t.applied_rule_id
+        WHERE LOWER(t.description) LIKE LOWER($1)
+          AND ($2::VARCHAR IS NULL OR t.applied_rule_id IS DISTINCT FROM $2)
+          ${whereExtras}
+        ORDER BY t.date DESC`,
+      params
+    );
+    return r.rows.map((row) => {
+      const c = toCamelCase(row);
+      c.date = formatDateForApi(c.date);
+      return c;
+    });
+  }
+
+  // ── Notificações in-app ─────────────────────────────────────────────────────
+
+  async createNotification(notif) {
+    const id = this.generateId();
+    const r = await this.pool.query(
+      `INSERT INTO notifications
+         (id, user_id, notification_type, title, message, related_entity_type, related_entity_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        id,
+        notif.userId,
+        notif.notificationType,
+        notif.title,
+        notif.message || null,
+        notif.relatedEntityType || null,
+        notif.relatedEntityId || null,
+      ]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async getNotificationsForUser(userId, { onlyUnread = false, limit = 50, includeCleared = false } = {}) {
+    const r = await this.pool.query(
+      `SELECT * FROM notifications
+        WHERE user_id = $1
+          AND ($2::BOOLEAN = FALSE OR is_read = FALSE)
+          AND ($3::BOOLEAN = TRUE  OR cleared = FALSE)
+        ORDER BY created_at DESC
+        LIMIT $4`,
+      [userId, onlyUnread, includeCleared, limit]
+    );
+    return toCamelCase(r.rows);
+  }
+
+  async getUnreadNotificationCount(userId) {
+    const r = await this.pool.query(
+      'SELECT COUNT(*)::INT AS count FROM notifications WHERE user_id = $1 AND is_read = FALSE AND cleared = FALSE',
+      [userId]
+    );
+    return r.rows[0].count;
+  }
+
+  async markNotificationAsRead(id, userId) {
+    const r = await this.pool.query(
+      `UPDATE notifications SET is_read = TRUE, read_at = NOW()
+        WHERE id = $1 AND user_id = $2 RETURNING *`,
+      [id, userId]
+    );
+    return r.rows[0] ? toCamelCase(r.rows[0]) : null;
+  }
+
+  async markAllNotificationsAsRead(userId) {
+    await this.pool.query(
+      `UPDATE notifications SET is_read = TRUE, read_at = NOW()
+        WHERE user_id = $1 AND is_read = FALSE AND cleared = FALSE`,
+      [userId]
+    );
+  }
+
+  async clearNotification(id, userId) {
+    const r = await this.pool.query(
+      `UPDATE notifications SET cleared = TRUE, cleared_at = NOW()
+        WHERE id = $1 AND user_id = $2 RETURNING *`,
+      [id, userId]
+    );
+    return r.rows[0] ? toCamelCase(r.rows[0]) : null;
+  }
+
+  async clearAllNotifications(userId) {
+    const r = await this.pool.query(
+      `UPDATE notifications SET cleared = TRUE, cleared_at = NOW()
+        WHERE user_id = $1 AND cleared = FALSE RETURNING id`,
+      [userId]
+    );
+    return r.rowCount;
+  }
+
+  async deleteNotification(id, userId) {
+    const r = await this.pool.query(
+      'DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING id',
+      [id, userId]
+    );
+    return r.rowCount > 0;
+  }
+
+  async deleteAllNotificationsForUser(userId, { onlyCleared = false } = {}) {
+    const r = await this.pool.query(
+      `DELETE FROM notifications
+        WHERE user_id = $1
+          AND ($2::BOOLEAN = FALSE OR cleared = TRUE)
+        RETURNING id`,
+      [userId, onlyCleared]
+    );
+    return r.rowCount;
+  }
+
+  async deleteNotificationsByEntity(entityType, entityId) {
+    await this.pool.query(
+      'DELETE FROM notifications WHERE related_entity_type = $1 AND related_entity_id = $2',
+      [entityType, entityId]
+    );
+  }
+
+  async fanoutNotificationToAdmins(notif, excludeUserIds = []) {
+    const adminsRes = await this.pool.query(
+      "SELECT id FROM users WHERE role IN ('admin', 'superadmin') AND is_active = TRUE"
+    );
+    const created = [];
+    for (const row of adminsRes.rows) {
+      if (excludeUserIds.includes(row.id)) continue;
+      const n = await this.createNotification({ ...notif, userId: row.id });
+      created.push(n);
+    }
+    return created;
+  }
+
+  // ── Permissões granulares para regras ───────────────────────────────────────
+
+  /**
+   * Retorna { canCreate, canEdit, canDelete, isAdminBypass }.
+   * admin/superadmin sempre TRUE (bypass).
+   */
+  async getUserRulePermissions(userId, role) {
+    if (role === 'admin' || role === 'superadmin') {
+      return { canCreate: true, canEdit: true, canDelete: true, isAdminBypass: true };
+    }
+    const r = await this.pool.query(
+      'SELECT can_create, can_edit, can_delete FROM user_rule_permissions WHERE user_id = $1',
+      [userId]
+    );
+    if (r.rows.length === 0) {
+      return { canCreate: false, canEdit: false, canDelete: false, isAdminBypass: false };
+    }
+    return { ...toCamelCase(r.rows[0]), isAdminBypass: false };
+  }
+
+  async setUserRulePermissions(userId, perms, grantedBy) {
+    const r = await this.pool.query(
+      `INSERT INTO user_rule_permissions
+         (user_id, can_create, can_edit, can_delete, granted_by, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE
+         SET can_create = EXCLUDED.can_create,
+             can_edit   = EXCLUDED.can_edit,
+             can_delete = EXCLUDED.can_delete,
+             granted_by = EXCLUDED.granted_by,
+             updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [userId, !!perms.canCreate, !!perms.canEdit, !!perms.canDelete, grantedBy || null]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async deleteUserRulePermissions(userId) {
+    await this.pool.query('DELETE FROM user_rule_permissions WHERE user_id = $1', [userId]);
   }
 
   async getAllProducts() {
