@@ -4,9 +4,22 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/alya-logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Alya Velas - Sistema de Gestão Financeira" />
     <meta name="author" content="Alya Velas" />
+
+    <!-- PWA — manifesto + theme-color (amber-500, assinatura Alya; dark vira amber-50 invertido) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#f59e0b" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1200" media="(prefers-color-scheme: dark)" />
+
+    <!-- iOS — habilita modo standalone após "Adicionar à Tela de Início"
+         (necessário pra Web Push em iOS 16.4+) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Alya" />
+
     <!-- CSP Nonce Meta Tag (será injetada pelo backend em produção) -->
     <meta name="csp-nonce" content="" id="csp-nonce-meta" />
     <title>Alya Velas - Sistema de Gestão Financeira</title>
