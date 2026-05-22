@@ -49,12 +49,20 @@ async function applyRulesAndPersist(db, savedTransaction, { actingUserId = null 
     relatedEntityType: 'transaction',
     relatedEntityId: savedTransaction.id,
   };
+  // Lazy require pra evitar ciclo (push-dispatcher → db). Em runtime, o módulo
+  // já foi resolvido pelo server.js no boot, então não há custo extra aqui.
+  const pushDispatcher = require('../services/push-dispatcher');
+
   const notified = new Set();
   if (actingUserId) {
-    await db.createNotification({ ...notifPayload, userId: actingUserId });
+    const actorNotif = await db.createNotification({ ...notifPayload, userId: actingUserId });
+    pushDispatcher.send(db, actingUserId, actorNotif).catch(() => {});
     notified.add(actingUserId);
   }
-  await db.fanoutNotificationToAdmins(notifPayload, Array.from(notified));
+  const adminNotifs = await db.fanoutNotificationToAdmins(notifPayload, Array.from(notified));
+  for (const n of adminNotifs) {
+    pushDispatcher.send(db, n.userId, n).catch(() => {});
+  }
   return { transaction: updated, applied: 'pending', matchedRules: matched };
 }
 

@@ -816,6 +816,173 @@ class Database extends FileDatabase {
     return created;
   }
 
+  // ===========================================================================
+  // Web Push: subscriptions e preferências de notificação
+  // ===========================================================================
+  // Portado do impgeo (database-pg.js seção "Web Push"), CONSOLIDADO num
+  // único scope já que o Alya é single-origin (não há tc-users separados).
+  //
+  // Os helpers de preferências têm fallback de defaults inline (constante
+  // NOTIFICATION_DEFAULTS abaixo). Idéia: nem todo user precisa ter linha pra
+  // cada (type, channel) — só quando o user toca o toggle a linha aparece.
+  // Mantém a tabela enxuta e permite mudar defaults sem migration.
+  //
+  // Tipos especiais com prefixo '_meta:' guardam toggles que não correspondem
+  // a um evento (ex: '_meta:foreground' = "mostrar push OS-level com o app
+  // aberto").
+
+  static NOTIFICATION_DEFAULTS = Object.freeze({
+    transaction_confirm_needed: { push: true,  email: false },
+    '_meta:foreground':         { push: false, email: false },
+  });
+
+  // ── push_subscriptions ─────────────────────────────────────────────────────
+
+  // Insere uma subscription nova ou atualiza last_seen_at se o endpoint já
+  // existir (mesmo dispositivo re-subscribendo, ou outro user na mesma máquina
+  // — neste caso o user_id também é atualizado, decisão consciente: a
+  // subscription "pertence" ao último usuário logado naquela combinação
+  // browser+origin).
+  async upsertPushSubscription(userId, sub, userAgent) {
+    const id = this.generateId();
+    const r = await this.pool.query(
+      `INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, user_agent)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (endpoint) DO UPDATE
+         SET user_id      = EXCLUDED.user_id,
+             p256dh       = EXCLUDED.p256dh,
+             auth         = EXCLUDED.auth,
+             user_agent   = EXCLUDED.user_agent,
+             failed_count = 0,
+             last_seen_at = NOW()
+       RETURNING *`,
+      [id, userId, sub.endpoint, sub.keys.p256dh, sub.keys.auth, userAgent || null]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  async listActivePushSubscriptions(userId) {
+    const r = await this.pool.query(
+      `SELECT * FROM push_subscriptions WHERE user_id = $1 ORDER BY last_seen_at DESC`,
+      [userId]
+    );
+    return toCamelCase(r.rows);
+  }
+
+  async deletePushSubscriptionByEndpoint(userId, endpoint) {
+    const r = await this.pool.query(
+      `DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2 RETURNING id`,
+      [userId, endpoint]
+    );
+    return r.rows.length > 0;
+  }
+
+  // Remove uma subscription que o push service marcou como inválida (410/404).
+  // Não exige user_id porque o endpoint é único globalmente.
+  async pruneInvalidPushSubscription(endpoint) {
+    await this.pool.query(
+      `DELETE FROM push_subscriptions WHERE endpoint = $1`,
+      [endpoint]
+    );
+  }
+
+  // Marca uma falha transitória; quando failed_count atinge MAX, remove.
+  // Devolve { removed: boolean, failedCount: number } pra observabilidade.
+  async markPushSubscriptionFailed(endpoint, maxFails = 5) {
+    const r = await this.pool.query(
+      `UPDATE push_subscriptions
+          SET failed_count = failed_count + 1
+        WHERE endpoint = $1
+        RETURNING failed_count`,
+      [endpoint]
+    );
+    if (r.rows.length === 0) return { removed: false, failedCount: 0 };
+    const count = r.rows[0].failed_count;
+    if (count >= maxFails) {
+      await this.pruneInvalidPushSubscription(endpoint);
+      return { removed: true, failedCount: count };
+    }
+    return { removed: false, failedCount: count };
+  }
+
+  async touchPushSubscriptionLastSeen(endpoint) {
+    await this.pool.query(
+      `UPDATE push_subscriptions
+          SET last_seen_at = NOW(), failed_count = 0
+        WHERE endpoint = $1`,
+      [endpoint]
+    );
+  }
+
+  // ── notification_preferences ──────────────────────────────────────────────
+
+  // Devolve TRUE/FALSE (nunca null). Usa default do mapa se não houver linha.
+  // Default-default = FALSE pra tipos desconhecidos (segurança: não envia push
+  // sem opt-in explícito).
+  async getNotificationPreference(userId, notificationType, channel) {
+    const r = await this.pool.query(
+      `SELECT enabled FROM notification_preferences
+        WHERE user_id = $1 AND notification_type = $2 AND channel = $3`,
+      [userId, notificationType, channel]
+    );
+    if (r.rows.length > 0) return r.rows[0].enabled;
+    const forType = Database.NOTIFICATION_DEFAULTS[notificationType];
+    if (forType && typeof forType[channel] === 'boolean') return forType[channel];
+    return false;
+  }
+
+  async setNotificationPreference(userId, notificationType, channel, enabled) {
+    const id = this.generateId();
+    const r = await this.pool.query(
+      `INSERT INTO notification_preferences (id, user_id, notification_type, channel, enabled)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, notification_type, channel) DO UPDATE
+         SET enabled    = EXCLUDED.enabled,
+             updated_at = NOW()
+       RETURNING *`,
+      [id, userId, notificationType, channel, !!enabled]
+    );
+    return toCamelCase(r.rows[0]);
+  }
+
+  // Devolve o grid completo de preferências do user, com defaults aplicados
+  // para qualquer combinação (type, channel) que não tenha linha explícita.
+  // Útil pra UI desenhar a tabela toda.
+  async listNotificationPreferences(userId) {
+    const r = await this.pool.query(
+      `SELECT notification_type, channel, enabled, updated_at
+         FROM notification_preferences WHERE user_id = $1`,
+      [userId]
+    );
+    const stored = new Map();
+    for (const row of r.rows) {
+      stored.set(`${row.notification_type}:${row.channel}`, row);
+    }
+    const grid = [];
+    const types = new Set([
+      ...Object.keys(Database.NOTIFICATION_DEFAULTS),
+      ...r.rows.map(row => row.notification_type),
+    ]);
+    for (const type of types) {
+      for (const channel of ['push', 'email']) {
+        const key = `${type}:${channel}`;
+        const row = stored.get(key);
+        const def = (Database.NOTIFICATION_DEFAULTS[type]
+                     && typeof Database.NOTIFICATION_DEFAULTS[type][channel] === 'boolean')
+          ? Database.NOTIFICATION_DEFAULTS[type][channel]
+          : false;
+        grid.push({
+          notificationType: type,
+          channel,
+          enabled: row ? row.enabled : def,
+          isDefault: !row,
+          updatedAt: row ? row.updated_at : null,
+        });
+      }
+    }
+    return grid;
+  }
+
   // ── Permissões granulares para regras ───────────────────────────────────────
 
   /**

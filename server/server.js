@@ -13,6 +13,8 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const sgMail = require("@sendgrid/mail");
 const Database = require("./database-pg");
+const push = require("./services/push");
+const pushDispatcher = require("./services/push-dispatcher");
 const { parseExtrato } = require("./services/extratoParser");
 const { applyRulesAndPersist: applyRulesAndPersistShared } = require("./utils/applyTransactionRules");
 
@@ -83,6 +85,7 @@ const anomalyDetection = require("./utils/anomaly-detection");
 const app = express();
 const port = process.env.PORT || 8001;
 const db = new Database();
+push.init(process.env);
 
 // 🔒 CORREÇÃO DE SEGURANÇA: Forçar HTTPS em produção
 if (process.env.NODE_ENV === "production") {
@@ -3214,10 +3217,14 @@ app.post('/api/transaction-rules/:id/mark-pending-retroactive', authenticateToke
       };
       const notified = new Set();
       if (req.user?.id) {
-        await db.createNotification({ ...notifPayload, userId: req.user.id });
+        const actorNotif = await db.createNotification({ ...notifPayload, userId: req.user.id });
+        pushDispatcher.send(db, req.user.id, actorNotif).catch(() => {});
         notified.add(req.user.id);
       }
-      await db.fanoutNotificationToAdmins(notifPayload, Array.from(notified));
+      const adminNotifs = await db.fanoutNotificationToAdmins(notifPayload, Array.from(notified));
+      for (const n of adminNotifs) {
+        pushDispatcher.send(db, n.userId, n).catch(() => {});
+      }
     }
     res.json({ success: true, marked });
     await logActivity(req.user.id, req.user.username, 'edit', 'transactions', 'transaction_rule', id, { markPendingRetroactive: marked });
@@ -3369,6 +3376,66 @@ app.delete('/api/notifications/:id', authenticateToken, async (req, res) => {
     const ok = await db.deleteNotification(req.params.id, req.user.id);
     if (!ok) return res.status(404).json({ success: false, error: 'Notificação não encontrada' });
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ─── Web Push: subscriptions e preferências ───────────────────────────────
+// Single-origin: 5 endpoints, todos atrás de authenticateToken (JWT Bearer).
+
+app.get('/api/push/vapid-public-key', authenticateToken, async (req, res) => {
+  if (!push.isConfigured()) {
+    return res.status(503).json({ success: false, error: 'Web Push não configurado no servidor' });
+  }
+  res.json({ success: true, publicKey: push.getPublicKey() });
+});
+
+app.post('/api/push/subscribe', authenticateToken, async (req, res) => {
+  try {
+    const { endpoint, keys } = req.body || {};
+    if (!endpoint || typeof endpoint !== 'string' || endpoint.length < 20) {
+      return res.status(400).json({ success: false, error: 'endpoint inválido' });
+    }
+    if (!keys || typeof keys.p256dh !== 'string' || typeof keys.auth !== 'string') {
+      return res.status(400).json({ success: false, error: 'keys.p256dh e keys.auth são obrigatórios' });
+    }
+    const userAgent = (req.headers['user-agent'] || '').slice(0, 500);
+    const sub = await db.upsertPushSubscription(req.user.id, { endpoint, keys }, userAgent);
+    res.json({ success: true, data: { id: sub.id, endpoint: sub.endpoint } });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/push/subscribe', authenticateToken, async (req, res) => {
+  try {
+    const { endpoint } = req.body || {};
+    if (!endpoint || typeof endpoint !== 'string') {
+      return res.status(400).json({ success: false, error: 'endpoint obrigatório' });
+    }
+    const removed = await db.deletePushSubscriptionByEndpoint(req.user.id, endpoint);
+    res.json({ success: true, removed });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/notification-preferences', authenticateToken, async (req, res) => {
+  try {
+    const grid = await db.listNotificationPreferences(req.user.id);
+    res.json({ success: true, data: grid });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.put('/api/notification-preferences', authenticateToken, async (req, res) => {
+  try {
+    const { notification_type, channel, enabled } = req.body || {};
+    if (!notification_type || typeof notification_type !== 'string' || notification_type.length > 64) {
+      return res.status(400).json({ success: false, error: 'notification_type inválido' });
+    }
+    if (channel !== 'push' && channel !== 'email') {
+      return res.status(400).json({ success: false, error: 'channel deve ser "push" ou "email"' });
+    }
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ success: false, error: 'enabled deve ser boolean' });
+    }
+    const pref = await db.setNotificationPreference(req.user.id, notification_type, channel, enabled);
+    res.json({ success: true, data: pref });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
