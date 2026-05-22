@@ -7210,7 +7210,11 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Main Content - padding-top para compensar header + nav (altura dinâmica) */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[140px]">
+      {/* min-h-screen garante que o <Footer /> nunca apareça na primeira dobra:
+          o main ocupa no mínimo 100vh, empurrando o rodapé para a segunda dobra
+          em telas grandes; em telas pequenas (conteúdo já passa de 100vh) o
+          comportamento natural é preservado. */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[140px] min-h-screen">
         {/* Banner persistente convidando o user a ativar Web Push neste dispositivo.
             Alinhado ao max-w-7xl do <main>, paleta amber/orange. Esconde sozinho
             quando o user já ativou, dispensou (7 dias) ou bloqueou — ver

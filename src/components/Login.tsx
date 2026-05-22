@@ -318,7 +318,9 @@ const Login: React.FC = () => {
       </div>
 
       {/* ─── Conteúdo principal ─── */}
-      <div className="relative z-10 flex flex-col items-center flex-1 py-10 px-4">
+      {/* min-h-screen: <Footer /> nunca aparece na primeira dobra. Conteúdo
+          ocupa no mínimo 100vh; em telas pequenas o flex-1 ainda cresce normal. */}
+      <div className="relative z-10 flex flex-col items-center flex-1 min-h-screen py-10 px-4">
 
         {/* Card glassmorphism */}
         <div className="login-card-enter login-card w-full max-w-md rounded-3xl p-6 sm:p-8">
