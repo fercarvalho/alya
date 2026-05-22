@@ -15,9 +15,9 @@
 // do mock continua no `main.tsx`, dentro do bloco condicional original
 // que verifica hostname de demo. Os dois SWs nunca convivem no mesmo host.
 
-const DEMO_HOSTS = ['alya.fercarvalho.com', 'github.io', 'demo'];
+export const DEMO_HOSTS = ['alya.fercarvalho.com', 'github.io', 'demo'];
 
-function isDemoHost(): boolean {
+export function isDemoHost(): boolean {
   if (typeof window === 'undefined') return false;
   const h = (window.location.hostname || '').toLowerCase();
   return DEMO_HOSTS.some((d) => h.includes(d));
