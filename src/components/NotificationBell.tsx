@@ -1,9 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, Check, EyeOff, Trash2, CheckCheck, Eraser } from 'lucide-react'
+import { Bell, BellOff, Check, EyeOff, Trash2, CheckCheck, Eraser } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { authedFetch } from '../utils/authedFetch'
 import ResolveTransactionModal from './modals/ResolveTransactionModal'
+import {
+  isWebPushSupported,
+  getCurrentPermissionState,
+  requestPermissionAndSubscribe,
+  unsubscribe as unsubscribePush,
+  getActiveSubscriptionEndpoint,
+  getDeniedHelpText,
+  type PermissionState,
+} from '../pwa/push'
+import { usePushBridge } from '../hooks/usePushBridge'
 
 const API_BASE_URL = '/api'
 const POLL_INTERVAL_MS = 30_000
@@ -34,6 +44,49 @@ const NotificationBell: React.FC = () => {
   // escapar do stacking context do container fixed do header (que prendia
   // o dropdown atrás da nav bar mesmo com z-index alto).
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
+
+  // Estado do Web Push neste dispositivo:
+  //   - permission: o que o browser reporta agora
+  //   - isSubscribed: já tem subscription ativa no SW deste browser
+  //   - busy: evita double-click durante request à API/SW
+  //   - lastMessage: feedback efêmero do último subscribe/unsubscribe
+  const [pushPermission, setPushPermission] = useState<PermissionState>('unsupported')
+  const [pushSubscribed, setPushSubscribed] = useState<boolean>(false)
+  const [pushBusy, setPushBusy] = useState<boolean>(false)
+  const [pushMessage, setPushMessage] = useState<string | null>(null)
+
+  const refreshPushState = useCallback(async () => {
+    const state = getCurrentPermissionState()
+    setPushPermission(state)
+    if (state === 'granted') {
+      const endpoint = await getActiveSubscriptionEndpoint()
+      setPushSubscribed(!!endpoint)
+    } else {
+      setPushSubscribed(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open) refreshPushState()
+  }, [open, refreshPushState])
+
+  const handleEnablePush = async () => {
+    if (pushBusy) return
+    setPushBusy(true); setPushMessage(null)
+    const r = await requestPermissionAndSubscribe(token)
+    setPushMessage(r.ok ? 'Notificações ativadas neste dispositivo.' : r.error)
+    await refreshPushState()
+    setPushBusy(false)
+  }
+
+  const handleDisablePush = async () => {
+    if (pushBusy) return
+    setPushBusy(true); setPushMessage(null)
+    const r = await unsubscribePush(token)
+    setPushMessage(r.ok ? 'Notificações desativadas neste dispositivo.' : r.error)
+    await refreshPushState()
+    setPushBusy(false)
+  }
 
   useEffect(() => {
     if (!open || !buttonRef.current) return
@@ -72,6 +125,13 @@ const NotificationBell: React.FC = () => {
     const t = setInterval(fetchNotifications, POLL_INTERVAL_MS)
     return () => clearInterval(t)
   }, [fetchNotifications])
+
+  // Ponte SW → UI: quando o SW recebe push, atualiza o sino na hora (sem
+  // esperar o tick de 30s). Cobre o modo foreground-quiet (push OS-level
+  // suprimida com app aberto, só sino atualiza).
+  usePushBridge({
+    onPush: () => { fetchNotifications() },
+  })
 
   useEffect(() => {
     if (!open) return
@@ -200,6 +260,58 @@ const NotificationBell: React.FC = () => {
                   <button onClick={() => setConfirmDeleteAll(true)} className="flex items-center gap-1 text-[11px] px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded font-semibold">
                     <Trash2 className="w-3 h-3" /> Excluir todas
                   </button>
+                </div>
+              )}
+
+              {/* Toggle de Web Push neste dispositivo. Visível apenas quando o browser
+                  suporta — em iOS sem PWA instalada também mostra (com mensagem
+                  explicativa) pra orientar o user a instalar. Paleta amber/orange
+                  alinhada ao header do dropdown. */}
+              {isWebPushSupported() && pushPermission !== 'unsupported' && (
+                <div className="mt-2 pt-2 border-t border-amber-200/50 dark:border-amber-700/30">
+                  {pushPermission === 'default' && (
+                    <button
+                      onClick={handleEnablePush}
+                      disabled={pushBusy}
+                      className="w-full flex items-center justify-center gap-1.5 text-[11px] px-2 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded font-semibold shadow-sm disabled:opacity-60"
+                    >
+                      <Bell className="w-3 h-3" />
+                      {pushBusy ? 'Ativando…' : 'Ativar notificações neste navegador'}
+                    </button>
+                  )}
+                  {pushPermission === 'granted' && !pushSubscribed && (
+                    <button
+                      onClick={handleEnablePush}
+                      disabled={pushBusy}
+                      className="w-full flex items-center justify-center gap-1.5 text-[11px] px-2 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded font-semibold shadow-sm disabled:opacity-60"
+                    >
+                      <Bell className="w-3 h-3" />
+                      {pushBusy ? 'Reativando…' : 'Reativar notificações neste navegador'}
+                    </button>
+                  )}
+                  {pushPermission === 'granted' && pushSubscribed && (
+                    <button
+                      onClick={handleDisablePush}
+                      disabled={pushBusy}
+                      className="w-full flex items-center justify-center gap-1.5 text-[11px] px-2 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded font-semibold disabled:opacity-60"
+                    >
+                      <BellOff className="w-3 h-3" />
+                      {pushBusy ? 'Desativando…' : 'Desativar notificações neste navegador'}
+                    </button>
+                  )}
+                  {pushPermission === 'denied' && (
+                    <p className="text-[10.5px] text-gray-600 dark:text-gray-400 px-1 py-0.5">
+                      Notificações bloqueadas. {getDeniedHelpText()}
+                    </p>
+                  )}
+                  {pushPermission === 'pwa-not-installed-ios' && (
+                    <p className="text-[10.5px] text-gray-600 dark:text-gray-400 px-1 py-0.5">
+                      Para receber notificações no iPhone, toque em <strong>Compartilhar → Adicionar à Tela de Início</strong>.
+                    </p>
+                  )}
+                  {pushMessage && (
+                    <p className="mt-1 text-[10.5px] text-gray-600 dark:text-gray-400 px-1">{pushMessage}</p>
+                  )}
                 </div>
               )}
             </div>

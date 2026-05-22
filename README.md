@@ -22,6 +22,7 @@ Sistema completo de gestão financeira desenvolvido para o ecommerce de velas Al
 - **Administração** — gerenciamento de usuários, módulos, permissões e logs de atividade
 - **Segurança** — sessões ativas, detecção de anomalias, alertas de segurança em tempo real
 - **Recuperação de Senha** — fluxo completo com e-mail via SendGrid e rate limiting
+- **Notificações in-app + Web Push** — sino com polling (30s) + push OS-level via PWA. Preferências granulares por tipo × canal (push, e-mail). Toggle "mostrar com app aberto". Cleanup automático de subscriptions expiradas (410/404). Multi-device. iOS 16.4+ suportado (exige PWA instalada na tela inicial). Chaves VAPID via `node server/scripts/generate-vapid.mjs`.
 
 ---
 

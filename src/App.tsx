@@ -51,6 +51,8 @@ import Login from "./components/Login";
 import MenuUsuario from "./components/MenuUsuario";
 import NotificationBell from "./components/NotificationBell";
 import PendingTransactionsBanner from "./components/PendingTransactionsBanner";
+// Lazy: banner é pequeno (~3KB) e o Vite gera chunk próprio sem inflar o bundle principal.
+const PushPermissionBanner = lazy(() => import("./components/PushPermissionBanner"));
 import TransactionRulesModal from "./components/modals/TransactionRulesModal";
 import ResolveTransactionModal from "./components/modals/ResolveTransactionModal";
 import ImpersonationBanner from "./components/ImpersonationBanner";
@@ -7206,6 +7208,16 @@ const AppContent: React.FC = () => {
 
       {/* Main Content - padding-top para compensar header + nav (altura dinâmica) */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[140px]">
+        {/* Banner persistente convidando o user a ativar Web Push neste dispositivo.
+            Alinhado ao max-w-7xl do <main>, paleta amber/orange. Esconde sozinho
+            quando o user já ativou, dispensou (7 dias) ou bloqueou — ver
+            PushPermissionBanner. */}
+        <Suspense fallback={null}>
+          <div className="mb-6">
+            <PushPermissionBanner />
+          </div>
+        </Suspense>
+
         {activeTab === "dashboard" && renderDashboard()}
         {activeTab === "metas" && renderMetas()}
         {activeTab === "projecao" && (

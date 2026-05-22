@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { API_BASE_URL } from "../config/api";
 import { setupSessionExpiredListener } from "../utils/axiosInterceptor";
+import { postAuthTokenToSW } from "../pwa/registerSW";
 
 interface User {
   id: string;
@@ -148,6 +149,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const data = await response.json();
         setUser(data.user);
         setAccessToken(tokenToVerify);
+        // Propaga token pro SW (necessário pra pushsubscriptionchange — sem o
+        // token o SW não consegue re-subscribe quando o browser invalida).
+        postAuthTokenToSW(tokenToVerify);
       } else {
         // Token inválido, remover do storage
         const storage = getStorage();
@@ -157,6 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
         setAccessToken(null);
         setRefreshToken(null);
+        postAuthTokenToSW(null);
       }
     } catch (error) {
       console.error("Erro ao verificar token:", error);
@@ -167,6 +172,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setAccessToken(null);
       setRefreshToken(null);
+      postAuthTokenToSW(null);
     } finally {
       setIsLoading(false);
     }
@@ -258,6 +264,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           storage.removeItem("pendingFirstLogin");
           storage.removeItem("authToken"); // Limpar token antigo
+          // Propaga token pro SW (pushsubscriptionchange precisa)
+          postAuthTokenToSW(receivedAccessToken);
 
           return {
             success: true,
@@ -331,6 +339,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setAccessToken(null);
       setRefreshToken(null);
+      // Limpa token no SW também — sem token, pushsubscriptionchange falha
+      // silenciosamente (correto: user logado em outro tab/device segue tendo
+      // sua subscription; este device acabou de fazer logout).
+      postAuthTokenToSW(null);
       const storage = getStorage();
       storage.removeItem("accessToken");
       storage.removeItem("refreshToken");
