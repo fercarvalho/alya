@@ -5,6 +5,7 @@
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { API_BASE_URL } from "../config/api";
+import { attachOfflineInterceptors } from "./offlineClient";
 
 // Flag para evitar múltiplas tentativas simultâneas de refresh
 let isRefreshing = false;
@@ -197,5 +198,10 @@ export const setupSessionExpiredListener = (onSessionExpired: () => void) => {
     window.removeEventListener("auth:session-expired", onSessionExpired);
   };
 };
+
+// PWA: SEGUNDO interceptor — observa erros de rede / 503 sintético do SW
+// pra disparar o OfflineBanner. NÃO substitui o interceptor de refresh acima
+// (que continua sendo o primeiro a tratar 401). Não engole o erro — só notifica.
+attachOfflineInterceptors(axios);
 
 export default axios;

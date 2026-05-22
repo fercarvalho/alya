@@ -8,6 +8,8 @@ import React, {
 import { API_BASE_URL } from "../config/api";
 import { setupSessionExpiredListener } from "../utils/axiosInterceptor";
 import { postAuthTokenToSW } from "../pwa/registerSW";
+import { setAuthState as setPwaAuthState } from "../pwa/installPrompt";
+import { nukePwaState } from "../pwa/nuke";
 
 interface User {
   id: string;
@@ -105,6 +107,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Função auxiliar para usar storage correto
   const getStorage = () => (isDemoMode ? sessionStorage : localStorage);
+
+  // PWA install banner: libera o prompt SÓ quando o usuário está logado.
+  // Sem isso, o banner apareceria na tela de login (UX agressivo demais).
+  useEffect(() => {
+    setPwaAuthState(!!user);
+  }, [user]);
 
   useEffect(() => {
     // Verificar se há tokens salvos (usando storage correto baseado no modo)
@@ -348,6 +356,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       storage.removeItem("refreshToken");
       storage.removeItem("authToken"); // Limpar token antigo também
       storage.removeItem("pendingFirstLogin");
+      // Limpa caches PWA + IndexedDB + storage (com whitelist de tema/consent).
+      // Não desregistra SW — ele permanece útil pra próxima sessão.
+      void nukePwaState({ unregisterSW: false });
     }
   };
 

@@ -56,6 +56,8 @@ const PushPermissionBanner = lazy(() => import("./components/PushPermissionBanne
 import TransactionRulesModal from "./components/modals/TransactionRulesModal";
 import ResolveTransactionModal from "./components/modals/ResolveTransactionModal";
 import ImpersonationBanner from "./components/ImpersonationBanner";
+import OfflineBanner from "./components/OfflineBanner";
+import PwaInstallBanner from "./components/PwaInstallBanner";
 import FeedbackButton from "./components/FeedbackButton";
 import ThemeToggle from "./components/ThemeToggle";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -7103,6 +7105,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <OfflineBanner />
       <ImpersonationBanner />
       {user && <FeedbackButton paginaAtual={activeTab} />}
       <ThemeToggle />
@@ -7217,6 +7220,12 @@ const AppContent: React.FC = () => {
             <PushPermissionBanner />
           </div>
         </Suspense>
+
+        {/* Banner convidando o user a instalar o Alya como PWA. Adapta-se ao
+            OS/browser (prompt nativo no Chrome/Edge; modal de instruções em
+            Safari iOS/macOS). Esconde sozinho quando já instalado, em demo,
+            ou dispensado (7 dias). Aparece só pós-login (gating em installPrompt). */}
+        <PwaInstallBanner />
 
         {activeTab === "dashboard" && renderDashboard()}
         {activeTab === "metas" && renderMetas()}

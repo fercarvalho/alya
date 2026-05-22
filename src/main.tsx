@@ -4,6 +4,8 @@ import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 import { registerProductionSW } from './pwa/registerSW'
+import { setupInstallPrompt } from './pwa/installPrompt'
+import { injectIosMeta } from './pwa/iosMeta'
 
 // Service Worker — 2 contextos com 2 SWs distintos no Alya:
 //
@@ -57,6 +59,15 @@ if (typeof window !== 'undefined' &&
   // (Vite HMR) e em demo (já tratado acima).
   registerProductionSW().catch(() => { /* já loga internamente */ });
 }
+
+// PWA install — captura beforeinstallprompt e injeta meta tags Apple/iOS.
+// Rodam em TODOS os contextos (incluindo demo) porque são side-effect-free:
+//   - setupInstallPrompt: só registra listeners; gating real é em
+//     PwaInstallBanner.tsx (esconde se for demo) + installPrompt.ts
+//     (esconde se !isAuthenticated)
+//   - injectIosMeta: idempotente; só atualiza/cria <meta> e <link>
+setupInstallPrompt()
+injectIosMeta()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
