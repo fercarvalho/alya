@@ -70,8 +70,9 @@ Thumbs.db
 *.md
 !README.md
 
-# SQL Backups
-*.sql
+# SQL Backups (dumps em backups/ + comprimidos). Migrations em
+# server/migrations/ continuam tracked.
+backups/**/*.sql
 *.sql.gz
 
 # Cache
