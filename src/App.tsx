@@ -88,6 +88,10 @@ import { API_BASE_URL } from "./config/api";
 import { parseLocalDate, formatDatePtBR } from "./utils/dateUtils";
 // Importar Axios Interceptor para inicializar refresh automático
 import "./utils/axiosInterceptor";
+import SubsystemPicker from "./subsistemas/SubsystemPicker";
+import AcessoNegado from "./subsistemas/AcessoNegado";
+import { useCurrentSubsystem } from "./subsistemas/useCurrentSubsystem";
+import { userCanAccessSubsystem } from "./subsistemas/manifest";
 
 import {
   PieChart as RechartsPieChart,
@@ -225,6 +229,10 @@ const AppContent: React.FC = () => {
   const { user, token, logout, isLoading } = useAuth();
   const { isDark } = useTheme();
   const { getVisibleModules } = useModules();
+  // Fase 1.2: roteamento macro de subsistemas. resolveCurrentSubsystem lê do
+  // hostname (subdomínio) ou sessionStorage (fallback localhost). Logo após
+  // o login, decidimos entre Picker / AcessoNegado / AppMain (caminho feliz).
+  const { subsystem } = useCurrentSubsystem();
 
   // Detectar se está em modo demo
   // Modo demo é ativado APENAS quando:
@@ -1160,6 +1168,24 @@ const AppContent: React.FC = () => {
         <Login />
       </>
     );
+  }
+
+  // Roteador macro de subsistemas — fase 1.2 do alya.
+  //
+  // Após login, decide entre 3 telas:
+  //   1. SubsystemPicker (domínio raiz / sem subsistema selecionado) —
+  //      qualquer role logado pode ver, mas user/guest verão empty state.
+  //   2. AcessoNegado (subsistema selecionado mas role/perms sem acesso).
+  //      Cobre tentativas de subdomínio direto, sessionStorage manipulado e
+  //      role rebaixado durante sessão ativa.
+  //   3. Caminho feliz: continua para o render principal abaixo (AppMain
+  //      implícito que ainda mora dentro do AppContent — refator pra
+  //      componente separado fica para sub-fase futura).
+  if (!subsystem) {
+    return <SubsystemPicker />;
+  }
+  if (!userCanAccessSubsystem(user, subsystem)) {
+    return <AcessoNegado attemptedSubsystem={subsystem} />;
   }
 
   // Funções para gerenciar o calendário personalizado
