@@ -14,6 +14,7 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const sgMail = require("@sendgrid/mail");
 const Database = require("./database-pg");
+const permissionsHelpers = require("./permissions");
 const push = require("./services/push");
 const pushDispatcher = require("./services/push-dispatcher");
 const { parseExtrato } = require("./services/extratoParser");
@@ -975,6 +976,8 @@ app.post("/api/auth/demo-register", async (req, res) => {
         email: newUser.email,
         role: newUser.role,
         modules: newUser.modules,
+        // Fase 2.4b — completa o shape pro frontend não precisar refetch.
+        modulesAccess: newUser.modulesAccess || {},
       },
     });
   } catch (err) {
@@ -1302,6 +1305,11 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
         address: safeUser.address,
         role: safeUser.role,
         modules: safeUser.modules || [],
+        // Fase 2.4b — modulesAccess granular ({moduleKey: 'view'|'edit'}).
+        // Fonte da verdade pra autorização daqui em diante; `modules` TEXT[]
+        // continua espelhando as keys com qualquer acesso pra compat
+        // (deprecar na 2.10).
+        modulesAccess: safeUser.modulesAccess || {},
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
         lastLogin: safeUser.lastLogin,
         permissoesLegais: safeUser.permissoesLegais || {},
@@ -2161,6 +2169,8 @@ app.post("/api/auth/verify", authenticateToken, async (req, res) => {
         address: safeUser.address,
         role: safeUser.role,
         modules: safeUser.modules || [],
+        // Fase 2.4b — idem login: matriz granular ({moduleKey:'view'|'edit'}).
+        modulesAccess: safeUser.modulesAccess || {},
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
         lastLogin: safeUser.lastLogin,
         permissoesLegais: safeUser.permissoesLegais || {},
@@ -3617,6 +3627,255 @@ app.put('/api/users/:id/rule-permissions', authenticateToken, requireAdmin, asyn
     res.json({ success: true, data: updated });
     await logActivity(req.user.id, req.user.username, 'edit', 'users', 'user_rule_permissions', req.params.id, { canCreate, canEdit, canDelete });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// =============================================================================
+// Fase 2.4b — Endpoints de permissões granulares por subsistema/módulo
+// =============================================================================
+//
+// 3 grupos:
+//   1. /api/admin/roles          — CRUD de roles (system: imutável key+is_system;
+//                                  custom: superadmin pode criar/renomear/deletar)
+//   2. /api/admin/role-defaults  — matriz de defaults por role × módulo,
+//                                  editável pela UI (Fase 2.7)
+//   3. /api/admin/users/:id/permissions — matriz granular de um user específico
+//                                          + reset-to-defaults
+//
+// Roles:
+//   - Listagem: qualquer admin (precisa pra montar select de role no modal
+//     "Novo usuário"). Mutação: só superadmin.
+//   - System roles (superadmin, admin, manager, user, guest) têm is_system=true:
+//     label/description/sort_order editáveis; key e is_system imutáveis.
+//
+// Role-defaults: mutação só superadmin. PUT substitui o conjunto INTEIRO
+// daquela role (idempotente).
+//
+// User permissions: mutação requer requireAdmin (admins editam outros admins
+// também, mas a UI cuida da semântica — superadmin pode editar superadmin
+// nele mesmo, admin não pode editar superadmin).
+
+// ── 1. ROLES ─────────────────────────────────────────────────────────────────
+app.get('/api/admin/roles', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const r = await db.pool.query(`
+      SELECT r.key, r.label, r.description, r.is_system, r.sort_order,
+             r.created_at, r.updated_at,
+             COALESCE(c.users_count, 0)::int AS users_count
+        FROM roles r
+        LEFT JOIN (
+          SELECT role, COUNT(*) AS users_count
+            FROM users
+           GROUP BY role
+        ) c ON c.role = r.key
+       ORDER BY r.sort_order, r.key
+    `);
+    res.json({ success: true, data: r.rows });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/admin/roles', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key, label, description, sortOrder } = req.body || {};
+    if (!key || !label) {
+      return res.status(400).json({ success: false, error: 'key e label são obrigatórios' });
+    }
+    if (!/^[a-z][a-z0-9_]*$/.test(key)) {
+      return res.status(400).json({ success: false, error: 'key inválida — use snake_case minúsculo (regex: ^[a-z][a-z0-9_]*$)' });
+    }
+    const r = await db.pool.query(
+      `INSERT INTO roles (key, label, description, is_system, sort_order)
+       VALUES ($1, $2, $3, FALSE, $4)
+       RETURNING *`,
+      [key, label, description || null, Number.isFinite(sortOrder) ? sortOrder : 100]
+    );
+    await logActivity(req.user.id, req.user.username, 'create', 'admin', 'role', key, { label, description });
+    res.json({ success: true, data: r.rows[0] });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ success: false, error: 'Já existe uma role com essa key' });
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/admin/roles/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { label, description, sortOrder } = req.body || {};
+    // Validação básica: pelo menos um campo
+    if (label === undefined && description === undefined && sortOrder === undefined) {
+      return res.status(400).json({ success: false, error: 'Nada a atualizar (envie label, description ou sortOrder)' });
+    }
+    // Bloqueio: NÃO permitir editar key e is_system. Mesmo pra system roles,
+    // label/description/sort_order seguem editáveis (UI mostra system roles
+    // mas só permite essas 3 colunas).
+    const fields = [];
+    const vals = [];
+    let i = 1;
+    if (label !== undefined)       { fields.push(`label = $${i++}`);       vals.push(label); }
+    if (description !== undefined) { fields.push(`description = $${i++}`); vals.push(description); }
+    if (sortOrder !== undefined)   { fields.push(`sort_order = $${i++}`);  vals.push(sortOrder); }
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    vals.push(key);
+    const r = await db.pool.query(
+      `UPDATE roles SET ${fields.join(', ')} WHERE key = $${i} RETURNING *`,
+      vals
+    );
+    if (r.rowCount === 0) return res.status(404).json({ success: false, error: 'Role não encontrada' });
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'role', key, { label, description, sortOrder });
+    res.json({ success: true, data: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.delete('/api/admin/roles/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    // 1. System role não pode ser deletada
+    const sysCheck = await db.pool.query('SELECT is_system FROM roles WHERE key = $1', [key]);
+    if (sysCheck.rowCount === 0) return res.status(404).json({ success: false, error: 'Role não encontrada' });
+    if (sysCheck.rows[0].is_system) {
+      return res.status(403).json({ success: false, error: 'Roles do sistema não podem ser deletadas' });
+    }
+    // 2. Pré-check de usuários (a FK ON DELETE RESTRICT pegaria, mas mensagem
+    //    clara é melhor que o erro 23503 do PG)
+    const usersCheck = await db.pool.query('SELECT COUNT(*)::int AS cnt FROM users WHERE role = $1', [key]);
+    if (usersCheck.rows[0].cnt > 0) {
+      return res.status(409).json({
+        success: false,
+        error: `Existem ${usersCheck.rows[0].cnt} usuário(s) com essa role. Rebaixe-os antes de deletar.`,
+      });
+    }
+    await db.pool.query('DELETE FROM roles WHERE key = $1', [key]);
+    await logActivity(req.user.id, req.user.username, 'delete', 'admin', 'role', key, {});
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── 2. ROLE DEFAULTS ─────────────────────────────────────────────────────────
+app.get('/api/admin/role-defaults', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const r = await db.pool.query(
+      `SELECT role, module_key, access_level, updated_at
+         FROM role_default_permissions
+        ORDER BY role, module_key`
+    );
+    // Estruturar como { [role]: { [moduleKey]: 'view'|'edit' } } pra
+    // facilitar consumo no frontend.
+    const byRole = {};
+    for (const row of r.rows) {
+      if (!byRole[row.role]) byRole[row.role] = {};
+      byRole[row.role][row.module_key] = row.access_level;
+    }
+    res.json({ success: true, data: byRole });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/admin/role-defaults/:role', authenticateToken, requireSuperAdmin, async (req, res) => {
+  const client = await db.pool.connect();
+  try {
+    const { role } = req.params;
+    const { permissions } = req.body || {};
+    if (!permissions || typeof permissions !== 'object') {
+      return res.status(400).json({ success: false, error: 'permissions deve ser um objeto { moduleKey: "view"|"edit" }' });
+    }
+    // Role precisa existir
+    const roleCheck = await client.query('SELECT key FROM roles WHERE key = $1', [role]);
+    if (roleCheck.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Role não encontrada' });
+    }
+    // Validar keys + levels
+    const keys = Object.keys(permissions);
+    for (const k of keys) {
+      const lvl = permissions[k];
+      if (lvl !== 'view' && lvl !== 'edit') {
+        return res.status(400).json({ success: false, error: `access_level inválido para ${k}: ${lvl}` });
+      }
+    }
+    if (keys.length > 0) {
+      const validKeys = await client.query('SELECT key FROM modules WHERE key = ANY($1)', [keys]);
+      const validSet = new Set(validKeys.rows.map(r => r.key));
+      const orphans = keys.filter(k => !validSet.has(k));
+      if (orphans.length > 0) {
+        return res.status(400).json({ success: false, error: `Módulos inexistentes: ${orphans.join(', ')}` });
+      }
+    }
+
+    await client.query('BEGIN');
+    await client.query('DELETE FROM role_default_permissions WHERE role = $1', [role]);
+    if (keys.length > 0) {
+      const moduleKeysArr = keys;
+      const levelsArr = keys.map(k => permissions[k]);
+      await client.query(
+        `INSERT INTO role_default_permissions (role, module_key, access_level)
+         SELECT $1, mk, lvl FROM UNNEST($2::text[], $3::text[]) AS t(mk, lvl)`,
+        [role, moduleKeysArr, levelsArr]
+      );
+    }
+    await client.query('COMMIT');
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'role_defaults', role, { count: keys.length });
+    res.json({ success: true, data: { role, count: keys.length } });
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch {}
+    res.status(500).json({ success: false, error: e.message });
+  } finally {
+    client.release();
+  }
+});
+
+// ── 3. USER PERMISSIONS (matriz granular do user) ────────────────────────────
+app.get('/api/admin/users/:id/permissions', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const user = await db.getUserById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    res.json({ success: true, data: { userId: user.id, role: user.role, modulesAccess: user.modulesAccess || {} } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/admin/users/:id/permissions', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { modulesAccess } = req.body || {};
+    if (!modulesAccess || typeof modulesAccess !== 'object') {
+      return res.status(400).json({ success: false, error: 'modulesAccess deve ser um objeto { moduleKey: "view"|"edit" }' });
+    }
+    const target = await db.getUserById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    // Política: admin não pode rebaixar superadmin
+    if (target.role === 'superadmin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({ success: false, error: 'Apenas superadmin pode alterar permissões de outro superadmin' });
+    }
+    await permissionsHelpers.setUserPermissions(db.pool, req.params.id, modulesAccess);
+    const reread = await db.getUserById(req.params.id);
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'user_permissions', req.params.id, {
+      count: Object.keys(modulesAccess).length,
+    });
+    res.json({ success: true, data: { userId: reread.id, modulesAccess: reread.modulesAccess } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/admin/users/:id/permissions/reset-to-defaults', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const target = await db.getUserById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    if (target.role === 'superadmin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({ success: false, error: 'Apenas superadmin pode resetar permissões de outro superadmin' });
+    }
+    await permissionsHelpers.applyRoleDefaultsToUser(db.pool, req.params.id, target.role);
+    const reread = await db.getUserById(req.params.id);
+    await logActivity(req.user.id, req.user.username, 'reset', 'admin', 'user_permissions', req.params.id, { role: target.role });
+    res.json({ success: true, data: { userId: reread.id, role: reread.role, modulesAccess: reread.modulesAccess } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // APIs para Transações
