@@ -7,6 +7,7 @@ require('dotenv').config();
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const FileDatabase = require('./database');
+const permissionsHelpers = require('./permissions');
 
 function formatDateForApi(dateVal) {
   if (!dateVal) return null;
@@ -1134,10 +1135,50 @@ class Database extends FileDatabase {
     return r.rowCount > 0;
   }
 
+  // Fase 2.4 — enriquecimento granular do user.
+  //
+  // Acopla um campo `modulesAccess` no shape { [moduleKey]: 'view' | 'edit' }
+  // lido de user_module_permissions. Esse campo é a fonte da verdade para
+  // autorização daqui em diante; `user.modules TEXT[]` continua espelhando
+  // as keys com qualquer acesso (via dual-write em setUserPermissions) só
+  // pra manter código não-migrado funcionando até a Fase 2.10.
+  //
+  // Para superadmin: forçamos edit em TODOS os módulos ativos do catálogo,
+  // independente de o que estiver gravado em user_module_permissions
+  // (defesa contra desincronizações temporárias entre roles/módulos novos).
+  async _enrichUserPermissions(user) {
+    if (!user) return user;
+    try {
+      const map = await permissionsHelpers.loadUserPermissions(this.pool, user.id);
+      if (user.role === 'superadmin') {
+        const modsRes = await this.pool.query(
+          `SELECT key FROM modules WHERE is_active = TRUE`
+        );
+        const superMap = {};
+        for (const row of modsRes.rows) superMap[row.key] = 'edit';
+        // Mesclar: explícitos do banco têm precedência caso alguém tenha
+        // explicitamente "view" pra um superadmin (não deveria acontecer,
+        // mas respeitamos), o resto vira edit.
+        user.modulesAccess = { ...superMap, ...map };
+      } else {
+        user.modulesAccess = map;
+      }
+    } catch (e) {
+      console.error('Erro ao enriquecer permissões do user:', e);
+      user.modulesAccess = {};
+    }
+    return user;
+  }
+
   async getAllUsers() {
     try {
       const r = await this.pool.query('SELECT * FROM users ORDER BY created_at DESC');
-      return r.rows.map(parseUser);
+      const users = r.rows.map(parseUser);
+      // Enrich em paralelo — uma query por user. Pra catálogos pequenos
+      // (dezenas de users) isso é aceitável. Se virar gargalo, migrar pra
+      // 1 query JOIN com agregação por user_id.
+      await Promise.all(users.map(u => this._enrichUserPermissions(u)));
+      return users;
     } catch (e) {
       console.error('Erro ao ler usuários:', e);
       return [];
@@ -1147,7 +1188,9 @@ class Database extends FileDatabase {
   async getUserByUsername(username) {
     try {
       const r = await this.pool.query('SELECT * FROM users WHERE username = $1', [username]);
-      return r.rows.length ? parseUser(r.rows[0]) : null;
+      if (!r.rows.length) return null;
+      const user = parseUser(r.rows[0]);
+      return this._enrichUserPermissions(user);
     } catch (e) {
       console.error('Erro ao buscar usuário:', e);
       return null;
@@ -1157,7 +1200,9 @@ class Database extends FileDatabase {
   async getUserById(id) {
     try {
       const r = await this.pool.query('SELECT * FROM users WHERE id = $1', [id]);
-      return r.rows.length ? parseUser(r.rows[0]) : null;
+      if (!r.rows.length) return null;
+      const user = parseUser(r.rows[0]);
+      return this._enrichUserPermissions(user);
     } catch (e) {
       console.error('Erro ao buscar usuário:', e);
       return null;
@@ -1168,11 +1213,34 @@ class Database extends FileDatabase {
     const id = this.generateId();
     const now = new Date().toISOString();
     const addr = userData.address ? JSON.stringify(userData.address) : null;
+    const role = userData.role || 'user';
+    // Fase 2.4 — modules TEXT[] começa vazio aqui; será preenchido em seguida
+    // pelo dual-write em setUserPermissions (se vier modulesAccess) ou pelos
+    // defaults da role (caso contrário). Manter o `modules: userData.modules`
+    // legado significaria que callers velhos quebrariam o invariante
+    // (granular vs TEXT[]).
     await this.pool.query(
       `INSERT INTO users (id, username, password, first_name, last_name, email, phone, photo_url, cpf, birth_date, gender, position, address, role, modules, is_active, last_login, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-      [id, userData.username, userData.password || '', userData.firstName || null, userData.lastName || null, userData.email || null, userData.phone || null, userData.photoUrl || null, userData.cpf || null, userData.birthDate || null, userData.gender || null, userData.position || null, addr, userData.role || 'user', userData.modules || [], userData.isActive !== false, userData.lastLogin || null, now, now]
+      [id, userData.username, userData.password || '', userData.firstName || null, userData.lastName || null, userData.email || null, userData.phone || null, userData.photoUrl || null, userData.cpf || null, userData.birthDate || null, userData.gender || null, userData.position || null, addr, role, [], userData.isActive !== false, userData.lastLogin || null, now, now]
     );
+
+    // Aplicação das perms granulares:
+    //   - se `modulesAccess` foi fornecido explicitamente → usa esse mapa
+    //   - se não, e veio o `modules` legado (TEXT[]) → traduz pra todos
+    //     com 'edit' (backward compat com callers antigos)
+    //   - caso contrário → aplica os defaults da role do banco
+    //     (ou do FALLBACK_DEFAULTS hardcoded se a tabela estiver vazia)
+    if (userData.modulesAccess && typeof userData.modulesAccess === 'object') {
+      await permissionsHelpers.setUserPermissions(this.pool, id, userData.modulesAccess);
+    } else if (Array.isArray(userData.modules) && userData.modules.length > 0) {
+      const legacyMap = {};
+      for (const k of userData.modules) legacyMap[k] = 'edit';
+      await permissionsHelpers.setUserPermissions(this.pool, id, legacyMap);
+    } else {
+      await permissionsHelpers.applyRoleDefaultsToUser(this.pool, id, role);
+    }
+
     return this.getUserById(id);
   }
 
@@ -1258,25 +1326,61 @@ class Database extends FileDatabase {
   }
 
   async updateUser(id, data) {
+    // Fase 2.4 — perms são tratadas APÓS o UPDATE da row de users, pra
+    // garantir que role nova já esteja persistida quando aplicarmos
+    // defaults. Tipos de mudança de permissão suportados (precedência
+    // de cima pra baixo):
+    //   1. `modulesAccess` (object) → substitui o conjunto inteiro
+    //   2. `modules` (TEXT[] legado) → traduz pra mapa com 'edit'
+    //      (backward compat com callers antigos)
+    //   3. Mudança de `role` com `applyRoleDefaults: true` → reaplica
+    //      os defaults da role nova (espelha "Aplicar padrões da role")
+    //   4. Mudança de `role` sem essa flag → mantém perms atuais
+    //      intactas (opção A do fluxo A/B da Fase 2.9)
     const fields = [];
     const vals = [];
     let i = 1;
     const map = {
       firstName: 'first_name', lastName: 'last_name', email: 'email', phone: 'phone', photoUrl: 'photo_url',
       cpf: 'cpf', birthDate: 'birth_date', gender: 'gender', position: 'position', address: 'address',
-      role: 'role', modules: 'modules', isActive: 'is_active', password: 'password', lastLogin: 'last_login',
+      role: 'role', isActive: 'is_active', password: 'password', lastLogin: 'last_login',
     };
     for (const [camel, col] of Object.entries(map)) {
       if (data[camel] === undefined) continue;
       fields.push(`${col} = $${i++}`);
       vals.push(col === 'address' && typeof data[camel] === 'object' ? JSON.stringify(data[camel]) : data[camel]);
     }
-    if (fields.length === 0) return this.getUserById(id);
-    fields.push('updated_at = CURRENT_TIMESTAMP');
-    vals.push(id);
-    const r = await this.pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`, vals);
-    if (r.rows.length === 0) throw new Error('Usuário não encontrado');
-    return parseUser(r.rows[0]);
+
+    // `modules` TEXT[] legado: aceita mas só pra registrar a precedência
+    // 2 abaixo — não persiste direto, vai pelo dual-write do helper.
+    let legacyModulesArr = null;
+    if (data.modules !== undefined) legacyModulesArr = data.modules;
+
+    if (fields.length > 0) {
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      vals.push(id);
+      const r = await this.pool.query(
+        `UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+        vals
+      );
+      if (r.rows.length === 0) throw new Error('Usuário não encontrado');
+    } else if (data.modulesAccess === undefined && legacyModulesArr === null) {
+      // Nada a fazer
+      return this.getUserById(id);
+    }
+
+    // Tratamento das perms (precedência descrita no topo)
+    if (data.modulesAccess && typeof data.modulesAccess === 'object') {
+      await permissionsHelpers.setUserPermissions(this.pool, id, data.modulesAccess);
+    } else if (Array.isArray(legacyModulesArr)) {
+      const legacyMap = {};
+      for (const k of legacyModulesArr) legacyMap[k] = 'edit';
+      await permissionsHelpers.setUserPermissions(this.pool, id, legacyMap);
+    } else if (data.role !== undefined && data.applyRoleDefaults === true) {
+      await permissionsHelpers.applyRoleDefaultsToUser(this.pool, id, data.role);
+    }
+
+    return this.getUserById(id);
   }
 
   async deleteUser(id) {
