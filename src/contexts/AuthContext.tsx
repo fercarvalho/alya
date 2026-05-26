@@ -34,12 +34,12 @@ interface User {
     state?: string;
   };
   role: string;
-  // `modules` (TEXT[] legado): keys com qualquer acesso. Mantido pra compat
-  // com código não migrado; deprecar na Fase 2.10.
-  modules?: string[];
-  // Fase 2.5 — matriz granular { moduleKey: 'view' | 'edit' }. Fonte da
+  // Fase 2.5+ — matriz granular { moduleKey: 'view' | 'edit' }. Fonte da
   // verdade pra autorização. Helpers em src/utils/permissions.ts (hasModuleView,
   // hasModuleEdit) leem daqui com bypass automático pra superadmin.
+  // Fase 2.10 — coluna users.modules TEXT[] e o campo correspondente no
+  // payload foram removidos. Quem precisa de uma lista plana usa
+  // listAccessibleModuleKeys(user) do helper.
   modulesAccess?: Record<string, 'view' | 'edit'>;
   isActive?: boolean;
   lastLogin?: string;

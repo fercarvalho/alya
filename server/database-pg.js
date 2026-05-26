@@ -234,16 +234,27 @@ class Database extends FileDatabase {
       const userRes = await this.pool.query('SELECT COUNT(*) FROM users');
       if (parseInt(userRes.rows[0].count, 10) === 0) {
         const ph = bcrypt.hashSync('FIRST_LOGIN_PLACEHOLDER', 10);
+        // Fase 2.10 — coluna users.modules dropada. Bootstrap inicial só
+        // cria as 3 rows de user; permissões granulares dependem de
+        // role_default_permissions (migration 021), que rodam antes deste
+        // bootstrap quando o servidor inicia pela 1ª vez em um banco vazio.
+        // Como aqui não temos request context (rodando em runtime startup),
+        // não dá pra chamar permissionsHelpers.applyRoleDefaultsToUser sem
+        // criar dependência circular; deixamos as 3 rows sem perms iniciais
+        // e contamos com 1) migration 020 ter rodado (que reseed
+        // user_module_permissions baseado em role × módulo), ou
+        // 2) admin criar usuários via UI (onde saveUser já chama
+        // applyRoleDefaultsToUser).
         const defaults = [
-          ['admin', ph, 'superadmin', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin', 'activeSessions', 'anomalies', 'securityAlerts', 'roadmap', 'faq']],
-          ['user', ph, 'user', ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'faq']],
-          ['guest', ph, 'guest', ['dashboard', 'metas', 'reports', 'dre', 'faq']],
+          ['admin', ph, 'superadmin'],
+          ['user',  ph, 'user'],
+          ['guest', ph, 'guest'],
         ];
-        for (const [username, password, role, modules] of defaults) {
+        for (const [username, password, role] of defaults) {
           const id = this.generateId();
           await this.pool.query(
-            'INSERT INTO users (id, username, password, role, modules, is_active) VALUES ($1, $2, $3, $4, $5, true)',
-            [id, username, password, role, modules]
+            'INSERT INTO users (id, username, password, role, is_active) VALUES ($1, $2, $3, $4, true)',
+            [id, username, password, role]
           );
         }
         console.log('Usuários padrão criados no PostgreSQL.');
@@ -1138,10 +1149,9 @@ class Database extends FileDatabase {
   // Fase 2.4 — enriquecimento granular do user.
   //
   // Acopla um campo `modulesAccess` no shape { [moduleKey]: 'view' | 'edit' }
-  // lido de user_module_permissions. Esse campo é a fonte da verdade para
-  // autorização daqui em diante; `user.modules TEXT[]` continua espelhando
-  // as keys com qualquer acesso (via dual-write em setUserPermissions) só
-  // pra manter código não-migrado funcionando até a Fase 2.10.
+  // lido de user_module_permissions. Source of truth única pra autorização
+  // desde a Fase 2.4 (frontend) / 2.4b (backend); a coluna legada
+  // users.modules foi dropada na Fase 2.10 (migration 023).
   //
   // Para superadmin: forçamos edit em TODOS os módulos ativos do catálogo,
   // independente de o que estiver gravado em user_module_permissions
@@ -1214,21 +1224,21 @@ class Database extends FileDatabase {
     const now = new Date().toISOString();
     const addr = userData.address ? JSON.stringify(userData.address) : null;
     const role = userData.role || 'user';
-    // Fase 2.4 — modules TEXT[] começa vazio aqui; será preenchido em seguida
-    // pelo dual-write em setUserPermissions (se vier modulesAccess) ou pelos
-    // defaults da role (caso contrário). Manter o `modules: userData.modules`
-    // legado significaria que callers velhos quebrariam o invariante
-    // (granular vs TEXT[]).
+    // Fase 2.10 — coluna users.modules dropada (migration 023). INSERT só
+    // cria a row de user; permissões granulares são populadas logo abaixo
+    // via setUserPermissions / applyRoleDefaultsToUser.
     await this.pool.query(
-      `INSERT INTO users (id, username, password, first_name, last_name, email, phone, photo_url, cpf, birth_date, gender, position, address, role, modules, is_active, last_login, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-      [id, userData.username, userData.password || '', userData.firstName || null, userData.lastName || null, userData.email || null, userData.phone || null, userData.photoUrl || null, userData.cpf || null, userData.birthDate || null, userData.gender || null, userData.position || null, addr, role, [], userData.isActive !== false, userData.lastLogin || null, now, now]
+      `INSERT INTO users (id, username, password, first_name, last_name, email, phone, photo_url, cpf, birth_date, gender, position, address, role, is_active, last_login, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+      [id, userData.username, userData.password || '', userData.firstName || null, userData.lastName || null, userData.email || null, userData.phone || null, userData.photoUrl || null, userData.cpf || null, userData.birthDate || null, userData.gender || null, userData.position || null, addr, role, userData.isActive !== false, userData.lastLogin || null, now, now]
     );
 
-    // Aplicação das perms granulares:
+    // Aplicação das perms granulares (a coluna users.modules foi dropada
+    // na Fase 2.10; aqui o `userData.modules` é só payload de API legado
+    // — não corresponde mais a uma coluna do schema):
     //   - se `modulesAccess` foi fornecido explicitamente → usa esse mapa
-    //   - se não, e veio o `modules` legado (TEXT[]) → traduz pra todos
-    //     com 'edit' (backward compat com callers antigos)
+    //   - se veio `modules` array (payload legado de API) → traduz pra
+    //     todos com 'edit' (backward compat com callers antigos da API)
     //   - caso contrário → aplica os defaults da role do banco
     //     (ou do FALLBACK_DEFAULTS hardcoded se a tabela estiver vazia)
     if (userData.modulesAccess && typeof userData.modulesAccess === 'object') {

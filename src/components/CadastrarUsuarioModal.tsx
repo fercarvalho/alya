@@ -70,18 +70,11 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
     };
   }, [isOpen, isSubmitting, onClose]);
 
-  const getDefaultModulesForRole = (role: string): string[] => {
-    switch (role) {
-      case 'superadmin':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
-      case 'user':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
-      case 'guest':
-        return ['dashboard', 'metas', 'reports', 'dre'];
-      default:
-        return [];
-    }
-  };
+  // Fase 2.10 — getDefaultModulesForRole hardcoded removido. Quando o
+  // payload não envia modulesAccess nem modules, o backend (saveUser na
+  // Fase 2.4a) aplica os defaults da role automaticamente via
+  // applyRoleDefaultsToUser, lendo de role_default_permissions (com
+  // fallback hardcoded em server/permissions/defaults.js).
 
   const handleInputChange = (field: string, value: string) => {
     if (field === 'phone') {
@@ -338,7 +331,11 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
         },
         photoUrl: finalPhotoUrl || undefined,
         role: formData.role,
-        modules: formData.modules.length > 0 ? formData.modules : getDefaultModulesForRole(formData.role),
+        // Fase 2.10 — não enviamos `modules` array nem `modulesAccess`.
+        // Backend (saveUser na Fase 2.4a) aplica os defaults da role
+        // automaticamente quando nenhum dos dois vem. Pra ajustar a matriz
+        // depois, o admin abre o modal de edição (PermissionsMatrix
+        // da Fase 2.6) ou usa o fluxo de 2 etapas via SimpleUserModal.
         isActive: formData.isActive
       };
       
@@ -757,12 +754,9 @@ const CadastrarUsuarioModal: React.FC<CadastrarUsuarioModalProps> = ({
               <select
                 value={formData.role}
                 onChange={(e) => {
-                  const role = e.target.value;
-                  setFormData(prev => ({
-                    ...prev,
-                    role,
-                    modules: getDefaultModulesForRole(role)
-                  }));
+                  // Fase 2.10 — só seta a role. Os defaults granulares
+                  // serão aplicados pelo backend ao criar (Fase 2.4a).
+                  setFormData(prev => ({ ...prev, role: e.target.value }));
                 }}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
                 disabled={isSubmitting}

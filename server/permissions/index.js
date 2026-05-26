@@ -117,8 +117,10 @@ async function loadUserPermissions(pool, userId) {
  * Substitui o conjunto inteiro de permissões de um user.
  * Atomicamente: TRUNCATE pro user específico + reinsert.
  *
- * Também sincroniza `users.modules TEXT[]` (legado) com as keys que têm
- * qualquer acesso (view ou edit). Esse dual-write é mantido até a Fase 2.10.
+ * Fase 2.10 — dual-write em `users.modules TEXT[]` foi REMOVIDO junto com
+ * a coluna (migration 023). user_module_permissions é a única source of
+ * truth. Update do timestamp em users.updated_at é mantido pra refletir
+ * que o user "mudou" (consumido por auditorias e cache invalidation).
  *
  * @param {object} pool
  * @param {string} userId
@@ -173,11 +175,12 @@ async function setUserPermissions(pool, userId, modulesAccess) {
       );
     }
 
-    // Dual-write em users.modules TEXT[] (legado) — mantém compatibilidade
-    // com código não-migrado. Deprecar na Fase 2.10.
+    // Fase 2.10 — dual-write em users.modules removido junto com a coluna
+    // (migration 023). user_module_permissions é a única source of truth.
+    // Touch só de updated_at pra refletir mudança de perms na timeline.
     await client.query(
-      `UPDATE users SET modules = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [keys, userId]
+      `UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [userId]
     );
 
     await client.query('COMMIT');
@@ -290,11 +293,9 @@ async function migrateUsersToRole(pool, fromKey, toKey, resetPermissions = true)
             [uid, idsArr, defKeys, levelsArr]
           );
         }
-        // Dual-write em users.modules TEXT[]
-        await client.query(
-          `UPDATE users SET modules = $1 WHERE id = $2`,
-          [defKeys, uid]
-        );
+        // Fase 2.10 — dual-write removido junto com a coluna users.modules
+        // (migration 023). Sem operação extra aqui — user_module_permissions
+        // foi atualizada acima.
       }
     }
     await client.query('COMMIT');

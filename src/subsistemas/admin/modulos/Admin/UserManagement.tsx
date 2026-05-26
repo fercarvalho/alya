@@ -22,7 +22,8 @@ interface User {
   phone?: string;
   photoUrl?: string;
   role: string;
-  modules?: string[];
+  // Fase 2.10 — coluna users.modules TEXT[] dropada; só matriz granular.
+  modulesAccess?: Record<string, 'view' | 'edit'>;
   isActive?: boolean;
   lastLogin?: string;
   createdAt: string;
@@ -97,20 +98,10 @@ const UserManagement: React.FC = () => {
     return user.username;
   };
 
-  const getDefaultModulesForRole = (role: string): string[] => {
-    switch (role) {
-      case 'superadmin':
-        return modules.filter(m => m.isActive).map(m => m.key);
-      case 'admin':
-        return modules.filter(m => m.isActive && !['activeSessions', 'anomalies', 'securityAlerts'].includes(m.key)).map(m => m.key);
-      case 'user':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
-      case 'guest':
-        return ['dashboard', 'metas', 'reports', 'dre'];
-      default:
-        return [];
-    }
-  };
+  // Fase 2.10 — getDefaultModulesForRole hardcoded removido. Defaults
+  // agora vêm de role_default_permissions (editáveis pela aba "Padrões
+  // de Função" — Fase 2.7) e são aplicados pelo backend automaticamente
+  // via saveUser quando modulesAccess não é fornecido (Fase 2.4a).
 
   const handleUpdateUser = async (userId: string, updates: any) => {
     // Fase 2.9 — não auto-sobrescreve `modules` ao trocar de role. Mudanças
@@ -208,17 +199,10 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const toggleModuleForUser = (userId: string, moduleKey: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-
-    const currentModules = user.modules || [];
-    const newModules = currentModules.includes(moduleKey)
-      ? currentModules.filter(m => m !== moduleKey)
-      : [...currentModules, moduleKey];
-
-    handleUpdateUser(userId, { modules: newModules });
-  };
+  // Fase 2.10 — toggleModuleForUser inline removido. Toggle binário não
+  // expressa view/edit; pra alterar permissões granulares, abra o modal
+  // de edição (botão Editar) que tem a PermissionsMatrix (Fase 2.6).
+  // Os chips de módulo na tabela viraram readonly (visual de status só).
 
   const handleResetAllPasswords = async () => {
     setIsResetting(true);
@@ -479,26 +463,30 @@ const UserManagement: React.FC = () => {
                       {modules.filter(m => m.isActive).map((mod) => {
                         const superadminOnly = ['activeSessions', 'anomalies', 'securityAlerts'].includes(mod.key);
                         const isRestricted = superadminOnly && currentUser?.role !== 'superadmin';
-                        const effectiveModules = u.role === 'superadmin'
-                          ? modules.filter(m => m.isActive).map(m => m.key)
-                          : (u.modules || []);
-                        const hasAccess = effectiveModules.includes(mod.key);
+                        // Fase 2.10 — chip read-only. Cor reflete nível granular
+                        // (edit = âmbar cheio; view = âmbar claro; sem acesso = cinza).
+                        // Pra alterar, abrir modal de edição (botão Editar à direita).
+                        const level: 'view' | 'edit' | null = u.role === 'superadmin'
+                          ? 'edit'
+                          : (u.modulesAccess && u.modulesAccess[mod.key]) || null;
+                        const chipClass = level === 'edit'
+                          ? 'bg-amber-500 text-white'
+                          : level === 'view'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            : 'bg-gray-200 text-gray-700';
                         return (
-                          <button
+                          <span
                             key={mod.id}
-                            onClick={() => !isRestricted && toggleModuleForUser(u.id, mod.key)}
-                            title={isRestricted ? 'Apenas o super administrador pode gerenciar este módulo' : undefined}
-                            className={`px-2 py-1 text-xs rounded transition-colors ${
-                              isRestricted
-                                ? 'opacity-40 cursor-not-allowed ' + (hasAccess ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-700')
-                                : hasAccess
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                            title={isRestricted
+                              ? 'Módulo exclusivo do super administrador'
+                              : `${mod.name} — ${level ?? 'sem acesso'} (editar via modal)`}
+                            className={`px-2 py-1 text-xs rounded ${chipClass} ${isRestricted ? 'opacity-50' : ''}`}
                           >
                             {mod.name}
-                            {hasAccess ? <Eye className="inline ml-1 h-3 w-3" /> : <EyeOff className="inline ml-1 h-3 w-3" />}
-                          </button>
+                            {level === 'edit' && <Eye className="inline ml-1 h-3 w-3" />}
+                            {level === 'view' && <Eye className="inline ml-1 h-3 w-3 opacity-70" />}
+                            {!level && <EyeOff className="inline ml-1 h-3 w-3" />}
+                          </span>
                         );
                       })}
                     </div>
@@ -606,25 +594,26 @@ const UserManagement: React.FC = () => {
                 {modules.filter(m => m.isActive).map((mod) => {
                   const superadminOnly = ['activeSessions', 'anomalies', 'securityAlerts'].includes(mod.key);
                   const isRestricted = superadminOnly && currentUser?.role !== 'superadmin';
-                  const effectiveModules = u.role === 'superadmin'
-                    ? modules.filter(m => m.isActive).map(m => m.key)
-                    : (u.modules || []);
-                  const hasAccess = effectiveModules.includes(mod.key);
+                  // Fase 2.10 — chip read-only granular (ver explicação na
+                  // tabela desktop acima).
+                  const level: 'view' | 'edit' | null = u.role === 'superadmin'
+                    ? 'edit'
+                    : (u.modulesAccess && u.modulesAccess[mod.key]) || null;
+                  const chipClass = level === 'edit'
+                    ? 'bg-amber-500 text-white'
+                    : level === 'view'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                      : 'bg-gray-200 text-gray-700';
                   return (
-                    <button
+                    <span
                       key={mod.id}
-                      onClick={() => !isRestricted && toggleModuleForUser(u.id, mod.key)}
-                      title={isRestricted ? 'Apenas o super administrador pode gerenciar este módulo' : undefined}
-                      className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                        isRestricted
-                          ? 'opacity-40 cursor-not-allowed ' + (hasAccess ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-700')
-                          : hasAccess
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-gray-200 text-gray-700 active:bg-gray-300'
-                      }`}
+                      title={isRestricted
+                        ? 'Módulo exclusivo do super administrador'
+                        : `${mod.name} — ${level ?? 'sem acesso'} (editar via modal)`}
+                      className={`px-2 py-0.5 text-xs rounded ${chipClass} ${isRestricted ? 'opacity-50' : ''}`}
                     >
                       {mod.name}
-                    </button>
+                    </span>
                   );
                 })}
               </div>

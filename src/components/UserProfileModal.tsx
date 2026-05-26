@@ -36,7 +36,9 @@ interface UserProfileData {
     state?: string;
   };
   role: string;
-  modules?: string[];
+  // Fase 2.10 — campo `modules` removido (coluna dropada). `modulesAccess`
+  // é a matriz granular ({moduleKey: 'view'|'edit'}).
+  modulesAccess?: Record<string, 'view' | 'edit'>;
   isActive?: boolean;
   lastLogin?: string;
   createdAt?: string;
@@ -325,13 +327,22 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose }) 
                 <div>
                   <label className="text-sm font-medium text-gray-500 mb-2 block">Módulos Ativos</label>
                   <div className="flex flex-wrap gap-2">
-                    {profileData.modules && profileData.modules.length > 0 ? (
-                      profileData.modules.map((module) => (
+                    {/* Fase 2.10 — lê de modulesAccess (matriz granular).
+                        view e edit aparecem; ausência = sem acesso (não
+                        exibe). edit fica mais saturado pra dar dica visual. */}
+                    {profileData.modulesAccess && Object.keys(profileData.modulesAccess).length > 0 ? (
+                      Object.entries(profileData.modulesAccess).map(([moduleKey, level]) => (
                         <span
-                          key={module}
-                          className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200"
+                          key={moduleKey}
+                          title={`${moduleKey} — ${level}`}
+                          className={`inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium border ${
+                            level === 'edit'
+                              ? 'bg-amber-100 text-amber-800 border-amber-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200/70'
+                          }`}
                         >
-                          {module}
+                          {moduleKey}
+                          <span className="ml-1.5 text-[10px] uppercase opacity-70">{level}</span>
                         </span>
                       ))
                     ) : (

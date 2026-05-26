@@ -24,7 +24,8 @@ interface User {
   phone?: string;
   photoUrl?: string;
   role: string;
-  modules?: string[];
+  // Fase 2.10 — campo `modules` removido (coluna users.modules dropada).
+  // A matriz granular vem via useUserPermissions a partir do user.id.
   isActive?: boolean;
   permissoesLegais?: PermissoesLegais;
 }
@@ -50,7 +51,8 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
     email: '',
     phone: '',
     role: 'user',
-    modules: [] as string[],
+    // Fase 2.10 — `modules` removido do formData. Matriz granular vive
+    // no hook useUserPermissions (perms) — não duplicamos aqui.
     isActive: true
   });
   const [permissoesLegais, setPermissoesLegais] = useState<PermissoesLegais>({});
@@ -95,7 +97,6 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
         email: user.email || '',
         phone: user.phone ? applyPhoneMask(user.phone) : '',
         role: user.role || 'user',
-        modules: user.modules || [],
         isActive: user.isActive !== undefined ? user.isActive : true
       });
       setPhotoUrl(user.photoUrl || null);
@@ -130,18 +131,11 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
     };
   }, [isOpen, isSubmitting, onClose]);
 
-  const getDefaultModulesForRole = (role: string): string[] => {
-    switch (role) {
-      case 'superadmin':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'admin'];
-      case 'user':
-        return ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre'];
-      case 'guest':
-        return ['dashboard', 'metas', 'reports', 'dre'];
-      default:
-        return [];
-    }
-  };
+  // Fase 2.10 — getDefaultModulesForRole hardcoded removido. A matriz
+  // granular (PermissionsMatrix da Fase 2.6) é editada explicitamente pelo
+  // admin; mudança de role NÃO sobrescreve mais a matriz aqui dentro do
+  // modal de edição. Se o admin quiser aplicar defaults da nova role,
+  // usa o botão "Resetar para defaults da role" da própria matriz.
 
   const handleInputChange = (field: string, value: string) => {
     if (field === 'phone') {
@@ -521,12 +515,11 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
               <select
                 value={formData.role}
                 onChange={(e) => {
-                  const role = e.target.value;
-                  setFormData(prev => ({
-                    ...prev,
-                    role,
-                    modules: getDefaultModulesForRole(role)
-                  }));
+                  // Fase 2.10 — só muda a role. A matriz granular (seção
+                  // "Permissões de Módulos" abaixo) é editada explicitamente
+                  // pelo admin; pra reaplicar defaults da nova role, usar o
+                  // botão "Resetar para defaults da role" da matriz.
+                  setFormData(prev => ({ ...prev, role: e.target.value }));
                 }}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50"
                 disabled={isSubmitting}
@@ -534,6 +527,7 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                 <option value="user">Usuário</option>
                 {currentUser?.role === 'superadmin' && <option value="superadmin">Super Administrador</option>}
                 <option value="admin">Administrador</option>
+                <option value="manager">Gerente</option>
                 <option value="guest">Convidado</option>
               </select>
             </div>

@@ -883,36 +883,11 @@ const generateRandomPassword = () => {
   return generateSecurePassword(16);
 };
 
-// Função auxiliar para obter módulos padrão por role
-const getDefaultModulesForRole = (role) => {
-  switch (role) {
-    case "superadmin":
-      return [
-        "dashboard", "transactions", "products", "clients",
-        "reports", "metas", "dre", "projecao",
-        "admin", "activeSessions", "anomalies", "securityAlerts", "roadmap",
-      ];
-    case "admin":
-      return [
-        "dashboard", "transactions", "products", "clients",
-        "reports", "metas", "dre", "projecao", "admin", "roadmap",
-      ];
-    case "user":
-      return [
-        "dashboard",
-        "transactions",
-        "products",
-        "clients",
-        "reports",
-        "metas",
-        "dre",
-      ];
-    case "guest":
-      return ["dashboard", "metas", "reports", "dre"];
-    default:
-      return [];
-  }
-};
+// Fase 2.10 — getDefaultModulesForRole hardcoded removido.
+// Defaults agora vêm de role_default_permissions (Fase 2.2) com fallback
+// pra FALLBACK_DEFAULTS em server/permissions/defaults.js. Aplicação é
+// feita pelo db.saveUser automaticamente quando modulesAccess/modules
+// não são fornecidos (Fase 2.4a).
 
 // 🔒 Rate Limiters movidos para ./middleware/security.js
 
@@ -939,14 +914,15 @@ app.post("/api/auth/demo-register", async (req, res) => {
     const tempPassword = generateRandomPassword();
     const hashedPassword = bcrypt.hashSync(tempPassword, 10);
 
-    // Cria o usuário (lastLogin = now para não exigir fluxo de convite no login)
+    // Cria o usuário (lastLogin = now para não exigir fluxo de convite no login).
+    // Fase 2.10 — sem `modules`/`modulesAccess`: saveUser aplica os defaults
+    // canônicos da role 'user' via applyRoleDefaultsToUser.
     const newUser = await db.saveUser({
       username: "teste_nuvemshop",
       firstName: nome,
       email: email,
       password: hashedPassword,
       role: "user",
-      modules: getDefaultModulesForRole("user"),
       isActive: true,
       lastLogin: new Date().toISOString(),
     });
@@ -975,8 +951,7 @@ app.post("/api/auth/demo-register", async (req, res) => {
         firstName: newUser.firstName,
         email: newUser.email,
         role: newUser.role,
-        modules: newUser.modules,
-        // Fase 2.4b — completa o shape pro frontend não precisar refetch.
+        // Fase 2.4b/2.10 — só matriz granular. Coluna `modules` foi dropada.
         modulesAccess: newUser.modulesAccess || {},
       },
     });
@@ -1304,7 +1279,8 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
         position: safeUser.position,
         address: safeUser.address,
         role: safeUser.role,
-        modules: safeUser.modules || [],
+        // Fase 2.10 — campo `modules` removido do payload (coluna dropada).
+        // Frontend lê `modulesAccess` abaixo.
         // Fase 2.4b — modulesAccess granular ({moduleKey: 'view'|'edit'}).
         // Fonte da verdade pra autorização daqui em diante; `modules` TEXT[]
         // continua espelhando as keys com qualquer acesso pra compat
@@ -2168,7 +2144,8 @@ app.post("/api/auth/verify", authenticateToken, async (req, res) => {
         position: safeUser.position,
         address: safeUser.address,
         role: safeUser.role,
-        modules: safeUser.modules || [],
+        // Fase 2.10 — campo `modules` removido do payload (coluna dropada).
+        // Frontend lê `modulesAccess` abaixo.
         // Fase 2.4b — idem login: matriz granular ({moduleKey:'view'|'edit'}).
         modulesAccess: safeUser.modulesAccess || {},
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
@@ -2389,7 +2366,8 @@ app.get("/api/user/profile", authenticateToken, async (req, res) => {
         position: safeUser.position,
         address: safeUser.address,
         role: safeUser.role,
-        modules: safeUser.modules || [],
+        // Fase 2.10 — campo `modules` removido do payload (coluna dropada).
+        // Frontend lê `modulesAccess` abaixo.
         isActive: safeUser.isActive !== undefined ? safeUser.isActive : true,
         lastLogin: safeUser.lastLogin,
         createdAt: safeUser.createdAt,
