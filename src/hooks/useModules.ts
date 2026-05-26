@@ -13,6 +13,9 @@ export interface SystemModule {
   isActive: boolean;
   isSystem: boolean;
   sortOrder?: number;
+  // Fase 2.x — subsystem_key vem do banco como camelCase via toCamelCase
+  // (server/database-pg.js). Necessário pra montar PermissionsMatrix.
+  subsystemKey?: string;
   createdAt: string;
   updatedAt: string;
 }

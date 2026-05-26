@@ -3927,6 +3927,29 @@ app.put('/api/admin/role-defaults/:role', authenticateToken, requireSuperAdmin, 
   }
 });
 
+// Fase 2.8 — defaults da role como matriz pronta pro frontend renderizar.
+// Usado pelo fluxo "Novo usuário em 2 etapas": Step 1 envia o role escolhido,
+// frontend chama esse endpoint pra popular a PermissionsMatrix da Step 2
+// com os defaults granulares (sem precisar cruzar manualmente com o catálogo
+// de módulos no client).
+//
+// Retorna: { role, modulesAccess: { [moduleKey]: 'view'|'edit' } } — só inclui
+// módulos com algum acesso. Quem fica de fora = "sem acesso" (null no UI).
+app.get('/api/admin/permissions/defaults', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const role = (req.query.role || '').toString();
+    if (!role) return res.status(400).json({ success: false, error: 'Query param `role` é obrigatório' });
+    const roleCheck = await db.pool.query('SELECT key FROM roles WHERE key = $1', [role]);
+    if (roleCheck.rowCount === 0) {
+      return res.status(404).json({ success: false, error: `Role '${role}' não existe` });
+    }
+    const modulesAccess = await permissionsHelpers.loadRoleDefaults(db.pool, role);
+    res.json({ success: true, data: { role, modulesAccess } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── 3. USER PERMISSIONS (matriz granular do user) ────────────────────────────
 app.get('/api/admin/users/:id/permissions', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -4992,6 +5015,10 @@ app.post(
         address,
         role,
         modules,
+        // Fase 2.8 — matriz granular { moduleKey: 'view'|'edit' } enviada
+        // pelo fluxo "Novo usuário em 2 etapas". Tem precedência sobre o
+        // legado `modules` (que continua aceito como fallback).
+        modulesAccess,
         isActive,
       } = req.body;
 
@@ -5131,11 +5158,11 @@ app.post(
       const tempPassword = generateRandomPassword();
       const tempPasswordHash = bcrypt.hashSync(tempPassword, 10);
 
-      // Se módulos não foram fornecidos, usar módulos padrão da role
+      // Fase 2.8 — precedência de perms:
+      //   1. modulesAccess (object granular do fluxo 2-etapas) → usado direto
+      //   2. modules (array legado) → traduzido pra 'edit' por saveUser
+      //   3. nada → saveUser aplica defaults da role automaticamente
       const userRole = role || "user";
-      const defaultModules = getDefaultModulesForRole(userRole);
-      const userModules =
-        modules && modules.length > 0 ? modules : defaultModules;
 
       const newUser = {
         username,
@@ -5151,7 +5178,10 @@ app.post(
         address: address || undefined,
         password: tempPasswordHash, // Senha temporária
         role: userRole,
-        modules: userModules,
+        // Encaminha modulesAccess se fornecido; senão modules legado;
+        // saveUser lida com fallback pros defaults da role.
+        ...(modulesAccess !== undefined ? { modulesAccess } : {}),
+        ...(modules !== undefined ? { modules } : {}),
         isActive: isActive !== undefined ? isActive : true,
         lastLogin: null, // null indica que nunca fez login
       };
