@@ -12,6 +12,7 @@
 // pieChartDataCategorias, etc) que só fazem sentido dentro do Dashboard.
 // =============================================================================
 
+import { useMemo } from 'react';
 import type React from 'react';
 import { BarChart3, Plus, PieChart, ChevronLeft, ChevronRight, Target, TrendingUp, TrendingDown, Wallet, Zap, Clock, DollarSign, ArrowUpCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
@@ -143,20 +144,23 @@ export default function Dashboard({
       "Q4 (Out-Dez)",
     ];
 
-    // Filtrar transações do trimestre atual usando função auxiliar
-    const transacoesTrimestre = transactions.filter((t) => {
+    // Fase 1.9 — memoizado: filter+reduce sobre `transactions` inteiro só
+    // refaz quando o array muda ou o trimestre selecionado muda.
+    const transacoesTrimestre = useMemo(() => transactions.filter((t) => {
       if (!t.date) return false;
       const { month, year } = getMonthYearFromDate(t.date);
       return mesesDoTrimestre.includes(month) && year === currentYear;
-    });
+    }), [transactions, mesesDoTrimestre.join(','), currentYear, getMonthYearFromDate]);
 
     // Dados trimestrais (usando dados reais das transações)
-    const totalReceitasTrimestre = transacoesTrimestre
-      .filter((t) => isReceita(t.type) && !t.isHidden)
-      .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
-    const totalDespesasTrimestre = transacoesTrimestre
-      .filter((t) => isDespesa(t.type) && !t.isHidden)
-      .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
+    const { totalReceitasTrimestre, totalDespesasTrimestre } = useMemo(() => ({
+      totalReceitasTrimestre: transacoesTrimestre
+        .filter((t) => isReceita(t.type) && !t.isHidden)
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0),
+      totalDespesasTrimestre: transacoesTrimestre
+        .filter((t) => isDespesa(t.type) && !t.isHidden)
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0),
+    }), [transacoesTrimestre]);
     const lucroLiquidoTrimestre =
       totalReceitasTrimestre - totalDespesasTrimestre;
 
@@ -166,28 +170,33 @@ export default function Dashboard({
       0,
     );
 
-    // Filtrar transações do ano atual usando função auxiliar
-    const transacoesAno = transactions.filter((t) => {
+    // Fase 1.9 — memoizado: re-filtra transactions só quando array/ano mudam.
+    const transacoesAno = useMemo(() => transactions.filter((t) => {
       if (!t.date) return false;
       return getYearFromDate(t.date) === currentYear;
-    });
+    }), [transactions, currentYear, getYearFromDate]);
 
     // Dados anuais (usando dados reais das transações)
-    const totalReceitasAno = transacoesAno
-      .filter((t) => isReceita(t.type) && !t.isHidden)
-      .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
-    const totalDespesasAno = transacoesAno
-      .filter((t) => isDespesa(t.type) && !t.isHidden)
-      .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
+    const { totalReceitasAno, totalDespesasAno } = useMemo(() => ({
+      totalReceitasAno: transacoesAno
+        .filter((t) => isReceita(t.type) && !t.isHidden)
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0),
+      totalDespesasAno: transacoesAno
+        .filter((t) => isDespesa(t.type) && !t.isHidden)
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0),
+    }), [transacoesAno]);
     const lucroLiquidoAno = totalReceitasAno - totalDespesasAno;
 
-    // Transações recentes (últimas 5)
-    const transacoesRecentes = transactions
+    // Transações recentes (últimas 5). Fase 1.9 — memoizado: evita re-sort
+    // do array inteiro de transactions em cada render. Importante: clonar
+    // antes de sort, porque .sort() muta o array (efeito colateral nojento
+    // no array recebido por prop).
+    const transacoesRecentes = useMemo(() => [...transactions]
       .sort(
         (a, b) =>
           parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime(),
       )
-      .slice(0, 5);
+      .slice(0, 5), [transactions]);
 
     // Dados para gráficos mensais (baseados no mês selecionado nas metas)
     const pieChartData = [
@@ -309,27 +318,34 @@ export default function Dashboard({
     ];
 
     // Dados para LineChart de evolução mensal (12 meses do ano)
+    // Fase 1.9 — memoizado: o map dispara 12 chamadas a calculateTotalsForMonth,
+    // cada uma rodando filter+reduce no array inteiro de transactions. Era um
+    // dos pontos mais caros do dashboard.
     const mesesNomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-    const lineChartData = mesesNomes.map((nome, idx) => {
+    const lineChartData = useMemo(() => mesesNomes.map((nome, idx) => {
       const { receitas: rec, despesas: desp, resultado: saldo } = calculateTotalsForMonth(idx, currentYear);
       return { mes: nome, Receitas: rec, Despesas: desp, Saldo: saldo };
-    });
+    }), [calculateTotalsForMonth, currentYear]);
 
-    // Dados para PieChart de categorias de despesas do mês selecionado
-    const despesasMes = transactions.filter((t) => {
-      if (!t.date || !isDespesa(t.type)) return false;
-      const { month, year } = getMonthYearFromDate(t.date);
-      return month === selectedMonth && year === currentYear;
-    });
-    const categoriasDespesas: Record<string, number> = {};
-    despesasMes.forEach((t) => {
-      const cat = t.category || "Outros";
-      categoriasDespesas[cat] = (categoriasDespesas[cat] || 0) + (Number(t.value) || 0);
-    });
+    // Dados para PieChart de categorias de despesas do mês selecionado.
+    // Fase 1.9 — memoizado em bloco: filtra + agrupa + ordena só quando muda
+    // transactions ou o mês selecionado.
     const CORES_CATEGORIAS = ["#ef4444","#f97316","#f59e0b","#8b5cf6","#06b6d4","#ec4899","#10b981","#3b82f6","#84cc16","#6366f1"];
-    const pieChartDataCategorias = Object.entries(categoriasDespesas)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, value], i) => ({ name, value, color: CORES_CATEGORIAS[i % CORES_CATEGORIAS.length] }));
+    const pieChartDataCategorias = useMemo(() => {
+      const despesasMes = transactions.filter((t) => {
+        if (!t.date || !isDespesa(t.type)) return false;
+        const { month, year } = getMonthYearFromDate(t.date);
+        return month === selectedMonth && year === currentYear;
+      });
+      const categoriasDespesas: Record<string, number> = {};
+      despesasMes.forEach((t) => {
+        const cat = t.category || "Outros";
+        categoriasDespesas[cat] = (categoriasDespesas[cat] || 0) + (Number(t.value) || 0);
+      });
+      return Object.entries(categoriasDespesas)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, value], i) => ({ name, value, color: CORES_CATEGORIAS[i % CORES_CATEGORIAS.length] }));
+    }, [transactions, selectedMonth, currentYear, getMonthYearFromDate]);
 
     // Componente de gráfico de rosca (donut chart)
     const renderPieChart = (data: any[], title: string) => {

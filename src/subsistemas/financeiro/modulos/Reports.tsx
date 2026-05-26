@@ -8,6 +8,7 @@
 // closure sobre o state do AppContent.
 // =============================================================================
 
+import { useMemo } from 'react';
 import {
   BarChart3,
   Download,
@@ -121,9 +122,18 @@ export default function Reports({
     });
 
   const p = periodoRelatorio;
-  const [iniAtual, fimAtual] = calcRangeAtual(p, off);
-  const tsAtual = filtrar(iniAtual, fimAtual);
-  const tsAnt = filtrar(...calcRangeAtual(p, off - 1));
+  // Fase 1.9 — memoizado: o filtro sobre `transactions` é o gargalo principal
+  // do componente. Recalcula apenas quando muda transactions, período ou
+  // offset. Atenção: `calcRangeAtual` depende de `agora` (capturado por
+  // closure no escopo do componente), portanto incluímos `agora` nas deps —
+  // se a página fica aberta atravessando meia-noite o range será revalidado
+  // no próximo render que disparar mudança em outra dep.
+  const [iniAtual, fimAtual] = useMemo(() => calcRangeAtual(p, off), [p, off, agora]);
+  const tsAtual = useMemo(() => filtrar(iniAtual, fimAtual), [transactions, iniAtual, fimAtual]);
+  const tsAnt = useMemo(() => {
+    const [ini, fim] = calcRangeAtual(p, off - 1);
+    return filtrar(ini, fim);
+  }, [transactions, p, off, agora]);
 
   const somarReceitas = (ts: any[]) => ts.filter((t) => isReceita(t.type)).reduce((s, t) => s + (Number(t.value) || 0), 0);
   const somarDespesas = (ts: any[]) => ts.filter((t) => isDespesa(t.type)).reduce((s, t) => s + (Number(t.value) || 0), 0);
@@ -187,23 +197,32 @@ export default function Reports({
       .map(([nome, v]) => ({ nome, receitas: v.rec, despesas: v.desp, saldo: v.rec - v.desp }));
   };
 
-  const recAtual = somarReceitas(tsAtual);
-  const despAtual = somarDespesas(tsAtual);
-  const lucroAtual = recAtual - despAtual;
+  // Fase 1.9 — totais memoizados por bloco. Cada reduce roda sobre tsAtual/tsAnt
+  // que já são estáveis quando os filtros não mudaram.
+  const { recAtual, despAtual, lucroAtual } = useMemo(() => {
+    const rec = somarReceitas(tsAtual);
+    const desp = somarDespesas(tsAtual);
+    return { recAtual: rec, despAtual: desp, lucroAtual: rec - desp };
+  }, [tsAtual]);
 
-  const recAnt = somarReceitas(tsAnt);
-  const despAnt = somarDespesas(tsAnt);
-  const lucroAnt = recAnt - despAnt;
+  const { recAnt, despAnt, lucroAnt } = useMemo(() => {
+    const rec = somarReceitas(tsAnt);
+    const desp = somarDespesas(tsAnt);
+    return { recAnt: rec, despAnt: desp, lucroAnt: rec - desp };
+  }, [tsAnt]);
 
   const varRec = recAnt > 0 ? ((recAtual - recAnt) / recAnt) * 100 : 0;
   const varDesp = despAnt > 0 ? ((despAtual - despAnt) / despAnt) * 100 : 0;
   const varLucro = lucroAnt !== 0 ? ((lucroAtual - lucroAnt) / Math.abs(lucroAnt)) * 100 : 0;
   const margemAtual = recAtual > 0 ? (lucroAtual / recAtual) * 100 : 0;
 
-  const catReceitas = calcPorCategoria(tsAtual, 'receita');
-  const catDespesas = calcPorCategoria(tsAtual, 'despesa');
-  const produtos = calcProdutos(tsAtual);
-  const tendencia = calcTendencia(tsAtual, p);
+  // Fase 1.9 — agregações memoizadas. catReceitas/catDespesas/produtos/tendencia
+  // fazem forEach+Object.entries+sort+map sobre tsAtual; barato por iteração
+  // mas dispara em todo render do AppContent (e tem muitos).
+  const catReceitas = useMemo(() => calcPorCategoria(tsAtual, 'receita'), [tsAtual]);
+  const catDespesas = useMemo(() => calcPorCategoria(tsAtual, 'despesa'), [tsAtual]);
+  const produtos = useMemo(() => calcProdutos(tsAtual), [tsAtual]);
+  const tendencia = useMemo(() => calcTendencia(tsAtual, p), [tsAtual, p]);
 
   const totalCatRec = catReceitas.reduce((s, i) => s + i.valor, 0);
   const totalCatDesp = catDespesas.reduce((s, i) => s + i.valor, 0);

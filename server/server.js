@@ -168,6 +168,34 @@ const isAllowedSubsystemOrigin = (origin) => {
 };
 
 // Middleware
+//
+// Fase 1.9 — Sobre o CORS com credentials:
+// - `credentials: true` exige que `Access-Control-Allow-Origin` retorne o
+//   origin EXATO da request (nunca '*'). A função `origin` acima já garante
+//   isso devolvendo `cb(null, true)`, que sinaliza ao cors() para ecoar o
+//   valor recebido.
+// - Preflight (OPTIONS) precisa retornar 200/204 com `Allow-Credentials: true`
+//   senão o browser bloqueia. O middleware cors() faz isso automaticamente
+//   quando `credentials: true` está setado — não precisa de handler manual.
+// - `maxAge: 86400` cacheia o preflight no browser por 24h, evitando OPTIONS
+//   em cada request de subsistema. Se você alterar `allowedHeaders` ou
+//   `methods`, browsers podem ainda servir resposta antiga até esse TTL
+//   expirar — em dev, abra DevTools → Network → "Disable cache" para forçar.
+//
+// Fase 1.9 — Sobre `SameSite=Lax` em getAuthCookieOptions:
+// - Lax permite cookie em navegação top-level cross-site (incluindo entre
+//   *.alya.sistemas.viverdepj.com.br ↔ alya.sistemas.viverdepj.com.br) mas
+//   bloqueia em requests sub-recurso cross-site (img/iframe/POST de fetch
+//   sem credentials). Como o frontend usa `credentials: include` e os
+//   subdomínios são todos do MESMO eTLD+1 (alya.sistemas.viverdepj.com.br),
+//   o browser trata como same-site → Lax basta.
+// - `SameSite=None` exigiria `Secure: true` obrigatoriamente E abriria
+//   espaço pra CSRF. Como nosso uso é estritamente sub-domínios próprios,
+//   ficamos no Lax.
+// - CSP atual NÃO seta `frame-ancestors 'none'` (não bloqueamos iframes do
+//   próprio domínio). Se um dia precisarmos embedar em domínios externos
+//   (ex.: parceiros), o cookie httpOnly NÃO acompanha — terá que migrar
+//   pra SameSite=None+Secure ou usar um esquema de token específico.
 app.use(
   cors({
     origin: (origin, cb) => {
@@ -197,7 +225,18 @@ app.use(cookieParser());
 // proxy do Vite), o vite.config.ts precisa usar proxy com changeOrigin: false.
 const resolveCookieDomain = (req) => {
   if (process.env.COOKIE_DOMAIN) return process.env.COOKIE_DOMAIN;
+  // Fase 1.9 — guarda defensiva: se req.hostname vier vazio (request mal
+  // formado, header Host omitido por algum proxy, ou tooling exótico), evita
+  // que o cookie seja setado num domínio inválido. Loga warning para
+  // visibilidade e cai no fallback (cookie vinculado ao host literal).
   const hostname = (req.hostname || "").toLowerCase();
+  if (!hostname) {
+    console.warn(
+      "[resolveCookieDomain] req.hostname vazio — cookie será vinculado ao host literal. Headers:",
+      { host: req.headers.host, xfwd: req.headers["x-forwarded-host"] }
+    );
+    return undefined;
+  }
   if (hostname === "alya.local" || hostname.endsWith(".alya.local")) {
     return ".alya.local";
   }
@@ -2092,6 +2131,16 @@ app.post("/api/auth/verify", authenticateToken, async (req, res) => {
     const user = await db.getUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    // Fase 1.9 — sliding window: ao autenticar com sucesso, re-emite os cookies
+    // com maxAge renovado para que o usuário ativo não tenha o cookie httpOnly
+    // expirando no browser depois de 24h corridos. JWT em si mantém TTL próprio
+    // (refresh continua sendo responsabilidade do /api/auth/refresh).
+    const currentAccess = extractAccessToken(req);
+    const currentRefresh = req.cookies && req.cookies.refreshToken;
+    if (currentAccess) {
+      setAuthCookies(req, res, currentAccess, currentRefresh || null);
     }
 
     const { password: _, ...safeUser } = user;
@@ -4952,12 +5001,46 @@ app.post(
       );
 
       const { password: _, ...safeTarget } = targetUser;
+      // Fase 1.9: seta cookie httpOnly do token de impersonation pro Domain
+      // compartilhado entre subdomínios. Sem isso, o admin impersonando troca
+      // de subdomínio → browser envia o cookie ANTIGO (do admin) e o backend
+      // devolve o admin (não o usuário impersonado), revertendo silenciosamente.
+      setAuthCookies(req, res, impersonationToken, null);
       res.json({ success: true, token: impersonationToken, user: safeTarget });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
   }
 );
+
+// Fase 1.9: stop impersonation aceita o token original via header e troca o
+// cookie httpOnly de volta pro admin. Sem esse endpoint, o cookie do user
+// impersonado ficaria no browser indefinidamente — ao trocar de subdomínio,
+// o admin re-impersonava sem saber.
+app.post("/api/admin/impersonate/stop", async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const originalToken = authHeader && authHeader.split(" ")[1];
+    if (!originalToken) {
+      return res.status(400).json({ error: "Token original ausente no header Authorization" });
+    }
+    // Verifica que o token original é válido e pertence a um admin/superadmin
+    let decoded;
+    try {
+      decoded = jwt.verify(originalToken, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: "Token original inválido ou expirado" });
+    }
+    if (!decoded || (decoded.role !== "admin" && decoded.role !== "superadmin")) {
+      return res.status(403).json({ error: "Token original não é de admin/superadmin" });
+    }
+    // Re-emite o cookie httpOnly com o token do admin original.
+    setAuthCookies(req, res, originalToken, null);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Erro ao parar impersonation" });
+  }
+});
 
 app.delete(
   "/api/admin/users/:id",

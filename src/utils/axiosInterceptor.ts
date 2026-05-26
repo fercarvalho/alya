@@ -10,6 +10,20 @@ import { attachOfflineInterceptors } from "./offlineClient";
 // Fase 1.3 — auth via cookie httpOnly compartilhado entre subdomínios.
 // Toda chamada (axios E fetch nativo) precisa enviar credentials para que o
 // browser inclua o cookie cross-subdomain (admin.alya.* → backend em alya.*).
+//
+// Fase 1.9 — IMPORTANTE: o monkey-patch de `window.fetch` abaixo precisa
+// rodar ANTES de qualquer código que chame `fetch`. Hoje a garantia vem de:
+//   - `src/App.tsx` faz `import "./utils/axiosInterceptor";` como import
+//     side-effect (não-named); ESM avalia esse módulo na ordem em que aparece.
+//   - `src/contexts/AuthContext.tsx` importa `setupSessionExpiredListener`
+//     daqui, o que também dispara a avaliação do módulo.
+// O primeiro dos dois a ser carregado já instala o patch. Como App.tsx é
+// importado em main.tsx e AuthContext é referenciado dentro de App, o patch
+// está garantidamente ativo antes do primeiro `fetch` user-iniciado.
+// Se algum dia surgir um caller que faça `fetch` ANTES do bundle do App
+// terminar de avaliar (ex.: snippet inline em index.html ou um worker que
+// roda fora do graph do bundler), mova este import para `src/main.tsx` como
+// PRIMEIRO import — antes mesmo do React.
 axios.defaults.withCredentials = true;
 
 if (typeof window !== "undefined") {
