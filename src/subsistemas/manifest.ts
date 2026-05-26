@@ -85,8 +85,21 @@ const PALETTES = {
   },
 } as const satisfies Record<string, SubsystemPalette>;
 
-// IMPORTANTE: keys dos módulos espelham server/migrations/018 - SUBSISTEMAS.sql
-// + getDefaultModulesByRole no UserManagement.tsx. Manter em sincronia.
+// IMPORTANTE: keys dos módulos espelham server/migrations/018 - SUBSISTEMAS.sql.
+//
+// Fase 3.2 — sobre `moduleKeys` em cada subsistema:
+//
+// Esse campo é FALLBACK HISTÓRICO usado no roteamento inicial (Fase 1.2)
+// e em casos extremamente edge onde o catálogo do banco ainda não carregou.
+// A partir da Fase 3.0/3.1, o `App.tsx` filtra os módulos visíveis no nav
+// pela coluna `modules.subsystem_key` do banco — quando o admin move um
+// módulo entre subsistemas via UI (ModuleManagement.tsx), o nav reflete a
+// nova ordem automaticamente, SEM editar este array nem fazer deploy.
+//
+// Logo: se você mover um módulo via UI, não precisa atualizar manifest.ts
+// pra refletir a mudança em runtime. Atualizar este array continua sendo
+// útil quando a mudança é "permanente" (mover pro código pra novos clones
+// do projeto começarem com a configuração nova) — é hygiene opcional.
 export const SUBSYSTEMS: ReadonlyArray<SubsystemDefinition> = [
   {
     key: 'admin',
