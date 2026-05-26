@@ -96,7 +96,12 @@ import "./utils/axiosInterceptor";
 import SubsystemPicker from "./subsistemas/SubsystemPicker";
 import AcessoNegado from "./subsistemas/AcessoNegado";
 import { useCurrentSubsystem } from "./subsistemas/useCurrentSubsystem";
-import { userCanAccessSubsystem } from "./subsistemas/manifest";
+import {
+  userCanAccessSubsystem,
+  supportsSubdomainNavigation,
+  getRootUrl,
+  clearSubsystemOverride,
+} from "./subsistemas/manifest";
 
 import {
   PieChart as RechartsPieChart,
@@ -4618,7 +4623,27 @@ const AppContent: React.FC = () => {
         <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200 dark:bg-gray-900/95 dark:border-amber-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-3 overflow-x-auto scrollbar-hide">
-              <div className="flex items-center min-w-max flex-shrink-0">
+              {/* Logo + título funcionam como botão de "voltar para o Picker
+                  (escolha de subsistema)". Em ambientes com suporte a
+                  subdomínio (*.alya.local / produção), navega pro host raiz.
+                  Em localhost sem subdomínio, limpa o override em
+                  sessionStorage e dispara o evento que o useCurrentSubsystem
+                  escuta pra re-renderizar como Picker. Mesmo padrão do
+                  impgeo. */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (supportsSubdomainNavigation()) {
+                    window.location.href = getRootUrl();
+                  } else {
+                    clearSubsystemOverride();
+                    window.dispatchEvent(new CustomEvent("subsystem:override-changed"));
+                  }
+                }}
+                className="flex items-center min-w-max flex-shrink-0 rounded-lg px-1 py-1 -ml-1 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 transition-colors cursor-pointer text-left"
+                title="Voltar para escolha de subsistema"
+                aria-label="Voltar para escolha de subsistema"
+              >
                 <img
                   src={isDemoMode ? "/app/alya-logo.png" : "/alya-logo.png"}
                   alt="Alya Velas Logo"
@@ -4632,7 +4657,7 @@ const AppContent: React.FC = () => {
                     Sistema de Gestão Inteligente
                   </p>
                 </div>
-              </div>
+              </button>
               <div className="flex items-center gap-4 min-w-max flex-shrink-0 ml-4">
                 <NotificationBell />
                 <MenuUsuario />
