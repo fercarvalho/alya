@@ -131,7 +131,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setRefreshToken(savedRefreshToken);
       verifyToken(savedAccessToken);
     } else {
-      setIsLoading(false);
+      // Fase 1.3: storage vazio pode significar (a) sessão nova OU (b) usuário
+      // trocou de subdomínio (localStorage é isolado por origem). Em (b), o
+      // cookie httpOnly compartilhado entre subdomínios ainda está válido —
+      // tentamos hidratar via /auth/verify sem token explícito; o backend cai
+      // para o cookie via extractAccessToken (header → cookie fallback).
+      verifyTokenViaCookie();
     }
 
     // Escutar evento de sessão expirada do Axios Interceptor
@@ -142,6 +147,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return cleanup;
   }, []);
+
+  // Tenta hidratar a sessão usando o cookie httpOnly compartilhado entre
+  // subdomínios. Falha silenciosa (cai pra tela de Login) se não houver cookie.
+  const verifyTokenViaCookie = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        // Não temos o token raw aqui (cookie é httpOnly), mas o state.token
+        // não é mais a fonte de verdade — o cookie é. State fica null e isso é OK.
+      }
+    } catch (_e) {
+      // Sem cookie ou cookie inválido — usuário precisa logar.
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const verifyToken = async (tokenToVerify: string) => {
     try {

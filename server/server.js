@@ -5,6 +5,7 @@ const express = require("express");
 const multer = require("multer");
 const XLSX = require("xlsx");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -143,8 +144,11 @@ app.use("/api/", generalLimiter);
 // Sanitização de dados (NoSQL injection e HPP)
 app.use(configureSanitization());
 
-// Configurar origens CORS a partir da variável de ambiente
-const allowedOrigins = process.env.CORS_ORIGINS
+// Configurar origens CORS — fase 1.3 (subsistemas).
+// Origem precisa ser permitida dinamicamente para os subdomínios dos 5
+// subsistemas (admin/gestao/financeiro/gerenciamento/especial), tanto em
+// dev (*.alya.local) quanto em prod (*.alya.sistemas.viverdepj.com.br).
+const staticOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
   : [
     "https://alya.sistemas.viverdepj.com.br",
@@ -154,10 +158,25 @@ const allowedOrigins = process.env.CORS_ORIGINS
     "http://127.0.0.1:5173",
   ];
 
+const isAllowedSubsystemOrigin = (origin) => {
+  if (!origin) return false;
+  // dev: http(s)://(qualquer-coisa.)alya.local(:port)
+  if (/^https?:\/\/([a-z0-9-]+\.)?alya\.local(?::\d+)?$/.test(origin)) return true;
+  // prod: https://(qualquer-coisa.)alya.sistemas.viverdepj.com.br
+  if (/^https:\/\/([a-z0-9-]+\.)?alya\.sistemas\.viverdepj\.com\.br$/.test(origin)) return true;
+  return false;
+};
+
 // Middleware
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // requisições same-origin / CLI / curl
+      if (staticOrigins.includes(origin) || isAllowedSubsystemOrigin(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -165,6 +184,72 @@ app.use(
     maxAge: 86400, // 24 horas de cache para preflight
   }),
 );
+
+app.use(cookieParser());
+
+// Helpers para cookies de auth (fase 1.3 — subsistemas).
+//
+// Domain do cookie é resolvido dinamicamente a partir do Host do request,
+// para que o mesmo backend sirva localhost, *.alya.local e produção sem
+// reconfigurar .env por ambiente. Override manual: COOKIE_DOMAIN no .env.
+//
+// Para que req.hostname reflita o Host original do navegador (e não o do
+// proxy do Vite), o vite.config.ts precisa usar proxy com changeOrigin: false.
+const resolveCookieDomain = (req) => {
+  if (process.env.COOKIE_DOMAIN) return process.env.COOKIE_DOMAIN;
+  const hostname = (req.hostname || "").toLowerCase();
+  if (hostname === "alya.local" || hostname.endsWith(".alya.local")) {
+    return ".alya.local";
+  }
+  if (
+    hostname === "alya.sistemas.viverdepj.com.br" ||
+    hostname.endsWith(".alya.sistemas.viverdepj.com.br")
+  ) {
+    return ".alya.sistemas.viverdepj.com.br";
+  }
+  return undefined; // cookie vinculado ao host (ex.: localhost)
+};
+const getAuthCookieOptions = (req) => ({
+  httpOnly: true,
+  secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+  sameSite: "lax",
+  domain: resolveCookieDomain(req),
+  path: "/",
+});
+const ACCESS_TOKEN_MAX_AGE = 24 * 60 * 60 * 1000;       // 24h
+const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;  // 7d
+const setAuthCookies = (req, res, accessToken, refreshToken) => {
+  const opts = getAuthCookieOptions(req);
+  res.cookie("accessToken", accessToken, { ...opts, maxAge: ACCESS_TOKEN_MAX_AGE });
+  if (refreshToken) {
+    res.cookie("refreshToken", refreshToken, { ...opts, maxAge: REFRESH_TOKEN_MAX_AGE });
+  }
+};
+const clearAuthCookies = (req, res) => {
+  const opts = getAuthCookieOptions(req);
+  res.clearCookie("accessToken", opts);
+  res.clearCookie("refreshToken", opts);
+};
+
+// extractAccessToken — header Authorization (Bearer) tem PRIORIDADE sobre
+// cookie, para que impersonation continue funcionando (o frontend manda o
+// impersonatedToken explicitamente). Em fluxo normal pós-fase 1.3, o
+// frontend não precisa mais enviar Authorization — cookie httpOnly é a
+// fonte de verdade. Quando o header vem como "Bearer null" ou
+// "Bearer undefined" (state em memória ainda não hidratado após F5),
+// caímos para o cookie automaticamente.
+const extractAccessToken = (req) => {
+  const authHeader = req.headers["authorization"];
+  const headerToken = authHeader && authHeader.split(" ")[1];
+  const isValidHeaderToken =
+    headerToken &&
+    headerToken !== "null" &&
+    headerToken !== "undefined" &&
+    headerToken.length > 10;
+  if (isValidHeaderToken) return headerToken;
+  if (req.cookies && req.cookies.accessToken) return req.cookies.accessToken;
+  return undefined;
+};
 // Nuvemshop webhook precisa de raw body para validação HMAC — registrado ANTES do express.json()
 const { createRouter: createNuvemshopRouter, handleWebhook: nuvemshopWebhookHandler } = require("./routes/nuvemshop");
 app.post(
@@ -271,10 +356,11 @@ function deleteAvatarFile(photoUrl) {
   }
 }
 
-// Middleware de autenticação
+// Middleware de autenticação — fase 1.3 (subsistemas).
+// Aceita token via header Authorization (Bearer) OU cookie httpOnly
+// 'accessToken'. Ver extractAccessToken acima para detalhes da prioridade.
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  const token = extractAccessToken(req);
 
   if (!token) {
     return res.status(401).json({ error: "Token de acesso requerido" });
@@ -282,7 +368,8 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({ error: "Token inválido" });
+      // 401 (não 403): cliente sabe que é problema de auth e dispara refresh
+      return res.status(401).json({ error: "Token inválido ou expirado" });
     }
     req.user = user;
     next();
@@ -1188,6 +1275,12 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
       response.newPassword = newPassword;
     }
 
+    // Fase 1.3: cookie httpOnly compartilhado entre subdomínios. O token
+    // continua no body também por compat com clients que ainda não usam
+    // credentials: 'include' (será removido na fase 2.x quando todos os
+    // clients tiverem migrado).
+    setAuthCookies(req, res, accessToken, refreshToken);
+
     res.json(response);
   } catch (error) {
     // Gerar código de erro único para rastreamento
@@ -1273,7 +1366,8 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
 // 🔒 FASE 3: Endpoint para renovar access token usando refresh token
 app.post("/api/auth/refresh", authLimiter, async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    // Fase 1.3: aceita refresh token via cookie httpOnly OU body (compat)
+    const refreshToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
 
     if (!refreshToken) {
       return res.status(400).json({ error: "Refresh token é obrigatório" });
@@ -1351,6 +1445,9 @@ app.post("/api/auth/refresh", authLimiter, async (req, res) => {
       status: AUDIT_STATUS.SUCCESS,
     });
 
+    // Fase 1.3: atualiza ambos os cookies (rotação)
+    setAuthCookies(req, res, newAccessToken, newRefreshToken);
+
     res.json({
       success: true,
       accessToken: newAccessToken,
@@ -1366,7 +1463,8 @@ app.post("/api/auth/refresh", authLimiter, async (req, res) => {
 // 🔒 FASE 3: Endpoint para logout (revogar refresh token)
 app.post("/api/auth/logout", authenticateToken, async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    // Fase 1.3: aceita refresh token via cookie httpOnly OU body (compat)
+    const refreshToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
 
     if (refreshToken) {
       const { success, tokenId } = await revokeRefreshToken(refreshToken);
@@ -1405,6 +1503,9 @@ app.post("/api/auth/logout", authenticateToken, async (req, res) => {
       details: {},
       status: AUDIT_STATUS.SUCCESS,
     });
+
+    // Fase 1.3: limpa cookies httpOnly independente do refresh ter sido válido
+    clearAuthCookies(req, res);
 
     res.json({ success: true, message: "Logout realizado com sucesso" });
   } catch (error) {
