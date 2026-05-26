@@ -1543,13 +1543,75 @@ class Database extends FileDatabase {
     }
   }
 
-  async reorderModules(orderedIds) {
-    const now = new Date().toISOString();
-    for (let i = 0; i < orderedIds.length; i++) {
-      await this.pool.query(
-        'UPDATE modules SET sort_order = $1, updated_at = $2 WHERE id = $3',
-        [i, now, orderedIds[i]]
+  // ─── Fase 3.0 — Subsistemas e módulos respeitando subsystem_key ────────
+  //
+  // listSubsystems / getSubsystemByKey: read-only sobre a tabela subsystems
+  // (introduzida na migration 018). Usados pra popular dropdown da UI
+  // de "mover módulo entre subsistemas" e pra validar subsystemKey nos
+  // CRUD de módulos.
+  async listSubsystems() {
+    if (!this.pool) return [];
+    try {
+      const r = await this.pool.query(
+        'SELECT * FROM subsystems WHERE is_active = TRUE ORDER BY sort_order, subsystem_key'
       );
+      return r.rows.map(toCamelCase);
+    } catch (e) {
+      console.error('Erro ao listar subsistemas:', e);
+      return [];
+    }
+  }
+
+  async getSubsystemByKey(key) {
+    if (!this.pool) return null;
+    try {
+      const r = await this.pool.query('SELECT * FROM subsystems WHERE subsystem_key = $1', [key]);
+      return r.rows.length ? toCamelCase(r.rows[0]) : null;
+    } catch (e) {
+      console.error('Erro ao buscar subsistema:', e);
+      return null;
+    }
+  }
+
+  // Fase 3.0 — reorder agora opera DENTRO de um subsistema. Valida que
+  // todas as keys pertencem ao subsystemKey antes do UPDATE (proteção
+  // contra inputs maliciosos ou stale). Atômico via transação.
+  //
+  // Assinatura nova: reorderModules(subsystemKey, orderedIds).
+  // Contrato antigo (orderedIds globais sem subsystem) deixou de existir
+  // — o endpoint aborta com 400 quando chama no formato antigo.
+  async reorderModules(subsystemKey, orderedIds) {
+    if (!subsystemKey || !Array.isArray(orderedIds) || orderedIds.length === 0) {
+      throw new Error('reorderModules: subsystemKey e orderedIds (array não vazio) são obrigatórios');
+    }
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Valida que todos os IDs pertencem ao subsistema
+      const r = await client.query(
+        'SELECT id FROM modules WHERE id = ANY($1) AND subsystem_key = $2',
+        [orderedIds, subsystemKey]
+      );
+      const validIds = new Set(r.rows.map((row) => row.id));
+      const orphans = orderedIds.filter((id) => !validIds.has(id));
+      if (orphans.length > 0) {
+        throw new Error(
+          `reorderModules: ${orphans.length} módulo(s) não pertencem ao subsistema "${subsystemKey}": ${orphans.join(', ')}`
+        );
+      }
+      const now = new Date().toISOString();
+      for (let i = 0; i < orderedIds.length; i++) {
+        await client.query(
+          'UPDATE modules SET sort_order = $1, updated_at = $2 WHERE id = $3',
+          [i, now, orderedIds[i]]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch {}
+      throw e;
+    } finally {
+      client.release();
     }
   }
 
@@ -1580,14 +1642,28 @@ class Database extends FileDatabase {
       const ex = await this.getSystemModuleByKey(data.key);
       if (ex && ex.id !== data.id) throw new Error('Já existe um módulo com esta key');
     }
+    // Fase 3.0 — subsystemKey é obrigatório (todo módulo pertence a um
+    // subsistema; ver migration 018). Valida contra a tabela subsystems.
+    if (!data.subsystemKey) {
+      throw new Error('saveSystemModule: subsystemKey é obrigatório');
+    }
+    const sub = await this.getSubsystemByKey(data.subsystemKey);
+    if (!sub) {
+      throw new Error(`saveSystemModule: subsystema "${data.subsystemKey}" não existe`);
+    }
     const id = this.generateId();
     const now = new Date().toISOString();
-    const maxR = await this.pool.query('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM modules');
+    // sort_order = próximo dentro do subsistema (não global) — schema
+    // mudou na 018; antes era global.
+    const maxR = await this.pool.query(
+      'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM modules WHERE subsystem_key = $1',
+      [data.subsystemKey]
+    );
     const nextOrder = maxR.rows[0].next;
     await this.pool.query(
-      `INSERT INTO modules (id, name, key, icon, description, route, is_active, is_system, sort_order, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, data.name || '', data.key || '', data.icon || null, data.description || null, data.route || null, data.isActive !== false, data.isSystem || false, nextOrder, now, now]
+      `INSERT INTO modules (id, name, key, icon, description, route, is_active, is_system, sort_order, subsystem_key, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [id, data.name || '', data.key || '', data.icon || null, data.description || null, data.route || null, data.isActive !== false, data.isSystem || false, nextOrder, data.subsystemKey, now, now]
     );
     return this.getSystemModuleById(id);
   }
@@ -1600,20 +1676,65 @@ class Database extends FileDatabase {
         if (ex && ex.id !== id) throw new Error('Já existe um módulo com esta key');
       }
     }
-    const fields = [];
-    const vals = [];
-    let i = 1;
-    for (const [camel, col] of [['name', 'name'], ['key', 'key'], ['icon', 'icon'], ['description', 'description'], ['route', 'route'], ['isActive', 'is_active']]) {
-      if (data[camel] === undefined) continue;
-      fields.push(`${col} = $${i++}`);
-      vals.push(data[camel]);
+    // Fase 3.0 — quando subsystemKey muda, valida o destino e recalcula
+    // sort_order pra ficar no fim do subsistema novo. Tudo em transação
+    // pra invariante "todo módulo tem subsystem_key válido e sort_order
+    // consistente" não quebrar parcialmente.
+    let moveTarget = null;
+    if (data.subsystemKey !== undefined) {
+      const sub = await this.getSubsystemByKey(data.subsystemKey);
+      if (!sub) {
+        throw new Error(`updateSystemModule: subsystema "${data.subsystemKey}" não existe`);
+      }
+      const cur = await this.getSystemModuleById(id);
+      if (!cur) throw new Error('Módulo não encontrado');
+      if (cur.subsystemKey !== data.subsystemKey) moveTarget = data.subsystemKey;
     }
-    if (fields.length === 0) return this.getSystemModuleById(id);
-    fields.push('updated_at = CURRENT_TIMESTAMP');
-    vals.push(id);
-    const r = await this.pool.query(`UPDATE modules SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`, vals);
-    if (r.rows.length === 0) throw new Error('Módulo não encontrado');
-    return toCamelCase(r.rows[0]);
+
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const fields = [];
+      const vals = [];
+      let i = 1;
+      for (const [camel, col] of [
+        ['name', 'name'],
+        ['key', 'key'],
+        ['icon', 'icon'],
+        ['description', 'description'],
+        ['route', 'route'],
+        ['isActive', 'is_active'],
+        ['subsystemKey', 'subsystem_key'],
+      ]) {
+        if (data[camel] === undefined) continue;
+        fields.push(`${col} = $${i++}`);
+        vals.push(data[camel]);
+      }
+      // Recalcula sort_order só se houve movimentação real entre subsistemas
+      if (moveTarget) {
+        const maxR = await client.query(
+          'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM modules WHERE subsystem_key = $1',
+          [moveTarget]
+        );
+        fields.push(`sort_order = $${i++}`);
+        vals.push(maxR.rows[0].next);
+      }
+      if (fields.length === 0) {
+        await client.query('COMMIT');
+        return this.getSystemModuleById(id);
+      }
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      vals.push(id);
+      const r = await client.query(`UPDATE modules SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`, vals);
+      if (r.rows.length === 0) throw new Error('Módulo não encontrado');
+      await client.query('COMMIT');
+      return toCamelCase(r.rows[0]);
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch {}
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   async deleteSystemModule(id) {

@@ -5511,12 +5511,17 @@ app.post(
   requireSuperAdmin,
   async (req, res) => {
     try {
-      const { name, key, icon, description, route, isActive } = req.body;
+      const { name, key, icon, description, route, isActive, subsystemKey } = req.body;
 
       if (!name || !key) {
         return res
           .status(400)
           .json({ success: false, error: "Nome e key são obrigatórios" });
+      }
+      // Fase 3.0 — subsystemKey é obrigatório (todo módulo pertence a
+      // um dos 5 subsistemas).
+      if (!subsystemKey) {
+        return res.status(400).json({ success: false, error: "subsystemKey é obrigatório" });
       }
 
       const moduleData = {
@@ -5527,6 +5532,7 @@ app.post(
         route: route || null,
         isActive: isActive !== undefined ? isActive : true,
         isSystem: false,
+        subsystemKey,
       };
 
       const module = await db.saveSystemModule(moduleData);
@@ -5537,7 +5543,7 @@ app.post(
         "admin",
         "module",
         module.id,
-        { name: module.name, key: module.key },
+        { name: module.name, key: module.key, subsystemKey: module.subsystemKey },
       );
 
       res.json({ success: true, data: module });
@@ -5559,6 +5565,19 @@ app.put(
       // Não permitir mudar isSystem
       delete updates.isSystem;
 
+      // Fase 3.0 — quando subsystemKey muda, snapshot do "movedFrom" pro log
+      // ficar legível. (updateSystemModule já valida o destino contra a
+      // tabela subsystems e recalcula sort_order.)
+      let movedFrom = null;
+      let movedTo = null;
+      if (updates.subsystemKey !== undefined) {
+        const before = await db.getSystemModuleById(id);
+        if (before && before.subsystemKey !== updates.subsystemKey) {
+          movedFrom = before.subsystemKey;
+          movedTo = updates.subsystemKey;
+        }
+      }
+
       const module = await db.updateSystemModule(id, updates);
       await logActivity(
         req.user.id,
@@ -5567,7 +5586,10 @@ app.put(
         "admin",
         "module",
         id,
-        { changes: Object.keys(updates) },
+        {
+          changes: Object.keys(updates),
+          ...(movedFrom ? { movedFrom, movedTo } : {}),
+        },
       );
 
       res.json({ success: true, data: module });
@@ -5610,17 +5632,43 @@ app.delete(
   },
 );
 
+// Fase 3.0 — endpoint listSubsystems pra popular o dropdown "Mover para"
+// na UI de ModuleManagement (Fase 3.1) e qualquer outra tela que precise
+// dos 5 subsistemas em runtime.
+app.get(
+  "/api/admin/subsystems",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const subsystems = await db.listSubsystems();
+      res.json({ success: true, data: subsystems });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
+
 app.post(
   "/api/admin/modules/reorder",
   authenticateToken,
   requireSuperAdmin,
   async (req, res) => {
     try {
-      const { ids } = req.body;
+      // Fase 3.0 — contrato novo: { subsystemKey, ids: [...] }. O contrato
+      // antigo só com `ids` é rejeitado com 400 — sort_order agora é POR
+      // subsistema (migration 018), reorder global perdeu sentido.
+      const { subsystemKey, ids } = req.body;
+      if (!subsystemKey) {
+        return res.status(400).json({
+          success: false,
+          error: "subsystemKey é obrigatório (contrato novo da Fase 3.0)",
+        });
+      }
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ success: false, error: "ids deve ser um array não vazio" });
       }
-      await db.reorderModules(ids);
+      await db.reorderModules(subsystemKey, ids);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
