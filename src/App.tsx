@@ -1159,7 +1159,15 @@ const AppContent: React.FC = () => {
   //      implícito que ainda mora dentro do AppContent — refator pra
   //      componente separado fica para sub-fase futura).
   if (!subsystem) {
-    return <SubsystemPicker />;
+    // ThemeToggle também no Picker — o componente é posicionado fixed,
+    // então basta render sibling do Picker pra ficar no canto da tela
+    // (mesmo padrão da tela de Login acima).
+    return (
+      <>
+        <ThemeToggle />
+        <SubsystemPicker />
+      </>
+    );
   }
   if (!userCanAccessSubsystem(user, subsystem)) {
     return <AcessoNegado attemptedSubsystem={subsystem} />;
