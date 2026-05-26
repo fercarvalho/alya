@@ -19,12 +19,12 @@ interface Props {
 }
 
 /**
- * Dropdown de troca de módulo (espelho do impgeo).
+ * Dropdown de troca de subsistema (espelho do impgeo).
  *
  * Comportamento:
- *   - Botão pai exibe o módulo atual com ícone, nome e chevron.
- *   - Click → dropdown com lista dos outros módulos acessíveis +
- *     indicador do atual + item "Trocar de módulo" (vermelho discreto).
+ *   - Botão pai exibe o subsistema atual com ícone, nome e chevron.
+ *   - Click → dropdown com lista dos outros subsistemas acessíveis +
+ *     indicador do atual + item "Trocar de subsistema" (vermelho discreto).
  *   - Fechamento: click fora, ESC, ou ao escolher um item.
  *   - Em ambiente com subdomínio: window.location.href = buildSubsystemUrl(slug)
  *   - Em localhost puro: setSubsystemOverride(slug) + custom event.
@@ -211,7 +211,7 @@ export default function SubsystemSwitcher({ current }: Props) {
             </>
           )}
 
-          {/* Indicador do módulo atual */}
+          {/* Indicador do subsistema atual */}
           <div className="px-4 py-2 flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40">
             <div className={`flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center ${current.palette.iconBg} ${current.palette.iconText}`}>
               {renderIcon(current.iconName, 'h-4 w-4')}

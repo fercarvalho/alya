@@ -83,12 +83,12 @@ export default function AcessoNegado({ attemptedSubsystem }: Props) {
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-6 max-w-md mx-auto">
             {attemptedSubsystem ? (
               <>
-                O módulo <span className="font-semibold text-gray-800 dark:text-gray-200">{attemptedSubsystem.name}</span>{' '}
+                O subsistema <span className="font-semibold text-gray-800 dark:text-gray-200">{attemptedSubsystem.name}</span>{' '}
                 ainda não está liberado para o seu perfil <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{user?.role || 'desconhecido'}</span>.
               </>
             ) : (
               <>
-                Os módulos do sistema ainda não estão liberados para o seu perfil <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{user?.role || 'desconhecido'}</span>.
+                Os subsistemas ainda não estão liberados para o seu perfil <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{user?.role || 'desconhecido'}</span>.
               </>
             )}
           </p>
