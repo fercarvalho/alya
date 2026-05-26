@@ -32,12 +32,12 @@ interface Props {
 }
 
 const ResolveTransactionModal: React.FC<Props> = ({ transactionId, description, onClose, onResolved }) => {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [candidates, setCandidates] = useState<RuleCandidate[] | null>(null)
   const [loading, setLoading] = useState(false)
 
   const loadCandidates = useCallback(async (txId: string) => {
-    if (!token) return
+    if (!user) return
     setLoading(true)
     try {
       const r = await authedFetch(token, `${API_BASE_URL}/transactions/${txId}/candidates`)

@@ -80,7 +80,7 @@ const emptyForm: FormState = {
 }
 
 const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChanged }) => {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [rules, setRules] = useState<TransactionRule[]>([])
   const [perms, setPerms] = useState<RulePermissions>({ canCreate: false, canEdit: false, canDelete: false })
   const [loading, setLoading] = useState(false)
@@ -94,7 +94,7 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
   const [deletePrompt, setDeletePrompt] = useState<{ rule: TransactionRule; affected: DeleteAffectedTx[] } | null>(null)
 
   const refresh = useCallback(async () => {
-    if (!token) return
+    if (!user) return
     setLoading(true)
     try {
       const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules`)

@@ -13,12 +13,12 @@ const POLL_INTERVAL_MS = 45_000
  * Clicar em "Confirmar agora" abre o BulkResolveModal direto.
  */
 const PendingTransactionsBanner: React.FC = () => {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [count, setCount] = useState(0)
   const [open, setOpen] = useState(false)
 
   const refresh = useCallback(async () => {
-    if (!token) return
+    if (!user) return
     try {
       const r = await authedFetch(token, `${API_BASE_URL}/transactions/pending`)
       const j = await r.json()

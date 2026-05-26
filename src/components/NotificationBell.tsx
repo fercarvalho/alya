@@ -32,7 +32,7 @@ interface Notification {
 }
 
 const NotificationBell: React.FC = () => {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -107,7 +107,7 @@ const NotificationBell: React.FC = () => {
   }, [open])
 
   const fetchNotifications = useCallback(async () => {
-    if (!token) return
+    if (!user) return
     try {
       const r = await authedFetch(token, `${API_BASE_URL}/notifications`)
       const j = await r.json()

@@ -41,14 +41,14 @@ interface Props {
 }
 
 const BulkResolveModal: React.FC<Props> = ({ isOpen, onClose, onResolved }) => {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [items, setItems] = useState<PendingTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [decisions, setDecisions] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
-    if (!token) return
+    if (!user) return
     setLoading(true)
     try {
       const r = await authedFetch(token, `${API_BASE_URL}/transactions/pending`)
