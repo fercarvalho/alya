@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Edit } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +6,8 @@ import { API_BASE_URL } from '../config/api';
 import PhotoUpload from './PhotoUpload';
 import { validateEmail } from '../utils/validation';
 import { applyPhoneMask, removePhoneMask, validatePhoneFormat } from '../utils/phoneMask';
+import PermissionsMatrix from '../subsistemas/admin/modulos/Admin/PermissionsMatrix';
+import { useUserPermissions } from '../hooks/useUserPermissions';
 
 interface PermissoesLegais {
   termos_uso?: boolean;
@@ -61,6 +63,27 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  // Fase 2.6 — matriz granular de permissões. O hook fetcha quando o modal
+  // abre (enabled = isOpen && tem user). Manipulação fica no estado interno
+  // do hook (permissions/setPermissions); save() é chamado dentro do
+  // handleSubmit principal, após o PUT do user.
+  const perms = useUserPermissions({
+    userId: user?.id ?? null,
+    enabled: isOpen && !!user,
+  });
+
+  // Quando admin (não-superadmin) edita non-superadmin, bloqueia os módulos
+  // exclusivos do superadmin pra não tentarem dar acesso (backend já barra,
+  // mas a UI clara evita confusão).
+  const lockedReasons = useMemo<Record<string, string>>(() => {
+    if (currentUser?.role === 'superadmin') return {}; // superadmin pode tudo
+    const reasons: Record<string, string> = {};
+    for (const k of ['activeSessions', 'anomalies', 'securityAlerts']) {
+      reasons[k] = 'Módulo exclusivo do superadmin';
+    }
+    return reasons;
+  }, [currentUser?.role]);
 
   // Carregar dados do usuário quando o modal abrir
   useEffect(() => {
@@ -247,7 +270,13 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
         setPhotoUrl(finalPhotoUrl);
       }
       
-      // Preparar dados para envio
+      // Preparar dados para envio.
+      //
+      // Fase 2.6 — NÃO mandamos mais `modules` no payload do user. As perms
+      // ficam na matriz granular (PUT em /api/admin/users/:id/permissions
+      // logo após este PUT). Mandar `modules` aqui sobrescreveria a matriz
+      // (o updateUser do backend dá precedência a `modules` array via
+      // setUserPermissions com 'edit' em todos).
       const userData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
@@ -256,7 +285,6 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
         phone: formData.phone ? removePhoneMask(formData.phone) : undefined,
         photoUrl: finalPhotoUrl || undefined,
         role: formData.role,
-        modules: formData.modules.length > 0 ? formData.modules : getDefaultModulesForRole(formData.role),
         isActive: formData.isActive
       };
       
@@ -272,6 +300,15 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
       const result = await response.json();
       
       if (result.success) {
+        // Fase 2.6 — persiste a matriz granular (PUT em /permissions). Se
+        // falhar, mostra erro mas NÃO cancela o fluxo (o user já foi
+        // atualizado com sucesso; admin pode tentar resalvar perms depois).
+        try {
+          await perms.save();
+        } catch (permErr) {
+          console.error('Erro ao salvar matriz de permissões:', permErr);
+          setErrors({ general: `Usuário salvo, mas permissões falharam: ${perms.error || (permErr as Error).message}` });
+        }
         // Salvar permissões legais se o superadmin estiver editando um admin
         // Condição: usuário sendo salvo É admin (novo ou já era) e o editor é superadmin
         const targetIsAdmin = formData.role === 'admin' || user.role === 'admin';
@@ -604,6 +641,31 @@ const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                   ))}
                 </div>
               </>
+            )}
+          </div>
+
+          {/* Fase 2.6 — Matriz granular de permissões por subsistema/módulo.
+              Substitui visualmente o grid binário antigo (que nem era
+              renderizado neste modal — só vinha aplicado por defaults da
+              role). Agora superadmin/admin pode customizar finamente
+              view/edit por módulo. */}
+          <div className="border border-amber-200 dark:border-amber-700 rounded-xl p-4 bg-amber-50/30 dark:bg-amber-900/10">
+            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+              <span className="text-amber-500">🔐</span> Permissões de Módulos
+            </h4>
+            {perms.error && (
+              <p className="text-xs text-red-600 mb-3">{perms.error}</p>
+            )}
+            {perms.isLoading ? (
+              <p className="text-xs text-gray-500">Carregando permissões…</p>
+            ) : (
+              <PermissionsMatrix
+                permissions={perms.permissions}
+                onChange={perms.setPermissions}
+                onResetToDefaults={perms.resetToDefaults}
+                isBusy={perms.isSaving || isSubmitting}
+                lockedReasons={lockedReasons}
+              />
             )}
           </div>
 
