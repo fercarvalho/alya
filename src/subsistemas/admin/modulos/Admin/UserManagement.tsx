@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, RefreshCw, AlertTriangle, Edit, LogIn, Users as UsersIcon
+  UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, RefreshCw, AlertTriangle, Edit, LogIn, Users as UsersIcon, RotateCcw, X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useModules } from '@/hooks/useModules';
@@ -50,6 +50,21 @@ const UserManagement: React.FC = () => {
   const [showUserCreatedModal, setShowUserCreatedModal] = useState(false);
   const [createdUserData, setCreatedUserData] = useState<any>(null);
 
+  // Fase 2.9 — fluxo A/B de mudança de role. Quando o admin troca a role
+  // inline (select da tabela), em vez de aplicar direto, perguntamos:
+  //   A) Manter perms atuais (matriz fica intacta)
+  //   B) Resetar pros defaults da nova role (overwrite via applyRoleDefaults)
+  // O backend (updateUser na 2.4a) já tem a precedência implementada:
+  //   - data.applyRoleDefaults === true → reaplica defaults
+  //   - sem essa flag → mantém perms atuais
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    userId: string;
+    username: string;
+    fromRole: string;
+    toRole: string;
+  } | null>(null);
+  const [isApplyingRoleChange, setIsApplyingRoleChange] = useState(false);
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -98,11 +113,10 @@ const UserManagement: React.FC = () => {
   };
 
   const handleUpdateUser = async (userId: string, updates: any) => {
-    // Ao trocar role, atualizar módulos automaticamente
-    if (updates.role) {
-      updates.modules = getDefaultModulesForRole(updates.role);
-    }
-
+    // Fase 2.9 — não auto-sobrescreve `modules` ao trocar de role. Mudanças
+    // de role passam pelo fluxo handleRoleChangeRequest (modal A/B). Updates
+    // que vêm sem `applyRoleDefaults` mantêm perms atuais (precedência do
+    // updateUser do backend, Fase 2.4a).
     try {
       const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         method: 'PUT',
@@ -121,6 +135,53 @@ const UserManagement: React.FC = () => {
     } catch (error) {
       console.error('Erro ao atualizar usuário:', error);
       alert('Erro ao atualizar usuário');
+    }
+  };
+
+  // Fase 2.9 — abre modal A/B em vez de aplicar a mudança direto. O caller
+  // (select inline na tabela) chama isso; o submit final é em
+  // handleConfirmRoleChange.
+  const handleRoleChangeRequest = (userId: string, newRole: string) => {
+    const u = users.find((x) => x.id === userId);
+    if (!u) return;
+    if (u.role === newRole) return; // no-op (não deve acontecer, mas defesa)
+    setPendingRoleChange({
+      userId,
+      username: u.username,
+      fromRole: u.role,
+      toRole: newRole,
+    });
+  };
+
+  const handleConfirmRoleChange = async (keepPermissions: boolean) => {
+    if (!pendingRoleChange) return;
+    setIsApplyingRoleChange(true);
+    try {
+      // keepPermissions=true → não envia applyRoleDefaults; backend mantém
+      // a matriz atual. false → envia applyRoleDefaults: true; backend
+      // chama applyRoleDefaultsToUser internamente.
+      const body: any = { role: pendingRoleChange.toRole };
+      if (!keepPermissions) body.applyRoleDefaults = true;
+      const response = await fetch(
+        `${API_BASE_URL}/admin/users/${pendingRoleChange.userId}`,
+        {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }
+      );
+      const result = await response.json();
+      if (!result.success) {
+        alert(result.error || 'Erro ao alterar função');
+        return;
+      }
+      setPendingRoleChange(null);
+      loadUsers();
+    } catch (e) {
+      console.error('Erro ao alterar função:', e);
+      alert('Erro ao alterar função');
+    } finally {
+      setIsApplyingRoleChange(false);
     }
   };
 
@@ -403,7 +464,7 @@ const UserManagement: React.FC = () => {
                         id={`user-role-${u.id}`}
                         name={`user-role-${u.id}`}
                         value={u.role}
-                        onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
+                        onChange={(e) => handleRoleChangeRequest(u.id, e.target.value)}
                         className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50 text-gray-600"
                       >
                         {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
@@ -527,7 +588,7 @@ const UserManagement: React.FC = () => {
                 </span>
                 <select
                   value={u.role}
-                  onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
+                  onChange={(e) => handleRoleChangeRequest(u.id, e.target.value)}
                   className="flex-1 min-w-0 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-gray-50 text-gray-600"
                 >
                   {currentUser?.role === 'superadmin' && <option value="superadmin">Super Admin</option>}
@@ -648,6 +709,90 @@ const UserManagement: React.FC = () => {
         onSuccess={loadUsers}
         user={editingUser}
       />
+
+      {/* Fase 2.9 — Modal A/B de mudança de role */}
+      {pendingRoleChange && (
+        <div
+          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-[10050] px-4 py-10"
+          onClick={(e) => { if (e.target === e.currentTarget && !isApplyingRoleChange) setPendingRoleChange(null); }}
+        >
+          <div className="bg-white dark:!bg-[#243040] rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Alterar função para <span className="text-amber-700 dark:text-amber-300">{pendingRoleChange.toRole}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPendingRoleChange(null)}
+                disabled={isApplyingRoleChange}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-40"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Você está mudando a função de <strong>{pendingRoleChange.username}</strong> de{' '}
+              <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">{pendingRoleChange.fromRole}</code> para{' '}
+              <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">{pendingRoleChange.toRole}</code>.
+              {' '}As permissões granulares podem ser resetadas para o padrão da nova função ou mantidas como estão.
+            </p>
+
+            <div className="space-y-3">
+              {/* Opção B — Resetar (destaque visual + recomendado) */}
+              <button
+                type="button"
+                onClick={() => handleConfirmRoleChange(false)}
+                disabled={isApplyingRoleChange}
+                className="w-full text-left p-4 border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-60 flex items-start gap-3"
+              >
+                <RotateCcw className="w-5 h-5 text-amber-600 dark:text-amber-300 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-amber-900 dark:text-amber-100">Resetar para o padrão de {pendingRoleChange.toRole}</span>
+                    <span className="text-[10px] uppercase tracking-wide bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100 px-1.5 py-0.5 rounded">Recomendado</span>
+                  </div>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+                    Aplica a tabela canônica de defaults da nova função. Customizações anteriores são perdidas.
+                  </p>
+                </div>
+              </button>
+
+              {/* Opção A — Manter (secundária) */}
+              <button
+                type="button"
+                onClick={() => handleConfirmRoleChange(true)}
+                disabled={isApplyingRoleChange}
+                className="w-full text-left p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:!bg-[#2d3f52] transition-colors disabled:opacity-60 flex items-start gap-3"
+              >
+                <Lock className="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-gray-800 dark:text-gray-200">Manter permissões atuais</div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Só altera a função. A matriz granular fica exatamente como está hoje (pode ficar inconsistente com a nova função).
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setPendingRoleChange(null)}
+                disabled={isApplyingRoleChange}
+                className="px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:!bg-[#2d3f52] rounded-lg hover:bg-gray-200 dark:hover:!bg-[#354b60] disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            {isApplyingRoleChange && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center animate-pulse">Aplicando…</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal de Confirmação para Resetar Todas as Senhas */}
       {showResetAllModal && (
