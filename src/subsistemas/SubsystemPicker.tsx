@@ -19,13 +19,16 @@ import { useCurrentSubsystem } from './useCurrentSubsystem';
 /**
  * Tela inicial pós-login no domínio raiz.
  *
- * Layout (fase 1.1 do alya — espelha o impgeo):
- *   - ImpersonationBanner (quando ativo) acima de tudo
- *   - Header reduzido: gradient azul + logo + nome + MenuUsuario + Sair.
- *     SEM barra de módulos (esse é o ponto da tela — escolher antes de ver).
+ * Layout:
+ *   - ImpersonationBanner (quando ativo) acima de tudo.
+ *   - Header com a mesma identidade visual do header principal do alya:
+ *     fundo creme translúcido + borda âmbar + logo Alya + título gradient
+ *     âmbar→laranja + MenuUsuario + Sair vermelho. SEM barra de módulos
+ *     (esse é o ponto da tela — escolher antes de ver).
+ *   - Fundo: gradient âmbar/laranja/amarelo claro, espelhando o body do
+ *     AppContent.
  *   - Conteúdo: grid de cards (1 col mobile, 2 col tablet, 3 col desktop)
  *     com paleta de cor própria por subsistema.
- *   - Cards não-acessíveis: estado vazio com explicação.
  *
  * Comportamento:
  *   - Click num card → spinner local + window.location.href (subdomínio)
@@ -37,6 +40,15 @@ export default function SubsystemPicker() {
   const { setSubsystem } = useCurrentSubsystem();
   const canUseSubdomain = useMemo(() => supportsSubdomainNavigation(), []);
   const [enteringSlug, setEnteringSlug] = useState<string | null>(null);
+
+  // Mesmo critério usado em AppContent (mantido inline para não acoplar
+  // a uma exportação só pra isso). Em prod normal isDemoMode é false.
+  const isDemoMode =
+    typeof window !== 'undefined' &&
+    (import.meta.env.VITE_DEMO_MODE === 'true' ||
+      window.location.hostname === 'alya.fercarvalho.com' ||
+      window.location.hostname.includes('github.io') ||
+      window.location.hostname.includes('demo'));
 
   const visibleSubsystems = useMemo<SubsystemDefinition[]>(
     () => SUBSYSTEMS.filter(sub => userCanAccessSubsystem(user, sub)),
@@ -61,44 +73,56 @@ export default function SubsystemPicker() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <ImpersonationBanner />
 
-      <nav className="bg-gradient-to-r from-blue-900 to-blue-800 shadow-lg">
+      {/* Header idêntico ao do AppContent (mesma identidade visual da Alya):
+          fundo creme translúcido com blur, borda âmbar, logo + título
+          gradient âmbar→laranja. Sem botão de "voltar pro Picker" aqui — já
+          ESTAMOS no Picker. */}
+      <header className="bg-white/95 backdrop-blur-md shadow-sm border-b border-amber-200 dark:bg-gray-900/95 dark:border-amber-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 py-2">
-            <div className="flex items-center flex-shrink-0">
-              <img src="/logo.png" alt="ALYA Logo" className="h-8 w-8 mr-2 object-contain" />
-              <div>
-                <span className="text-white text-xl font-bold">ALYA</span>
-                <p className="text-blue-200 text-sm">Sistema de Gestão Financeira</p>
+          <div className="flex justify-between items-center py-3 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center min-w-max flex-shrink-0">
+              <img
+                src={isDemoMode ? '/app/alya-logo.png' : '/alya-logo.png'}
+                alt="Alya Velas Logo"
+                className="w-10 h-10 mr-3 rounded-lg shadow-sm object-contain"
+              />
+              <div className="min-w-0 flex-shrink">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent whitespace-nowrap">
+                  Alya Velas
+                </h1>
+                <p className="text-sm text-amber-600/70 font-medium break-words">
+                  Sistema de Gestão Inteligente
+                </p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4 min-w-max flex-shrink-0 ml-4">
               <NotificationBell />
               <MenuUsuario />
               <button
                 onClick={logout}
-                className="flex items-center space-x-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm whitespace-nowrap"
                 title="Sair"
               >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sair</span>
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm font-medium">Sair</span>
               </button>
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
       <main className="flex-1 min-h-screen max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
         <header className="mb-8 sm:mb-10">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight mb-2">
-            Escolha um Módulo
+            Escolha um Subsistema
           </h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl">
             {canUseSubdomain
-              ? 'Cada módulo vive em seu próprio subdomínio. Você pode trocar a qualquer momento pelo botão "Trocar módulo" no header.'
-              : 'Em desenvolvimento local sem subdomínios — a escolha fica nesta aba do navegador. Em produção, cada módulo terá seu próprio subdomínio.'}
+              ? 'Cada subsistema vive em seu próprio subdomínio. Você pode trocar a qualquer momento pelo dropdown de subsistema no header.'
+              : 'Em desenvolvimento local sem subdomínios — a escolha fica nesta aba do navegador. Em produção, cada subsistema terá seu próprio subdomínio.'}
           </p>
         </header>
 
@@ -108,10 +132,10 @@ export default function SubsystemPicker() {
               <LucideIcons.Lock className="h-7 w-7 text-gray-400 dark:text-gray-500" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Nenhum módulo disponível
+              Nenhum subsistema disponível
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-              O seu perfil ainda não tem acesso a nenhum módulo. Fale com um administrador
+              O seu perfil ainda não tem acesso a nenhum subsistema. Fale com um administrador
               se precisa de acesso.
             </p>
           </div>
