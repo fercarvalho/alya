@@ -4640,7 +4640,7 @@ const AppContent: React.FC = () => {
                     window.dispatchEvent(new CustomEvent("subsystem:override-changed"));
                   }
                 }}
-                className="flex items-center min-w-max flex-shrink-0 rounded-2xl px-2 py-1 -ml-2 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 transition-colors cursor-pointer text-left"
+                className="flex items-center min-w-max flex-shrink-0 rounded-2xl px-2 py-1 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 transition-colors cursor-pointer text-left"
                 title="Voltar para escolha de subsistema"
                 aria-label="Voltar para escolha de subsistema"
               >
