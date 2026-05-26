@@ -178,40 +178,43 @@ export function getSubsystemBySlug(slug: string | null | undefined): SubsystemDe
 
 // Permissão de acesso aos subsistemas.
 //
-// Fase 1.1: implementação inicial — role-based (espelhando o impgeo até a
-// Fase 1.8/2.2). Quando a Fase 2 trouxer permissões granulares por módulo
-// (user.modulesAccess), esta função vira o ponto único onde a lógica muda.
+// Fase 2.5: usa a matriz granular user.modulesAccess (populada pelo backend
+// na Fase 2.4b em /login e /verify). Helpers centralizados em
+// src/utils/permissions.ts pra todo lugar do app falar a mesma língua.
+
+import {
+  listAccessibleModuleKeys,
+  isSuperadmin,
+  type AccessLevel,
+} from '@/utils/permissions';
 
 interface UserWithPermissions {
   role?: string;
-  modulesAccess?: Array<{ moduleKey?: string; accessLevel?: string }>;
-}
-
-function getAccessibleModuleKeys(user: UserWithPermissions | null | undefined): Set<string> {
-  if (!user) return new Set();
-  const access = user.modulesAccess;
-  if (!Array.isArray(access)) return new Set();
-  return new Set(
-    access
-      .map((item) => item?.moduleKey)
-      .filter((key): key is string => typeof key === 'string' && key.length > 0)
-  );
+  // Aceita o shape canônico (Record) E o legado (Array) pra compat —
+  // a normalização fica nos helpers de permissions.ts.
+  modulesAccess?:
+    | Record<string, AccessLevel>
+    | Array<{ moduleKey?: string; accessLevel?: string }>;
 }
 
 export function userCanAccessSubsystem(
   user: UserWithPermissions | null | undefined,
   subsystem: SubsystemDefinition,
 ): boolean {
-  // Enquanto a Fase 2 (permissões granulares) não está no alya, fazemos uma
-  // checagem mista: se o user tem `modulesAccess` (alya já popula no /login),
-  // usa por permissão real; caso contrário, cai no fallback role-based.
-  const accessible = getAccessibleModuleKeys(user);
-  if (accessible.size > 0) {
-    return subsystem.moduleKeys.some((key) => accessible.has(key));
+  if (!user) return false;
+  // Superadmin acessa tudo (bypass)
+  if (isSuperadmin(user)) return true;
+
+  // Se o user tem matriz granular populada, usa por permissão real.
+  const accessibleKeys = new Set(listAccessibleModuleKeys(user));
+  if (accessibleKeys.size > 0) {
+    return subsystem.moduleKeys.some((key) => accessibleKeys.has(key));
   }
-  // Fallback role-based (compat com user antigo sem modulesAccess populado)
-  if (!user?.role) return false;
-  return user.role === 'superadmin' || user.role === 'admin';
+
+  // Fallback role-based (caso edge raro: backend velho sem modulesAccess
+  // populado, ou estado intermediário durante deploy).
+  if (!user.role) return false;
+  return user.role === 'admin';
 }
 
 export function userCanAccessSubsystems(user: UserWithPermissions | null | undefined): boolean {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { hasModuleView } from '../utils/permissions';
 
 export interface SystemModule {
   id: string;
@@ -55,15 +56,11 @@ export const useModules = () => {
 
   const getVisibleModules = (): SystemModule[] => {
     if (!user) return [];
-
-    // superadmin vê todos os módulos ativos, independente do array de módulos
-    if (user.role === 'superadmin') {
-      return sortByOrder(modules.filter(m => m.isActive));
-    }
-
-    // Todos os outros (incluindo admin) são filtrados estritamente pelo array de módulos
-    if (!user.modules || user.modules.length === 0) return [];
-    return sortByOrder(modules.filter(m => m.isActive && user.modules!.includes(m.key)));
+    // Fase 2.5 — usa matriz granular via hasModuleView (que trata bypass
+    // de superadmin internamente). Substitui o check antigo
+    // `user.modules.includes(key)`, que ignorava view vs edit e dependia
+    // do TEXT[] legado.
+    return sortByOrder(modules.filter(m => m.isActive && hasModuleView(user, m.key)));
   };
 
   const getModuleByKey = (key: string): SystemModule | undefined => {
