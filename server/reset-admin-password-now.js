@@ -55,14 +55,17 @@ async function resetAdminPassword() {
       console.error('❌ Usuário admin não encontrado!');
       console.log('   Criando usuário admin...\n');
 
-      // Criar usuário admin
+      // Criar usuário admin.
+      // Fase 2.10 — coluna users.modules foi dropada (migration 023).
+      // INSERT só cria a row; perms granulares vêm de role_default_permissions
+      // via applyRoleDefaultsToUser, executado logo após.
       const newPassword = generateStrongPassword(16);
       const hashedPassword = bcrypt.hashSync(newPassword, 10);
       const adminId = crypto.randomUUID();
 
       await pool.query(
-        `INSERT INTO users (id, username, password, first_name, last_name, email, role, modules, is_active, last_login)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)`,
+        `INSERT INTO users (id, username, password, first_name, last_name, email, role, is_active, last_login)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)`,
         [
           adminId,
           'admin',
@@ -71,10 +74,20 @@ async function resetAdminPassword() {
           'Sistema',
           'admin@alya.com',
           'admin',
-          ['dashboard', 'transactions', 'products', 'clients', 'reports', 'metas', 'dre', 'projecao', 'admin'],
           true
         ]
       );
+
+      // Aplicar defaults granulares da role 'admin' (Fase 2.4a). Se o
+      // banco não estiver com 022 + role_default_permissions populada,
+      // o admin fica sem perms iniciais — admin precisa rodar
+      // migrations 019-022 antes deste script pra setup completo.
+      try {
+        const permissionsHelpers = require('./permissions');
+        await permissionsHelpers.applyRoleDefaultsToUser(pool, adminId, 'admin');
+      } catch (e) {
+        console.warn('⚠️  Falha ao aplicar defaults granulares (ok se migrations 020+ ainda não rodaram):', e.message);
+      }
 
       console.log('✅ Usuário admin criado com sucesso!\n');
       console.log('╔════════════════════════════════════════════════╗');

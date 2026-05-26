@@ -92,28 +92,38 @@ async function migrateData() {
     await client.query('BEGIN');
     console.log('Iniciando migração de dados...\n');
 
+    // Fase 2.10 — coluna users.modules foi dropada (migration 023).
+    // INSERT/UPSERT só toca colunas que ainda existem. As permissões
+    // granulares de cada usuário migrado precisam ser populadas depois
+    // (manualmente via reset-to-defaults ou via UI). Este script é
+    // one-time histórico de JSON→PG; mantido aqui pra referência mas
+    // já foi executado em prod faz tempo.
     const users = readJsonFile('users.json');
     console.log(`Migrando ${users.length} usuários...`);
     for (const u of users) {
       await client.query(`
-        INSERT INTO users (id, username, password, first_name, last_name, email, phone, photo_url, cpf, birth_date, gender, position, address, role, modules, is_active, last_login, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        INSERT INTO users (id, username, password, first_name, last_name, email, phone, photo_url, cpf, birth_date, gender, position, address, role, is_active, last_login, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         ON CONFLICT (username) DO UPDATE SET
           id = EXCLUDED.id, password = EXCLUDED.password, first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name, email = EXCLUDED.email, phone = EXCLUDED.phone,
           photo_url = EXCLUDED.photo_url, cpf = EXCLUDED.cpf, birth_date = EXCLUDED.birth_date,
           gender = EXCLUDED.gender, position = EXCLUDED.position, address = EXCLUDED.address,
-          role = EXCLUDED.role, modules = EXCLUDED.modules, is_active = EXCLUDED.is_active,
+          role = EXCLUDED.role, is_active = EXCLUDED.is_active,
           last_login = EXCLUDED.last_login, created_at = EXCLUDED.created_at, updated_at = EXCLUDED.updated_at
       `, [
         u.id, u.username, u.password || '', u.firstName || null, u.lastName || null, u.email || null, u.phone || null,
         u.photoUrl || null, u.cpf || null, u.birthDate || null, u.gender || null, u.position || null,
-        u.address ? JSON.stringify(u.address) : null, u.role || 'user', u.modules || [], u.isActive !== false,
+        u.address ? JSON.stringify(u.address) : null, u.role || 'user', u.isActive !== false,
         u.lastLogin || null, u.createdAt || new Date().toISOString(), u.updatedAt || new Date().toISOString()
       ]);
       report.users++;
     }
     console.log(`  ${report.users} usuários migrados.`);
+    if (report.users > 0) {
+      console.log(`  ⚠️  Permissões granulares NÃO foram migradas (coluna users.modules dropada na Fase 2.10).`);
+      console.log(`     Aplique via UI ou reset-to-defaults endpoint após migração.`);
+    }
 
     const transactions = readJsonFile('transactions.json');
     console.log(`Migrando ${transactions.length} transações...`);
