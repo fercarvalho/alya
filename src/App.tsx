@@ -1147,6 +1147,54 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Modais de notificação pós-login que devem aparecer ANTES do user entrar
+  // num subsistema (no Picker ou AcessoNegado), não só no caminho feliz:
+  //   - CommitVersionModal (carrossel) — superadmin precisa cadastrar
+  //     commits novos antes de fazer qualquer outra coisa. Antes ficava
+  //     escondido até entrar num subsistema; agora aparece já no Picker.
+  //   - VersaoNovaModal — usuários não-superadmin veem changelog/avisos
+  //     ao logar; idem.
+  // useEffects que populam esses states (commitsPendentes / versoesNovas)
+  // já rodam só com user logado, independente do subsystem.
+  const notificationModalsNode = (
+    <>
+      {commitsPendentes && commitsPendentes.commits.length > 0 && (
+        <CommitVersionModal
+          commits={commitsPendentes.commits}
+          versaoAtual={commitsPendentes.versaoAtual}
+          onClose={() => setCommitsPendentes(null)}
+          onProcess={async ({ commitHash, action, novaVersao, mensagem, data, rolesNotificados }) => {
+            const res = await fetch(`${API_BASE_URL}/admin/rodape/confirmar-commit`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                action, novaVersao, commitHash, mensagem, data, rolesNotificados,
+                manterSessionId: commitsPendentes.manterSessionId,
+              }),
+            });
+            if (!res.ok) throw new Error('Falha na requisição');
+            window.dispatchEvent(new Event('rodape-updated'));
+          }}
+        />
+      )}
+      {versoesNovas && versoesNovas.length > 0 && (
+        <VersaoNovaModal
+          versoes={versoesNovas}
+          onConfirm={async (versao) => {
+            try {
+              await fetch(`${API_BASE_URL}/notificacao-versao/vista`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ versao }),
+              });
+            } catch { /* silently ignore */ }
+          }}
+          onClose={() => setVersoesNovas(null)}
+        />
+      )}
+    </>
+  );
+
   // Roteador macro de subsistemas — fase 1.2 do alya.
   //
   // Após login, decide entre 3 telas:
@@ -1166,11 +1214,17 @@ const AppContent: React.FC = () => {
       <>
         <ThemeToggle />
         <SubsystemPicker />
+        {notificationModalsNode}
       </>
     );
   }
   if (!userCanAccessSubsystem(user, subsystem)) {
-    return <AcessoNegado attemptedSubsystem={subsystem} />;
+    return (
+      <>
+        <AcessoNegado attemptedSubsystem={subsystem} />
+        {notificationModalsNode}
+      </>
+    );
   }
 
   // Funções para gerenciar o calendário personalizado
@@ -7087,54 +7141,11 @@ const AppContent: React.FC = () => {
       {/* Footer dinâmico */}
       <Footer />
 
-      {/* Modal de commits pendentes (carrossel — somente superadmin) */}
-      {commitsPendentes && commitsPendentes.commits.length > 0 && (
-        <CommitVersionModal
-          commits={commitsPendentes.commits}
-          versaoAtual={commitsPendentes.versaoAtual}
-          onClose={() => setCommitsPendentes(null)}
-          onProcess={async ({ commitHash, action, novaVersao, mensagem, data, rolesNotificados }) => {
-            const res = await fetch(`${API_BASE_URL}/admin/rodape/confirmar-commit`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                action,
-                novaVersao,
-                commitHash,
-                mensagem,
-                data,
-                rolesNotificados,
-                manterSessionId: commitsPendentes.manterSessionId,
-              }),
-            });
-            if (!res.ok) throw new Error('Falha na requisição');
-            window.dispatchEvent(new Event('rodape-updated'));
-          }}
-        />
-      )}
-
-      {/* Modal de nova versão para usuários */}
-      {versoesNovas && versoesNovas.length > 0 && (
-        <VersaoNovaModal
-          versoes={versoesNovas}
-          onConfirm={async (versao) => {
-            try {
-              await fetch(`${API_BASE_URL}/notificacao-versao/vista`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ versao }),
-              });
-            } catch { /* silently ignore */ }
-          }}
-          onClose={() => setVersoesNovas(null)}
-        />
-      )}
+      {/* CommitVersionModal + VersaoNovaModal — agora extraídos em
+          notificationModalsNode (no AppContent acima) e renderizados
+          também no Picker/AcessoNegado, pra superadmin não precisar
+          entrar num subsistema só pra ver commits pendentes. */}
+      {notificationModalsNode}
 
       {/* Toast de Desfazer Importação */}
       {showUndoToast && (
