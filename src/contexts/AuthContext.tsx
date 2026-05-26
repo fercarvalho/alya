@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import { API_BASE_URL } from "../config/api";
@@ -89,6 +90,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isImpersonating, setIsImpersonating] = useState(
     () => !!sessionStorage.getItem("originalAccessToken")
   );
+  // Fase 1.9 — guarda contra race condition: dois callers (boot useEffect +
+  // listener PWA, por exemplo) podem disparar verify simultaneamente, o que
+  // gerava setUser concorrente e flicker visual. Ref síncrona evita o segundo
+  // disparo entrar enquanto o primeiro está em flight (state seria assíncrono
+  // demais pra esse propósito).
+  const isVerifyingRef = useRef(false);
 
   // Alias para compatibilidade com código existente
   const token = accessToken;
@@ -151,6 +158,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Tenta hidratar a sessão usando o cookie httpOnly compartilhado entre
   // subdomínios. Falha silenciosa (cai pra tela de Login) se não houver cookie.
   const verifyTokenViaCookie = async () => {
+    if (isVerifyingRef.current) return;
+    isVerifyingRef.current = true;
     try {
       const response = await fetch(`${API_BASE_URL}/auth/verify`, {
         method: "POST",
@@ -166,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (_e) {
       // Sem cookie ou cookie inválido — usuário precisa logar.
     } finally {
+      isVerifyingRef.current = false;
       setIsLoading(false);
     }
   };
@@ -417,7 +427,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const data = await response.json();
     if (!data.success) throw new Error(data.error || "Erro ao impersonar usuário");
 
-    // Salvar token original antes de trocar
+    // Fase 1.9 — `originalAccessToken`/`originalRefreshToken` ficam SEMPRE em
+    // sessionStorage (independente de demo mode), porque devem viver apenas
+    // durante esta sessão de impersonation. Já o token impersonado vai no
+    // getStorage() — local em prod, session em demo —, alinhado com o resto
+    // da app.
     sessionStorage.setItem("originalAccessToken", accessToken);
     if (refreshToken) sessionStorage.setItem("originalRefreshToken", refreshToken);
 
@@ -434,10 +448,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.dispatchEvent(new CustomEvent("auth:impersonation-changed"));
   };
 
-  const stopImpersonating = () => {
+  const stopImpersonating = async () => {
     const originalToken = sessionStorage.getItem("originalAccessToken");
     const originalRefresh = sessionStorage.getItem("originalRefreshToken");
     if (!originalToken) return;
+
+    // Fase 1.9: avisa o backend pra trocar o cookie httpOnly de volta pro
+    // admin original. Sem isso, o cookie do user impersonado fica no browser
+    // e o admin re-impersona silenciosamente ao trocar de subdomínio.
+    try {
+      await fetch(`${API_BASE_URL}/admin/impersonate/stop`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Authorization: `Bearer ${originalToken}`, "Content-Type": "application/json" },
+      });
+    } catch {
+      // Mesmo se falhar, segue limpando o estado local — pior caso é
+      // re-fazer impersonation depois.
+    }
 
     sessionStorage.removeItem("originalAccessToken");
     sessionStorage.removeItem("originalRefreshToken");
@@ -460,8 +488,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(newUser);
     setAccessToken(newAccessToken);
     setRefreshToken(newRefreshToken);
-    localStorage.setItem('accessToken', newAccessToken);
-    localStorage.setItem('refreshToken', newRefreshToken);
+    // Fase 1.9 — usa getStorage() em vez de localStorage hardcoded, para que
+    // em modo demo (sessionStorage) os tokens não sejam persistidos além da
+    // aba aberta. Antes desse fix, primeiro login em demo persistia em local.
+    const storage = getStorage();
+    storage.setItem('accessToken', newAccessToken);
+    storage.setItem('refreshToken', newRefreshToken);
   };
 
   const value: AuthContextType = {
