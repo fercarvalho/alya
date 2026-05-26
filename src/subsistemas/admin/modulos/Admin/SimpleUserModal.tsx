@@ -116,11 +116,16 @@ const SimpleUserModal: React.FC<SimpleUserModalProps> = ({
       // Constrói a matriz cruzando com availableModules (que tem moduleName +
       // subsystemKey, que o endpoint de defaults não retorna).
       const matrix: ModulePermission[] = availableModules
-        .filter((m) => m.isActive)
+        // Fase 3.x — exige subsystemKey populado. Desde a migration 018
+        // a coluna modules.subsystem_key é NOT NULL e o tipo SystemModule
+        // (useModules.ts) tem subsystemKey?:string opcional só por compat
+        // de TS. Filtrar fora qualquer m sem subsystemKey é mais seguro
+        // que cair num fallback silencioso ('admin'), que mascararia bugs.
+        .filter((m) => m.isActive && m.subsystemKey)
         .map((m) => ({
           moduleKey: m.key,
           moduleName: m.name,
-          subsystemKey: m.subsystemKey || 'admin', // fallback raro
+          subsystemKey: m.subsystemKey as string,
           accessLevel: defaultsMap[m.key] ?? null,
         }));
       setPendingPermissions(matrix);
