@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HelpCircle, ChevronDown, ChevronUp, Search, ShieldCheck } from 'lucide-react';
-import { API_BASE_URL } from '../config/api';
-import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '@/config/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FAQItem {
   id: string;
