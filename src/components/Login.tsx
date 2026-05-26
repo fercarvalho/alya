@@ -8,7 +8,7 @@ import {
 import EsqueciSenhaModal from './modals/EsqueciSenhaModal';
 import ResetarSenhaModal from './modals/ResetarSenhaModal';
 import { API_BASE_URL } from '../config/api';
-import Documentation from './Documentation';
+import Documentation from '@/subsistemas/gestao/modulos/Documentation';
 import CookieBanner from './CookieBanner';
 import TermosUsoModal from './TermosUsoModal';
 import PoliticaPrivacidadeModal from './PoliticaPrivacidadeModal';

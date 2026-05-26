@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   BookOpen, ChevronRight, ChevronDown, FileText, Search, X, Menu, Clock
 } from 'lucide-react';
-import { API_BASE_URL } from '../config/api';
-import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { API_BASE_URL } from '@/config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { marked, Renderer, use } from 'marked';
 
 interface DocPage {

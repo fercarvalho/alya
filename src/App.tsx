@@ -45,8 +45,8 @@ import {
   Settings,
   MoreHorizontal,
 } from "lucide-react";
-import Clients from "./components/Clients";
-import DRE from "./components/DRE";
+import Clients from "@/subsistemas/gerenciamento/modulos/Clients";
+import DRE from "@/subsistemas/financeiro/modulos/DRE";
 import Login from "./components/Login";
 import MenuUsuario from "./components/MenuUsuario";
 import NotificationBell from "./components/NotificationBell";
@@ -64,18 +64,18 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 // Lazy load AdminPanel (só carrega quando necessário)
 const AdminPanel = lazy(() => import("@/subsistemas/admin/modulos/Admin"));
 // Lazy load Projeção (componente grande)
-const Projection = lazy(() => import("./components/Projection"));
+const Projection = lazy(() => import("@/subsistemas/financeiro/modulos/Projection"));
 // Lazy load integração Nuvemshop
-const NuvemshopIntegration = lazy(() => import("./components/Nuvemshop"));
+const NuvemshopIntegration = lazy(() => import("@/subsistemas/especial/modulos/Nuvemshop"));
 // Lazy load páginas de segurança
 const ActiveSessions = lazy(() => import("@/subsistemas/admin/modulos/ActiveSessions"));
 const AnomalyDashboard = lazy(() => import("@/subsistemas/admin/modulos/AnomalyDashboard"));
 const SecurityAlerts = lazy(() => import("@/subsistemas/admin/modulos/SecurityAlerts"));
 // Lazy load Roadmap
-const Roadmap = lazy(() => import("./components/Roadmap"));
+const Roadmap = lazy(() => import("@/subsistemas/gestao/modulos/Roadmap"));
 // Lazy load FAQ
-const FAQ = lazy(() => import("./components/FAQ"));
-import Documentation from "./components/Documentation";
+const FAQ = lazy(() => import("@/subsistemas/gestao/modulos/FAQ"));
+import Documentation from "@/subsistemas/gestao/modulos/Documentation";
 import Footer from "./components/Footer";
 import CommitVersionModal from "./components/CommitVersionModal";
 import VersaoNovaModal from "./components/VersaoNovaModal";

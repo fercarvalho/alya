@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { TrendingUp, TrendingDown, DollarSign, Download, FileText, Filter, BarChart3, ArrowLeftRight } from 'lucide-react'
-import { parseLocalDate } from '../utils/dateUtils'
-import { API_BASE_URL } from '../config/api'
-import { useAuth } from '../contexts/AuthContext'
-import PendingTransactionsBanner from './PendingTransactionsBanner'
+import { parseLocalDate } from '@/utils/dateUtils'
+import { API_BASE_URL } from '@/config/api'
+import { useAuth } from '@/contexts/AuthContext'
+import PendingTransactionsBanner from '@/components/PendingTransactionsBanner'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 

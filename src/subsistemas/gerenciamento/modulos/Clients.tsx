@@ -3,7 +3,7 @@ import { Users, Plus, Download, Upload, Edit, Trash2, Filter, X } from 'lucide-r
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import axios from 'axios'
-import { API_BASE_URL } from '../config/api'
+import { API_BASE_URL } from '@/config/api'
 
 interface Client {
   id: string
