@@ -7,6 +7,24 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { API_BASE_URL } from "../config/api";
 import { attachOfflineInterceptors } from "./offlineClient";
 
+// Fase 1.3 — auth via cookie httpOnly compartilhado entre subdomínios.
+// Toda chamada (axios E fetch nativo) precisa enviar credentials para que o
+// browser inclua o cookie cross-subdomain (admin.alya.* → backend em alya.*).
+axios.defaults.withCredentials = true;
+
+if (typeof window !== "undefined") {
+  // Monkey-patch fetch global para injetar credentials: 'include' por padrão.
+  // Sem isso, fetch nativo (usado em vários componentes do alya antes do axios
+  // ser padrão) não envia o cookie, quebrando auth em prod com subdomínios.
+  // Quem precisar excluir credentials (raríssimo, ex: chamada a 3rd party) usa
+  // explicitamente { credentials: 'omit' }.
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const finalInit: RequestInit = { credentials: "include", ...(init || {}) };
+    return originalFetch(input, finalInit);
+  };
+}
+
 // Flag para evitar múltiplas tentativas simultâneas de refresh
 let isRefreshing = false;
 // Fila de requisições que falharam durante o refresh

@@ -44,7 +44,12 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8001',
-        changeOrigin: true,
+        // Fase 1.3: changeOrigin: false preserva o Host original (ex.:
+        // admin.alya.local) no header que chega no backend. Sem isso,
+        // resolveCookieDomain veria 'localhost' (do target) e não conseguiria
+        // setar o cookie com Domain=.alya.local para compartilhar entre
+        // subdomínios.
+        changeOrigin: false,
         secure: false
       }
     }
