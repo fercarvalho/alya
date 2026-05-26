@@ -3677,12 +3677,19 @@ app.get('/api/admin/roles', authenticateToken, requireAdmin, async (req, res) =>
 
 app.post('/api/admin/roles', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { key, label, description, sortOrder } = req.body || {};
+    const { key, label, description, sortOrder, cloneFromRole } = req.body || {};
     if (!key || !label) {
       return res.status(400).json({ success: false, error: 'key e label são obrigatórios' });
     }
     if (!/^[a-z][a-z0-9_]*$/.test(key)) {
       return res.status(400).json({ success: false, error: 'key inválida — use snake_case minúsculo (regex: ^[a-z][a-z0-9_]*$)' });
+    }
+    // Se cloneFromRole foi passado, valida que existe antes de criar
+    if (cloneFromRole) {
+      const src = await db.pool.query('SELECT key FROM roles WHERE key = $1', [cloneFromRole]);
+      if (src.rowCount === 0) {
+        return res.status(400).json({ success: false, error: `Role de origem '${cloneFromRole}' não existe` });
+      }
     }
     const r = await db.pool.query(
       `INSERT INTO roles (key, label, description, is_system, sort_order)
@@ -3690,10 +3697,72 @@ app.post('/api/admin/roles', authenticateToken, requireSuperAdmin, async (req, r
        RETURNING *`,
       [key, label, description || null, Number.isFinite(sortOrder) ? sortOrder : 100]
     );
-    await logActivity(req.user.id, req.user.username, 'create', 'admin', 'role', key, { label, description });
+    // Após criar a row na tabela `roles`, opcionalmente clona os defaults
+    // de outra role. Fase 2.7 — útil pra criar "Supervisor de Vendas" a
+    // partir de "user", por exemplo.
+    if (cloneFromRole) {
+      try {
+        await permissionsHelpers.cloneRoleDefaults(db.pool, cloneFromRole, key);
+      } catch (cloneErr) {
+        // Se a clonagem falha, mantém a role criada (sem defaults). Logamos
+        // o erro pra debug mas não derrubamos o fluxo — admin pode editar
+        // defaults manualmente depois.
+        console.error('Clone role defaults failed:', cloneErr);
+      }
+    }
+    await logActivity(req.user.id, req.user.username, 'create', 'admin', 'role', key, { label, description, cloneFromRole: cloneFromRole || null });
     res.json({ success: true, data: r.rows[0] });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ success: false, error: 'Já existe uma role com essa key' });
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Fase 2.7 — listagem de uso (quantos/quais usuários têm essa role).
+// Usado pelo modal de exclusão pra mostrar pre-flight: "X usuários ainda
+// usam essa role; escolha pra qual migrar".
+app.get('/api/admin/roles/:key/usage', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const role = await db.pool.query('SELECT key, label FROM roles WHERE key = $1', [key]);
+    if (role.rowCount === 0) return res.status(404).json({ success: false, error: 'Role não encontrada' });
+    const users = await db.pool.query(
+      `SELECT id, username, first_name AS "firstName", last_name AS "lastName"
+         FROM users WHERE role = $1 ORDER BY username`,
+      [key]
+    );
+    res.json({
+      success: true,
+      data: {
+        role: role.rows[0].key,
+        label: role.rows[0].label,
+        users: users.rows,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Fase 2.7 — migra usuários de uma role pra outra. Usado pelo modal de
+// exclusão "Migrar e excluir": precisa esvaziar a role custom antes de
+// poder rodar o DELETE (FK ON DELETE RESTRICT).
+app.post('/api/admin/roles/:key/migrate-users', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { key: fromKey } = req.params;
+    const { toKey, resetPermissions } = req.body || {};
+    if (!toKey) return res.status(400).json({ success: false, error: 'toKey é obrigatório' });
+    if (fromKey === toKey) return res.status(400).json({ success: false, error: 'fromKey e toKey precisam ser diferentes' });
+    const tgt = await db.pool.query('SELECT key FROM roles WHERE key = $1', [toKey]);
+    if (tgt.rowCount === 0) return res.status(404).json({ success: false, error: 'Role de destino não encontrada' });
+    const migrated = await permissionsHelpers.migrateUsersToRole(
+      db.pool, fromKey, toKey, resetPermissions !== false
+    );
+    await logActivity(req.user.id, req.user.username, 'edit', 'admin', 'role_migration', fromKey, {
+      toKey, resetPermissions: resetPermissions !== false, migrated,
+    });
+    res.json({ success: true, data: { migrated, fromKey, toKey } });
+  } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -3771,6 +3840,36 @@ app.get('/api/admin/role-defaults', authenticateToken, requireAdmin, async (req,
       byRole[row.role][row.module_key] = row.access_level;
     }
     res.json({ success: true, data: byRole });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Fase 2.7 — restaura defaults da role pros valores hardcoded originais
+// (FALLBACK_DEFAULTS em server/permissions/defaults.js). Só faz sentido pra
+// system roles — custom roles não têm "original" definido.
+app.post('/api/admin/role-defaults/:role/reset', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { role } = req.params;
+    const roleRow = await db.pool.query('SELECT key, is_system FROM roles WHERE key = $1', [role]);
+    if (roleRow.rowCount === 0) return res.status(404).json({ success: false, error: 'Role não encontrada' });
+    if (!roleRow.rows[0].is_system) {
+      return res.status(400).json({
+        success: false,
+        error: 'Apenas roles do sistema têm "padrão original" — ajuste a matriz manualmente para roles custom.',
+      });
+    }
+    const { buildDefaultsForRole } = require('./permissions/defaults');
+    const modsRes = await db.pool.query('SELECT key, subsystem_key, is_active FROM modules WHERE is_active = TRUE');
+    const modsCamel = modsRes.rows.map((m) => ({
+      key: m.key, subsystemKey: m.subsystem_key, isActive: m.is_active,
+    }));
+    const hardcoded = buildDefaultsForRole(role, modsCamel);
+    await permissionsHelpers.setRoleDefaults(db.pool, role, hardcoded);
+    await logActivity(req.user.id, req.user.username, 'reset', 'admin', 'role_defaults', role, {
+      restoredCount: Object.keys(hardcoded).length,
+    });
+    res.json({ success: true, data: { role, modulesAccess: hardcoded } });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

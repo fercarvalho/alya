@@ -199,6 +199,114 @@ async function applyRoleDefaultsToUser(pool, userId, roleKey) {
   return setUserPermissions(pool, userId, defaults);
 }
 
+/**
+ * Substitui os defaults de uma role inteira em transação.
+ * Usado por PUT /api/admin/role-defaults/:role e por cloneRoleDefaults.
+ *
+ * @param {object} poolOrClient — pode ser pool ou client em transação
+ * @param {string} roleKey
+ * @param {Object<string, 'view'|'edit'>} modulesAccess
+ */
+async function setRoleDefaults(poolOrClient, roleKey, modulesAccess) {
+  const keys = Object.keys(modulesAccess || {});
+  // Quando chamado fora de transação (pool direto), pegamos um client pra
+  // garantir atomicidade do DELETE + INSERT. Se já veio um client (chamada
+  // aninhada), reusamos sem nova BEGIN.
+  const isExternalClient = typeof poolOrClient.release !== 'function' ||
+                            (poolOrClient.constructor && poolOrClient.constructor.name === 'Client');
+  let client = poolOrClient;
+  let weOpened = false;
+  if (!isExternalClient && typeof poolOrClient.connect === 'function') {
+    client = await poolOrClient.connect();
+    weOpened = true;
+  }
+  try {
+    if (weOpened) await client.query('BEGIN');
+    await client.query('DELETE FROM role_default_permissions WHERE role = $1', [roleKey]);
+    if (keys.length > 0) {
+      const levelsArr = keys.map((k) => modulesAccess[k]);
+      await client.query(
+        `INSERT INTO role_default_permissions (role, module_key, access_level)
+         SELECT $1, mk, lvl FROM UNNEST($2::text[], $3::text[]) AS t(mk, lvl)`,
+        [roleKey, keys, levelsArr]
+      );
+    }
+    if (weOpened) await client.query('COMMIT');
+  } catch (e) {
+    if (weOpened) { try { await client.query('ROLLBACK'); } catch {} }
+    throw e;
+  } finally {
+    if (weOpened) client.release();
+  }
+}
+
+/**
+ * Clona os defaults de uma role pra outra. Lê os defaults da fromKey e
+ * substitui os da toKey por eles.
+ */
+async function cloneRoleDefaults(pool, fromKey, toKey) {
+  const src = await loadRoleDefaults(pool, fromKey);
+  return setRoleDefaults(pool, toKey, src);
+}
+
+/**
+ * Migra usuários de uma role pra outra. Opcionalmente reseta suas permissões
+ * granulares pros defaults da nova role (caso contrário, mantém as perms
+ * que tinham — pode ficar inconsistente com a nova role mas é decisão
+ * explícita do admin).
+ *
+ * @returns {Promise<number>} — quantidade de users migrados
+ */
+async function migrateUsersToRole(pool, fromKey, toKey, resetPermissions = true) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const users = await client.query('SELECT id FROM users WHERE role = $1', [fromKey]);
+    const ids = users.rows.map((r) => r.id);
+    if (ids.length === 0) {
+      await client.query('COMMIT');
+      return 0;
+    }
+    // UPDATE role (FK ON UPDATE CASCADE da migration 022 não se aplica aqui
+    // porque estamos mudando o VALOR da role, não a key da role).
+    await client.query(
+      `UPDATE users SET role = $1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2)`,
+      [toKey, ids]
+    );
+    // Defaults granulares: se pedido, reseta cada user pra defaults da toKey
+    if (resetPermissions) {
+      // Carrega defaults uma vez fora do loop
+      const defaults = await loadRoleDefaults(client, toKey);
+      const defKeys = Object.keys(defaults);
+      for (const uid of ids) {
+        await client.query('DELETE FROM user_module_permissions WHERE user_id = $1', [uid]);
+        if (defKeys.length > 0) {
+          const levelsArr = defKeys.map((k) => defaults[k]);
+          const idsArr = defKeys.map((k) => `${uid}-${k}`);
+          await client.query(
+            `INSERT INTO user_module_permissions (id, user_id, module_key, access_level, created_at, updated_at)
+             SELECT id, $1, mk, lvl, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+               FROM UNNEST($2::text[], $3::text[], $4::text[]) AS t(id, mk, lvl)`,
+            [uid, idsArr, defKeys, levelsArr]
+          );
+        }
+        // Dual-write em users.modules TEXT[]
+        await client.query(
+          `UPDATE users SET modules = $1 WHERE id = $2`,
+          [defKeys, uid]
+        );
+      }
+    }
+    await client.query('COMMIT');
+    return ids.length;
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   isSuperadmin,
   getModuleAccess,
@@ -209,4 +317,7 @@ module.exports = {
   loadUserPermissions,
   setUserPermissions,
   applyRoleDefaultsToUser,
+  setRoleDefaults,
+  cloneRoleDefaults,
+  migrateUsersToRole,
 };

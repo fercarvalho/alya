@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Users, Settings, Activity, BarChart3, Shield, ShieldOff, HelpCircle, MessageSquare, BookOpen, Layout, FileText
+  Users, Settings, Activity, BarChart3, Shield, ShieldOff, HelpCircle, MessageSquare, BookOpen, Layout, FileText, KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserManagement from './UserManagement';
@@ -12,8 +12,9 @@ import FeedbackManagement from './FeedbackManagement';
 import DocumentationManagement from './DocumentationManagement';
 import FooterManagement from './FooterManagement';
 import LegalManagement from './LegalManagement';
+import RoleDefaultsManagement from './RoleDefaultsManagement';
 
-type AdminTab = 'users' | 'modules' | 'activity' | 'statistics' | 'faq' | 'feedbacks' | 'documentacao' | 'rodape' | 'legal';
+type AdminTab = 'users' | 'modules' | 'role-defaults' | 'activity' | 'statistics' | 'faq' | 'feedbacks' | 'documentacao' | 'rodape' | 'legal';
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth();
@@ -45,6 +46,7 @@ const AdminPanel: React.FC = () => {
   const tabs = [
     { id: 'users' as AdminTab, name: 'Usuários', icon: Users },
     ...(isSuperAdmin ? [{ id: 'modules' as AdminTab, name: 'Módulos', icon: Settings }] : []),
+    ...(isSuperAdmin ? [{ id: 'role-defaults' as AdminTab, name: 'Padrões de Função', icon: KeyRound }] : []),
     { id: 'activity' as AdminTab, name: 'Atividades', icon: Activity },
     { id: 'statistics' as AdminTab, name: 'Estatísticas', icon: BarChart3 },
     { id: 'faq' as AdminTab, name: 'FAQ', icon: HelpCircle },
@@ -93,6 +95,7 @@ const AdminPanel: React.FC = () => {
       <div className="mt-6">
         {activeTab === 'users' && <UserManagement />}
         {activeTab === 'modules' && <ModuleManagement />}
+        {activeTab === 'role-defaults' && <RoleDefaultsManagement />}
         {activeTab === 'activity' && <ActivityLog />}
         {activeTab === 'statistics' && <Statistics />}
         {activeTab === 'faq' && <FAQManagement />}
