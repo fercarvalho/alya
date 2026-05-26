@@ -50,7 +50,7 @@ function labelFor(type: string): { title: string; description?: string } {
 }
 
 const NotificationPreferencesSection: React.FC = () => {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [prefs, setPrefs] = useState<Preference[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -72,7 +72,7 @@ const NotificationPreferencesSection: React.FC = () => {
   }, [])
 
   const loadPrefs = useCallback(async () => {
-    if (!token) return
+    if (!user) return
     setLoading(true); setError(null)
     try {
       const r = await authedFetch(token, '/api/notification-preferences')
@@ -89,7 +89,7 @@ const NotificationPreferencesSection: React.FC = () => {
   useEffect(() => { loadPrefs(); refreshPush() }, [loadPrefs, refreshPush])
 
   const togglePref = async (type: string, channel: Channel, nextValue: boolean) => {
-    if (!token) return
+    if (!user) return
     const key = `${type}:${channel}`
     setSavingKey(key)
     const prev = prefs

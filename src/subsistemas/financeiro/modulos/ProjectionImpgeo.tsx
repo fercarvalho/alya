@@ -282,7 +282,7 @@ export default function Projection() {
 
   const apiFetch = useCallback(
     async (path: string, init: RequestInit = {}) => {
-      if (!token) throw new Error('Token ausente')
+      if (!user) throw new Error('Token ausente')
       const headers: HeadersInit = {
         ...(init.headers || {}),
         'Content-Type': 'application/json',
@@ -316,7 +316,7 @@ export default function Projection() {
   }, [apiFetch])
 
   useEffect(() => {
-    if (!token) return
+    if (!user) return
     refreshAll()
   }, [token, refreshAll])
 
@@ -531,7 +531,7 @@ export default function Projection() {
     }
   }
 
-  if (!token) {
+  if (!user) {
     return (
       <div className="p-6">
         <p className="text-gray-700">Você precisa estar logado para acessar a Projeção.</p>
