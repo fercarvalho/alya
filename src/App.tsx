@@ -95,6 +95,7 @@ import { parseLocalDate, formatDatePtBR } from "./utils/dateUtils";
 import "./utils/axiosInterceptor";
 import SubsystemPicker from "./subsistemas/SubsystemPicker";
 import AcessoNegado from "./subsistemas/AcessoNegado";
+import SubsystemSwitcher from "./subsistemas/SubsystemSwitcher";
 import { useCurrentSubsystem } from "./subsistemas/useCurrentSubsystem";
 import {
   userCanAccessSubsystem,
@@ -4661,6 +4662,11 @@ const AppContent: React.FC = () => {
               <div className="flex items-center gap-4 min-w-max flex-shrink-0 ml-4">
                 <NotificationBell />
                 <MenuUsuario />
+                {/* Dropdown de troca de subsistema — espelha padrão do impgeo,
+                    com paleta âmbar para combinar com o header creme do alya.
+                    Lista outros subsistemas acessíveis + atalho "Trocar de
+                    subsistema" (que leva pro Picker no host raiz). */}
+                <SubsystemSwitcher current={subsystem} />
                 <button
                   onClick={logout}
                   className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm whitespace-nowrap"

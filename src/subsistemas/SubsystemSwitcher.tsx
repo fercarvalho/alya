@@ -108,10 +108,12 @@ export default function SubsystemSwitcher({ current }: Props) {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        title={`Trocar módulo (atual: ${current.name})`}
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-white
-          ${open ? 'bg-blue-600' : 'bg-blue-700 hover:bg-blue-600'}
-          focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-800`}
+        title={`Trocar subsistema (atual: ${current.name})`}
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border whitespace-nowrap
+          ${open
+            ? 'bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-100'
+            : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100 hover:border-amber-300 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-900/40'}
+          focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-1`}
       >
         <Layers className="h-4 w-4" aria-hidden="true" />
         <span className="hidden sm:inline text-sm font-medium">{current.name}</span>
@@ -126,7 +128,7 @@ export default function SubsystemSwitcher({ current }: Props) {
           {others.length > 0 && (
             <>
               <div className="px-4 pt-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                Outros módulos
+                Outros subsistemas
               </div>
               <ul className="pb-1">
                 {others.map(sub => {
@@ -203,12 +205,12 @@ export default function SubsystemSwitcher({ current }: Props) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-red-700 dark:text-red-400">
-                {navigatingTo === '__root__' ? 'Voltando…' : 'Trocar de módulo'}
+                {navigatingTo === '__root__' ? 'Voltando…' : 'Trocar de subsistema'}
               </div>
               <div className="text-xs text-red-600 dark:text-red-300 line-clamp-1">
                 {navigatingTo === '__root__'
                   ? 'Levando você de volta à tela de escolha'
-                  : 'Voltar para a tela de escolha de módulo'}
+                  : 'Voltar para a tela de escolha de subsistema'}
               </div>
             </div>
           </button>
