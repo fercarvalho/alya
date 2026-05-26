@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import * as LucideIcons from 'lucide-react';
 import { Layers, ChevronDown, ArrowLeft, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,6 +35,36 @@ export default function SubsystemSwitcher({ current }: Props) {
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  // Ref para o dropdown portalizado — fora da árvore de containerRef. Sem
+  // isso o handler de click-fora abaixo fecharia o menu ao clicar nele.
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Posição absoluta na viewport para o dropdown portalizado (ver comentário
+  // junto ao createPortal abaixo). Recalculada ao abrir, e em scroll/resize
+  // pra acompanhar o botão se o usuário rolar a página com o menu aberto.
+  const [menuRect, setMenuRect] = useState<{ top: number; right: number } | null>(null);
+
+  const updateRect = useCallback(() => {
+    if (!buttonRef.current) return;
+    const r = buttonRef.current.getBoundingClientRect();
+    setMenuRect({
+      top: r.bottom + 8, // 8px = mt-2 equivalente
+      right: window.innerWidth - r.right,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setMenuRect(null);
+      return;
+    }
+    updateRect();
+    window.addEventListener('scroll', updateRect, true);
+    window.addEventListener('resize', updateRect);
+    return () => {
+      window.removeEventListener('scroll', updateRect, true);
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [open, updateRect]);
 
   const accessible = useMemo<SubsystemDefinition[]>(
     () => SUBSYSTEMS.filter(sub => userCanAccessSubsystem(user, sub)),
@@ -45,11 +76,14 @@ export default function SubsystemSwitcher({ current }: Props) {
     [accessible, current.key]
   );
 
-  // Click fora fecha
+  // Click fora fecha — considera container (botão) E menu portalizado.
   useEffect(() => {
     if (!open) return;
     const onMouseDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const inContainer = containerRef.current?.contains(target);
+      const inMenu = menuRef.current?.contains(target);
+      if (!inContainer && !inMenu) {
         setOpen(false);
       }
     };
@@ -120,10 +154,18 @@ export default function SubsystemSwitcher({ current }: Props) {
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
 
-      {open && (
+      {/* Dropdown via portal — o header do alya tem `overflow-x-auto`
+          (necessário pra rolagem horizontal de menus em viewports estreitos),
+          que cria contexto de clipping também no eixo Y e cortaria o menu
+          por baixo. Portalizando pra document.body o dropdown escapa
+          qualquer parent com overflow/transform/contain. Posição é
+          recomputada via getBoundingClientRect em updateRect(). */}
+      {open && menuRect && createPortal(
         <div
+          ref={menuRef}
           role="menu"
-          className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden"
+          style={{ position: 'fixed', top: menuRect.top, right: menuRect.right }}
+          className="w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-[10050] overflow-hidden"
         >
           {others.length > 0 && (
             <>
@@ -214,7 +256,8 @@ export default function SubsystemSwitcher({ current }: Props) {
               </div>
             </div>
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
