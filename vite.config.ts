@@ -37,6 +37,14 @@ function injectSwBuildHash(): Plugin {
 export default defineConfig({
   base: basePath,
   plugins: [react(), injectSwBuildHash()],
+  resolve: {
+    // Fase 1.4: alias @/* → src/* para evitar imports profundos como
+    // ../../contexts/AuthContext após a reorganização para src/subsistemas/.
+    // Mesma convenção do impgeo.
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
   server: {
     port: 8000,
     open: true,

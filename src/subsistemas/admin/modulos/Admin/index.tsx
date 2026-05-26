@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import {
   Users, Settings, Activity, BarChart3, Shield, ShieldOff, HelpCircle, MessageSquare, BookOpen, Layout, FileText
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import UserManagement from './admin/UserManagement';
-import ModuleManagement from './admin/ModuleManagement';
-import ActivityLog from './admin/ActivityLog';
-import Statistics from './admin/Statistics';
-import FAQManagement from './admin/FAQManagement';
-import FeedbackManagement from './admin/FeedbackManagement';
-import DocumentationManagement from './admin/DocumentationManagement';
-import FooterManagement from './admin/FooterManagement';
-import LegalManagement from './admin/LegalManagement';
+import { useAuth } from '@/contexts/AuthContext';
+import UserManagement from './UserManagement';
+import ModuleManagement from './ModuleManagement';
+import ActivityLog from './ActivityLog';
+import Statistics from './Statistics';
+import FAQManagement from './FAQManagement';
+import FeedbackManagement from './FeedbackManagement';
+import DocumentationManagement from './DocumentationManagement';
+import FooterManagement from './FooterManagement';
+import LegalManagement from './LegalManagement';
 
 type AdminTab = 'users' | 'modules' | 'activity' | 'statistics' | 'faq' | 'feedbacks' | 'documentacao' | 'rodape' | 'legal';
 

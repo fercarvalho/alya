@@ -4,8 +4,8 @@ import {
   Clock, CheckCircle, MessageCircle, ExternalLink,
   Send, CheckCheck, AlertCircle, User, MessageSquare
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/config/api';
 import { Feedback } from './FeedbackManagement';
 
 interface FeedbackDetailModalProps {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Shield, Check, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/config/api';
 
 interface Module {
   id: string;

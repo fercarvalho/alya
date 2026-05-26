@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Download, Filter, ChevronDown, ChevronRight, Activity, Plus, Pencil, Trash2, LogIn, UserCheck, ChevronLeft
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useModules } from '../../hooks/useModules';
-import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useModules } from '@/hooks/useModules';
+import { API_BASE_URL } from '@/config/api';
 
 interface ActivityLog {
   id: string;

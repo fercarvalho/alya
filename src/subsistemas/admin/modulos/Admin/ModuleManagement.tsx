@@ -19,9 +19,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useAuth } from '../../contexts/AuthContext';
-import { SystemModule, useModules } from '../../hooks/useModules';
-import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { SystemModule, useModules } from '@/hooks/useModules';
+import { API_BASE_URL } from '@/config/api';
 
 interface SortableModuleCardProps {
   module: SystemModule;

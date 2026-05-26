@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
   UserPlus, Trash2, Eye, EyeOff, Lock, Unlock, Search, RefreshCw, AlertTriangle, Edit, LogIn, Users as UsersIcon
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useModules } from '../../hooks/useModules';
-import { API_BASE_URL } from '../../config/api';
-import CadastrarUsuarioModal from '../CadastrarUsuarioModal';
-import EditarUsuarioModal from '../EditarUsuarioModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { useModules } from '@/hooks/useModules';
+import { API_BASE_URL } from '@/config/api';
+import CadastrarUsuarioModal from '@/components/CadastrarUsuarioModal';
+import EditarUsuarioModal from '@/components/EditarUsuarioModal';
 import UserCreationTypeModal from './UserCreationTypeModal';
 import SimpleUserModal from './SimpleUserModal';
 import UserCreatedModal from './UserCreatedModal';
-import LazyAvatar from '../LazyAvatar';
-import { applyPhoneMask } from '../../utils/phoneMask';
+import LazyAvatar from '@/components/LazyAvatar';
+import { applyPhoneMask } from '@/utils/phoneMask';
 
 interface User {
   id: string;
