@@ -457,7 +457,22 @@ const AppContent: React.FC = () => {
 
   // ⚠️ IMPORTANTE: Todos os hooks devem ser declarados ANTES de qualquer return condicional
   // Estados principais
-  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+  // Fase 1.7: activeTab inicial respeita o subsistema atual — primeiro módulo
+  // do subsystem.moduleKeys (que reflete o manifesto). Sem isso, ao entrar no
+  // subsistema 'admin' com activeTab='dashboard' (hardcoded antigo), o nav
+  // filtra 'dashboard' fora (não pertence a admin) e o main fica em branco.
+  const [activeTab, setActiveTab] = useState<TabType>(
+    () => ((subsystem?.moduleKeys[0] as TabType) ?? "dashboard"),
+  );
+
+  // Quando o subsistema muda (Picker → entra, ou Switcher troca de módulo),
+  // reseta activeTab pro primeiro módulo do subsistema novo.
+  useEffect(() => {
+    if (subsystem) {
+      setActiveTab(subsystem.moduleKeys[0] as TabType);
+    }
+  }, [subsystem?.key]);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [metas, setMetas] = useState<Meta[]>([]);
   const [projectionSnapshot, setProjectionSnapshot] = useState<any>(null);
@@ -676,7 +691,7 @@ const AppContent: React.FC = () => {
   // Carregar dados do banco de dados
   useEffect(() => {
     // Só carregar dados se o token estiver disponível
-    if (!token || !user) {
+    if (!user) {
       return;
     }
 
@@ -707,7 +722,7 @@ const AppContent: React.FC = () => {
 
   // Verificar commits pendentes (fila) quando superadmin faz login
   useEffect(() => {
-    if (!token || !user || user.role !== 'superadmin') return;
+    if (!user || user.role !== 'superadmin') return;
     let cancelled = false;
 
     const checkCommits = async () => {
@@ -739,7 +754,7 @@ const AppContent: React.FC = () => {
 
   // Verificar notificação de nova versão (usuários não-superadmin)
   useEffect(() => {
-    if (!token || !user || user.role === 'superadmin') return;
+    if (!user || user.role === 'superadmin') return;
     let cancelled = false;
 
     const checkVersao = async () => {
@@ -768,7 +783,7 @@ const AppContent: React.FC = () => {
 
   // Sincronizar consentimento de cookies com o banco (LGPD)
   useEffect(() => {
-    if (!token || !user) return;
+    if (!user) return;
 
     const syncConsent = async () => {
       try {
@@ -813,7 +828,7 @@ const AppContent: React.FC = () => {
   // Atualizar snapshot da Projeção ao entrar em abas que dependem das metas.
   // (Metas é derivado diretamente do Faturamento Total da Projeção.)
   useEffect(() => {
-    if (!token || !user) return;
+    if (!user) return;
     if (activeTab !== "metas" && activeTab !== "dashboard") return;
 
     let mounted = true;
@@ -839,7 +854,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // Só carregar do storage se não houver token (modo offline/desenvolvimento)
     // Em produção, os dados vêm da API
-    if (!token || !user) {
+    if (!user) {
       const storage = getStorage();
       const savedTransactions = storage.getItem("alya-transactions");
       const savedProducts = storage.getItem("alya-products");
@@ -4660,9 +4675,15 @@ const AppContent: React.FC = () => {
                   };
 
                   const visibleModules = getVisibleModules();
+                  // Fase 1.7: filtra módulos pelos que pertencem ao subsistema
+                  // atual. Sem isso, o nav mostraria todos os ~20 módulos em
+                  // qualquer subsistema.
+                  const subsystemModuleSet = new Set(subsystem.moduleKeys);
+                  const inSubsystem = visibleModules.filter((m) => subsystemModuleSet.has(m.key));
 
-                  // Filtrar respeitando restrições de role, na ordem definida pelos módulos
-                  const filteredTabs = visibleModules.filter((m) => {
+                  // Restrição de role legada (admin/roadmap só superadmin/admin).
+                  // Será substituída pela checagem granular da Fase 2.
+                  const filteredTabs = inSubsystem.filter((m) => {
                     if (m.key === "admin" || m.key === "roadmap") {
                       return user?.role === "superadmin" || user?.role === "admin";
                     }
