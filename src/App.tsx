@@ -62,15 +62,15 @@ import FeedbackButton from "./components/FeedbackButton";
 import ThemeToggle from "./components/ThemeToggle";
 import { ThemeProvider } from "./contexts/ThemeContext";
 // Lazy load AdminPanel (só carrega quando necessário)
-const AdminPanel = lazy(() => import("./components/AdminPanel"));
+const AdminPanel = lazy(() => import("@/subsistemas/admin/modulos/Admin"));
 // Lazy load Projeção (componente grande)
 const Projection = lazy(() => import("./components/Projection"));
 // Lazy load integração Nuvemshop
 const NuvemshopIntegration = lazy(() => import("./components/Nuvemshop"));
 // Lazy load páginas de segurança
-const ActiveSessions = lazy(() => import("./pages/ActiveSessions"));
-const AnomalyDashboard = lazy(() => import("./pages/admin/AnomalyDashboard"));
-const SecurityAlerts = lazy(() => import("./pages/admin/SecurityAlerts"));
+const ActiveSessions = lazy(() => import("@/subsistemas/admin/modulos/ActiveSessions"));
+const AnomalyDashboard = lazy(() => import("@/subsistemas/admin/modulos/AnomalyDashboard"));
+const SecurityAlerts = lazy(() => import("@/subsistemas/admin/modulos/SecurityAlerts"));
 // Lazy load Roadmap
 const Roadmap = lazy(() => import("./components/Roadmap"));
 // Lazy load FAQ

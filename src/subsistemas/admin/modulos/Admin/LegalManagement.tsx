@@ -5,8 +5,8 @@ import {
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useAuth } from '../../contexts/AuthContext';
-import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/config/api';
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 

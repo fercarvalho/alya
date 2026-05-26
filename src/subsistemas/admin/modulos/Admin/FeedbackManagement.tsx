@@ -4,8 +4,8 @@ import {
   HelpCircle, TrendingUp, Lightbulb, ThumbsDown,
   Clock, CheckCircle, MessageCircle
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/config/api';
 import FeedbackDetailModal from './FeedbackDetailModal';
 
 export interface Feedback {

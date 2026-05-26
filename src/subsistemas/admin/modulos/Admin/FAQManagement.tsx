@@ -3,8 +3,8 @@ import {
   Plus, Edit2, Trash2, ChevronUp, ChevronDown, Eye, EyeOff,
   HelpCircle, Save, X, AlertTriangle, Globe, Users, ShieldCheck
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { API_BASE_URL } from '../../config/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/config/api';
 
 type Visibility = 'todos' | 'usuarios' | 'admins';
 
