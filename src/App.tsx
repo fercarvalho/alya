@@ -1541,7 +1541,7 @@ const AppContent: React.FC = () => {
     // Filtro por descrição
     if (transactionFilters.description) {
       filtered = filtered.filter((t) =>
-        t.description
+        (t.description || "")
           .toLowerCase()
           .includes(transactionFilters.description.toLowerCase()),
       );
@@ -1555,7 +1555,7 @@ const AppContent: React.FC = () => {
     // Filtro por categoria
     if (transactionFilters.category) {
       filtered = filtered.filter((t) =>
-        t.category
+        (t.category || "")
           .toLowerCase()
           .includes(transactionFilters.category.toLowerCase()),
       );
