@@ -2630,6 +2630,102 @@ class Database extends FileDatabase {
     );
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Bling (ERP) — espelha o padrão da Nuvemshop. Tokens chegam JÁ criptografados
+  // (a cifragem AES-256-GCM acontece na camada de auth/rota, não aqui).
+  // ───────────────────────────────────────────────────────────────────────────
+
+  async getBlingConfig(userId) {
+    const r = await this.pool.query(
+      'SELECT * FROM bling_config WHERE user_id = $1 AND is_active = TRUE',
+      [userId]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async saveBlingConfig(userId, data) {
+    const now = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO bling_config
+        (user_id, bling_company_id, access_token, refresh_token, token_expires_at,
+         refresh_expires_at, scopes, connected_at, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)
+       ON CONFLICT (user_id) DO UPDATE SET
+        bling_company_id   = EXCLUDED.bling_company_id,
+        access_token       = EXCLUDED.access_token,
+        refresh_token      = EXCLUDED.refresh_token,
+        token_expires_at   = EXCLUDED.token_expires_at,
+        refresh_expires_at = EXCLUDED.refresh_expires_at,
+        scopes             = EXCLUDED.scopes,
+        connected_at       = EXCLUDED.connected_at,
+        is_active          = TRUE`,
+      [userId, data.blingCompanyId || null, data.accessToken, data.refreshToken,
+       data.tokenExpiresAt, data.refreshExpiresAt, data.scopes || null, now]
+    );
+  }
+
+  // Atualiza apenas os tokens (usado no refresh automático ~6h)
+  async updateBlingTokens(userId, { accessToken, refreshToken, tokenExpiresAt, refreshExpiresAt, scopes }) {
+    await this.pool.query(
+      `UPDATE bling_config SET
+        access_token       = $2,
+        refresh_token      = COALESCE($3, refresh_token),
+        token_expires_at   = $4,
+        refresh_expires_at = COALESCE($5, refresh_expires_at),
+        scopes             = COALESCE($6, scopes)
+       WHERE user_id = $1`,
+      [userId, accessToken, refreshToken || null, tokenExpiresAt, refreshExpiresAt || null, scopes || null]
+    );
+  }
+
+  // Atualiza cursores de sincronização (usado pelo poller da Fase A)
+  async updateBlingConfig(userId, fields) {
+    const map = {
+      lastSyncReceivables: 'last_sync_receivables',
+      lastSyncPayables: 'last_sync_payables',
+      lastSyncOrders: 'last_sync_orders',
+    };
+    const sets = [];
+    const values = [userId];
+    let idx = 2;
+    for (const [k, col] of Object.entries(map)) {
+      if (fields[k] !== undefined) {
+        sets.push(`${col} = $${idx++}`);
+        values.push(fields[k]);
+      }
+    }
+    if (sets.length === 0) return;
+    await this.pool.query(`UPDATE bling_config SET ${sets.join(', ')} WHERE user_id = $1`, values);
+  }
+
+  async deleteBlingConfig(userId) {
+    await this.pool.query('DELETE FROM bling_config WHERE user_id = $1', [userId]);
+    await this.pool.query('DELETE FROM bling_sync_map WHERE user_id = $1', [userId]);
+  }
+
+  async getBlingSyncMap(userId, resourceType, blingId) {
+    const r = await this.pool.query(
+      'SELECT * FROM bling_sync_map WHERE user_id = $1 AND resource_type = $2 AND bling_id = $3',
+      [userId, resourceType, blingId]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
+  async saveBlingSyncMap(userId, resourceType, blingId, localId, { sourceRef = null, status = 'synced' } = {}) {
+    await this.pool.query(
+      `INSERT INTO bling_sync_map (user_id, resource_type, bling_id, local_id, source_ref, status, synced_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (user_id, resource_type, bling_id) DO UPDATE SET
+        local_id   = EXCLUDED.local_id,
+        source_ref = EXCLUDED.source_ref,
+        status     = EXCLUDED.status,
+        synced_at  = NOW()`,
+      [userId, resourceType, blingId, localId, sourceRef, status]
+    );
+  }
+
   async getNuvemshopDashboardMetrics(userId, startDate, endDate) {
     // Receitas do mês com categoria "Venda Online" (originadas da Nuvemshop)
     const revenueResult = await this.pool.query(

@@ -40,6 +40,7 @@ import {
   Wallet,
   Sparkles,
   ShoppingBag,
+  Boxes,
   HelpCircle,
   BookOpen,
   Settings,
@@ -67,6 +68,8 @@ const AdminPanel = lazy(() => import("@/subsistemas/admin/modulos/Admin"));
 const Projection = lazy(() => import("@/subsistemas/financeiro/modulos/Projection"));
 // Lazy load integração Nuvemshop
 const NuvemshopIntegration = lazy(() => import("@/subsistemas/especial/modulos/Nuvemshop"));
+// Lazy load integração Bling
+const BlingIntegration = lazy(() => import("@/subsistemas/especial/modulos/Bling"));
 // Lazy load páginas de segurança
 const ActiveSessions = lazy(() => import("@/subsistemas/admin/modulos/ActiveSessions"));
 const AnomalyDashboard = lazy(() => import("@/subsistemas/admin/modulos/AnomalyDashboard"));
@@ -4757,6 +4760,7 @@ const AppContent: React.FC = () => {
                     products: Package,
                     clients: Users,
                     nuvemshop: ShoppingBag,
+                    bling: Boxes,
                     dre: BarChart3,
                     activeSessions: Lock,
                     anomalies: Activity,
@@ -4959,6 +4963,11 @@ const AppContent: React.FC = () => {
         {activeTab === "nuvemshop" && (
           <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Nuvemshop...</div>}>
             <NuvemshopIntegration />
+          </Suspense>
+        )}
+        {activeTab === "bling" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Bling...</div>}>
+            <BlingIntegration />
           </Suspense>
         )}
         {activeTab === "dre" && <DRE />}

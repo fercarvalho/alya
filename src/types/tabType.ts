@@ -16,6 +16,7 @@ export type TabType =
   | 'anomalies'
   | 'securityAlerts'
   | 'nuvemshop'
+  | 'bling'
   | 'roadmap'
   | 'faq'
   | 'documentacao';
