@@ -33,6 +33,7 @@ const Login: React.FC = () => {
   const [showEsqueciSenhaModal, setShowEsqueciSenhaModal] = useState(false);
   const [showResetarSenhaModal, setShowResetarSenhaModal] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
 
   // Demo register
   const [showDemoModal, setShowDemoModal] = useState(false);
@@ -144,6 +145,11 @@ const Login: React.FC = () => {
         setShowResetarSenhaModal(true);
         window.history.replaceState({}, document.title, window.location.pathname);
       }
+      const invite = params.get('invite');
+      if (invite) {
+        setInviteToken(invite);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
   }, []);
 
@@ -170,13 +176,15 @@ const Login: React.FC = () => {
     setErrorCode('');
     setErrorMessage('');
 
-    const result = await login(username, password);
+    const result = await login(username, password, inviteToken || undefined);
 
     if (!result.success) {
       if (result.errorCode) {
         setError(result.error || 'Erro ao processar sua solicitação');
         setErrorCode(result.errorCode);
         setErrorMessage(result.message || '');
+      } else if (result.requiresInvite) {
+        setError('Este é seu primeiro acesso. Use o link de convite enviado pelo administrador.');
       } else {
         setError(result.error || 'Usuário ou senha incorretos');
       }

@@ -298,6 +298,9 @@ app.post(
   nuvemshopWebhookHandler(db)
 );
 
+// Bling router (Fase 0: OAuth/status; o webhook entra na Fase B)
+const { createRouter: createBlingRouter } = require("./routes/bling");
+
 app.use(express.json({ limit: "10mb" })); // Limitar tamanho do payload
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -1017,59 +1020,83 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
     let newPassword = null;
 
     if (isFirstLogin) {
-      // 🔒 CORREÇÃO DE SEGURANÇA CRÍTICA:
-      // Primeiro login agora requer token de convite válido e senha temporária
+      // Verificar se existe algum convite ativo para este usuário
+      const inviteCheck = await db.pool.query(
+        `SELECT COUNT(*) as count FROM user_invites
+         WHERE user_id = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP`,
+        [user.id],
+      );
+      const hasActiveInvite = parseInt(inviteCheck.rows[0].count) > 0;
 
-      if (!inviteToken) {
-        return res.status(401).json({
-          error: "Token de convite necessário para primeiro acesso",
-          requiresInvite: true,
-        });
-      }
-
-      // Validar token de convite
-      const invite = await db.validateUserInvite(inviteToken);
-      if (!invite) {
-        return res
-          .status(401)
-          .json({ error: "Token de convite inválido ou expirado" });
-      }
-
-      // Verificar se o token pertence a este usuário
-      if (invite.userId !== user.id) {
-        return res
-          .status(401)
-          .json({ error: "Token de convite não pertence a este usuário" });
-      }
-
-      // Validar senha temporária contra o hash do convite
-      isValidPassword = bcrypt.compareSync(password, invite.tempPasswordHash);
-
-      if (!isValidPassword) {
-        // 🔒 AUDITORIA: Login falhou - senha temporária incorreta
-        await logAudit({
-          operation: AUDIT_OPERATIONS.LOGIN_FAILURE,
-          userId: user.id,
-          username: user.username,
-          ipAddress: req.ip || req.connection?.remoteAddress,
-          userAgent: req.headers["user-agent"],
-          details: { reason: "invalid_temp_password", firstLogin: true },
-          status: AUDIT_STATUS.FAILURE,
-          errorMessage: "Senha temporária incorreta",
-        });
-
-        // 🚨 ALERTA: Senha temporária incorreta em primeiro login (suspeito)
-        try {
-          await securityAlerts.alertSuspiciousLogin(
-            user.username,
-            req.ip || req.connection?.remoteAddress,
-            "Tentativa de primeiro login com senha temporária incorreta",
-          );
-        } catch (alertError) {
-          console.error("Erro ao enviar alerta de segurança:", alertError);
+      if (hasActiveInvite) {
+        // Convite existe no banco → exige token para validação segura
+        if (!inviteToken) {
+          return res.status(401).json({
+            error: "Token de convite necessário para primeiro acesso",
+            requiresInvite: true,
+          });
         }
 
-        return res.status(401).json({ error: "Senha temporária incorreta" });
+        // Validar token de convite
+        const invite = await db.validateUserInvite(inviteToken);
+        if (!invite) {
+          return res
+            .status(401)
+            .json({ error: "Token de convite inválido ou expirado" });
+        }
+
+        // Verificar se o token pertence a este usuário
+        if (invite.userId !== user.id) {
+          return res
+            .status(401)
+            .json({ error: "Token de convite não pertence a este usuário" });
+        }
+
+        // Validar senha temporária contra o hash do convite
+        isValidPassword = bcrypt.compareSync(password, invite.tempPasswordHash);
+
+        if (!isValidPassword) {
+          await logAudit({
+            operation: AUDIT_OPERATIONS.LOGIN_FAILURE,
+            userId: user.id,
+            username: user.username,
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.headers["user-agent"],
+            details: { reason: "invalid_temp_password", firstLogin: true },
+            status: AUDIT_STATUS.FAILURE,
+            errorMessage: "Senha temporária incorreta",
+          });
+          try {
+            await securityAlerts.alertSuspiciousLogin(
+              user.username,
+              req.ip || req.connection?.remoteAddress,
+              "Tentativa de primeiro login com senha temporária incorreta",
+            );
+          } catch (alertError) {
+            console.error("Erro ao enviar alerta de segurança:", alertError);
+          }
+          return res.status(401).json({ error: "Senha temporária incorreta" });
+        }
+
+        // Marcar convite como usado
+        await db.markInviteAsUsed(inviteToken);
+      } else {
+        // Sem convite ativo (falha na criação ou expirado) → fallback com senha armazenada
+        isValidPassword = bcrypt.compareSync(password, user.password);
+
+        if (!isValidPassword) {
+          await logAudit({
+            operation: AUDIT_OPERATIONS.LOGIN_FAILURE,
+            userId: user.id,
+            username: user.username,
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.headers["user-agent"],
+            details: { reason: "invalid_temp_password", firstLogin: true, noInvite: true },
+            status: AUDIT_STATUS.FAILURE,
+            errorMessage: "Senha temporária incorreta (sem convite)",
+          });
+          return res.status(401).json({ error: "Usuário ou senha incorretos" });
+        }
       }
 
       // Gerar nova senha aleatória para o usuário alterar posteriormente
@@ -1082,9 +1109,6 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
         password: hashedPassword,
         lastLogin: now,
       });
-
-      // Marcar convite como usado
-      await db.markInviteAsUsed(inviteToken);
     } else {
       // Login normal: verificar senha
       isValidPassword = bcrypt.compareSync(password, user.password);
@@ -6196,6 +6220,9 @@ app.delete('/api/admin/faq/:id', authenticateToken, requireAdmin, async (req, re
 
 // Rotas da integração Nuvemshop (autenticadas)
 app.use("/api/nuvemshop", createNuvemshopRouter(db, authenticateToken));
+
+// Rotas da integração Bling (autenticadas; callback OAuth é público via state assinado)
+app.use("/api/bling", createBlingRouter(db, authenticateToken));
 
 // ─── RODAPÉ ───────────────────────────────────────────────────────────────────
 

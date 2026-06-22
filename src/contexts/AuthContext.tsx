@@ -55,6 +55,7 @@ interface LoginResponse {
   error?: string;
   errorCode?: string;
   message?: string;
+  requiresInvite?: boolean;
 }
 
 interface AuthContextType {
@@ -62,7 +63,7 @@ interface AuthContextType {
   token: string | null; // Mantido para compatibilidade (aponta para accessToken)
   accessToken: string | null;
   refreshToken: string | null;
-  login: (username: string, password: string) => Promise<LoginResponse>;
+  login: (username: string, password: string, inviteToken?: string) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   isLoading: boolean;
   completeFirstLogin: () => void;
@@ -232,6 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (
     username: string,
     password: string,
+    inviteToken?: string,
   ): Promise<LoginResponse> => {
     try {
       // Garantir que o Service Worker está pronto (se estiver em modo demo)
@@ -262,7 +264,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, ...(inviteToken ? { inviteToken } : {}) }),
         signal: controller.signal,
       });
 
@@ -341,6 +343,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           error: errorData.error || 'Erro ao fazer login',
           errorCode: errorData.errorCode,
           message: errorData.message,
+          requiresInvite: errorData.requiresInvite,
         };
       }
     } catch (error: any) {
