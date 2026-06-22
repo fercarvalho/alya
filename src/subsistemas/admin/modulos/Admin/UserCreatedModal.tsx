@@ -5,6 +5,8 @@ interface UserCreatedModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateAnother: () => void;
+  mode?: 'created' | 'reset';
+  emailSent?: boolean;
   userData: {
     username: string;
     email: string;
@@ -18,8 +20,11 @@ const UserCreatedModal: React.FC<UserCreatedModalProps> = ({
   isOpen,
   onClose,
   onCreateAnother,
+  mode = 'created',
+  emailSent,
   userData
 }) => {
+  const isReset = mode === 'reset';
   const [copiedField, setCopiedField] = React.useState<string | null>(null);
 
   // Fechar modal com ESC
@@ -79,10 +84,12 @@ const UserCreatedModal: React.FC<UserCreatedModalProps> = ({
             </div>
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">
-            Usuário Criado com Sucesso!
+            {isReset ? 'Acesso Redefinido com Sucesso!' : 'Usuário Criado com Sucesso!'}
           </h2>
           <p className="text-green-100">
-            As credenciais foram geradas e o convite foi enviado
+            {isReset
+              ? 'Uma nova senha temporária foi gerada para o usuário'
+              : 'As credenciais foram geradas e o convite foi enviado'}
           </p>
         </div>
 
@@ -179,8 +186,8 @@ const UserCreatedModal: React.FC<UserCreatedModalProps> = ({
             </div>
           )}
 
-          {/* Email Enviado */}
-          {userData.email && !userData.email.includes('@temp.local') && (
+          {/* Email Enviado com sucesso */}
+          {userData.email && !userData.email.includes('@temp.local') && emailSent !== false && (
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <div className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -190,6 +197,23 @@ const UserCreatedModal: React.FC<UserCreatedModalProps> = ({
                   </p>
                   <p className="text-xs text-blue-800">
                     Um e-mail foi enviado para <span className="font-semibold">{userData.email}</span> com as instruções de acesso e credenciais temporárias.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Email NÃO enviado (SendGrid indisponível) — repasse manual */}
+          {userData.email && !userData.email.includes('@temp.local') && emailSent === false && (
+            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-900 mb-1">
+                    E-mail não enviado
+                  </p>
+                  <p className="text-xs text-red-800">
+                    Não foi possível enviar o e-mail para <span className="font-semibold">{userData.email}</span> automaticamente. Copie as credenciais acima e repasse manualmente ao usuário.
                   </p>
                 </div>
               </div>
@@ -239,13 +263,15 @@ const UserCreatedModal: React.FC<UserCreatedModalProps> = ({
 
         {/* Footer com Ações */}
         <div className="bg-gray-50 px-6 py-4 border-t flex flex-col sm:flex-row justify-between gap-3">
-          <button
-            onClick={onCreateAnother}
-            className="flex items-center justify-center gap-2 px-4 py-2 text-amber-700 border-2 border-amber-500 rounded-lg hover:bg-amber-50 font-medium transition-colors"
-          >
-            <UserPlus className="w-4 h-4" />
-            Criar Outro Usuário
-          </button>
+          {!isReset && (
+            <button
+              onClick={onCreateAnother}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-amber-700 border-2 border-amber-500 rounded-lg hover:bg-amber-50 font-medium transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              Criar Outro Usuário
+            </button>
+          )}
           <button
             onClick={onClose}
             className="flex items-center justify-center gap-2 px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium transition-colors"

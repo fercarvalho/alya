@@ -2073,8 +2073,83 @@ app.post(
         return res.status(404).json({ error: "Usuário não encontrado" });
       }
 
-      // Resetar lastLogin para null (permitir primeiro login novamente)
-      await db.updateUser(user.id, { lastLogin: null });
+      // Gerar nova senha temporária forte e voltar o usuário ao fluxo de
+      // primeiro acesso (mesma lógica da criação de usuário).
+      const tempPassword = generateRandomPassword();
+      const tempPasswordHash = bcrypt.hashSync(tempPassword, 10);
+      await db.updateUser(user.id, {
+        password: tempPasswordHash,
+        lastLogin: null,
+      });
+
+      // Criar novo convite alinhado à nova senha — falha não bloqueia o reset
+      let invite = null;
+      let inviteWarning = null;
+      try {
+        invite = await db.createUserInvite(
+          user.id,
+          tempPasswordHash,
+          7,
+          req.user.id,
+        );
+      } catch (inviteError) {
+        console.error(
+          "Erro ao criar convite no reset (senha já redefinida):",
+          inviteError,
+        );
+        inviteWarning =
+          "Senha temporária redefinida, mas não foi possível gerar o link de convite.";
+      }
+
+      // SendGrid continua sendo o canal principal: envia o e-mail se
+      // configurado e houver e-mail real. As credenciais na resposta são
+      // apenas uma alternativa para repasse manual.
+      let emailSent = false;
+      if (
+        invite &&
+        SENDGRID_API_KEY &&
+        user.email &&
+        !user.email.endsWith("@temp.local")
+      ) {
+        const inviteLink = `${process.env.FRONTEND_URL || "https://alya.sistemas.viverdepj.com.br"}/login?invite=${invite.inviteToken}`;
+        const msg = {
+          to: user.email,
+          from: {
+            email: SENDGRID_FROM_EMAIL,
+            name: process.env.SENDGRID_FROM_NAME || "Alya Sistemas",
+          },
+          subject: "Alya - Redefinição de Acesso",
+          text: `Olá ${user.firstName || user.username},\n\nSeu acesso ao sistema Alya foi redefinido por um administrador.\n\nSuas credenciais temporárias:\nUsuário: ${user.username}\nSenha Temporária: ${tempPassword}\n\nLink de acesso:\n${inviteLink}\n\nEste convite expira em 7 dias.\n\nApós o acesso, você receberá uma nova senha que deverá ser alterada.\n\nAtenciosamente,\nEquipe Alya`,
+          html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <p style="text-align: center; margin-bottom: 30px;">
+              <span style="font-size: 24px; font-weight: bold; color: #d97706;">Alya</span>
+            </p>
+            <h2 style="color: #1e293b; margin-bottom: 20px;">Acesso Redefinido</h2>
+            <p style="color: #475569; font-size: 16px; line-height: 1.5;">Olá <strong>${user.firstName || user.username}</strong>,</p>
+            <p style="color: #475569; font-size: 16px; line-height: 1.5;">Seu acesso ao sistema Alya foi redefinido por um administrador.</p>
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <p style="margin: 5px 0; color: #78350f;"><strong>Usuário:</strong> ${user.username}</p>
+              <p style="margin: 5px 0; color: #78350f;"><strong>Senha Temporária:</strong> <code style="background-color: #fde68a; padding: 2px 6px; border-radius: 3px;">${tempPassword}</code></p>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${inviteLink}" style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Acessar Sistema</a>
+            </div>
+            <p style="color: #64748b; font-size: 14px; text-align: center;">Este convite expira em 7 dias.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">Se você não esperava esta redefinição, contate o administrador.</p>
+          </div>
+        `,
+        };
+
+        try {
+          await sgMail.send(msg);
+          emailSent = true;
+          console.log(`Email de redefinição enviado para: ${user.email}`);
+        } catch (sgError) {
+          console.error("Erro ao enviar e-mail de redefinição:", sgError);
+        }
+      }
 
       // Logar ação
       await logActivity(
@@ -2088,7 +2163,21 @@ app.post(
 
       res.json({
         success: true,
-        message: `Primeiro login resetado para o usuário ${username}. Agora você pode fazer login com qualquer senha novamente.`,
+        message: `Acesso redefinido para o usuário ${username}.`,
+        emailSent,
+        warning: inviteWarning || undefined,
+        data: {
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+        invite: invite
+          ? {
+              token: invite.inviteToken,
+              expiresAt: invite.expiresAt,
+              tempPassword, // sempre devolvido como fallback ao SendGrid
+            }
+          : { tempPassword },
       });
     } catch (error) {
       res.status(500).json({ error: "Erro interno do servidor" });

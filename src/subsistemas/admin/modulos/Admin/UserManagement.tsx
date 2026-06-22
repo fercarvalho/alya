@@ -50,6 +50,8 @@ const UserManagement: React.FC = () => {
   const [showSimpleUserModal, setShowSimpleUserModal] = useState(false);
   const [showUserCreatedModal, setShowUserCreatedModal] = useState(false);
   const [createdUserData, setCreatedUserData] = useState<any>(null);
+  const [userCreatedMode, setUserCreatedMode] = useState<'created' | 'reset'>('created');
+  const [userCreatedEmailSent, setUserCreatedEmailSent] = useState<boolean | undefined>(undefined);
 
   // Fase 2.9 — fluxo A/B de mudança de role. Quando o admin troca a role
   // inline (select da tabela), em vez de aplicar direto, perguntamos:
@@ -245,8 +247,19 @@ const UserManagement: React.FC = () => {
       });
       const result = await response.json();
       if (result.success) {
-        alert(`✅ ${result.message}`);
+        // Mesmo modal da criação, em modo "reset": mostra a nova senha
+        // temporária / link de convite como alternativa ao SendGrid.
+        setCreatedUserData({
+          username: result.data?.username || userToReset.username,
+          email: result.data?.email || userToReset.email,
+          role: result.data?.role || userToReset.role,
+          inviteToken: result.invite?.token,
+          tempPassword: result.invite?.tempPassword,
+        });
+        setUserCreatedMode('reset');
+        setUserCreatedEmailSent(result.emailSent);
         setUserToReset(null);
+        setShowUserCreatedModal(true);
         loadUsers(); // Recarregar lista de usuários
       } else {
         alert(result.error || 'Erro ao resetar senha');
@@ -280,6 +293,8 @@ const UserManagement: React.FC = () => {
       tempPassword: result.invite?.tempPassword
     };
     setCreatedUserData(userData);
+    setUserCreatedMode('created');
+    setUserCreatedEmailSent(result.emailSent);
     setShowSimpleUserModal(false);
     setShowUserCreatedModal(true);
     loadUsers();
@@ -295,6 +310,8 @@ const UserManagement: React.FC = () => {
       tempPassword: result.invite?.tempPassword
     };
     setCreatedUserData(userData);
+    setUserCreatedMode('created');
+    setUserCreatedEmailSent(result.emailSent);
     setShowUserCreatedModal(true);
     loadUsers();
   };
@@ -684,6 +701,8 @@ const UserManagement: React.FC = () => {
           isOpen={showUserCreatedModal}
           onClose={handleCloseUserCreatedModal}
           onCreateAnother={handleCreateAnother}
+          mode={userCreatedMode}
+          emailSent={userCreatedEmailSent}
           userData={createdUserData}
         />
       )}
