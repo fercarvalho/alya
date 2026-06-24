@@ -92,6 +92,8 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
 
   const [retroPreview, setRetroPreview] = useState<{ ruleId: string; matches: RetroactivePreviewTx[]; excluded: Set<string>; orphans: RetroactivePreviewTx[]; orphansToRevert: Set<string> } | null>(null)
   const [deletePrompt, setDeletePrompt] = useState<{ rule: TransactionRule; affected: DeleteAffectedTx[] } | null>(null)
+  // Catálogo de subcategorias (fonte única). Alimenta o <select> de "Subcategorizar como".
+  const [availableSubcategories, setAvailableSubcategories] = useState<string[]>([])
 
   const refresh = useCallback(async () => {
     if (!user) return
@@ -107,6 +109,16 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
   }, [token])
 
   useEffect(() => { if (isOpen) refresh() }, [isOpen, refresh])
+
+  // Carrega o catálogo de subcategorias ao abrir (mesma fonte do modal de
+  // Gerenciar e do modal de transação).
+  useEffect(() => {
+    if (!isOpen) return
+    authedFetch(token, `${API_BASE_URL}/subcategories`)
+      .then((r) => r.json())
+      .then((j) => { if (j.success && Array.isArray(j.data)) setAvailableSubcategories(j.data) })
+      .catch(() => {})
+  }, [isOpen, token])
 
   useEffect(() => {
     if (!isOpen) return
@@ -570,12 +582,23 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
                     <span className="text-sm font-medium">Subcategorizar como</span>
                   </label>
                   {form.applySubcategory && (
-                    <input
-                      type="text" value={form.setSubcategory}
-                      onChange={(e) => setForm((f) => ({ ...f, setSubcategory: e.target.value }))}
-                      placeholder='Ex: "Insumos"'
-                      className={`mt-2 ml-6 w-[calc(100%-1.5rem)] px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 ${errors.setSubcategory ? 'border-red-500' : 'border-gray-300'}`}
-                    />
+                    <>
+                      <select
+                        value={form.setSubcategory}
+                        onChange={(e) => setForm((f) => ({ ...f, setSubcategory: e.target.value }))}
+                        className={`mt-2 ml-6 w-[calc(100%-1.5rem)] px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 ${errors.setSubcategory ? 'border-red-500' : 'border-gray-300'}`}
+                      >
+                        <option value="">Selecione uma subcategoria</option>
+                        {/* Se a regra já referencia uma subcategoria que saiu do catálogo, ainda mostra a opção atual */}
+                        {form.setSubcategory && !availableSubcategories.includes(form.setSubcategory) && (
+                          <option value={form.setSubcategory}>{form.setSubcategory} (fora do catálogo)</option>
+                        )}
+                        {availableSubcategories.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                        Para criar/editar subcategorias, use o menu Ações → Gerenciar Subcategorias.
+                      </p>
+                    </>
                   )}
                   {form.applySubcategory && errors.setSubcategory && <p className="text-xs text-red-500 mt-1 ml-6">{errors.setSubcategory}</p>}
                 </div>
