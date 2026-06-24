@@ -128,7 +128,7 @@ import {
 
 // Fase 1.6.2: tipos compartilhados extraídos para @/types/transactionType
 // (também usados pelo Transactions component em subsistemas/financeiro/modulos)
-import { type TransactionType, TRANSACTION_TYPE_STYLES } from '@/types/transactionType';
+import { type TransactionType, TRANSACTION_TYPE_STYLES, CAIXA_TRANSACTION_TYPES } from '@/types/transactionType';
 
 interface NewTransaction {
   id: string;
@@ -1732,8 +1732,10 @@ const AppContent: React.FC = () => {
         transactionForm.value.trim() === "" ||
         parseFloat(transactionForm.value) <= 0,
       type: !transactionForm.type || transactionForm.type.trim() === "",
+      // Categoria não é obrigatória para movimentações de caixa (aporte/sangria).
       category:
-        !transactionForm.category || transactionForm.category.trim() === "",
+        !CAIXA_TRANSACTION_TYPES.includes(transactionForm.type as TransactionType) &&
+        (!transactionForm.category || transactionForm.category.trim() === ""),
     };
 
     setTransactionFormErrors(errors);
@@ -2227,7 +2229,7 @@ const AppContent: React.FC = () => {
   // Calcula totais para um mês/ano específico (usado nas metas para comparar com a projeção)
   const calculateTotalsForMonth = (month: number, year: number) => {
     if (!transactions || transactions.length === 0) {
-      return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0 };
+      return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0, reforcos: 0, retiradas: 0 };
     }
     try {
       const monthTransactions = transactions.filter((transaction) => {
@@ -2241,15 +2243,24 @@ const AppContent: React.FC = () => {
       const despesas = monthTransactions
         .filter((t) => isDespesa(t.type) && !t.isHidden)
         .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
+      // Movimentações de caixa (aporte/sangria): afetam o caixa, não o operacional.
+      const reforcos = monthTransactions
+        .filter((t) => t.type === 'Reforço de caixa' && !t.isHidden)
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
+      const retiradas = monthTransactions
+        .filter((t) => t.type === 'Retirada de caixa' && !t.isHidden)
+        .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
       return {
         receitas,
         despesas,
         faturamento: receitas,
         resultado: receitas - despesas,
+        reforcos,
+        retiradas,
       };
     } catch (error) {
       console.error("Erro ao calcular totais:", error);
-      return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0 };
+      return { receitas: 0, despesas: 0, faturamento: 0, resultado: 0, reforcos: 0, retiradas: 0 };
     }
   };
 
@@ -2437,12 +2448,16 @@ const AppContent: React.FC = () => {
     metaValue: number,
   ) => {
     const currentYear = new Date().getFullYear();
-    const { receitas, despesas, resultado } = calculateTotalsForMonth(
+    const { receitas, despesas, resultado, reforcos, retiradas } = calculateTotalsForMonth(
       monthIndex,
       currentYear,
     );
     const totalReceitas = receitas;
     const totalDespesas = despesas;
+    const totalReforcos = reforcos;
+    const totalRetiradas = retiradas;
+    // Resultado em CAIXA = operacional + reforços - retiradas (fora do DRE/metas).
+    const resultadoEmCaixa = resultado + reforcos - retiradas;
 
     const proj = getProjectionMetasForMonth(monthIndex);
     const reais = getReaisByCategoryForMonth(monthIndex);
@@ -2643,11 +2658,35 @@ const AppContent: React.FC = () => {
                   </span>
                 </div>
 
-                {/* TOTAL GERAL */}
-                <div className={`flex justify-between items-center py-4 px-4 rounded-lg border-2 mt-4 ${resultado >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
-                  <span className="font-bold text-gray-900 text-lg">Total geral</span>
-                  <span className={`font-bold text-xl ${resultado >= 0 ? "text-emerald-800" : "text-red-800"}`}>
+                {/* RESULTADO OPERACIONAL (sem movimentações de caixa) */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">RESULTADO OPERACIONAL</span>
+                  <span className={`font-bold ${resultado >= 0 ? "text-emerald-800" : "text-red-800"}`}>
                     R$ {resultado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {/* REFORÇO DE CAIXA (aporte) */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-semibold text-teal-700">REFORÇO DE CAIXA</span>
+                  <span className="font-bold text-teal-800">
+                    +R$ {totalReforcos.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {/* RETIRADA DE CAIXA (sangria) */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="font-semibold text-orange-700">RETIRADA DE CAIXA</span>
+                  <span className="font-bold text-orange-800">
+                    -R$ {totalRetiradas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {/* TOTAL GERAL (em caixa, com reforço/retirada) */}
+                <div className={`flex justify-between items-center py-4 px-4 rounded-lg border-2 mt-4 ${resultadoEmCaixa >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
+                  <span className="font-bold text-gray-900 text-lg">Total geral (em caixa)</span>
+                  <span className={`font-bold text-xl ${resultadoEmCaixa >= 0 ? "text-emerald-800" : "text-red-800"}`}>
+                    R$ {resultadoEmCaixa.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -2929,6 +2968,15 @@ const AppContent: React.FC = () => {
     const totalDespesasAno = transacoesDoAno
       .filter((t) => isDespesa(t.type) && !t.isHidden)
       .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
+    // Movimentações de caixa do ano (aporte/sangria) — fora do operacional.
+    const totalReforcosAno = transacoesDoAno
+      .filter((t) => t.type === 'Reforço de caixa' && !t.isHidden)
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
+    const totalRetiradasAno = transacoesDoAno
+      .filter((t) => t.type === 'Retirada de caixa' && !t.isHidden)
+      .reduce((sum, t) => sum + (Number(t.value) || 0), 0);
+    const resultadoAno = totalReceitasAno - totalDespesasAno;
+    const resultadoEmCaixaAno = resultadoAno + totalReforcosAno - totalRetiradasAno;
 
     // Metas totais do ano (valores da projeção)
     const metaTotalAno = mesesMetas.reduce((sum, m) => sum + m.meta, 0);
@@ -2959,22 +3007,22 @@ const AppContent: React.FC = () => {
             <div className="bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-gray-800 dark:to-gray-800 p-6 rounded-2xl shadow-lg border border-purple-200 dark:border-gray-700">
               <div className="space-y-4">
                 {/* REFORÇO DE CAIXA — TODO: implementar cálculo de reforço de caixa */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700 opacity-50" title="Funcionalidade em desenvolvimento">
-                  <span className="font-bold text-purple-800 text-lg">
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
+                  <span className="font-bold text-teal-700 text-lg">
                     REFORÇO DE CAIXA
                   </span>
-                  <span className="font-bold text-purple-900 text-lg text-xs font-normal italic">
-                    Em breve
+                  <span className="font-bold text-teal-800 text-lg">
+                    +R$ {totalReforcosAno.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
-                {/* SAÍDA DE CAIXA — TODO: implementar cálculo de saída de caixa */}
-                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700 opacity-50" title="Funcionalidade em desenvolvimento">
-                  <span className="font-bold text-purple-800 text-lg">
-                    SAÍDA DE CAIXA
+                {/* RETIRADA DE CAIXA */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
+                  <span className="font-bold text-orange-700 text-lg">
+                    RETIRADA DE CAIXA
                   </span>
-                  <span className="font-bold text-purple-900 text-lg text-xs font-normal italic">
-                    Em breve
+                  <span className="font-bold text-orange-800 text-lg">
+                    -R$ {totalRetiradasAno.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
@@ -3014,20 +3062,30 @@ const AppContent: React.FC = () => {
                   </span>
                 </div>
 
-                {/* TOTAL GERAL ANUAL */}
+                {/* RESULTADO OPERACIONAL (sem movimentações de caixa) */}
+                <div className="flex justify-between items-center py-3 border-b-2 border-purple-200 dark:border-gray-700">
+                  <span className="font-bold text-slate-700 dark:text-slate-300 text-lg">
+                    RESULTADO OPERACIONAL
+                  </span>
+                  <span className={`font-bold text-lg ${resultadoAno >= 0 ? "text-emerald-800" : "text-red-800"}`}>
+                    R$ {resultadoAno.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {/* TOTAL GERAL ANUAL (em caixa, com reforço/retirada) */}
                 <div className="flex justify-between items-center py-6 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-gray-700 dark:to-gray-700 px-6 rounded-xl border-3 border-purple-400 dark:border-gray-600 mt-6">
                   <span className="font-bold text-purple-900 dark:text-purple-200 text-2xl">
-                    Total Geral Anual
+                    Total Geral Anual (em caixa)
                   </span>
                   <span
                     className={`font-bold text-2xl ${
-                      totalReceitasAno - totalDespesasAno >= 0
+                      resultadoEmCaixaAno >= 0
                         ? "text-emerald-800"
                         : "text-red-800"
                     }`}
                   >
                     R${" "}
-                    {(totalReceitasAno - totalDespesasAno).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    {resultadoEmCaixaAno.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -5662,6 +5720,8 @@ const AppContent: React.FC = () => {
                     <option value="">Selecione o tipo</option>
                     <option value="Receita">Receita</option>
                     <option value="Despesa">Despesa</option>
+                    <option value="Reforço de caixa">Reforço de caixa</option>
+                    <option value="Retirada de caixa">Retirada de caixa</option>
                   </select>
 
                   {/* Ícone de erro e tooltip */}

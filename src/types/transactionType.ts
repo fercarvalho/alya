@@ -6,7 +6,17 @@ export type TransactionType =
   | 'Receita'
   | 'Despesa'
   | 'Transferência entre contas'
-  | 'A confirmar';
+  | 'A confirmar'
+  | 'Reforço de caixa'
+  | 'Retirada de caixa';
+
+// Movimentações de caixa: aporte (reforço) e sangria (retirada). Afetam o
+// saldo/caixa (reforço soma, retirada subtrai), mas ficam FORA do DRE, das
+// metas e dos cards de Receita/Despesa (não são operacionais).
+export const CAIXA_TRANSACTION_TYPES: TransactionType[] = [
+  'Reforço de caixa',
+  'Retirada de caixa',
+];
 
 // Estilos por tipo (badge + valor + sinal):
 //   - 'Transferência entre contas' (azul, neutro em DRE/Dashboard)
@@ -37,5 +47,16 @@ export const TRANSACTION_TYPE_STYLES: Record<
       'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
     valueText: 'text-purple-600',
     sign: '',
+  },
+  'Reforço de caixa': {
+    badge: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+    valueText: 'text-teal-600',
+    sign: '+',
+  },
+  'Retirada de caixa': {
+    badge:
+      'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+    valueText: 'text-orange-600',
+    sign: '-',
   },
 };

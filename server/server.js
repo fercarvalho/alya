@@ -3249,8 +3249,8 @@ app.post("/api/export", authenticateToken, (req, res) => {
 // REGRAS AUTOMÁTICAS DE TRANSAÇÕES (migration 015)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const VALID_TRANSACTION_TYPES = ['Receita', 'Despesa', 'Transferência entre contas', 'A confirmar'];
-const VALID_ACTION_VALUES_FOR_TYPE = ['Receita', 'Despesa', 'Transferência entre contas'];
+const VALID_TRANSACTION_TYPES = ['Receita', 'Despesa', 'Reforço de caixa', 'Retirada de caixa', 'Transferência entre contas', 'A confirmar'];
+const VALID_ACTION_VALUES_FOR_TYPE = ['Receita', 'Despesa', 'Reforço de caixa', 'Retirada de caixa', 'Transferência entre contas'];
 
 function _truncateForNotif(s, n = 80) {
   if (!s) return '';

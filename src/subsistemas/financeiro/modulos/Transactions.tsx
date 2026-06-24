@@ -291,6 +291,8 @@ export default function Transactions({
                 <option value="">Todos os tipos</option>
                 <option value="Receita">Receitas</option>
                 <option value="Despesa">Despesas</option>
+                <option value="Reforço de caixa">Reforço de caixa</option>
+                <option value="Retirada de caixa">Retirada de caixa</option>
                 <option value="Transferência entre contas">Transferências</option>
                 <option value="A confirmar">A confirmar</option>
               </select>
