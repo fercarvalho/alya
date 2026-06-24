@@ -346,7 +346,9 @@ const NotificationBell: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="absolute top-2 right-2 hidden group-hover:flex gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-0.5" onClick={stop}>
+                      {/* Ações: sempre visíveis no mobile (sem hover em touch),
+                          aparecem no hover a partir de sm */}
+                      <div className="absolute top-2 right-2 flex sm:hidden sm:group-hover:flex gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-0.5" onClick={stop}>
                         {!n.isRead && (
                           <button onClick={() => markRead(n.id)} title="Marcar como lida" className="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded">
                             <Check className="w-3.5 h-3.5" />
