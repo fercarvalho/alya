@@ -711,6 +711,25 @@ class Database extends FileDatabase {
     });
   }
 
+  // Transações atualmente governadas por uma regra (applied_rule_id = ruleId).
+  // Usado pelo modal de edição para detectar "órfãs" — transações que a regra
+  // já alterou mas que não casam mais com a condição depois de editada.
+  async getTransactionsByAppliedRule(ruleId) {
+    const r = await this.pool.query(
+      `SELECT t.*, r.id AS existing_rule_id, r.name AS existing_rule_name
+         FROM transactions t
+         LEFT JOIN transaction_rules r ON r.id = t.applied_rule_id
+        WHERE t.applied_rule_id = $1
+        ORDER BY t.date DESC`,
+      [ruleId]
+    );
+    return r.rows.map((row) => {
+      const c = toCamelCase(row);
+      c.date = formatDateForApi(c.date);
+      return c;
+    });
+  }
+
   // ── Notificações in-app ─────────────────────────────────────────────────────
 
   async createNotification(notif) {

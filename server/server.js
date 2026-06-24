@@ -3410,6 +3410,17 @@ app.post('/api/transaction-rules/preview', authenticateToken, async (req, res) =
   }
 });
 
+// Transações atualmente governadas por uma regra (para o modal de edição
+// detectar "órfãs" — as que não casam mais com a condição editada).
+app.get('/api/transaction-rules/:id/affected', authenticateToken, async (req, res) => {
+  try {
+    const data = await db.getTransactionsByAppliedRule(req.params.id);
+    res.json({ success: true, data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Aplica retroativo
 app.post('/api/transaction-rules/:id/apply-retroactive', authenticateToken, requireRulePermission('edit'), async (req, res) => {
   try {

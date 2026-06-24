@@ -90,7 +90,7 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
-  const [retroPreview, setRetroPreview] = useState<{ ruleId: string; matches: RetroactivePreviewTx[]; excluded: Set<string> } | null>(null)
+  const [retroPreview, setRetroPreview] = useState<{ ruleId: string; matches: RetroactivePreviewTx[]; excluded: Set<string>; orphans: RetroactivePreviewTx[]; orphansToRevert: Set<string> } | null>(null)
   const [deletePrompt, setDeletePrompt] = useState<{ rule: TransactionRule; affected: DeleteAffectedTx[] } | null>(null)
 
   const refresh = useCallback(async () => {
@@ -201,26 +201,47 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
         if (!j.success) { alert(j.error || 'Falha ao criar regra'); return }
         savedRule = j.data
       }
+      const wasEditing = !!editing
       await refresh()
       setView('list'); setEditing(null)
 
       if (savedRule) {
-        const prev = await authedFetch(token, `${API_BASE_URL}/transaction-rules/preview`, {
-          method: 'POST',
-          body: JSON.stringify({
-            descriptionContains: savedRule.descriptionContains,
-            minValue: savedRule.minValue,
-            maxValue: savedRule.maxValue,
-            matchType: savedRule.matchType,
+        const newDesc = (savedRule.descriptionContains || '').toLowerCase()
+
+        // Em paralelo: transações novas que se encaixam (preview) e, se for edição,
+        // as já governadas pela regra (affected) para detectar órfãs.
+        const [pj, affj] = await Promise.all([
+          authedFetch(token, `${API_BASE_URL}/transaction-rules/preview`, {
+            method: 'POST',
+            body: JSON.stringify({
+              descriptionContains: savedRule.descriptionContains,
+              minValue: savedRule.minValue,
+              maxValue: savedRule.maxValue,
+              matchType: savedRule.matchType,
+              ruleId: savedRule.id,
+            }),
+          }).then((r) => r.json()),
+          wasEditing
+            ? authedFetch(token, `${API_BASE_URL}/transaction-rules/${savedRule.id}/affected`).then((r) => r.json())
+            : Promise.resolve({ success: true, data: [] }),
+        ])
+
+        const matches: RetroactivePreviewTx[] = (pj.success ? (pj.data || []) : [])
+          .filter((t: RetroactivePreviewTx) => !t.existingRuleId || t.existingRuleId === savedRule!.id)
+          .filter((t: RetroactivePreviewTx) => t.appliedRuleId !== savedRule!.id)
+
+        // Órfãs: governadas pela regra mas cuja descrição não contém mais a nova condição.
+        const orphans: RetroactivePreviewTx[] = (affj.success ? (affj.data || []) : [])
+          .filter((t: RetroactivePreviewTx) => !(t.description || '').toLowerCase().includes(newDesc))
+
+        if (matches.length > 0 || orphans.length > 0) {
+          setRetroPreview({
             ruleId: savedRule.id,
-          }),
-        })
-        const pj = await prev.json()
-        if (pj.success) {
-          const matches = (pj.data || []).filter((t: RetroactivePreviewTx) => !t.existingRuleId || t.existingRuleId === savedRule!.id)
-          if (matches.length > 0) {
-            setRetroPreview({ ruleId: savedRule.id, matches, excluded: new Set() })
-          }
+            matches,
+            excluded: new Set(),
+            orphans,
+            orphansToRevert: new Set(orphans.map((t) => t.id)),
+          })
         }
       }
     } finally { setSubmitting(false) }
@@ -290,12 +311,24 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
     if (!retroPreview) return
     setSubmitting(true)
     try {
-      const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${retroPreview.ruleId}/apply-retroactive`, {
-        method: 'POST',
-        body: JSON.stringify({ excludedTransactionIds: Array.from(retroPreview.excluded) }),
-      })
-      const j = await r.json()
-      if (!j.success) { alert(j.error || 'Falha na aplicação retroativa'); return }
+      // 1. Aplica a regra nas transações novas que se encaixam.
+      if (retroPreview.matches.length > 0) {
+        const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${retroPreview.ruleId}/apply-retroactive`, {
+          method: 'POST',
+          body: JSON.stringify({ excludedTransactionIds: Array.from(retroPreview.excluded) }),
+        })
+        const j = await r.json()
+        if (!j.success) { alert(j.error || 'Falha na aplicação retroativa'); return }
+      }
+      // 2. Reverte as órfãs marcadas — transações que não se encaixam mais na regra.
+      if (retroPreview.orphansToRevert.size > 0) {
+        const r2 = await authedFetch(token, `${API_BASE_URL}/transaction-rules/${retroPreview.ruleId}/revert`, {
+          method: 'POST',
+          body: JSON.stringify({ transactionIds: Array.from(retroPreview.orphansToRevert) }),
+        })
+        const j2 = await r2.json()
+        if (!j2.success) { alert(j2.error || 'Falha ao reverter transações órfãs'); return }
+      }
       setRetroPreview(null)
       onRulesChanged?.()
     } finally { setSubmitting(false) }
@@ -581,10 +614,17 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
         <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Aplicar regra retroativamente?</h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                {retroPreview.matches.length} transação(ões) anteriores se encaixam. Desmarque as que você NÃO quer alterar.
-              </p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Revisar alterações da regra</h3>
+              {retroPreview.matches.length > 0 && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {retroPreview.matches.length} transação(ões) anteriores se encaixam. Desmarque as que você NÃO quer alterar.
+                </p>
+              )}
+              {retroPreview.orphans.length > 0 && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {retroPreview.orphans.length} transação(ões) deixaram de se encaixar após a edição. Marque as que deseja reverter ao estado original.
+                </p>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-1">
               {retroPreview.matches.map((t) => {
@@ -608,21 +648,56 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
                   </label>
                 )
               })}
+
+              {retroPreview.orphans.length > 0 && (
+                <div className={retroPreview.matches.length > 0 ? 'mt-3 pt-3 border-t border-gray-200 dark:border-gray-700' : ''}>
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 px-1">Não se encaixam mais — reverter ao original?</p>
+                  {retroPreview.orphans.map((t) => {
+                    const willRevert = retroPreview.orphansToRevert.has(t.id)
+                    return (
+                      <label key={t.id} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer ${willRevert ? 'bg-gray-50 dark:bg-gray-700/30' : 'opacity-50'}`}>
+                        <input
+                          type="checkbox"
+                          checked={willRevert}
+                          onChange={() => setRetroPreview((p) => {
+                            if (!p) return p
+                            const orphansToRevert = new Set(p.orphansToRevert)
+                            if (orphansToRevert.has(t.id)) orphansToRevert.delete(t.id); else orphansToRevert.add(t.id)
+                            return { ...p, orphansToRevert }
+                          })}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{t.description}</p>
+                          <p className="text-xs text-gray-500">{new Date(t.date).toLocaleDateString('pt-BR')} · {t.type} · R$ {Number(t.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center px-6 py-4 border-t border-gray-200 dark:border-gray-700 gap-2">
               <button onClick={() => setRetroPreview(null)} className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 Cancelar
               </button>
-              <button
-                onClick={markAllPending}
-                disabled={submitting}
-                className="px-4 py-2 text-sm font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 rounded-lg"
-                title="Marca todas as transações como 'A confirmar' para você decidir depois"
-              >
-                {submitting ? 'Aguarde...' : `Decidir depois (${retroPreview.matches.length})`}
-              </button>
+              {retroPreview.matches.length > 0 && (
+                <button
+                  onClick={markAllPending}
+                  disabled={submitting}
+                  className="px-4 py-2 text-sm font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 rounded-lg"
+                  title="Marca todas as transações como 'A confirmar' para você decidir depois"
+                >
+                  {submitting ? 'Aguarde...' : `Decidir depois (${retroPreview.matches.length})`}
+                </button>
+              )}
               <button onClick={applyRetroactive} disabled={submitting} className="px-5 py-2 text-sm font-semibold bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg shadow-sm">
-                {submitting ? 'Aplicando...' : `Aplicar em ${retroPreview.matches.length - retroPreview.excluded.size} transação(ões)`}
+                {submitting ? 'Aplicando...' : (() => {
+                  const applyCount = retroPreview.matches.length - retroPreview.excluded.size
+                  const revertCount = retroPreview.orphansToRevert.size
+                  if (retroPreview.orphans.length === 0) return `Aplicar em ${applyCount} transação(ões)`
+                  if (retroPreview.matches.length === 0) return `Reverter ${revertCount} transação(ões)`
+                  return `Aplicar (${applyCount}) e reverter (${revertCount})`
+                })()}
               </button>
             </div>
           </div>
