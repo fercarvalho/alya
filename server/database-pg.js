@@ -106,6 +106,17 @@ class Database extends FileDatabase {
 
   async _ensurePgDefaults() {
     try {
+      // Catálogo de subcategorias (migration 023). Self-heal: garante a tabela
+      // mesmo se a migration manual não tiver rodado ainda.
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS subcategories (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_subcategories_name ON subcategories(name);`);
+
       // Garantir que as tabelas de documentação existem
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS doc_sections (
@@ -508,6 +519,79 @@ class Database extends FileDatabase {
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  // ── Catálogo de subcategorias (migration 023) ───────────────────────────────
+  // Fonte única, compartilhada pelo modal de transação, modal de Regras e modal
+  // de Gerenciar Subcategorias. A coluna subcategory em transactions é texto
+  // livre (sem FK): excluir do catálogo não apaga o valor das transações.
+
+  async getAllSubcategories() {
+    try {
+      const result = await this.pool.query('SELECT name FROM subcategories ORDER BY name');
+      return result.rows.map((row) => row.name);
+    } catch (error) {
+      console.error('Erro ao ler subcategorias:', error);
+      return [];
+    }
+  }
+
+  async saveSubcategory(name) {
+    await this.pool.query(
+      'INSERT INTO subcategories (name, created_at) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
+      [name, new Date().toISOString()]
+    );
+    return name;
+  }
+
+  async deleteSubcategory(name) {
+    const result = await this.pool.query('DELETE FROM subcategories WHERE name = $1', [name]);
+    return result.rowCount > 0;
+  }
+
+  // Regras que referenciam a subcategoria (set_subcategory). Usado pra bloquear
+  // a exclusão enquanto houver regra dependente.
+  async getRulesUsingSubcategory(name) {
+    const result = await this.pool.query(
+      'SELECT id, name FROM transaction_rules WHERE set_subcategory = $1 ORDER BY name',
+      [name]
+    );
+    return result.rows;
+  }
+
+  // Renomeia e propaga o novo nome para tudo que referencia por texto:
+  // transações (subcategory + original_subcategory) e regras (set_subcategory).
+  // Atômico. Retorna 'ok' | 'not_found' | 'conflict'.
+  async renameSubcategory(oldName, newName) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const exists = await client.query('SELECT 1 FROM subcategories WHERE name = $1', [oldName]);
+      if (exists.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return 'not_found';
+      }
+      const clash = await client.query('SELECT 1 FROM subcategories WHERE name = $1', [newName]);
+      if (clash.rowCount > 0) {
+        await client.query('ROLLBACK');
+        return 'conflict';
+      }
+
+      await client.query('UPDATE subcategories SET name = $1 WHERE name = $2', [newName, oldName]);
+      await client.query('UPDATE transactions SET subcategory = $1 WHERE subcategory = $2', [newName, oldName]);
+      await client.query('UPDATE transactions SET original_subcategory = $1 WHERE original_subcategory = $2', [newName, oldName]);
+      await client.query('UPDATE transaction_rules SET set_subcategory = $1 WHERE set_subcategory = $2', [newName, oldName]);
+
+      await client.query('COMMIT');
+      return 'ok';
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Erro ao renomear subcategoria:', error);
+      throw error;
     } finally {
       client.release();
     }

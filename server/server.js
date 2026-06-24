@@ -3306,6 +3306,118 @@ function requireRulePermission(action /* 'create' | 'edit' | 'delete' */) {
   };
 }
 
+// ─── Catálogo de subcategorias (migration 023) ──────────────────────────────
+app.get('/api/subcategories', authenticateToken, async (req, res) => {
+  try {
+    const subcategories = await db.getAllSubcategories();
+    res.json({ success: true, data: subcategories });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/subcategories', authenticateToken, async (req, res) => {
+  try {
+    const name = (req.body?.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Nome da subcategoria é obrigatório' });
+    }
+    const subcategory = await db.saveSubcategory(name);
+    res.json({ success: true, data: subcategory });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/subcategories/:name', authenticateToken, async (req, res) => {
+  try {
+    const oldName = decodeURIComponent(req.params.name || '').trim();
+    const newName = (req.body?.newName || '').trim();
+    if (!oldName || !newName) {
+      return res.status(400).json({ success: false, error: 'Nome atual e novo nome são obrigatórios' });
+    }
+    if (oldName === newName) {
+      return res.json({ success: true });
+    }
+    const result = await db.renameSubcategory(oldName, newName);
+    if (result === 'not_found') {
+      return res.status(404).json({ success: false, error: 'Subcategoria não encontrada' });
+    }
+    if (result === 'conflict') {
+      return res.status(409).json({ success: false, error: 'Já existe uma subcategoria com esse nome' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Exclusão em massa. Respeita o invariante: subcategoria usada por regra(s) não
+// é excluída — volta em `blocked` com as regras; as livres voltam em `deleted`.
+// Rota POST de path fixo declarada ANTES das rotas :name pra não colidir.
+app.post('/api/subcategories/bulk-delete', authenticateToken, async (req, res) => {
+  try {
+    const names = Array.isArray(req.body?.names)
+      ? req.body.names.map((n) => String(n || '').trim()).filter(Boolean)
+      : [];
+    if (names.length === 0) {
+      return res.status(400).json({ success: false, error: 'Lista de subcategorias é obrigatória' });
+    }
+    const deleted = [];
+    const blocked = [];
+    for (const name of names) {
+      const rules = await db.getRulesUsingSubcategory(name);
+      if (rules.length > 0) { blocked.push({ name, rules }); continue; }
+      const ok = await db.deleteSubcategory(name);
+      if (ok) deleted.push(name);
+    }
+    res.json({ success: true, deleted, blocked });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Regras que dependem desta subcategoria (set_subcategory).
+app.get('/api/subcategories/:name/rules', authenticateToken, async (req, res) => {
+  try {
+    const name = decodeURIComponent(req.params.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Nome da subcategoria é obrigatório' });
+    }
+    const rules = await db.getRulesUsingSubcategory(name);
+    res.json({ success: true, data: rules });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/subcategories/:name', authenticateToken, async (req, res) => {
+  try {
+    const name = decodeURIComponent(req.params.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Nome da subcategoria é obrigatório' });
+    }
+    // Invariante: subcategoria usada por regra não pode ser excluída até a regra
+    // ser editada ou removida. Guard server-side (independe do frontend).
+    const dependentRules = await db.getRulesUsingSubcategory(name);
+    if (dependentRules.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'in_use',
+        message: 'Subcategoria está em uso por uma ou mais regras.',
+        rules: dependentRules,
+      });
+    }
+    const deleted = await db.deleteSubcategory(name);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Subcategoria não encontrada' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ─── CRUD de regras ────────────────────────────────────────────────────────
 app.get('/api/transaction-rules', authenticateToken, async (req, res) => {
   try {
