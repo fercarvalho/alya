@@ -63,6 +63,7 @@ interface TransactionsProps {
   setImportExportType: (v: 'transactions' | 'products') => void;
   setIsImportExportModalOpen: (v: boolean) => void;
   setIsRulesModalOpen: (v: boolean) => void;
+  setIsManageSubcategoriesOpen: (v: boolean) => void;
   setIsTransactionModalOpen: (v: boolean) => void;
   setResolveTarget: (v: { id: string; description: string } | null) => void;
   // Calendar filter state
@@ -111,6 +112,7 @@ export default function Transactions({
   setImportExportType,
   setIsImportExportModalOpen,
   setIsRulesModalOpen,
+  setIsManageSubcategoriesOpen,
   setIsTransactionModalOpen,
   setResolveTarget,
   isFilterCalendarFromOpen,
@@ -199,6 +201,14 @@ export default function Transactions({
                 >
                   <Settings className="h-4 w-4 text-amber-600 flex-shrink-0" />
                   Conjunto de Regras
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => { setIsManageSubcategoriesOpen(true); setIsActionsMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border-t border-gray-100 dark:border-gray-700"
+                >
+                  <Settings className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  Gerenciar Subcategorias
                 </button>
               </div>
             )}

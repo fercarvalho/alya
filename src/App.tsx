@@ -56,6 +56,7 @@ import PendingTransactionsBanner from "./components/PendingTransactionsBanner";
 const PushPermissionBanner = lazy(() => import("./components/PushPermissionBanner"));
 import TransactionRulesModal from "./components/modals/TransactionRulesModal";
 import ResolveTransactionModal from "./components/modals/ResolveTransactionModal";
+import ManageSubcategoriesModal from "./components/modals/ManageSubcategoriesModal";
 import ImpersonationBanner from "./components/ImpersonationBanner";
 import OfflineBanner from "./components/OfflineBanner";
 import PwaInstallBanner from "./components/PwaInstallBanner";
@@ -608,12 +609,20 @@ const AppContent: React.FC = () => {
   // Refs para estado indeterminate nos Select All checkboxes
   const selectAllTransactionsRef = useRef<HTMLInputElement>(null);
   const selectAllProductsRef = useRef<HTMLInputElement>(null);
-  const [transactionForm, setTransactionForm] = useState({
+  const [transactionForm, setTransactionForm] = useState<{
+    date: string;
+    description: string;
+    value: string;
+    type: string;
+    category: string;
+    subcategory?: string;
+  }>({
     date: new Date().toISOString().split("T")[0], // Data atual por padrão
     description: "",
     value: "",
     type: "Receita",
     category: "",
+    subcategory: "",
   });
   const [transactionFormErrors, setTransactionFormErrors] = useState({
     date: false,
@@ -622,6 +631,25 @@ const AppContent: React.FC = () => {
     type: false,
     category: false,
   });
+
+  // Catálogo de subcategorias (migration 023) — fonte única, compartilhada com
+  // o modal de Regras e o modal de Gerenciar Subcategorias.
+  const [subcategories, setSubcategories] = useState<string[]>([]);
+  const [isManageSubcategoriesOpen, setIsManageSubcategoriesOpen] = useState(false);
+  const loadSubcategories = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/subcategories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) setSubcategories(result.data);
+    } catch {
+      /* silencioso */
+    }
+  }, [token]);
+  useEffect(() => { loadSubcategories(); }, [loadSubcategories]);
 
   // Estados do calendário personalizado
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -2080,6 +2108,7 @@ const AppContent: React.FC = () => {
       value: transaction.value.toString(),
       type: transaction.type,
       category: transaction.category,
+      subcategory: transaction.subcategory ?? "",
     });
     setIsTransactionModalOpen(true);
   };
@@ -4903,6 +4932,7 @@ const AppContent: React.FC = () => {
             setImportExportType={setImportExportType}
             setIsImportExportModalOpen={setIsImportExportModalOpen}
             setIsRulesModalOpen={setIsRulesModalOpen}
+            setIsManageSubcategoriesOpen={setIsManageSubcategoriesOpen}
             setIsTransactionModalOpen={setIsTransactionModalOpen}
             setResolveTarget={setResolveTarget}
             isFilterCalendarFromOpen={isFilterCalendarFromOpen}
@@ -5419,6 +5449,7 @@ const AppContent: React.FC = () => {
                         value: parseFloat(transactionForm.value) || 0,
                         type: transactionForm.type as "Receita" | "Despesa",
                         category: transactionForm.category,
+                        subcategory: transactionForm.subcategory?.trim() || null,
                       },
                     );
 
@@ -5443,6 +5474,7 @@ const AppContent: React.FC = () => {
                       value: parseFloat(transactionForm.value) || 0,
                       type: transactionForm.type as "Receita" | "Despesa",
                       category: transactionForm.category,
+                      subcategory: transactionForm.subcategory?.trim() || null,
                     });
 
                     if (newTransaction) {
@@ -5701,6 +5733,37 @@ const AppContent: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Subcategoria (opcional) — select do catálogo (migration 023) */}
+              <div>
+                <label htmlFor="tx-subcategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Subcategoria
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    id="tx-subcategory"
+                    name="subcategory"
+                    value={transactionForm.subcategory ?? ""}
+                    onChange={handleTransactionInputChange}
+                    className="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-gray-100 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                  >
+                    <option value="">Sem subcategoria</option>
+                    {transactionForm.subcategory && !subcategories.includes(transactionForm.subcategory) && (
+                      <option value={transactionForm.subcategory}>{transactionForm.subcategory} (fora do catálogo)</option>
+                    )}
+                    {subcategories.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsManageSubcategoriesOpen(true)}
+                    className="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors flex-shrink-0"
+                    title="Gerenciar subcategorias"
+                    aria-label="Gerenciar subcategorias"
+                  >
+                    <Settings className="w-4 h-4" aria-hidden="true" />
+                  </button>
                 </div>
               </div>
 
@@ -7230,6 +7293,14 @@ const AppContent: React.FC = () => {
             .then((j) => { if (j.success) setTransactions(j.data || []); })
             .catch(() => {});
         }}
+      />
+
+      <ManageSubcategoriesModal
+        isOpen={isManageSubcategoriesOpen}
+        onClose={() => setIsManageSubcategoriesOpen(false)}
+        token={token}
+        onChanged={loadSubcategories}
+        onRequestEditRules={() => setIsRulesModalOpen(true)}
       />
 
       <ResolveTransactionModal
