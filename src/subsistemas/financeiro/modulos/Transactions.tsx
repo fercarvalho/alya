@@ -29,6 +29,18 @@ import {
 import PendingTransactionsBanner from '@/components/PendingTransactionsBanner';
 import { type TransactionType, TRANSACTION_TYPE_STYLES } from '@/types/transactionType';
 
+// Rótulo + estilo do badge de ORIGEM da transação (migration 026).
+const SOURCE_LABELS: Record<string, { label: string; badge: string }> = {
+  manual:      { label: 'Manual',   badge: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
+  import_xlsx: { label: 'Planilha', badge: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300' },
+  extrato:     { label: 'Extrato',  badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300' },
+  fatura:      { label: 'Fatura',   badge: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300' },
+  nuvemshop:   { label: 'Nuvemshop', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  bling:       { label: 'Bling',    badge: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
+  infinitepay: { label: 'InfinitePay', badge: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' },
+};
+const getSourceMeta = (s: string | null | undefined) => SOURCE_LABELS[s || 'manual'] || SOURCE_LABELS.manual;
+
 interface TransactionFilters {
   type: string;
   category: string;
@@ -36,6 +48,7 @@ interface TransactionFilters {
   dateTo: string;
   hasDateFilter: boolean;
   description: string;
+  source: string;
 }
 
 interface TransactionsProps {
@@ -295,6 +308,29 @@ export default function Transactions({
                 <option value="Retirada de caixa">Retirada de caixa</option>
                 <option value="Transferência entre contas">Transferências</option>
                 <option value="A confirmar">A confirmar</option>
+              </select>
+            </div>
+
+            {/* Filtro Origem */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <label htmlFor="transaction-source-filter" className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
+                Origem
+              </label>
+              <select
+                id="transaction-source-filter"
+                name="transaction-source-filter"
+                value={transactionFilters.source || ''}
+                onChange={(e) => setTransactionFilters((prev) => ({ ...prev, source: e.target.value }))}
+                className="px-1 sm:px-2 md:px-3 py-1 sm:py-2 border border-amber-300 dark:border-gray-600 rounded-md text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-gray-700 dark:text-gray-100 w-full"
+              >
+                <option value="">Todas as origens</option>
+                <option value="manual">Manual</option>
+                <option value="import_xlsx">Planilha</option>
+                <option value="extrato">Extrato</option>
+                <option value="fatura">Fatura</option>
+                <option value="nuvemshop">Nuvemshop</option>
+                <option value="bling">Bling</option>
+                <option value="infinitepay">InfinitePay</option>
               </select>
             </div>
 
@@ -577,6 +613,10 @@ export default function Transactions({
                         )}
                         {transaction.description}
                       </h3>
+                      {/* Origem da transação (migration 026) */}
+                      <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${getSourceMeta(transaction.source).badge}`} title={`Origem: ${getSourceMeta(transaction.source).label}`}>
+                        {getSourceMeta(transaction.source).label}
+                      </span>
                     </div>
 
                     {/* Tipo */}

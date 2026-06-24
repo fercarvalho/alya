@@ -322,6 +322,7 @@ function handleWebhook(db) {
             value: parseFloat(payload.total || 0),
             type: 'Despesa',
             category: 'Estorno Nuvemshop',
+            source: 'nuvemshop',
           });
         }
       } else if (event === 'product/created' || event === 'product/updated') {

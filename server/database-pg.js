@@ -117,6 +117,9 @@ class Database extends FileDatabase {
       `);
       await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_subcategories_name ON subcategories(name);`);
 
+      // Origem da transação (migration 026) — self-heal.
+      await this.pool.query(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'manual'`);
+
       // Garantir que as tabelas de documentação existem
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS doc_sections (
@@ -321,8 +324,8 @@ class Database extends FileDatabase {
     const now = new Date().toISOString();
     const date = parseDate(transaction.date) || now.split('T')[0];
     const r = await this.pool.query(
-      `INSERT INTO transactions (id, date, description, value, type, category, subcategory, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO transactions (id, date, description, value, type, category, subcategory, source, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
         id,
         date,
@@ -331,6 +334,7 @@ class Database extends FileDatabase {
         transaction.type || 'Outros',
         transaction.category || null,
         transaction.subcategory || null,
+        transaction.source || 'manual',
         now,
         now,
       ]

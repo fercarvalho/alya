@@ -79,6 +79,7 @@ async function syncOrders(db, userId, token, storeId, since) {
         value: parseOrderValue(order.total),
         type: 'Receita',
         category: 'Venda Online',
+        source: 'nuvemshop',
       });
       // Aplica regras automáticas (manda actingUserId pra criar notificação
       // pendente, se houver conflito). saveSyncMap usa o ID original — que não

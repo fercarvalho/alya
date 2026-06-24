@@ -2957,7 +2957,7 @@ app.post(
         let ruleAppliedCount = 0;
         for (const t of parsed) {
           try {
-            const savedT = await db.saveTransaction(t);
+            const savedT = await db.saveTransaction({ ...t, source: 'import_xlsx' });
             const { transaction: finalTx, applied } = await applyRulesAndPersist(savedT, { actingUserId: req.user.id });
             if (applied === 'rule') ruleAppliedCount++;
             if (applied === 'pending') pendingCount++;
@@ -3095,17 +3095,18 @@ app.post(
 // Rota para CONFIRMAR e salvar as transações do extrato após revisão
 app.post("/api/import/extrato/confirm", authenticateToken, async (req, res) => {
   try {
-    const { transactions } = req.body;
+    const { transactions, importType } = req.body;
     if (!Array.isArray(transactions) || transactions.length === 0) {
       return res.status(400).json({ error: "Nenhuma transação para importar." });
     }
+    const importSource = importType === 'fatura' ? 'fatura' : 'extrato';
 
     const saved = [];
     let pendingCount = 0;
     let ruleAppliedCount = 0;
     for (const t of transactions) {
       try {
-        const savedT = await db.saveTransaction({ ...t, userId: req.user.id });
+        const savedT = await db.saveTransaction({ ...t, userId: req.user.id, source: importSource });
         const { transaction: finalTx, applied } = await applyRulesAndPersist(savedT, { actingUserId: req.user.id });
         if (applied === 'rule') ruleAppliedCount++;
         if (applied === 'pending') pendingCount++;

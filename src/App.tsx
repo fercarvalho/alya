@@ -138,6 +138,7 @@ interface NewTransaction {
   type: TransactionType;
   category: string;
   subcategory?: string;
+  source?: string | null;
   appliedRuleId?: string | null;
   originalType?: string | null;
   originalCategory?: string | null;
@@ -689,6 +690,7 @@ const AppContent: React.FC = () => {
     dateTo: "", // data fim
     hasDateFilter: false, // se está usando filtro de data
     description: "", // busca por descrição
+    source: "", // origem: manual/import_xlsx/extrato/fatura/nuvemshop/bling/infinitepay
   });
 
   const [productFilters, setProductFilters] = useState({
@@ -1582,6 +1584,9 @@ const AppContent: React.FC = () => {
     if (transactionFilters.type) {
       filtered = filtered.filter((t) => t.type === transactionFilters.type);
     }
+    if (transactionFilters.source) {
+      filtered = filtered.filter((t) => (t.source || 'manual') === transactionFilters.source);
+    }
 
     // Filtro por categoria
     if (transactionFilters.category) {
@@ -1708,6 +1713,7 @@ const AppContent: React.FC = () => {
       dateTo: "",
       hasDateFilter: false,
       description: "",
+      source: "",
     });
   };
 
@@ -6835,7 +6841,7 @@ const AppContent: React.FC = () => {
                         try {
                           const headers: HeadersInit = { 'Content-Type': 'application/json' };
                           if (token) headers['Authorization'] = `Bearer ${token}`;
-                          const body = JSON.stringify({ transactions: extratoPreview.map(({ _id: _r, ...t }) => { const { _selected: _s, ...rest } = t as any; return rest; }) });
+                          const body = JSON.stringify({ transactions: extratoPreview.map(({ _id: _r, ...t }) => { const { _selected: _s, ...rest } = t as any; return rest; }), importType: importType || 'extrato' });
                           const response = await fetch(`${API_BASE_URL}/import/extrato/confirm`, { method: 'POST', headers, body });
                           if (response.ok) {
                             const result = await response.json();
