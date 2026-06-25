@@ -94,6 +94,7 @@ import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { API_BASE_URL } from "./config/api";
+import { CATEGORIES_BY_TYPE } from "./config/categorias";
 import { parseLocalDate, formatDatePtBR } from "./utils/dateUtils";
 // Importar Axios Interceptor para inicializar refresh automático
 import "./utils/axiosInterceptor";
@@ -2099,11 +2100,8 @@ const AppContent: React.FC = () => {
 
   // Função para obter as categorias baseadas no tipo (case-insensitive)
   const getCategoriesByType = (type: string) => {
-    if (isReceita(type)) {
-      return ["Atacado", "Varejo", "Investimentos", "Outros"];
-    } else if (isDespesa(type)) {
-      return ["Fixo", "Variável", "Investimento", "Mkt", "Outros"];
-    }
+    if (isReceita(type)) return CATEGORIES_BY_TYPE.Receita;
+    if (isDespesa(type)) return CATEGORIES_BY_TYPE.Despesa;
     return [];
   };
 

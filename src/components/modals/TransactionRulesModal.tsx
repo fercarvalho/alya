@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { X, Plus, Edit, Trash2, ToggleLeft, ToggleRight, ArrowRight, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { authedFetch } from '../../utils/authedFetch'
+import { CATEGORIES_BY_TYPE } from '@/config/categorias'
 
 const API_BASE_URL = '/api'
 
@@ -568,12 +569,22 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
                     <span className="text-sm font-medium">Categorizar como</span>
                   </label>
                   {form.applyCategory && (
-                    <input
-                      type="text" value={form.setCategory}
+                    <select
+                      value={form.setCategory}
                       onChange={(e) => setForm((f) => ({ ...f, setCategory: e.target.value }))}
-                      placeholder='Ex: "Fornecedores"'
                       className={`mt-2 ml-6 w-[calc(100%-1.5rem)] px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 ${errors.setCategory ? 'border-red-500' : 'border-gray-300'}`}
-                    />
+                    >
+                      <option value="">Selecione uma categoria</option>
+                      {form.setCategory && ![...CATEGORIES_BY_TYPE.Receita, ...CATEGORIES_BY_TYPE.Despesa].includes(form.setCategory) && (
+                        <option value={form.setCategory}>{form.setCategory} (fora do catálogo)</option>
+                      )}
+                      <optgroup label="Receita">
+                        {CATEGORIES_BY_TYPE.Receita.map((c) => <option key={`r-${c}`} value={c}>{c}</option>)}
+                      </optgroup>
+                      <optgroup label="Despesa">
+                        {CATEGORIES_BY_TYPE.Despesa.map((c) => <option key={`d-${c}`} value={c}>{c}</option>)}
+                      </optgroup>
+                    </select>
                   )}
                   {form.applyCategory && errors.setCategory && <p className="text-xs text-red-500 mt-1 ml-6">{errors.setCategory}</p>}
                 </div>
