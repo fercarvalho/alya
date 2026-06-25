@@ -1739,8 +1739,10 @@ const AppContent: React.FC = () => {
         transactionForm.value.trim() === "" ||
         parseFloat(transactionForm.value) <= 0,
       type: !transactionForm.type || transactionForm.type.trim() === "",
-      // Categoria não é obrigatória para movimentações de caixa (aporte/sangria).
+      // Categoria não é obrigatória para movimentações de caixa (aporte/sangria)
+      // nem para transferência entre contas (tipos sem categoria no sistema).
       category:
+        transactionForm.type !== 'Transferência entre contas' &&
         !CAIXA_TRANSACTION_TYPES.includes(transactionForm.type as TransactionType) &&
         (!transactionForm.category || transactionForm.category.trim() === ""),
     };
@@ -5726,6 +5728,7 @@ const AppContent: React.FC = () => {
                     <option value="Despesa">Despesa</option>
                     <option value="Reforço de caixa">Reforço de caixa</option>
                     <option value="Retirada de caixa">Retirada de caixa</option>
+                    <option value="Transferência entre contas">Transferência entre contas</option>
                   </select>
 
                   {/* Ícone de erro e tooltip */}
