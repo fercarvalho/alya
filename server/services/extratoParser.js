@@ -1,4 +1,4 @@
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
@@ -24,8 +24,13 @@ function pdfToLayoutText(buffer, password = null) {
   const tmpIn = path.join(os.tmpdir(), `extrato-${Date.now()}.pdf`);
   try {
     fs.writeFileSync(tmpIn, buffer);
-    const pwFlag = password ? `-upw "${password}"` : "";
-    const text = execSync(`pdftotext ${pwFlag} -layout "${tmpIn}" -`, { encoding: "utf8" });
+    // execFileSync (sem shell): argumentos passados literalmente, então a senha
+    // pode conter qualquer caractere ($, espaço, aspas...) sem quebrar nem abrir
+    // brecha de injeção de comando.
+    const args = [];
+    if (password) args.push("-upw", password);
+    args.push("-layout", tmpIn, "-");
+    const text = execFileSync("pdftotext", args, { encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
     return text;
   } finally {
     if (fs.existsSync(tmpIn)) fs.unlinkSync(tmpIn);
