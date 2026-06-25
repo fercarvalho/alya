@@ -30,8 +30,23 @@ function pdfToLayoutText(buffer, password = null) {
     const args = [];
     if (password) args.push("-upw", password);
     args.push("-layout", tmpIn, "-");
-    const text = execFileSync("pdftotext", args, { encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
-    return text;
+    try {
+      return execFileSync("pdftotext", args, { encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
+    } catch (err) {
+      // Traduz os erros técnicos do pdftotext em mensagens claras pro usuário.
+      const detail = `${err.stderr || ""} ${err.message || ""}`.toLowerCase();
+      if (detail.includes("incorrect password") || detail.includes("password")) {
+        throw new Error(
+          password
+            ? "Senha do PDF incorreta. Confira a senha do extrato e tente novamente."
+            : 'Este PDF está protegido por senha. Informe a senha do extrato no campo "Senha do PDF" e tente novamente.'
+        );
+      }
+      if (err.code === "ENOENT") {
+        throw new Error("Ferramenta de leitura de PDF (pdftotext) não encontrada no servidor.");
+      }
+      throw new Error("Não foi possível ler o PDF do extrato. Verifique se o arquivo não está corrompido e tente novamente.");
+    }
   } finally {
     if (fs.existsSync(tmpIn)) fs.unlinkSync(tmpIn);
   }
