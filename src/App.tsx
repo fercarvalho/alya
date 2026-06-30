@@ -5512,6 +5512,17 @@ const AppContent: React.FC = () => {
                   return;
                 }
 
+                // Tipos sem categoria (transferência/caixa) não têm categoria
+                // nem subcategoria: zera ambos no salvar — inclusive ao editar
+                // uma transação antiga que ainda as tivesse.
+                const typeUsesCategory =
+                  transactionForm.type !== "Transferência entre contas" &&
+                  !CAIXA_TRANSACTION_TYPES.includes(transactionForm.type as TransactionType);
+                const categoryToSave = typeUsesCategory ? transactionForm.category : "";
+                const subcategoryToSave = typeUsesCategory
+                  ? transactionForm.subcategory?.trim() || null
+                  : null;
+
                 if (editingTransaction) {
                   // Editar transação existente
                   try {
@@ -5522,8 +5533,8 @@ const AppContent: React.FC = () => {
                         description: transactionForm.description,
                         value: parseFloat(transactionForm.value) || 0,
                         type: transactionForm.type as "Receita" | "Despesa",
-                        category: transactionForm.category,
-                        subcategory: transactionForm.subcategory?.trim() || null,
+                        category: categoryToSave,
+                        subcategory: subcategoryToSave,
                       },
                     );
 
@@ -5547,8 +5558,8 @@ const AppContent: React.FC = () => {
                       description: transactionForm.description,
                       value: parseFloat(transactionForm.value) || 0,
                       type: transactionForm.type as "Receita" | "Despesa",
-                      category: transactionForm.category,
-                      subcategory: transactionForm.subcategory?.trim() || null,
+                      category: categoryToSave,
+                      subcategory: subcategoryToSave,
                     });
 
                     if (newTransaction) {
