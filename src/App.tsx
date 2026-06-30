@@ -1407,8 +1407,18 @@ const AppContent: React.FC = () => {
     setTransactionForm((prev) => ({
       ...prev,
       [name]: value,
-      // Reset category when type changes
-      ...(name === "type" ? { category: "" } : {}),
+      // Ao trocar o tipo: zera a categoria (categorias mudam por tipo) e, se o
+      // novo tipo não usa categoria (transferência/caixa), zera a subcategoria
+      // também — esses tipos não têm categoria nem subcategoria.
+      ...(name === "type"
+        ? {
+            category: "",
+            ...(value === "Transferência entre contas" ||
+            CAIXA_TRANSACTION_TYPES.includes(value as TransactionType)
+              ? { subcategory: "" }
+              : {}),
+          }
+        : {}),
     }));
 
     // Limpar erro do campo quando o usuário digitar
@@ -5808,7 +5818,10 @@ const AppContent: React.FC = () => {
               </div>
               )}
 
-              {/* Subcategoria (opcional) — select do catálogo (migration 023) */}
+              {/* Subcategoria — também não se aplica a transferência/caixa
+                  (tipos sem categoria nem subcategoria no sistema). */}
+              {transactionForm.type !== 'Transferência entre contas' &&
+                !CAIXA_TRANSACTION_TYPES.includes(transactionForm.type as TransactionType) && (
               <div>
                 <label htmlFor="tx-subcategory" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Subcategoria
@@ -5838,6 +5851,7 @@ const AppContent: React.FC = () => {
                   </button>
                 </div>
               </div>
+              )}
 
               {/* Botões */}
               <div className="flex gap-3 pt-4">
