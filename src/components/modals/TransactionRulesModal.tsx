@@ -566,13 +566,13 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
 
                 <div>
                   <label className="flex items-center gap-2 select-none">
-                    <input type="checkbox" checked={form.applyType} onChange={(e) => setForm((f) => ({ ...f, applyType: e.target.checked, applyCategory: e.target.checked && f.actionValue === 'Transferência entre contas' ? false : f.applyCategory }))} />
+                    <input type="checkbox" checked={form.applyType} onChange={(e) => setForm((f) => { const cat = e.target.checked && f.actionValue === 'Transferência entre contas'; return ({ ...f, applyType: e.target.checked, applyCategory: cat ? false : f.applyCategory, applySubcategory: cat ? false : f.applySubcategory }); })} />
                     <span className="text-sm font-medium">Mudar tipo para</span>
                   </label>
                   {form.applyType && (
                     <select
                       value={form.actionValue}
-                      onChange={(e) => setForm((f) => ({ ...f, actionValue: e.target.value, applyCategory: e.target.value === 'Transferência entre contas' ? false : f.applyCategory }))}
+                      onChange={(e) => setForm((f) => { const cat = e.target.value === 'Transferência entre contas'; return ({ ...f, actionValue: e.target.value, applyCategory: cat ? false : f.applyCategory, applySubcategory: cat ? false : f.applySubcategory }); })}
                       className={`mt-2 ml-6 w-[calc(100%-1.5rem)] px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 ${errors.actionValue ? 'border-red-500' : 'border-gray-300'}`}
                     >
                       {VALID_ACTION_VALUES.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -610,6 +610,9 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
                 </div>
                 )}
 
+                {/* Subcategoria também não se aplica quando a regra muda o tipo
+                    para Transferência entre contas (tipo sem subcategoria). */}
+                {!(form.applyType && form.actionValue === 'Transferência entre contas') && (
                 <div>
                   <label className="flex items-center gap-2 select-none">
                     <input type="checkbox" checked={form.applySubcategory} onChange={(e) => setForm((f) => ({ ...f, applySubcategory: e.target.checked }))} />
@@ -636,6 +639,7 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
                   )}
                   {form.applySubcategory && errors.setSubcategory && <p className="text-xs text-red-500 mt-1 ml-6">{errors.setSubcategory}</p>}
                 </div>
+                )}
 
                 <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
                   <label className="flex items-center gap-2 select-none">

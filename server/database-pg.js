@@ -643,13 +643,12 @@ class Database extends FileDatabase {
 
     const newType        = rule.actionValue     ? rule.actionValue     : baseType;
     // Tipos sem categoria: transferência entre contas e movimentações de caixa
-    // não têm categoria no sistema. Se a regra leva a transação a um desses
-    // tipos, a categoria é zerada — não pode sobrar/aplicar categoria neles.
+    // não têm categoria NEM subcategoria no sistema. Se a regra leva a transação
+    // a um desses tipos, ambas são zeradas — não pode sobrar/aplicar nelas.
     const TYPES_WITHOUT_CATEGORY = ['Transferência entre contas', 'Reforço de caixa', 'Retirada de caixa'];
-    const newCategory    = TYPES_WITHOUT_CATEGORY.includes(newType)
-      ? null
-      : (rule.setCategory ? rule.setCategory : baseCategory);
-    const newSubcategory = rule.setSubcategory  ? rule.setSubcategory  : baseSubcategory;
+    const typeUsesCategory = !TYPES_WITHOUT_CATEGORY.includes(newType);
+    const newCategory    = typeUsesCategory ? (rule.setCategory    ? rule.setCategory    : baseCategory)    : null;
+    const newSubcategory = typeUsesCategory ? (rule.setSubcategory ? rule.setSubcategory : baseSubcategory) : null;
     const newHidden      = rule.hideTransaction ? true                 : tx.is_hidden;
 
     // Preserva original_* apenas na primeira aplicação
