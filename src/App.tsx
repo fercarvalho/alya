@@ -5752,7 +5752,11 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
 
-              {/* Categoria */}
+              {/* Categoria — só aplica a Receita/Despesa. Transferência entre
+                  contas e movimentações de caixa (reforço/retirada) não têm
+                  categoria, então o campo (e seu required) some pra esses tipos. */}
+              {transactionForm.type !== 'Transferência entre contas' &&
+                !CAIXA_TRANSACTION_TYPES.includes(transactionForm.type as TransactionType) && (
               <div>
                 <label htmlFor="tx-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Categoria <span className="text-red-500">*</span>
@@ -5802,6 +5806,7 @@ const AppContent: React.FC = () => {
                   )}
                 </div>
               </div>
+              )}
 
               {/* Subcategoria (opcional) — select do catálogo (migration 023) */}
               <div>

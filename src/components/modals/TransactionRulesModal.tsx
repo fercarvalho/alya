@@ -549,13 +549,13 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
 
                 <div>
                   <label className="flex items-center gap-2 select-none">
-                    <input type="checkbox" checked={form.applyType} onChange={(e) => setForm((f) => ({ ...f, applyType: e.target.checked }))} />
+                    <input type="checkbox" checked={form.applyType} onChange={(e) => setForm((f) => ({ ...f, applyType: e.target.checked, applyCategory: e.target.checked && f.actionValue === 'Transferência entre contas' ? false : f.applyCategory }))} />
                     <span className="text-sm font-medium">Mudar tipo para</span>
                   </label>
                   {form.applyType && (
                     <select
                       value={form.actionValue}
-                      onChange={(e) => setForm((f) => ({ ...f, actionValue: e.target.value }))}
+                      onChange={(e) => setForm((f) => ({ ...f, actionValue: e.target.value, applyCategory: e.target.value === 'Transferência entre contas' ? false : f.applyCategory }))}
                       className={`mt-2 ml-6 w-[calc(100%-1.5rem)] px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 ${errors.actionValue ? 'border-red-500' : 'border-gray-300'}`}
                     >
                       {VALID_ACTION_VALUES.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -563,6 +563,9 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
                   )}
                 </div>
 
+                {/* Categoria não se aplica quando a regra muda o tipo para
+                    Transferência entre contas (tipo sem categoria). */}
+                {!(form.applyType && form.actionValue === 'Transferência entre contas') && (
                 <div>
                   <label className="flex items-center gap-2 select-none">
                     <input type="checkbox" checked={form.applyCategory} onChange={(e) => setForm((f) => ({ ...f, applyCategory: e.target.checked }))} />
@@ -588,6 +591,7 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
                   )}
                   {form.applyCategory && errors.setCategory && <p className="text-xs text-red-500 mt-1 ml-6">{errors.setCategory}</p>}
                 </div>
+                )}
 
                 <div>
                   <label className="flex items-center gap-2 select-none">
