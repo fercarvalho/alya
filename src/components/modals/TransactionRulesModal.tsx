@@ -41,6 +41,7 @@ interface RetroactivePreviewTx {
   value: number | string
   type: string
   category: string
+  originalType?: string | null
   appliedRuleId: string | null
   existingRuleId: string | null
   existingRuleName: string | null
@@ -243,9 +244,25 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
           .filter((t: RetroactivePreviewTx) => !t.existingRuleId || t.existingRuleId === savedRule!.id)
           .filter((t: RetroactivePreviewTx) => t.appliedRuleId !== savedRule!.id)
 
-        // Órfãs: governadas pela regra mas cuja descrição não contém mais a nova condição.
+        // Órfãs: governadas pela regra que NÃO satisfazem mais a condição
+        // COMPLETA da regra (descrição + faixa de valor + tipo casado), não só
+        // a descrição. Espelha o evaluateRulesForTransaction do backend. O tipo
+        // casado é comparado com o tipo de ENTRADA da transação (originalType,
+        // antes da regra mexer no tipo); descrição e valor não são alterados por
+        // regra, então usam os valores atuais.
+        const stillMatchesRule = (t: RetroactivePreviewTx) => {
+          if (!(t.description || '').toLowerCase().includes(newDesc)) return false
+          const absVal = Math.abs(Number(t.value) || 0)
+          if (savedRule!.minValue != null && absVal < Number(savedRule!.minValue)) return false
+          if (savedRule!.maxValue != null && absVal > Number(savedRule!.maxValue)) return false
+          if (savedRule!.matchType) {
+            const incomingType = t.originalType ?? t.type
+            if (savedRule!.matchType !== incomingType) return false
+          }
+          return true
+        }
         const orphans: RetroactivePreviewTx[] = (affj.success ? (affj.data || []) : [])
-          .filter((t: RetroactivePreviewTx) => !(t.description || '').toLowerCase().includes(newDesc))
+          .filter((t: RetroactivePreviewTx) => !stillMatchesRule(t))
 
         if (matches.length > 0 || orphans.length > 0) {
           setRetroPreview({
