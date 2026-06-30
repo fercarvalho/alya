@@ -1749,12 +1749,13 @@ const AppContent: React.FC = () => {
         transactionForm.value.trim() === "" ||
         parseFloat(transactionForm.value) <= 0,
       type: !transactionForm.type || transactionForm.type.trim() === "",
-      // Categoria não é obrigatória para movimentações de caixa (aporte/sangria)
-      // nem para transferência entre contas (tipos sem categoria no sistema).
+      // Categoria deve ser uma das válidas do tipo. Vazio OU valor fora do
+      // catálogo (ex.: importação antiga que gravou o tipo como categoria)
+      // bloqueia o salvamento. Transferência/caixa não têm categoria.
       category:
         transactionForm.type !== 'Transferência entre contas' &&
         !CAIXA_TRANSACTION_TYPES.includes(transactionForm.type as TransactionType) &&
-        (!transactionForm.category || transactionForm.category.trim() === ""),
+        !getCategoriesByType(transactionForm.type).includes(transactionForm.category),
     };
 
     setTransactionFormErrors(errors);
@@ -5798,6 +5799,15 @@ const AppContent: React.FC = () => {
                     <option value="" disabled>
                       Selecione uma categoria
                     </option>
+                    {/* Valor fora do catálogo (ex.: importação antiga que gravou
+                        o tipo como categoria): mostra como opção real para o
+                        select não cair na primeira opção e enganar o usuário. */}
+                    {transactionForm.category &&
+                      !getCategoriesByType(transactionForm.type).includes(transactionForm.category) && (
+                        <option value={transactionForm.category}>
+                          {transactionForm.category} (fora do catálogo)
+                        </option>
+                      )}
                     {getCategoriesByType(transactionForm.type).map(
                       (category) => (
                         <option key={category} value={category}>
@@ -5818,7 +5828,7 @@ const AppContent: React.FC = () => {
                             </span>
                           </div>
                           <span className="text-gray-700 text-sm">
-                            Preencha este campo.
+                            Selecione uma categoria válida.
                           </span>
                         </div>
                         <div className="absolute -top-1 left-4 w-0 h-0 border-l-2 border-r-2 border-b-2 border-transparent border-b-gray-50"></div>

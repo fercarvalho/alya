@@ -3503,6 +3503,45 @@ app.post('/api/transaction-rules/reorder', authenticateToken, requireRulePermiss
   }
 });
 
+// Reprocessa as regras nas transações SEM categoria real (null/vazio, ou com
+// categoria = tipo — resquício de importação antiga) e ainda NÃO governadas por
+// regra nem pendentes. Aplica a regra que casa (1 match), marca "A confirmar"
+// (2+) ou deixa "Sem categoria" (0). Não toca em transações já categorizadas
+// manualmente nem nas já aplicadas por regra.
+app.post('/api/transaction-rules/reprocess', authenticateToken, requireRulePermission('edit'), async (req, res) => {
+  try {
+    const { rows } = await db.pool.query(
+      `SELECT id, description, value, type, category
+         FROM transactions
+        WHERE applied_rule_id IS NULL
+          AND (needs_confirmation IS NULL OR needs_confirmation = FALSE)
+          AND (category IS NULL OR TRIM(category) = '' OR category = type)`
+    );
+    let categorized = 0, pending = 0, uncategorized = 0;
+    for (const tx of rows) {
+      // Resíduo do bug de importação (categoria = tipo): zera antes de avaliar.
+      if (tx.category && tx.category === tx.type) {
+        await db.pool.query('UPDATE transactions SET category = NULL WHERE id = $1', [tx.id]);
+        tx.category = null;
+      }
+      const { matched } = await db.evaluateRulesForTransaction(tx);
+      if (matched.length === 1) {
+        await db.applyRuleToTransaction(tx.id, matched[0].id);
+        categorized++;
+      } else if (matched.length >= 2) {
+        await db.markTransactionPendingConfirmation(tx.id, matched.map((r) => r.id));
+        pending++;
+      } else {
+        uncategorized++;
+      }
+    }
+    await logActivity(req.user.id, req.user.username, 'edit', 'transactions', 'transaction_rule', null, { reprocess: { total: rows.length, categorized, pending, uncategorized } });
+    res.json({ success: true, total: rows.length, categorized, pending, uncategorized });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Preview de candidatos (para criar/editar regra com retroativo)
 app.post('/api/transaction-rules/preview', authenticateToken, async (req, res) => {
   try {

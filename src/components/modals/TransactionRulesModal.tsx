@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { X, Plus, Edit, Trash2, ToggleLeft, ToggleRight, ArrowRight, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react'
+import { X, Plus, Edit, Trash2, ToggleLeft, ToggleRight, ArrowRight, AlertTriangle, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { authedFetch } from '../../utils/authedFetch'
 import { CATEGORIES_BY_TYPE } from '@/config/categorias'
@@ -91,6 +91,7 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
   const [form, setForm] = useState<FormState>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [reprocessing, setReprocessing] = useState(false)
 
   const [retroPreview, setRetroPreview] = useState<{ ruleId: string; matches: RetroactivePreviewTx[]; excluded: Set<string>; orphans: RetroactivePreviewTx[]; orphansToRevert: Set<string> } | null>(null)
   const [deletePrompt, setDeletePrompt] = useState<{ rule: TransactionRule; affected: DeleteAffectedTx[] } | null>(null)
@@ -136,6 +137,24 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
   }, [isOpen, retroPreview, deletePrompt, view, onClose])
 
   if (!isOpen) return null
+
+  // Reprocessa as transações sem categoria real pelas regras atuais. Útil para
+  // classificar de uma vez as importadas antigas (que não passaram pelas regras)
+  // sem categorizar à mão.
+  const reprocessTransactions = async () => {
+    if (!perms.canEdit) return
+    if (!window.confirm('Aplicar as regras nas transações sem categoria? As que casarem com uma regra serão classificadas automaticamente.')) return
+    setReprocessing(true)
+    try {
+      const r = await authedFetch(token, `${API_BASE_URL}/transaction-rules/reprocess`, { method: 'POST' })
+      const j = await r.json()
+      if (!j.success) { alert(j.error || 'Falha ao reprocessar'); return }
+      alert(`Reprocessadas ${j.total} transação(ões):\n• ${j.categorized} classificadas por regra\n• ${j.pending} aguardando confirmação\n• ${j.uncategorized} sem regra (continuam "Sem categoria")`)
+      onRulesChanged?.()
+    } catch {
+      alert('Erro ao reprocessar transações.')
+    } finally { setReprocessing(false) }
+  }
 
   const startCreate = () => {
     if (!perms.canCreate) return
@@ -396,16 +415,27 @@ const TransactionRulesModal: React.FC<Props> = ({ isOpen, onClose, onRulesChange
         <div className="flex-1 overflow-y-auto p-6">
           {view === 'list' && (
             <>
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-4 gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">{rules.length} regra(s)</span>
-                <button
-                  disabled={!perms.canCreate}
-                  onClick={startCreate}
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg shadow-sm"
-                  title={perms.canCreate ? 'Criar nova regra' : 'Você não tem permissão para criar regras'}
-                >
-                  <Plus className="w-4 h-4" /> Nova Regra
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={!perms.canEdit || reprocessing}
+                    onClick={reprocessTransactions}
+                    className="flex items-center gap-2 px-3 py-2 border border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold rounded-lg"
+                    title={perms.canEdit ? 'Aplica as regras nas transações sem categoria' : 'Você não tem permissão'}
+                  >
+                    <RefreshCw className={`w-4 h-4 ${reprocessing ? 'animate-spin' : ''}`} />
+                    {reprocessing ? 'Reprocessando...' : 'Reprocessar'}
+                  </button>
+                  <button
+                    disabled={!perms.canCreate}
+                    onClick={startCreate}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg shadow-sm"
+                    title={perms.canCreate ? 'Criar nova regra' : 'Você não tem permissão para criar regras'}
+                  >
+                    <Plus className="w-4 h-4" /> Nova Regra
+                  </button>
+                </div>
               </div>
 
               {loading && <p className="text-sm text-gray-500">Carregando...</p>}

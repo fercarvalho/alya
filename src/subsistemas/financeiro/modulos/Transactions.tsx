@@ -647,7 +647,7 @@ export default function Transactions({
                     {/* Categoria */}
                     <div className="flex-shrink-0 w-20 sm:w-24 text-center">
                       <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-0.5 sm:px-1 py-0.5 rounded-md truncate">
-                        {transaction.category}
+                        {transaction.category || <span className="italic text-gray-400 dark:text-gray-500">Sem categoria</span>}
                       </span>
                     </div>
 
