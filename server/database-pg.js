@@ -958,6 +958,31 @@ class Database extends FileDatabase {
   static NOTIFICATION_DEFAULTS = Object.freeze({
     transaction_confirm_needed: { push: true,  email: false },
     '_meta:foreground':         { push: false, email: false },
+
+    // ── Gerenciamento (PM) — 22 tipos pm_* (port do IMPGEO, sem pm_project_paid) ──
+    // Operacionais imediatos = só push; aprovações/decisões = push + email.
+    pm_task_assigned:              { push: true,  email: false },
+    pm_task_accepted:              { push: true,  email: false },
+    pm_task_refused:               { push: true,  email: false },
+    pm_task_overdue:               { push: true,  email: false },
+    pm_review_requested:           { push: true,  email: false },
+    pm_review_decided:             { push: true,  email: false },
+    pm_help_requested:             { push: true,  email: false },
+    pm_help_accepted:              { push: true,  email: false },
+    pm_help_refused:               { push: true,  email: true  },
+    pm_project_completed:          { push: true,  email: false },
+    pm_pomodoro_overage_requested: { push: true,  email: true  },
+    pm_pomodoro_overage_decided:   { push: true,  email: true  },
+    pm_due_date_requested:         { push: true,  email: true  },
+    pm_due_date_proposed:          { push: true,  email: true  },
+    pm_due_date_decided:           { push: true,  email: true  },
+    pm_task_uncompleted:           { push: true,  email: true  },
+    pm_uncomplete_requested:       { push: true,  email: true  },
+    pm_uncomplete_decided:         { push: true,  email: true  },
+    pm_uncomplete_self_notice:     { push: true,  email: true  },
+    pm_review_followup:            { push: true,  email: true  },
+    pm_delegation_requested:       { push: true,  email: true  },
+    pm_delegation_decided:         { push: true,  email: true  },
   });
 
   // ── push_subscriptions ─────────────────────────────────────────────────────

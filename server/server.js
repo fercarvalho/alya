@@ -880,6 +880,26 @@ const requireLegalPermission = (tipo) => (req, res, next) => {
   });
 };
 
+/**
+ * Middleware de permissão por MÓDULO granular (subsistemas).
+ * Gate genérico sobre user_module_permissions (via req.user.modulesAccess, que o
+ * JWT já carrega). admin/superadmin têm bypass. Usado pelas rotas do PM.
+ * @param {string} moduleKey - ex.: 'projects', 'tarefas_gerenciamento'
+ * @param {'view'|'edit'} [level='view']
+ */
+const requireModulePermission = (moduleKey, level = "view") => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: "Não autenticado." });
+  }
+  if (req.user.role === "admin" || req.user.role === "superadmin") return next(); // bypass
+  const access = (req.user.modulesAccess || {})[moduleKey] || null;
+  const ok = level === "view"
+    ? (access === "view" || access === "edit")
+    : (access === "edit");
+  if (ok) return next();
+  return res.status(403).json({ success: false, error: `Acesso negado ao módulo ${moduleKey}.` });
+};
+
 // 🔒 FASE 3: Função de geração de senha melhorada
 // Agora usa generateSecurePassword() que garante requisitos de complexidade
 const generateRandomPassword = () => {
