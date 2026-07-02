@@ -80,6 +80,8 @@ const Roadmap = lazy(() => import("@/subsistemas/gestao/modulos/Roadmap"));
 // Lazy load FAQ
 const FAQ = lazy(() => import("@/subsistemas/gestao/modulos/FAQ"));
 import Documentation from "@/subsistemas/gestao/modulos/Documentation";
+// Widget flutuante de Pomodoro (PM) — sempre montado; auto-oculta sem sessão ativa.
+const PomodoroFloatingWidget = lazy(() => import("@/subsistemas/gerenciamento/modulos/_pm/PomodoroFloatingWidget"));
 import Reports from "@/subsistemas/financeiro/modulos/Reports";
 import Products from "@/subsistemas/gerenciamento/modulos/Products";
 import Transactions from "@/subsistemas/financeiro/modulos/Transactions";
@@ -4788,6 +4790,11 @@ const AppContent: React.FC = () => {
       <ImpersonationBanner />
       {user && <FeedbackButton paginaAtual={activeTab} />}
       <ThemeToggle />
+      {user && (
+        <Suspense fallback={null}>
+          <PomodoroFloatingWidget />
+        </Suspense>
+      )}
       {/* Container fixo para Header e Navigation */}
       <div className="fixed top-0 left-0 right-0 z-[60]">
         {/* Header */}
