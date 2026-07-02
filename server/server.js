@@ -25,6 +25,9 @@ const pmTaskService = require("./services/pm/task-service");
 const pmPomodoroService = require("./services/pm/pomodoro-service");
 const pmCostService = require("./services/pm/cost-service");
 const pmHelpService = require("./services/pm/help-service");
+const pmDashboardService = require("./services/pm/dashboard-service");
+const pmGoalsService = require("./services/pm/goals-service");
+const pmReportService = require("./services/pm/report-service");
 const pmNotify = require("./services/pm/notification-service");
 
 // Upload de anexos de tarefas do PM (multer diskStorage → server/uploads/pm/).
@@ -8174,6 +8177,199 @@ for (const action of Object.keys(helpActions)) {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SUBSISTEMA GERENCIAMENTO (PM) — pomodoro, dashboard, metas, relatórios (F2 R3)
+// ═══════════════════════════════════════════════════════════════════════════
+const GOALS = 'metas_gerenciamento';
+const REL = 'relatorios_tarefas_gerenciamento';
+
+// ─── Pomodoro ─────────────────────────────────────────────────────────────────
+app.get('/api/pomodoro/active', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmPomodoroService.getActiveSession(db, req.user.id) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pomodoro/sessions', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const result = await pmPomodoroService.startSession(db, {
+      userId: req.user.id, taskId: req.body.taskId || null, category: req.body.category || null,
+      plannedMinutes: Number(req.body.plannedMinutes) || 25,
+      breakMinutes: req.body.breakMinutes != null ? Number(req.body.breakMinutes) : null,
+    });
+    res.json({ success: true, data: result });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code, remainingMinutes: error.remainingMinutes }); }
+});
+const pomodoroActions = {
+  pause:          (id, req) => pmPomodoroService.pauseSession(db, id, req.user.id),
+  resume:         (id, req) => pmPomodoroService.resumeSession(db, id, req.user.id),
+  complete:       (id, req) => pmPomodoroService.completeActive(db, id, req.user.id),
+  'finish-break': (id, req) => pmPomodoroService.finishBreak(db, id, req.user.id),
+  'skip-break':   (id, req) => pmPomodoroService.skipBreak(db, id, req.user.id),
+  abort:          (id, req) => pmPomodoroService.abortSession(db, id, req.user.id, { reason: req.body?.reason || 'manual' }),
+  heartbeat:      (id, req) => pmPomodoroService.heartbeat(db, id, req.user.id),
+};
+for (const action of Object.keys(pomodoroActions)) {
+  app.post(`/api/pomodoro/sessions/:id/${action}`, authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'edit'), async (req, res) => {
+    try { res.json({ success: true, data: await pomodoroActions[action](req.params.id, req) }); }
+    catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+  });
+}
+app.get('/api/pomodoro/stats', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmPomodoroService.getStats(db, req.user.id, { range: req.query.range || 'day' }) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pomodoro/overage', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmPomodoroService.getOverageToday(db, req.user.id) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pomodoro/overage', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmPomodoroService.requestOverage(db, req.user.id, { justification: req.body.justification || null }) }); }
+  catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.get('/api/pomodoro/overage/pending', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'view'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas gestores.' });
+    res.json({ success: true, data: await pmPomodoroService.listPendingOverages(db) });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pomodoro/overage/:id/decide', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas gestores.' });
+    res.json({ success: true, data: await pmPomodoroService.decideOverage(db, req.params.id, req.user, { approved: req.body.approved === true }) });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.get('/api/pomodoro/config', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmPomodoroService.getConfig(db, req.user.id) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.put('/api/pomodoro/config', authenticateToken, requireModulePermission('pomodoro_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const cfg = await pmPomodoroService.updateConfig(db, req.user.id, {
+      dailyLimitMinutes: req.body.dailyLimitMinutes, idleAlertMinutes: req.body.idleAlertMinutes, soundEnabled: req.body.soundEnabled,
+    });
+    res.json({ success: true, data: cfg });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+app.post('/api/me/task-area-opened', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    await db.pool.query(`INSERT INTO task_idle_tracking (id, user_id, opened_at) VALUES ($1, $2, NOW())`, [db.generateId(), req.user.id]);
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// ─── Preferências de relatório por e-mail (opt-in, gestores) ──────────────────
+app.get('/api/me/pm-email-prefs', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Relatórios por e-mail são só para gestores.' });
+    const r = await db.pool.query('SELECT pm_email_reports, pm_report_frequencies FROM users WHERE id = $1', [req.user.id]);
+    const row = r.rows[0] || {};
+    res.json({ success: true, data: { emailReports: row.pm_email_reports === true, frequencies: Array.isArray(row.pm_report_frequencies) ? row.pm_report_frequencies : [] } });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.put('/api/me/pm-email-prefs', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Relatórios por e-mail são só para gestores.' });
+    const VALID = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
+    const freqs = Array.isArray(req.body.frequencies) ? req.body.frequencies.filter(f => VALID.includes(f)) : [];
+    const emailReports = req.body.emailReports === true;
+    await db.pool.query('UPDATE users SET pm_email_reports = $1, pm_report_frequencies = $2::jsonb WHERE id = $3',
+      [emailReports, JSON.stringify(freqs), req.user.id]);
+    res.json({ success: true, data: { emailReports, frequencies: freqs } });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+app.get('/api/pm/dashboard', authenticateToken, requireModulePermission('dashboard_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmDashboardService.getDashboard(db, req.user, { from: req.query.from, to: req.query.to }) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// ─── Metas ────────────────────────────────────────────────────────────────────
+app.get('/api/pm/goals', authenticateToken, requireModulePermission(GOALS, 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmGoalsService.listGoals(db, req.user) }); }
+  catch (error) { res.status(error.status || 500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pm/goals', authenticateToken, requireModulePermission(GOALS, 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmGoalsService.createGoal(db, req.user, req.body) }); }
+  catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.patch('/api/pm/goals/:id', authenticateToken, requireModulePermission(GOALS, 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmGoalsService.updateGoal(db, req.user, req.params.id, req.body) }); }
+  catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.delete('/api/pm/goals/:id', authenticateToken, requireModulePermission(GOALS, 'edit'), async (req, res) => {
+  try { await pmGoalsService.deleteGoal(db, req.user, req.params.id); res.json({ success: true }); }
+  catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+// ─── Relatórios administrativos + custos ──────────────────────────────────────
+app.get('/api/pm/reports/productivity', authenticateToken, requireModulePermission(REL, 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmReportService.productivityByUser(db, { from: req.query.from, to: req.query.to, user: req.user }) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/reports/projects-health', authenticateToken, requireModulePermission(REL, 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmReportService.projectsHealth(db, { user: req.user }) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/reports/teams', authenticateToken, requireModulePermission(REL, 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmReportService.teamsReport(db, { from: req.query.from, to: req.query.to, user: req.user }) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/reports/financials', authenticateToken, requireModulePermission(REL, 'view'), async (req, res) => {
+  try {
+    if (!req.query.projectId) return res.status(400).json({ success: false, error: 'projectId obrigatório' });
+    const data = await pmCostService.getProjectFinancials(db, req.query.projectId);
+    if (!data) return res.status(404).json({ success: false, error: 'Projeto não encontrado' });
+    res.json({ success: true, data });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/reports/export', authenticateToken, requireModulePermission(REL, 'view'), async (req, res) => {
+  try {
+    const rows = await pmReportService.productivityByUser(db, { from: req.query.from, to: req.query.to, user: req.user });
+    const aoa = [['Usuário', 'Concluídas', 'Atrasadas', 'Abertas', 'Min. ativos']]
+      .concat(rows.map(r => [r.name, Number(r.completed), Number(r.overdue), Number(r.open_tasks), Number(r.active_minutes)]));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Produtividade');
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="produtividade.xlsx"');
+    res.send(buf);
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/reports/export-pdf', authenticateToken, requireModulePermission(REL, 'view'), async (req, res) => {
+  try {
+    const PDFDocument = require('pdfkit'); // lazy: não derruba o server se faltar a lib
+    const rows = await pmReportService.productivityByUser(db, { from: req.query.from, to: req.query.to, user: req.user });
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="produtividade.pdf"');
+    doc.pipe(res);
+    doc.fontSize(16).fillColor('#111827').text('Relatório de Produtividade');
+    doc.moveDown(0.2).fontSize(10).fillColor('#6b7280')
+      .text(`Período: ${req.query.from || '—'} a ${req.query.to || '—'}  ·  gerado em ${new Date().toLocaleString('pt-BR')}`);
+    doc.moveDown(0.8);
+    const colX = [40, 250, 335, 415, 480];
+    const right = 555;
+    const headers = ['Usuário', 'Concluídas', 'Atrasadas', 'Abertas', 'Min. ativos'];
+    let y = doc.y;
+    doc.rect(40, y, right - 40, 18).fill('#6d28d9');
+    doc.fillColor('#ffffff').fontSize(9);
+    headers.forEach((h, i) => doc.text(h, colX[i] + 3, y + 5, { width: (colX[i + 1] || right) - colX[i] - 6, align: i === 0 ? 'left' : 'right' }));
+    y += 22;
+    doc.fontSize(9);
+    rows.forEach(r => {
+      if (y > 790) { doc.addPage(); y = 40; }
+      const cells = [r.name, String(r.completed), String(r.overdue), String(r.open_tasks), String(r.active_minutes)];
+      doc.fillColor('#111827');
+      cells.forEach((c, i) => doc.text(c, colX[i] + 3, y, { width: (colX[i + 1] || right) - colX[i] - 6, align: i === 0 ? 'left' : 'right' }));
+      y += 15;
+      doc.moveTo(40, y - 3).lineTo(right, y - 3).strokeColor('#eef0f3').lineWidth(0.5).stroke();
+    });
+    if (!rows.length) doc.fillColor('#6b7280').text('Sem dados no período.', 40, y + 4);
+    doc.end();
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
 app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
   console.log(`📡 API disponível em http://localhost:${port}`);
@@ -8186,4 +8382,25 @@ app.listen(port, () => {
   console.log(
     `🔍 Monitoramento de anomalias ativado (intervalo: ${monitoringInterval}min)`,
   );
+
+  // PM: detector de tarefas atrasadas (a cada 1min). Marca overdue + notifica
+  // responsável e admins (idempotente — só pega available/in_progress).
+  const pmOverdueTimer = setInterval(async () => {
+    try {
+      const n = await pmReportService.detectAndMarkOverdue(db);
+      if (n > 0) console.log(`[pm-report] ${n} tarefa(s) marcada(s) como atrasada(s).`);
+    } catch (error) { console.log('[pm-report] erro no detector de atraso:', error.message); }
+  }, 60 * 1000);
+  if (typeof pmOverdueTimer.unref === 'function') pmOverdueTimer.unref();
+
+  // PM: tick de relatórios por e-mail (a cada 5min). Envia o período anterior
+  // fechado p/ gestores opt-in; idempotente via pm_report_jobs.
+  const pmReportTimer = setInterval(async () => {
+    try {
+      const sent = await pmReportService.sendDueReports(db, new Date());
+      if (sent > 0) console.log(`[pm-report] ${sent} relatório(s) enviado(s) por e-mail.`);
+    } catch (error) { console.log('[pm-report] erro no tick de relatórios:', error.message); }
+  }, 5 * 60 * 1000);
+  if (typeof pmReportTimer.unref === 'function') pmReportTimer.unref();
+  console.log('🗂️  Cron jobs do PM ativados (overdue 1min, relatórios 5min)');
 });
