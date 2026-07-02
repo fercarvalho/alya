@@ -8,6 +8,7 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const FileDatabase = require('./database');
 const permissionsHelpers = require('./permissions');
+const encryption = require('./utils/encryption');
 
 function formatDateForApi(dateVal) {
   if (!dateVal) return null;
@@ -30,6 +31,40 @@ function toCamelCase(obj) {
     out[camel] = toCamelCase(v);
   }
   return out;
+}
+
+// ── Clients: cifragem de campos sensíveis (AES-256-GCM via utils/encryption) ──
+// O schema guarda cpf/phone/email/address cifrados em colunas *_encrypted (+ *_hash
+// p/ busca). As colunas plaintext ficam NULL. cnpj/name/first_name/last_name/source
+// ficam em claro (não sensíveis / usados p/ exibição e busca).
+const _enc = (v) => (v ? encryption.encrypt(String(v)) : null);
+const _hsh = (v) => (v ? encryption.hash(String(v)) : null);
+const _dec = (v) => { if (!v) return null; try { return encryption.decrypt(v); } catch { return null; } };
+
+// Serializa o endereço (objeto {cep,street,...} ou string) para JSON string.
+function _serializeAddress(address) {
+  if (address == null) return null;
+  if (typeof address === 'object') return JSON.stringify(address);
+  return String(address);
+}
+
+// Descriptografa uma linha de clients e devolve o objeto camelCase pronto para a API,
+// sem expor as colunas *_encrypted/*_hash. address volta como objeto (se for JSON).
+function decryptClientRow(row) {
+  if (!row) return null;
+  const cpf = row.cpf_encrypted ? _dec(row.cpf_encrypted) : (row.cpf || null);
+  const email = row.email_encrypted ? _dec(row.email_encrypted) : (row.email || null);
+  const phone = row.phone_encrypted ? _dec(row.phone_encrypted) : (row.phone || null);
+  let address = row.address_encrypted ? _dec(row.address_encrypted) : (row.address || null);
+  if (address && typeof address === 'string' && address.trim().startsWith('{')) {
+    try { address = JSON.parse(address); } catch { /* mantém string */ }
+  }
+  const clean = { ...row };
+  delete clean.cpf_encrypted; delete clean.cpf_hash;
+  delete clean.email_encrypted; delete clean.email_hash;
+  delete clean.phone_encrypted; delete clean.address_encrypted;
+  clean.cpf = cpf; clean.email = email; clean.phone = phone; clean.address = address;
+  return toCamelCase(clean);
 }
 
 function parseDate(dateStr) {
@@ -1230,7 +1265,7 @@ class Database extends FileDatabase {
   async getAllClients() {
     try {
       const r = await this.pool.query('SELECT * FROM clients ORDER BY created_at DESC');
-      return toCamelCase(r.rows);
+      return r.rows.map(decryptClientRow);
     } catch (e) {
       console.error('Erro ao ler clientes:', e);
       return [];
@@ -1240,37 +1275,52 @@ class Database extends FileDatabase {
   async saveClient(client) {
     const id = this.generateId();
     const now = new Date().toISOString();
-    const addr = typeof client.address === 'object' ? JSON.stringify(client.address) : (client.address || null);
+    const addr = _serializeAddress(client.address);
     const r = await this.pool.query(
-      `INSERT INTO clients (id, name, email, phone, address, cpf, cnpj, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [id, client.name || '', client.email || null, client.phone || null, addr, client.cpf || null, client.cnpj || null, now, now]
+      `INSERT INTO clients
+         (id, name, first_name, last_name, source, cnpj,
+          cpf_encrypted, cpf_hash, email_encrypted, email_hash,
+          phone_encrypted, address_encrypted, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [id, client.name || '', client.firstName || null, client.lastName || null,
+       client.source || 'manual', client.cnpj || null,
+       _enc(client.cpf), _hsh(client.cpf), _enc(client.email), _hsh(client.email),
+       _enc(client.phone), _enc(addr), now, now]
     );
-    return toCamelCase(r.rows[0]);
+    return decryptClientRow(r.rows[0]);
   }
 
   async updateClient(id, data) {
-    const addr = data.address !== undefined ? (typeof data.address === 'object' ? JSON.stringify(data.address) : data.address) : null;
+    // SET dinâmico: só toca os campos presentes. Sensíveis vão para *_encrypted (+ *_hash).
+    const sets = [], vals = [];
+    const push = (col, val) => { vals.push(val); sets.push(`${col} = $${vals.length}`); };
+    if (data.name !== undefined) push('name', data.name);
+    if (data.firstName !== undefined) push('first_name', data.firstName);
+    if (data.lastName !== undefined) push('last_name', data.lastName);
+    if (data.source !== undefined) push('source', data.source);
+    if (data.cnpj !== undefined) push('cnpj', data.cnpj);
+    if (data.cpf !== undefined) { push('cpf_encrypted', _enc(data.cpf)); push('cpf_hash', _hsh(data.cpf)); }
+    if (data.email !== undefined) { push('email_encrypted', _enc(data.email)); push('email_hash', _hsh(data.email)); }
+    if (data.phone !== undefined) push('phone_encrypted', _enc(data.phone));
+    if (data.address !== undefined) push('address_encrypted', _enc(_serializeAddress(data.address)));
+    if (!sets.length) {
+      const cur = await this.getClientById(id);
+      if (!cur) throw new Error('Cliente não encontrado');
+      return cur;
+    }
+    vals.push(id);
     const r = await this.pool.query(
-      `UPDATE clients SET
-        name = COALESCE($2, name),
-        email = COALESCE($3, email),
-        phone = COALESCE($4, phone),
-        address = COALESCE($5, address),
-        cpf = COALESCE($6, cpf),
-        cnpj = COALESCE($7, cnpj),
-        updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 RETURNING *`,
-      [id, data.name, data.email, data.phone, addr, data.cpf, data.cnpj]
+      `UPDATE clients SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${vals.length} RETURNING *`,
+      vals
     );
     if (r.rows.length === 0) throw new Error('Cliente não encontrado');
-    return toCamelCase(r.rows[0]);
+    return decryptClientRow(r.rows[0]);
   }
 
   async getClientById(id) {
     const r = await this.pool.query('SELECT * FROM clients WHERE id = $1', [id]);
     if (r.rows.length === 0) return null;
-    return toCamelCase(r.rows[0]);
+    return decryptClientRow(r.rows[0]);
   }
 
   async deleteClient(id) {
