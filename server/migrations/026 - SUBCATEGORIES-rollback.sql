@@ -1,4 +1,4 @@
--- Rollback da 023 - SUBCATEGORIES
+-- Rollback da 026 - SUBCATEGORIES
 -- Remove o catálogo. NÃO afeta transactions.subcategory nem
 -- transaction_rules.set_subcategory (texto livre permanece).
 

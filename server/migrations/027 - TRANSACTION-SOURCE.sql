@@ -1,4 +1,4 @@
--- 026 - TRANSACTION SOURCE
+-- 027 - TRANSACTION SOURCE
 -- Rastreio de origem da transação: de onde ela veio.
 -- Valores: 'manual' | 'import_xlsx' | 'extrato' | 'fatura' | 'nuvemshop'
 --          | 'bling' | 'infinitepay'  (default 'manual').

@@ -1,4 +1,4 @@
--- 023 - SUBCATEGORIES
+-- 026 - SUBCATEGORIES
 -- Catálogo central de subcategorias. Antes, "subcategoria" no alya só existia
 -- como texto livre em transactions.subcategory e transaction_rules.set_subcategory.
 -- Esta tabela passa a ser a fonte única, usada pelo modal de transação, pelo

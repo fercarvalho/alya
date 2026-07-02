@@ -1,3 +1,3 @@
--- Rollback da 026 - TRANSACTION SOURCE
+-- Rollback da 027 - TRANSACTION SOURCE
 DROP INDEX IF EXISTS idx_transactions_source;
 ALTER TABLE transactions DROP COLUMN IF EXISTS source;
