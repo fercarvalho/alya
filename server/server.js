@@ -24,7 +24,22 @@ const pmTemplateService = require("./services/pm/template-service");
 const pmTaskService = require("./services/pm/task-service");
 const pmPomodoroService = require("./services/pm/pomodoro-service");
 const pmCostService = require("./services/pm/cost-service");
+const pmHelpService = require("./services/pm/help-service");
 const pmNotify = require("./services/pm/notification-service");
+
+// Upload de anexos de tarefas do PM (multer diskStorage → server/uploads/pm/).
+const pmAttachmentsDir = path.join(__dirname, "uploads", "pm");
+const pmAttachmentStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    if (!fs.existsSync(pmAttachmentsDir)) fs.mkdirSync(pmAttachmentsDir, { recursive: true });
+    cb(null, pmAttachmentsDir);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, `pm-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+const uploadPmAttachment = multer({ storage: pmAttachmentStorage, limits: { fileSize: 10 * 1024 * 1024 } });
 const { parseExtrato } = require("./services/extratoParser");
 const { applyRulesAndPersist: applyRulesAndPersistShared } = require("./utils/applyTransactionRules");
 
@@ -7819,6 +7834,345 @@ app.get('/api/pm/unlinked-transactions', authenticateToken, requireModulePermiss
     res.json({ success: true, data: r.rows });
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUBSISTEMA GERENCIAMENTO (PM) — rotas de TAREFAS (F2 R2c)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Atribuir/reatribuir (gestor). Manager fora do escopo → pré-aprovação (delegação).
+app.post('/api/projects/:id/tasks/:taskId/assign', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas gestores atribuem tarefas.' });
+    const existing = await pmTaskService.getTask(db.pool, req.params.taskId);
+    if (!existing) return res.status(404).json({ success: false, error: 'Tarefa não encontrada' });
+    if (!req.body.userId) return res.status(400).json({ success: false, error: 'Selecione um responsável.' });
+
+    const okCurrent = await _canManageTask(db, req.user, existing, existing.assignee_user_id);
+    if (!okCurrent) return res.status(403).json({ success: false, error: 'Fora do seu escopo: gerencie apenas tarefas da sua equipe.' });
+
+    let forceAcceptance = false;
+    if (req.user.role === 'manager') {
+      const pr = await db.pool.query('SELECT manager_user_id FROM projects WHERE id=$1', [existing.project_id]);
+      const ownsProject = pr.rows[0]?.manager_user_id === req.user.id;
+      const tr = await db.pool.query('SELECT role FROM users WHERE id=$1', [req.body.userId]);
+      const targetRole = tr.rows[0]?.role;
+      const targetIsSelf = req.body.userId === req.user.id;
+      const targetIsCommon = targetRole === 'user';
+      const targetIsGestor = targetRole === 'admin' || targetRole === 'superadmin';
+      if (!targetIsSelf && !targetIsCommon && !targetIsGestor && !ownsProject) {
+        return res.status(403).json({ success: false, error: 'Fora do seu escopo de delegação.' });
+      }
+      if (targetIsCommon && !ownsProject) {
+        await pmTaskService.requestDelegation(db, {
+          taskId: req.params.taskId, projectId: existing.project_id, managerId: req.user.id,
+          toUserId: req.body.userId, dueDate: req.body.dueDate ?? null,
+        });
+        return res.json({ success: true, data: { requested: true } });
+      }
+      if (!targetIsSelf) forceAcceptance = true;
+    } else {
+      const okTarget = await _canManageTask(db, req.user, existing, req.body.userId);
+      if (!okTarget) return res.status(403).json({ success: false, error: 'Fora do seu escopo.' });
+    }
+
+    const task = await pmTaskService.assignTask(db, req.params.taskId, {
+      toUserId: req.body.userId, assignedByUserId: req.user?.id || null, reason: req.body.reason || 'assign',
+      forceAcceptance,
+      ...(req.body.dueDate !== undefined ? { dueDate: req.body.dueDate } : {}),
+    });
+    res.json({ success: true, data: task });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+// Definir/ajustar/limpar prazo (gestor direto; user/manager pedem aprovação).
+app.post('/api/tasks/:taskId/due-date', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const existing = await pmTaskService.getTask(db.pool, req.params.taskId);
+    if (!existing) return res.status(404).json({ success: false, error: 'Tarefa não encontrada' });
+    const role = req.user?.role;
+    if (role === 'admin' || role === 'superadmin') {
+      if (!await _canManageTask(db, req.user, existing)) return res.status(403).json({ success: false, error: 'Você não pode alterar o prazo de uma tarefa de outro admin.' });
+      const task = await pmTaskService.setTaskDueDate(db, req.params.taskId, { dueDate: req.body.dueDate ?? null, userId: req.user?.id || null });
+      return res.json({ success: true, data: { applied: true, task } });
+    }
+    if (role !== 'manager') {
+      const mine = existing.assignee_user_id === req.user?.id || existing.captured_by_user_id === req.user?.id;
+      if (!mine) return res.status(403).json({ success: false, error: 'Você só pode pedir alteração de prazo da sua própria tarefa.' });
+    }
+    const request = await pmTaskService.requestDueDateChange(db, req.params.taskId, {
+      userId: req.user.id, requestedDueDate: req.body.dueDate ?? null, justification: req.body.justification || null,
+    });
+    res.json({ success: true, data: { requested: true, request } });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+app.get('/api/pm/due-date-requests/pending', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas gestores.' });
+    res.json({ success: true, data: await pmTaskService.listPendingDueDateRequests(db, req.user) });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pm/due-date-requests/:id/decide', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const data = await pmTaskService.decideDueDateChange(db, req.params.id, req.user, {
+      action: req.body.action, approved: req.body.approved === true, newDueDate: req.body.newDueDate ?? null, note: req.body.note ?? null,
+    });
+    res.json({ success: true, data });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.get('/api/pm/due-date-requests/mine', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTaskService.listMyDueProposals(db, req.user?.id) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pm/due-date-requests/:id/respond', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const data = await pmTaskService.respondDueDateProposal(db, req.params.id, req.user, {
+      action: req.body.action, newDueDate: req.body.newDueDate ?? null, justification: req.body.justification ?? null,
+    });
+    res.json({ success: true, data });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+app.get('/api/pm/delegation-requests', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTaskService.listPendingDelegations(db, req.user) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pm/delegation-requests/:id/decide', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const data = await pmTaskService.decideDelegation(db, req.params.id, req.user, { approved: req.body.approved === true });
+    res.json({ success: true, data });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+// Transições diretas (accept/refuse/start/pause/resume/complete/cancel).
+const taskActions = {
+  accept:  (taskId, req) => pmTaskService.acceptTask(db, taskId, { userId: req.user?.id || null }),
+  refuse:  (taskId, req) => pmTaskService.refuseTask(db, taskId, { userId: req.user?.id || null, reason: req.body.reason }),
+  start:   (taskId, req) => pmTaskService.startTask(db, taskId, { userId: req.user?.id || null }),
+  pause:   (taskId, req) => pmTaskService.pauseTask(db, taskId, { userId: req.user?.id || null }),
+  resume:  (taskId, req) => pmTaskService.resumeTask(db, taskId, { userId: req.user?.id || null }),
+  complete:(taskId, req) => pmTaskService.completeTask(db, taskId, { userId: req.user?.id || null, actorRole: req.user?.role || null }),
+  cancel:  (taskId, req) => pmTaskService.cancelTask(db, taskId, { userId: req.user?.id || null, reason: req.body.reason || null }),
+};
+for (const action of Object.keys(taskActions)) {
+  app.post(`/api/tasks/:taskId/${action}`, authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+    try {
+      if (action === 'cancel' && !_isManagerRole(req.user)) {
+        return res.status(403).json({ success: false, error: 'Apenas gestores cancelam tarefas.' });
+      }
+      const task = await _guardTaskActor(req, res, req.params.taskId);
+      if (!task) return;
+      const result = await taskActions[action](req.params.taskId, req);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(error.status || 400).json({ success: false, error: error.message, code: error.code, blockedBy: error.blockedBy });
+    }
+  });
+}
+
+app.post('/api/tasks/:taskId/claim', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const task = await pmTaskService.claimTask(db, req.params.taskId, { userId: req.user.id, actorRole: req.user.role });
+    res.json({ success: true, data: task });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.post('/api/tasks/claim-bulk', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.taskIds) ? req.body.taskIds.filter(Boolean) : [];
+    if (!ids.length) return res.status(400).json({ success: false, error: 'taskIds obrigatório' });
+    const result = await pmTaskService.claimTasksBulk(db, ids, { userId: req.user.id, actorRole: req.user.role });
+    res.json({ success: true, data: result });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+app.get('/api/me/tasks', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    const statuses = req.query.status ? String(req.query.status).split(',').map(s => s.trim()).filter(Boolean) : null;
+    const tasks = await pmTaskService.listMyTasks(db, req.user.id, { statuses });
+    const dueAction = (req.user?.role === 'admin' || req.user?.role === 'superadmin') ? 'edit' : 'request';
+    tasks.forEach(t => { t.due_action = dueAction; });
+    res.json({ success: true, data: tasks });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.get('/api/me/available-tasks', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    const tasks = await pmTaskService.listAvailableUnassignedTasks(db);
+    const role = req.user?.role;
+    tasks.forEach(t => { t.can_assign = (role === 'superadmin' || role === 'admin' || role === 'manager'); });
+    for (const t of tasks) {
+      try { t.completion_prereqs = await pmTaskService.completionPrereqs(db, t, req.user); }
+      catch { t.completion_prereqs = []; }
+    }
+    res.json({ success: true, data: tasks });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.get('/api/projects/:id/tasks', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTaskService.listProjectTasks(db, req.params.id) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// Pickers de usuários (atribuição / responsável de projeto / ajuda).
+app.get('/api/pm/users', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    const users = await db.getAllUsers();
+    const data = (users || []).filter(u => u.is_active !== false)
+      .map(u => ({ id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username, role: u.role }));
+    res.json({ success: true, data });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/project-leads', authenticateToken, requireModulePermission('projects', 'view'), async (req, res) => {
+  try {
+    const data = (await db.getAllUsers() || [])
+      .filter(u => u.is_active !== false && ['manager', 'admin', 'superadmin'].includes(u.role))
+      .map(u => ({ id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username, role: u.role }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    res.json({ success: true, data });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/assignable-users', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas gestores atribuem tarefas.' });
+    const actor = req.user;
+    const task = req.query.taskId ? await pmTaskService.getTask(db.pool, req.query.taskId) : null;
+    let ownsProject = false, teamSet = new Set();
+    if (actor.role === 'manager') {
+      if (task && task.project_id) {
+        const p = await db.pool.query('SELECT manager_user_id FROM projects WHERE id = $1', [task.project_id]);
+        ownsProject = p.rows[0]?.manager_user_id === actor.id;
+      }
+      if (!ownsProject) {
+        const h = await db.pool.query('SELECT DISTINCT to_user_id FROM task_assignments_history WHERE assigned_by_user_id = $1', [actor.id]);
+        teamSet = new Set(h.rows.map(r => r.to_user_id));
+      }
+    }
+    const users = (await db.getAllUsers() || []).filter(u => u.is_active !== false);
+    const data = users.filter(u => {
+      if (actor.role === 'superadmin') return true;
+      if (actor.role === 'admin') return u.id === actor.id || !(u.role === 'admin' || u.role === 'superadmin');
+      if (actor.role === 'manager') return u.id === actor.id || u.role === 'user' || u.role === 'admin' || u.role === 'superadmin' || ownsProject || teamSet.has(u.id);
+      return false;
+    }).map(u => ({ id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username, role: u.role }));
+    res.json({ success: true, data });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// Revisão.
+app.post('/api/tasks/:taskId/submit-review', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const task = await _guardTaskActor(req, res, req.params.taskId);
+    if (!task) return;
+    res.json({ success: true, data: await pmTaskService.submitForReview(db, req.params.taskId, { userId: req.user?.id || null }) });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.post('/api/tasks/:taskId/review/approve', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas admin/gerente revisa.' });
+    res.json({ success: true, data: await pmTaskService.approveReview(db, req.params.taskId, { id: req.user.id, role: req.user.role }) });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.post('/api/tasks/:taskId/review/reject', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas admin/gerente revisa.' });
+    res.json({ success: true, data: await pmTaskService.rejectReview(db, req.params.taskId, { userId: req.user.id, reviewerRole: req.user.role, adjustmentNotes: req.body.adjustmentNotes }) });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+// Reabertura (desconcluir).
+app.post('/api/tasks/:taskId/uncomplete', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const result = await pmTaskService.uncompleteTask(db, req.params.taskId, {
+      actor: { id: req.user.id, role: req.user.role }, reason: req.body.reason, target: req.body.target,
+    });
+    res.json({ success: true, data: result });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.get('/api/pm/uncomplete-requests', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTaskService.listPendingUncompleteRequests(db, req.user) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.post('/api/pm/uncomplete-requests/:id/decide', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const result = await pmTaskService.decideUncomplete(db, req.params.id, { reviewer: { id: req.user.id, role: req.user.role }, approve: req.body.approve === true });
+    res.json({ success: true, data: result });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.get('/api/pm/pending-reviews', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    if (!_isManagerRole(req.user)) return res.status(403).json({ success: false, error: 'Apenas admin/gerente.' });
+    res.json({ success: true, data: await pmTaskService.listPendingReviews(db, req.user) });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// Anexos.
+app.post('/api/tasks/:taskId/attachments', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), uploadPmAttachment.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, error: 'Arquivo obrigatório' });
+    const task = await pmTaskService.getTask(db.pool, req.params.taskId);
+    if (!task) return res.status(404).json({ success: false, error: 'Tarefa não encontrada' });
+    const id = db.generateId();
+    await db.pool.query(
+      `INSERT INTO task_attachments (id, task_id, file_name, stored_name, mime, size_bytes, uploaded_by_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [id, req.params.taskId, req.file.originalname, req.file.filename, req.file.mimetype, req.file.size, req.user?.id || null]
+    );
+    res.json({ success: true, data: { id, fileName: req.file.originalname } });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+app.get('/api/tasks/:taskId/attachments', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    const r = await db.pool.query(
+      `SELECT id, file_name, mime, size_bytes, uploaded_by_user_id, uploaded_at FROM task_attachments WHERE task_id = $1 ORDER BY uploaded_at DESC`,
+      [req.params.taskId]);
+    res.json({ success: true, data: r.rows });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.get('/api/pm/attachments/:id/download', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try {
+    const r = await db.pool.query('SELECT * FROM task_attachments WHERE id = $1', [req.params.id]);
+    const att = r.rows[0];
+    if (!att) return res.status(404).json({ success: false, error: 'Anexo não encontrado' });
+    const filePath = path.join(pmAttachmentsDir, att.stored_name);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Arquivo ausente no servidor' });
+    res.download(filePath, att.file_name);
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+app.delete('/api/pm/attachments/:id', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const r = await db.pool.query('DELETE FROM task_attachments WHERE id = $1 RETURNING stored_name', [req.params.id]);
+    if (r.rows[0]) {
+      const fp = path.join(pmAttachmentsDir, r.rows[0].stored_name);
+      if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch { /* noop */ } }
+    }
+    res.json({ success: true });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+// Pedidos de ajuda.
+app.post('/api/tasks/:taskId/help-request', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+  try {
+    const data = await pmHelpService.createHelpRequest(db, req.params.taskId, {
+      requesterUserId: req.user.id, targetUserId: req.body.targetUserId, message: req.body.message || null,
+    });
+    res.json({ success: true, data });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+app.get('/api/me/help-requests', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
+  try { res.json({ success: true, data: await pmHelpService.listIncomingHelp(db, req.user.id) }); }
+  catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+const helpActions = {
+  accept:   (id, req) => pmHelpService.acceptHelp(db, id, { userId: req.user.id }),
+  refuse:   (id, req) => pmHelpService.refuseHelp(db, id, { userId: req.user.id, reason: req.body.reason }),
+  complete: (id, req) => pmHelpService.markCollaborationComplete(db, id, { userId: req.user.id, notes: req.body.notes || null }),
+};
+for (const action of Object.keys(helpActions)) {
+  app.post(`/api/help-requests/:id/${action}`, authenticateToken, requireModulePermission('tarefas_gerenciamento', 'edit'), async (req, res) => {
+    try { res.json({ success: true, data: await helpActions[action](req.params.id, req) }); }
+    catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+  });
+}
 
 app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
