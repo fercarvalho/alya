@@ -17,6 +17,14 @@ const Database = require("./database-pg");
 const permissionsHelpers = require("./permissions");
 const push = require("./services/push");
 const pushDispatcher = require("./services/push-dispatcher");
+
+// ─── Subsistema Gerenciamento (PM) — serviços de domínio ─────────────────────
+const pmProjectService = require("./services/pm/project-service");
+const pmTemplateService = require("./services/pm/template-service");
+const pmTaskService = require("./services/pm/task-service");
+const pmPomodoroService = require("./services/pm/pomodoro-service");
+const pmCostService = require("./services/pm/cost-service");
+const pmNotify = require("./services/pm/notification-service");
 const { parseExtrato } = require("./services/extratoParser");
 const { applyRulesAndPersist: applyRulesAndPersistShared } = require("./utils/applyTransactionRules");
 
@@ -7450,6 +7458,368 @@ app.put('/api/admin/permissoes-legais/:userId', authenticateToken, requireSuperA
 });
 
 // Iniciar servidor
+// ═══════════════════════════════════════════════════════════════════════════
+// SUBSISTEMA GERENCIAMENTO (PM) — rotas (F2 R2b: projetos, serviços, custo)
+// Cada rota declara authenticateToken + requireModulePermission (gate por módulo).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const _isManagerRole = (u) => u && (u.role === 'admin' || u.role === 'superadmin' || u.role === 'manager');
+
+// Escopo de gestão de tarefa (atribuir / definir prazo):
+//  - superadmin: tudo.  - admin: tudo, menos tarefa de outro admin/superadmin.
+//  - manager: só na equipe dele (projeto que gerencia, quem já atribuiu, ou ele).
+async function _canManageTask(db, actor, task, targetUserId) {
+  if (!actor) return false;
+  if (targetUserId === undefined) targetUserId = task && task.assignee_user_id;
+  if (actor.role === 'superadmin') return true;
+
+  let targetRole = null;
+  if (targetUserId) {
+    const r = await db.pool.query('SELECT role FROM users WHERE id = $1', [targetUserId]);
+    targetRole = r.rows[0]?.role || null;
+  }
+
+  if (actor.role === 'admin') {
+    if (targetUserId && targetUserId !== actor.id && (targetRole === 'admin' || targetRole === 'superadmin')) return false;
+    return true;
+  }
+
+  if (actor.role === 'manager') {
+    if (!targetUserId) return true;
+    if (targetUserId === actor.id) return true;
+    if (targetRole === 'user') return true;
+    if (task && task.project_id) {
+      const p = await db.pool.query('SELECT manager_user_id FROM projects WHERE id = $1', [task.project_id]);
+      if (p.rows[0]?.manager_user_id === actor.id) return true;
+    }
+    const h = await db.pool.query(
+      `SELECT 1 FROM task_assignments_history WHERE assigned_by_user_id = $1 AND to_user_id = $2 LIMIT 1`,
+      [actor.id, targetUserId]
+    );
+    if (h.rows[0]) return true;
+    return false;
+  }
+  return false;
+}
+
+// Anota cada tarefa do projeto com can_manage (escopo de atribuir) e due_action.
+async function _annotateCanManage(db, actor, project) {
+  if (!actor || !project) return;
+  const tasks = (project.stages || []).flatMap(s => s.tasks || []);
+  if (!tasks.length) return;
+
+  if (actor.role === 'superadmin') { tasks.forEach(t => { t.can_manage = true; t.due_action = 'edit'; }); return; }
+
+  if (actor.role === 'admin') {
+    const ids = [...new Set(tasks.map(t => t.assignee_user_id).filter(Boolean))];
+    const roleById = {};
+    if (ids.length) {
+      const rr = await db.pool.query('SELECT id, role FROM users WHERE id = ANY($1::varchar[])', [ids]);
+      rr.rows.forEach(r => { roleById[r.id] = r.role; });
+    }
+    tasks.forEach(t => {
+      const tid = t.assignee_user_id;
+      t.can_manage = !(tid && tid !== actor.id && (roleById[tid] === 'admin' || roleById[tid] === 'superadmin'));
+      t.due_action = t.can_manage ? 'edit' : null;
+    });
+    return;
+  }
+
+  if (actor.role === 'manager') {
+    const ownsProject = project.manager_user_id === actor.id;
+    let teamSet = new Set();
+    if (!ownsProject) {
+      const h = await db.pool.query('SELECT DISTINCT to_user_id FROM task_assignments_history WHERE assigned_by_user_id = $1', [actor.id]);
+      teamSet = new Set(h.rows.map(r => r.to_user_id));
+    }
+    const ids = [...new Set(tasks.map(t => t.assignee_user_id).filter(Boolean))];
+    const roleById = {};
+    if (ids.length) {
+      const rr = await db.pool.query('SELECT id, role FROM users WHERE id = ANY($1::varchar[])', [ids]);
+      rr.rows.forEach(r => { roleById[r.id] = r.role; });
+    }
+    tasks.forEach(t => {
+      const tid = t.assignee_user_id;
+      t.can_manage = !tid || tid === actor.id || roleById[tid] === 'user' || ownsProject || teamSet.has(tid);
+      t.due_action = 'request';
+    });
+    return;
+  }
+
+  tasks.forEach(t => {
+    t.can_manage = false;
+    t.due_action = (t.assignee_user_id === actor.id || t.captured_by_user_id === actor.id) ? 'request' : null;
+  });
+}
+
+// Guarda: admin/manager OU responsável/capturador da tarefa.
+async function _guardTaskActor(req, res, taskId) {
+  const task = await pmTaskService.getTask(db.pool, taskId);
+  if (!task) { res.status(404).json({ success: false, error: 'Tarefa não encontrada' }); return null; }
+  if (_isManagerRole(req.user)) return task;
+  if (task.assignee_user_id === req.user?.id || task.captured_by_user_id === req.user?.id) return task;
+  res.status(403).json({ success: false, error: 'Você não pode agir sobre esta tarefa.' });
+  return null;
+}
+
+// ─── Projetos ─────────────────────────────────────────────────────────────────
+app.get('/api/projects', authenticateToken, requireModulePermission('projects', 'view'), async (req, res) => {
+  try {
+    const projects = await pmProjectService.listProjects(db, req.query || {});
+    res.json({ success: true, data: projects });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/projects', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    if (req.body && req.body.serviceId) {
+      const svc = await db.pool.query('SELECT status FROM services WHERE id = $1', [req.body.serviceId]);
+      if (svc.rows[0]?.status === 'inativo') {
+        return res.status(400).json({ success: false, error: 'Este serviço está inativo e não pode gerar novos projetos.', code: 'service_inactive' });
+      }
+    }
+    // createProjectFromTemplate cria o projeto (com ou sem serviceId; sem = projeto simples).
+    const project = await pmProjectService.createProjectFromTemplate(db, {
+      name: req.body.name,
+      description: req.body.description,
+      serviceId: req.body.serviceId || null,
+      clientId: req.body.clientId || null,
+      managerUserId: req.body.managerUserId || null,
+      startDate: req.body.startDate || null,
+      status: req.body.status || null,
+      totalCents: req.body.totalCents || 0,
+      source: 'manual',
+      actorUserId: req.user?.id || null,
+    });
+    res.json({ success: true, data: project });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.get('/api/projects/:id', authenticateToken, requireModulePermission('projects', 'view'), async (req, res) => {
+  try {
+    const include = req.query.include
+      ? String(req.query.include).split(',').map(s => s.trim()).filter(Boolean)
+      : ['stages', 'tasks', 'events'];
+    const project = await pmProjectService.getProjectWithDetails(db, req.params.id, { include });
+    if (!project) return res.status(404).json({ success: false, error: 'Projeto não encontrado' });
+    await _annotateCanManage(db, req.user, project);
+    res.json({ success: true, data: project });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/projects/:id/stages/reorder', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    await pmProjectService.reorderStages(db, req.params.id, req.body.orderedIds || []);
+    res.json({ success: true });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/projects/:id/stages/:stageId/skip', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    await pmProjectService.skipStage(db, req.params.id, req.params.stageId, { actorUserId: req.user?.id || null });
+    res.json({ success: true });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/projects/:id/stages/:stageId/clone-as-version', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    const project = await pmProjectService.cloneStageAsNewVersion(db, req.params.id, req.params.stageId, { actorUserId: req.user?.id || null });
+    res.json({ success: true, data: project });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.put('/api/projects/:id', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    // UPDATE dinâmico: só toca os campos presentes no payload.
+    const map = {
+      name: 'name', description: 'description', status: 'status', source: 'source',
+      clientId: 'client_id', serviceId: 'service_id', managerUserId: 'manager_user_id',
+      priority: 'priority', startDate: 'start_date', dueDate: 'due_date',
+      totalCents: 'total_cents', paidCents: 'paid_cents', autoFinalize: 'auto_finalize',
+    };
+    const sets = [], vals = [];
+    for (const [k, col] of Object.entries(map)) {
+      if (Object.prototype.hasOwnProperty.call(req.body, k)) {
+        vals.push(req.body[k]); sets.push(`${col} = $${vals.length}`);
+      }
+    }
+    if (!sets.length) return res.status(400).json({ success: false, error: 'Nada para atualizar' });
+    vals.push(req.params.id);
+    const r = await db.pool.query(
+      `UPDATE projects SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${vals.length} RETURNING *`, vals);
+    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Projeto não encontrado' });
+    res.json({ success: true, data: r.rows[0] });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.delete('/api/projects/:id', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    await db.pool.query('DELETE FROM projects WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: 'Projeto excluído com sucesso' });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.delete('/api/projects', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ success: false, error: 'IDs devem ser um array' });
+    await db.pool.query('DELETE FROM projects WHERE id = ANY($1::varchar[])', [ids]);
+    res.json({ success: true, message: `${ids.length} projetos deletados com sucesso` });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// ─── Serviços (CRUD) ──────────────────────────────────────────────────────────
+app.get('/api/services', authenticateToken, requireModulePermission('services', 'view'), async (req, res) => {
+  try {
+    const r = await db.pool.query('SELECT * FROM services ORDER BY name');
+    res.json({ success: true, data: r.rows });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/services', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try {
+    const id = db.generateId();
+    const status = req.body.status === 'inativo' ? 'inativo' : 'ativo';
+    const r = await db.pool.query(
+      `INSERT INTO services (id, name, description, price, status, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5, NOW(), NOW()) RETURNING *`,
+      [id, req.body.name || null, req.body.description || null, req.body.price || 0, status]);
+    res.json({ success: true, data: r.rows[0] });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.put('/api/services/:id', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try {
+    const status = (req.body.status === 'ativo' || req.body.status === 'inativo') ? req.body.status : null;
+    const r = await db.pool.query(
+      `UPDATE services SET name = $1, description = $2, price = $3, status = COALESCE($4, status), updated_at = NOW()
+       WHERE id = $5 RETURNING *`,
+      [req.body.name || null, req.body.description || null, req.body.price || 0, status, req.params.id]);
+    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Serviço não encontrado' });
+    res.json({ success: true, data: r.rows[0] });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.delete('/api/services/:id', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try {
+    const svc = await db.pool.query('SELECT is_system FROM services WHERE id = $1', [req.params.id]);
+    if (svc.rows[0]?.is_system === true) {
+      return res.status(403).json({ success: false, error: 'Serviço de sistema não pode ser excluído.' });
+    }
+    await db.pool.query('DELETE FROM services WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: 'Serviço excluído com sucesso' });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+// ─── Template de serviço (etapas/tarefas/deps/triggers) ───────────────────────
+app.get('/api/services/:id/template', authenticateToken, requireModulePermission('services', 'view'), async (req, res) => {
+  try {
+    const tpl = await pmTemplateService.getServiceTemplate(db, req.params.id, {
+      version: req.query.version ? Number(req.query.version) : undefined,
+    });
+    res.json({ success: true, data: tpl });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/services/:id/template/stages', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTemplateService.createStage(db, req.params.id, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.put('/api/services/:id/template/stages/reorder', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { await pmTemplateService.reorderStages(db, req.params.id, Number(req.body.version) || 1, req.body.orderedIds || []); res.json({ success: true }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.patch('/api/services/:id/template/stages/:stageId', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTemplateService.updateStage(db, req.params.stageId, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.delete('/api/services/:id/template/stages/:stageId', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { await pmTemplateService.deleteStage(db, req.params.stageId); res.json({ success: true }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/services/:id/template/stages/:stageId/tasks', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTemplateService.createTask(db, req.params.stageId, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.patch('/api/services/:id/template/tasks/:taskId', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTemplateService.updateTask(db, req.params.taskId, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.delete('/api/services/:id/template/tasks/:taskId', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { await pmTemplateService.deleteTask(db, req.params.taskId); res.json({ success: true }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/services/:id/template/tasks/:taskId/dependencies', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTemplateService.createDependency(db, req.params.taskId, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+app.delete('/api/services/:id/template/dependencies/:depId', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { await pmTemplateService.deleteDependency(db, req.params.depId); res.json({ success: true }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/services/:id/template/tasks/:taskId/triggers', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: await pmTemplateService.createTrigger(db, req.params.taskId, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+app.delete('/api/services/:id/template/triggers/:triggerId', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { await pmTemplateService.deleteTrigger(db, req.params.triggerId); res.json({ success: true }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/services/:id/template/version-bump', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: { version: await pmTemplateService.versionBump(db, req.params.id) } }); }
+  catch (error) { res.status(400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/services/:id/template/import', authenticateToken, requireModulePermission('services', 'edit'), async (req, res) => {
+  try { res.json({ success: true, data: { version: await pmTemplateService.importTemplateStructure(db, req.params.id, req.body.stages) } }); }
+  catch (error) { res.status(error.status || 400).json({ success: false, error: error.message, code: error.code }); }
+});
+
+// ─── Integração financeira (custo) ────────────────────────────────────────────
+app.post('/api/transactions/:id/link-project', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    const data = await pmCostService.linkTransactionToProject(db, req.params.id, req.body.projectId || null);
+    res.json({ success: true, data });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message }); }
+});
+
+app.post('/api/transactions/link-project-bulk', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
+    const data = await pmCostService.linkTransactionsToProject(db, ids, req.body.projectId || null);
+    res.json({ success: true, data });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message }); }
+});
+
+app.get('/api/projects/:id/transactions', authenticateToken, requireModulePermission('projects', 'view'), async (req, res) => {
+  try {
+    const r = await db.pool.query(
+      `SELECT id, date, description, value, type, category FROM transactions WHERE project_id = $1 ORDER BY date DESC`,
+      [req.params.id]);
+    res.json({ success: true, data: r.rows });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+app.get('/api/pm/unlinked-transactions', authenticateToken, requireModulePermission('projects', 'edit'), async (req, res) => {
+  try {
+    const r = await db.pool.query(
+      `SELECT id, date, description, value, type FROM transactions
+        WHERE project_id IS NULL AND type = 'Despesa' ORDER BY date DESC LIMIT 100`);
+    res.json({ success: true, data: r.rows });
+  } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+});
+
 app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
   console.log(`📡 API disponível em http://localhost:${port}`);
