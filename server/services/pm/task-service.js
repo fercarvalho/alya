@@ -1150,20 +1150,22 @@ async function listPendingReviews(db, viewer = null) {
 // ─── Leituras p/ dashboard ────────────────────────────────────────────────────
 
 /** Tarefas do usuário (responsável OU capturador), filtráveis por status. */
-async function listMyTasks(db, userId, { statuses } = {}) {
+async function listMyTasks(db, userId, { statuses, limit, offset = 0 } = {}) {
   const params = [userId];
   let statusClause = '';
   if (Array.isArray(statuses) && statuses.length) {
     params.push(statuses);
     statusClause = `AND t.status = ANY($2::varchar[])`;
   }
+  let pageClause = '';
+  if (limit != null) { params.push(Number(limit), Number(offset)); pageClause = `LIMIT $${params.length - 1} OFFSET $${params.length}`; }
   const r = await db.pool.query(
     `SELECT t.*, p.name AS project_name, s.name AS stage_name
        FROM project_tasks t
        JOIN projects p ON p.id = t.project_id
        LEFT JOIN project_stages s ON s.id = t.project_stage_id
       WHERE (t.assignee_user_id = $1 OR t.captured_by_user_id = $1) ${statusClause}
-      ORDER BY t.due_date NULLS LAST, t.updated_at DESC`,
+      ORDER BY t.due_date NULLS LAST, t.updated_at DESC ${pageClause}`,
     params
   );
   return r.rows;
@@ -1174,7 +1176,10 @@ async function listMyTasks(db, userId, { statuses } = {}) {
  * de projetos que não estão concluídos/cancelados. Qualquer usuário do módulo vê
  * para poder se auto-atribuir.
  */
-async function listAvailableUnassignedTasks(db) {
+async function listAvailableUnassignedTasks(db, { limit, offset = 0 } = {}) {
+  const params = [];
+  let pageClause = '';
+  if (limit != null) { params.push(Number(limit), Number(offset)); pageClause = `LIMIT $${params.length - 1} OFFSET $${params.length}`; }
   const r = await db.pool.query(
     `SELECT t.*, p.name AS project_name, s.name AS stage_name
        FROM project_tasks t
@@ -1184,18 +1189,22 @@ async function listAvailableUnassignedTasks(db) {
         AND t.status = 'available'
         AND p.status NOT IN ('concluido', 'cancelado', 'inativo')
         AND NOT EXISTS (SELECT 1 FROM task_delegation_requests dr WHERE dr.task_id = t.id AND dr.status = 'pending')
-      ORDER BY t.due_date ASC NULLS LAST, t.updated_at DESC`
+      ORDER BY t.due_date ASC NULLS LAST, t.updated_at DESC ${pageClause}`,
+    params
   );
   return r.rows;
 }
 
 /** Tarefas de um projeto (admin/manager). */
-async function listProjectTasks(db, projectId) {
+async function listProjectTasks(db, projectId, { limit, offset = 0 } = {}) {
+  const params = [projectId];
+  let pageClause = '';
+  if (limit != null) { params.push(Number(limit), Number(offset)); pageClause = `LIMIT $${params.length - 1} OFFSET $${params.length}`; }
   const r = await db.pool.query(
     `SELECT t.*, s.name AS stage_name FROM project_tasks t
        LEFT JOIN project_stages s ON s.id = t.project_stage_id
-      WHERE t.project_id = $1 ORDER BY t.sort_order ASC`,
-    [projectId]
+      WHERE t.project_id = $1 ORDER BY t.sort_order ASC ${pageClause}`,
+    params
   );
   return r.rows;
 }

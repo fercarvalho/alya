@@ -340,9 +340,12 @@ class Database extends FileDatabase {
     }
   }
 
-  async getAllTransactions() {
+  async getAllTransactions({ limit, offset = 0 } = {}) {
     try {
-      const r = await this.pool.query('SELECT * FROM transactions ORDER BY created_at DESC');
+      let sql = 'SELECT * FROM transactions ORDER BY created_at DESC';
+      const params = [];
+      if (limit != null) { params.push(Number(limit), Number(offset)); sql += ` LIMIT $1 OFFSET $2`; }
+      const r = await this.pool.query(sql, params);
       return r.rows.map(row => {
         const t = toCamelCase(row);
         if (t.date) t.date = formatDateForApi(t.date);
@@ -1103,6 +1106,24 @@ class Database extends FileDatabase {
   // Devolve TRUE/FALSE (nunca null). Usa default do mapa se não houver linha.
   // Default-default = FALSE pra tipos desconhecidos (segurança: não envia push
   // sem opt-in explícito).
+  // Defaults por tipo (push/email): tabela notification_type_defaults (editável)
+  // mesclada sobre o mapa estático NOTIFICATION_DEFAULTS (fallback). Cache 60s.
+  async _getTypeDefaults() {
+    const now = Date.now();
+    if (this._typeDefaultsCache && (now - (this._typeDefaultsCacheAt || 0)) < 60000) {
+      return this._typeDefaultsCache;
+    }
+    const merged = {};
+    for (const [t, v] of Object.entries(Database.NOTIFICATION_DEFAULTS)) merged[t] = { ...v };
+    try {
+      const r = await this.pool.query('SELECT notification_type, push, email FROM notification_type_defaults');
+      for (const row of r.rows) merged[row.notification_type] = { push: row.push, email: row.email };
+    } catch { /* tabela ausente (pré-036) → usa só o mapa estático */ }
+    this._typeDefaultsCache = merged;
+    this._typeDefaultsCacheAt = now;
+    return merged;
+  }
+
   async getNotificationPreference(userId, notificationType, channel) {
     const r = await this.pool.query(
       `SELECT enabled FROM notification_preferences
@@ -1110,7 +1131,8 @@ class Database extends FileDatabase {
       [userId, notificationType, channel]
     );
     if (r.rows.length > 0) return r.rows[0].enabled;
-    const forType = Database.NOTIFICATION_DEFAULTS[notificationType];
+    const defs = await this._getTypeDefaults();
+    const forType = defs[notificationType];
     if (forType && typeof forType[channel] === 'boolean') return forType[channel];
     return false;
   }
@@ -1142,18 +1164,18 @@ class Database extends FileDatabase {
     for (const row of r.rows) {
       stored.set(`${row.notification_type}:${row.channel}`, row);
     }
+    const defs = await this._getTypeDefaults();
     const grid = [];
     const types = new Set([
-      ...Object.keys(Database.NOTIFICATION_DEFAULTS),
+      ...Object.keys(defs),
       ...r.rows.map(row => row.notification_type),
     ]);
     for (const type of types) {
       for (const channel of ['push', 'email']) {
         const key = `${type}:${channel}`;
         const row = stored.get(key);
-        const def = (Database.NOTIFICATION_DEFAULTS[type]
-                     && typeof Database.NOTIFICATION_DEFAULTS[type][channel] === 'boolean')
-          ? Database.NOTIFICATION_DEFAULTS[type][channel]
+        const def = (defs[type] && typeof defs[type][channel] === 'boolean')
+          ? defs[type][channel]
           : false;
         grid.push({
           notificationType: type,

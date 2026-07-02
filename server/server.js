@@ -4304,7 +4304,8 @@ app.post('/api/admin/users/:id/permissions/reset-to-defaults', authenticateToken
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
 app.get("/api/transactions", authenticateToken, async (req, res) => {
   try {
-    const transactions = await db.getAllTransactions();
+    // Paginação opt-in: sem ?limit devolve tudo (compat); com ?limit aplica LIMIT/OFFSET.
+    const transactions = await db.getAllTransactions({ limit: req.query.limit, offset: req.query.offset });
     res.json({ success: true, data: transactions });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -7991,7 +7992,7 @@ app.post('/api/tasks/claim-bulk', authenticateToken, requireModulePermission('ta
 app.get('/api/me/tasks', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
   try {
     const statuses = req.query.status ? String(req.query.status).split(',').map(s => s.trim()).filter(Boolean) : null;
-    const tasks = await pmTaskService.listMyTasks(db, req.user.id, { statuses });
+    const tasks = await pmTaskService.listMyTasks(db, req.user.id, { statuses, limit: req.query.limit, offset: req.query.offset });
     const dueAction = (req.user?.role === 'admin' || req.user?.role === 'superadmin') ? 'edit' : 'request';
     tasks.forEach(t => { t.due_action = dueAction; });
     res.json({ success: true, data: tasks });
@@ -8000,7 +8001,7 @@ app.get('/api/me/tasks', authenticateToken, requireModulePermission('tarefas_ger
 
 app.get('/api/me/available-tasks', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
   try {
-    const tasks = await pmTaskService.listAvailableUnassignedTasks(db);
+    const tasks = await pmTaskService.listAvailableUnassignedTasks(db, { limit: req.query.limit, offset: req.query.offset });
     const role = req.user?.role;
     tasks.forEach(t => { t.can_assign = (role === 'superadmin' || role === 'admin' || role === 'manager'); });
     for (const t of tasks) {
@@ -8012,7 +8013,7 @@ app.get('/api/me/available-tasks', authenticateToken, requireModulePermission('t
 });
 
 app.get('/api/projects/:id/tasks', authenticateToken, requireModulePermission('tarefas_gerenciamento', 'view'), async (req, res) => {
-  try { res.json({ success: true, data: await pmTaskService.listProjectTasks(db, req.params.id) }); }
+  try { res.json({ success: true, data: await pmTaskService.listProjectTasks(db, req.params.id, { limit: req.query.limit, offset: req.query.offset }) }); }
   catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
