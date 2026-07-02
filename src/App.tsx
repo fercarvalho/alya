@@ -90,6 +90,7 @@ import CommitVersionModal from "./components/CommitVersionModal";
 import VersaoNovaModal from "./components/VersaoNovaModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
+import { DialogProvider } from "@/components/DialogProvider";
 import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -7432,7 +7433,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <DialogProvider>
+          <AppContent />
+        </DialogProvider>
       </AuthProvider>
     </ThemeProvider>
   );
