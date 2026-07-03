@@ -22,6 +22,8 @@
  *   - admin: edita SÓ o módulo 'admin' do subsistema admin (não recebe
  *     activeSessions/anomalies/securityAlerts — exclusivos do superadmin).
  *   - guest: gestao limitado a faq + documentacao (sem roadmap).
+ *   - relatorios_tarefas_gerenciamento: só admin/superadmin/manager
+ *     (user/guest não recebem, mesmo com gerenciamento=edit/view).
  *
  * Esses casos são tratados em buildDefaultsForRole abaixo.
  */
@@ -88,6 +90,14 @@ function buildDefaultsForRole(roleKey, modules) {
       if (m.key === 'faq' || m.key === 'documentacao') {
         result[m.key] = 'view';
       }
+      continue;
+    }
+    // relatorios_tarefas_gerenciamento: só gestão (admin/superadmin/manager).
+    // user/guest não recebem relatórios consolidados, mesmo com gerenciamento=edit.
+    if (
+      (roleKey === 'user' || roleKey === 'guest') &&
+      m.key === 'relatorios_tarefas_gerenciamento'
+    ) {
       continue;
     }
 

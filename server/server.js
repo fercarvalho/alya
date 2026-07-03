@@ -4416,7 +4416,7 @@ app.delete("/api/transactions", authenticateToken, async (req, res) => {
 
 // APIs para Produtos
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
-app.get("/api/products", authenticateToken, async (req, res) => {
+app.get("/api/products", authenticateToken, requireModulePermission("products", "view"), async (req, res) => {
   try {
     const products = await db.getAllProducts();
     res.json({ success: true, data: products });
@@ -4425,7 +4425,7 @@ app.get("/api/products", authenticateToken, async (req, res) => {
   }
 });
 
-app.post("/api/products", authenticateToken, async (req, res) => {
+app.post("/api/products", authenticateToken, requireModulePermission("products", "edit"), async (req, res) => {
   try {
     const product = await db.saveProduct(req.body);
     await logActivity(
@@ -4443,7 +4443,7 @@ app.post("/api/products", authenticateToken, async (req, res) => {
   }
 });
 
-app.put("/api/products/:id", authenticateToken, async (req, res) => {
+app.put("/api/products/:id", authenticateToken, requireModulePermission("products", "edit"), async (req, res) => {
   try {
     const { id } = req.params;
     const before = await db.getProductById(id);
@@ -4463,7 +4463,7 @@ app.put("/api/products/:id", authenticateToken, async (req, res) => {
   }
 });
 
-app.delete("/api/products/:id", authenticateToken, async (req, res) => {
+app.delete("/api/products/:id", authenticateToken, requireModulePermission("products", "edit"), async (req, res) => {
   try {
     const { id } = req.params;
     const before = await db.getProductById(id);
@@ -4483,7 +4483,7 @@ app.delete("/api/products/:id", authenticateToken, async (req, res) => {
   }
 });
 
-app.delete("/api/products", authenticateToken, async (req, res) => {
+app.delete("/api/products", authenticateToken, requireModulePermission("products", "edit"), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
@@ -4512,7 +4512,7 @@ app.delete("/api/products", authenticateToken, async (req, res) => {
 
 // APIs para Clientes
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
-app.get("/api/clients", authenticateToken, async (req, res) => {
+app.get("/api/clients", authenticateToken, requireModulePermission("clients", "view"), async (req, res) => {
   try {
     const clients = await db.getAllClients();
     res.json({ success: true, data: clients });
@@ -4524,6 +4524,7 @@ app.get("/api/clients", authenticateToken, async (req, res) => {
 app.post(
   "/api/clients",
   authenticateToken,
+  requireModulePermission("clients", "edit"),
   createLimiter,
   validateClientCreation,
   async (req, res) => {
@@ -4545,7 +4546,7 @@ app.post(
   },
 );
 
-app.put("/api/clients/:id", authenticateToken, async (req, res) => {
+app.put("/api/clients/:id", authenticateToken, requireModulePermission("clients", "edit"), async (req, res) => {
   try {
     const { id } = req.params;
     const before = await db.getClientById(id);
@@ -4565,7 +4566,7 @@ app.put("/api/clients/:id", authenticateToken, async (req, res) => {
   }
 });
 
-app.delete("/api/clients/:id", authenticateToken, async (req, res) => {
+app.delete("/api/clients/:id", authenticateToken, requireModulePermission("clients", "edit"), async (req, res) => {
   try {
     const { id } = req.params;
     const before = await db.getClientById(id);
@@ -4585,7 +4586,7 @@ app.delete("/api/clients/:id", authenticateToken, async (req, res) => {
   }
 });
 
-app.delete("/api/clients", authenticateToken, async (req, res) => {
+app.delete("/api/clients", authenticateToken, requireModulePermission("clients", "edit"), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
