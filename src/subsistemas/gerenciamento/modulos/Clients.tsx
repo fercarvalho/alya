@@ -5,16 +5,43 @@ import html2canvas from 'html2canvas'
 import axios from 'axios'
 import { API_BASE_URL } from '@/config/api'
 
+interface AddressObj {
+  cep?: string; street?: string; number?: string; complement?: string
+  neighborhood?: string; city?: string; state?: string
+}
+
 interface Client {
   id: string
   name: string
   email: string
   phone: string
-  address: string
+  address: string | AddressObj | null
   cpf?: string
   cnpj?: string
+  firstName?: string
+  lastName?: string
+  source?: string
   createdAt?: string
   updatedAt?: string
+}
+
+type ClientForm = {
+  name: string; email: string; phone: string
+  documentType: 'cpf' | 'cnpj'; cpf: string; cnpj: string
+  firstName: string; lastName: string; source: string
+  address: AddressObj
+}
+
+const EMPTY_ADDRESS: AddressObj = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' }
+const EMPTY_FORM: ClientForm = { name: '', email: '', phone: '', documentType: 'cpf', cpf: '', cnpj: '', firstName: '', lastName: '', source: 'manual', address: { ...EMPTY_ADDRESS } }
+
+// Endereço para exibição/exportação: aceita string (legado) ou objeto estruturado.
+function addressToText(a: string | AddressObj | null | undefined): string {
+  if (!a) return ''
+  if (typeof a === 'string') return a
+  const cidadeUf = a.city && a.state ? `${a.city}/${a.state}` : (a.city || a.state || '')
+  return [a.street, a.number, a.complement, a.neighborhood, cidadeUf, a.cep ? `CEP ${a.cep}` : '']
+    .filter(Boolean).join(', ')
 }
 
 const Clients: React.FC = () => {
@@ -22,17 +49,7 @@ const Clients: React.FC = () => {
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set())
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
-  const [form, setForm] = useState<{
-    name: string
-    email: string
-    phone: string
-    address: string
-    documentType: 'cpf' | 'cnpj'
-    cpf: string
-    cnpj: string
-  }>({
-    name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: ''
-  })
+  const [form, setForm] = useState<ClientForm>({ ...EMPTY_FORM, address: { ...EMPTY_ADDRESS } })
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
   const [isImportExportOpen, setIsImportExportOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -94,7 +111,7 @@ const Clients: React.FC = () => {
           setIsModalOpen(false);
           setEditing(null);
           setFormErrors({});
-          setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' });
+          setForm({ ...EMPTY_FORM, address: { ...EMPTY_ADDRESS } });
         } else if (isImportExportOpen) {
           setIsImportExportOpen(false);
         } else if (isExportClientesModalOpen) {
@@ -184,7 +201,6 @@ const Clients: React.FC = () => {
     if (!form.name.trim()) errors.name = 'Campo obrigatório'
     if (!form.email.trim()) errors.email = 'Campo obrigatório'
     if (!form.phone.trim()) errors.phone = 'Campo obrigatório'
-    if (!form.address.trim()) errors.address = 'Campo obrigatório'
 
     // Validar CPF ou CNPJ baseado no tipo selecionado
     if (form.documentType === 'cpf' && !form.cpf.trim()) {
@@ -200,12 +216,16 @@ const Clients: React.FC = () => {
   const saveClient = async () => {
     if (!validateForm()) return
 
+    const hasAddr = Object.values(form.address).some(v => v && String(v).trim())
     const payload = {
       id: editing?.id,
       name: form.name,
       email: form.email,
       phone: form.phone,
-      address: form.address,
+      firstName: form.firstName || undefined,
+      lastName: form.lastName || undefined,
+      source: form.source || 'manual',
+      address: hasAddr ? form.address : null,
       cpf: form.cpf || undefined,
       cnpj: form.cnpj || undefined
     }
@@ -221,7 +241,7 @@ const Clients: React.FC = () => {
         if (data.success) setClients(prev => [data.data, ...prev])
       }
       if (!mountedRef.current) return
-      setIsModalOpen(false); setEditing(null); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }); setFormErrors({})
+      setIsModalOpen(false); setEditing(null); setForm({ ...EMPTY_FORM, address: { ...EMPTY_ADDRESS } }); setFormErrors({})
     } catch (error) {
       console.error('Erro ao salvar:', error)
     } finally {
@@ -353,7 +373,7 @@ const Clients: React.FC = () => {
           else clientesSemEmail++
           if (c.phone && c.phone.trim()) clientesComTelefone++
           else clientesSemTelefone++
-          if (c.address && c.address.trim()) clientesComEndereco++
+          if (addressToText(c.address).trim()) clientesComEndereco++
           else clientesSemEndereco++
         })
       }
@@ -469,7 +489,7 @@ const Clients: React.FC = () => {
             <td style="padding: 10px; color: #6b7280;">${documento}</td>
             <td style="padding: 10px; color: #374151;">${escapeHtml(client.email)}</td>
             <td style="padding: 10px; color: #374151;">${escapeHtml(client.phone)}</td>
-            <td style="padding: 10px; color: #6b7280;">${escapeHtml(client.address)}</td>
+            <td style="padding: 10px; color: #6b7280;">${escapeHtml(addressToText(client.address))}</td>
           </tr>
         `
       })
@@ -566,7 +586,7 @@ const Clients: React.FC = () => {
             Importar/Exportar
           </button>
           <button
-            onClick={() => { setEditing(null); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }); setFormErrors({}); setIsModalOpen(true) }}
+            onClick={() => { setEditing(null); setForm({ ...EMPTY_FORM, address: { ...EMPTY_ADDRESS } }); setFormErrors({}); setIsModalOpen(true) }}
             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
             <Plus className="h-5 w-5" aria-hidden="true" />
@@ -707,10 +727,10 @@ const Clients: React.FC = () => {
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{c.phone}</p>
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{c.address}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">{addressToText(c.address)}</p>
                   </div>
                   <div className="flex-shrink-0 w-16 sm:w-20 flex gap-0.5 sm:gap-1 justify-center">
-                    <button onClick={() => { setEditing(c); setForm({ name: c.name, email: c.email, phone: c.phone, address: c.address, documentType: c.cpf ? 'cpf' : 'cnpj', cpf: c.cpf || '', cnpj: c.cnpj || '' }); setIsModalOpen(true) }} className="p-0.5 sm:p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-full transition-all duration-200" aria-label={`Editar cliente ${c.name}`} title="Editar cliente">
+                    <button onClick={() => { setEditing(c); const addr = (c.address && typeof c.address === 'object') ? c.address : (c.address ? { street: String(c.address) } : {}); setForm({ name: c.name, email: c.email, phone: c.phone, documentType: c.cpf ? 'cpf' : 'cnpj', cpf: c.cpf || '', cnpj: c.cnpj || '', firstName: c.firstName || '', lastName: c.lastName || '', source: c.source || 'manual', address: { ...EMPTY_ADDRESS, ...addr } }); setIsModalOpen(true) }} className="p-0.5 sm:p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-full transition-all duration-200" aria-label={`Editar cliente ${c.name}`} title="Editar cliente">
                       <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3" aria-hidden="true" />
                     </button>
                     <button onClick={() => deleteOne(c.id)} disabled={deletingId === c.id} className="p-0.5 sm:p-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed" aria-label={`Excluir cliente ${c.name}`} title="Excluir cliente">
@@ -735,7 +755,7 @@ const Clients: React.FC = () => {
 
       {/* Modal Novo/Editar Cliente */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50" onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }) } }}>
+        <div className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center px-4 pb-4 pt-[180px] z-50" onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ ...EMPTY_FORM, address: { ...EMPTY_ADDRESS } }) } }}>
           <div role="dialog" aria-modal="true" aria-labelledby="modal-title-client" className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50">
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50">
@@ -744,7 +764,7 @@ const Clients: React.FC = () => {
                   <Users className="w-6 h-6 text-amber-700" aria-hidden="true" />
                   {editing ? 'Editar Cliente' : 'Novo Cliente'}
                 </h2>
-                <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }) }} className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all" aria-label="Fechar modal">
+                <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ ...EMPTY_FORM, address: { ...EMPTY_ADDRESS } }) }} className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all" aria-label="Fechar modal">
                   <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
@@ -807,24 +827,29 @@ const Clients: React.FC = () => {
                   </div>
                 )}
               </div>
-              <div className="relative">
-                <label htmlFor="client-address" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Endereço <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="client-address"
-                  type="text"
-                  value={form.address}
-                  onChange={(e) => setForm(prev => ({ ...prev, address: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${formErrors.address ? 'border-red-500 bg-red-50' : ''
-                    }`}
-                />
-                {formErrors.address && (
-                  <div className="absolute top-full left-0 mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg z-10">
-                    {formErrors.address}
-                    <div className="absolute -top-1 left-2 w-2 h-2 bg-red-500 transform rotate-45"></div>
-                  </div>
-                )}
+              {/* Primeiro nome / Sobrenome (campos do PM) */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Primeiro nome</label>
+                  <input type="text" value={form.firstName} onChange={(e) => setForm(prev => ({ ...prev, firstName: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Sobrenome</label>
+                  <input type="text" value={form.lastName} onChange={(e) => setForm(prev => ({ ...prev, lastName: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                </div>
+              </div>
+              {/* Endereço estruturado (cifrado no backend) */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Endereço</label>
+                <div className="grid grid-cols-6 gap-2">
+                  <input placeholder="CEP" value={form.address.cep || ''} onChange={(e) => setForm(prev => ({ ...prev, address: { ...prev.address, cep: e.target.value } }))} className="col-span-2 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                  <input placeholder="Cidade" value={form.address.city || ''} onChange={(e) => setForm(prev => ({ ...prev, address: { ...prev.address, city: e.target.value } }))} className="col-span-3 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                  <input placeholder="UF" maxLength={2} value={form.address.state || ''} onChange={(e) => setForm(prev => ({ ...prev, address: { ...prev.address, state: e.target.value } }))} className="col-span-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                  <input placeholder="Logradouro" value={form.address.street || ''} onChange={(e) => setForm(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))} className="col-span-4 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                  <input placeholder="Número" value={form.address.number || ''} onChange={(e) => setForm(prev => ({ ...prev, address: { ...prev.address, number: e.target.value } }))} className="col-span-2 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                  <input placeholder="Bairro" value={form.address.neighborhood || ''} onChange={(e) => setForm(prev => ({ ...prev, address: { ...prev.address, neighborhood: e.target.value } }))} className="col-span-3 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                  <input placeholder="Complemento" value={form.address.complement || ''} onChange={(e) => setForm(prev => ({ ...prev, address: { ...prev.address, complement: e.target.value } }))} className="col-span-3 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" />
+                </div>
               </div>
               <div>
                 <label htmlFor="client-doctype" className="block text-sm font-semibold text-gray-700 mb-1">
@@ -870,7 +895,7 @@ const Clients: React.FC = () => {
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ name: '', email: '', phone: '', address: '', documentType: 'cpf', cpf: '', cnpj: '' }) }} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">Cancelar</button>
+              <button onClick={() => { setIsModalOpen(false); setEditing(null); setFormErrors({}); setForm({ ...EMPTY_FORM, address: { ...EMPTY_ADDRESS } }) }} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">Cancelar</button>
               <button onClick={saveClient} disabled={isSaving} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed">
                 {isSaving ? 'Salvando...' : 'Salvar'}
               </button>
