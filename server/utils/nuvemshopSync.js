@@ -204,4 +204,72 @@ async function syncCustomers(db, userId, token, storeId, since) {
   return { imported, updated, errors };
 }
 
-module.exports = { syncOrders, syncProducts, syncCustomers };
+/**
+ * PUSH de produtos ALYA → Nuvemshop (cria/atualiza produtos na loja).
+ * Espelho inverso de syncProducts: usa o nuvemshop_sync_map para decidir entre
+ * criar (POST) e atualizar (PUT), mantendo o vínculo local_id ↔ nuvemshop_id.
+ *
+ * Requer que o app Nuvemshop tenha o escopo `write_products` — sem ele a API
+ * responde 403 (capturado por produto e reportado em `details`).
+ *
+ * @param {object} db - Instância do Database
+ * @param {string} userId - ID do usuário no ALYA
+ * @param {string} token - Access token Nuvemshop (descriptografado)
+ * @param {string} storeId - ID da loja Nuvemshop
+ * @param {string[]|null} productIds - ids locais a enviar; vazio/ausente = todos
+ * @returns {{ created:number, updated:number, errors:number, details:Array }}
+ */
+async function pushProducts(db, userId, token, storeId, productIds) {
+  let created = 0;
+  let updated = 0;
+  let errors = 0;
+  const details = [];
+
+  // Seleciona os produtos: por ids (seleção da UI) ou todos.
+  let products;
+  if (Array.isArray(productIds) && productIds.length > 0) {
+    products = [];
+    for (const id of productIds) {
+      const p = await db.getProductById(id);
+      if (p) products.push(p);
+    }
+  } else {
+    products = await db.getAllProducts();
+  }
+
+  for (const p of products) {
+    const name = (p.name || '').toString().trim() || 'Sem nome';
+    try {
+      // Mapeamento Alya → Nuvemshop: nome (pt) + variante única com preço/estoque.
+      // cost/sold não têm equivalente; category fica de fora (categorias Nuvemshop são por id).
+      const payload = {
+        name: { pt: name },
+        variants: [{ price: p.price != null ? String(p.price) : '0', stock: parseInt(p.stock, 10) || 0 }],
+      };
+
+      const map = await db.getSyncMapByLocalId(userId, 'product', p.id);
+      if (map && map.nuvemshopId) {
+        await nuvemshopService.updateProduct(token, storeId, map.nuvemshopId, payload);
+        updated++;
+        details.push({ localId: p.id, name, action: 'updated', nuvemshopId: map.nuvemshopId });
+      } else {
+        const createdProd = await nuvemshopService.createProduct(token, storeId, payload);
+        await db.saveSyncMap(userId, 'product', createdProd.id, p.id);
+        created++;
+        details.push({ localId: p.id, name, action: 'created', nuvemshopId: createdProd.id });
+      }
+    } catch (err) {
+      errors++;
+      const status = err.response && err.response.status;
+      const msg = status === 403
+        ? 'Sem permissão de escrita (escopo write_products) no app Nuvemshop'
+        : ((err.response && err.response.data && err.response.data.message) || err.message);
+      console.error(`[NuvemshopPush] Erro ao enviar produto ${p.id} (${name}):`, msg);
+      details.push({ localId: p.id, name, action: 'error', status, error: msg });
+    }
+  }
+
+  return { created, updated, errors, details };
+}
+
+module.exports = { syncOrders, syncProducts, syncCustomers, pushProducts };

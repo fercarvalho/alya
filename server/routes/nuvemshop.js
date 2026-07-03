@@ -18,7 +18,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { decrypt, encrypt } = require('../utils/encryption');
 const nuvemshopService = require('../services/nuvemshopService');
-const { syncOrders, syncProducts, syncCustomers } = require('../utils/nuvemshopSync');
+const { syncOrders, syncProducts, syncCustomers, pushProducts } = require('../utils/nuvemshopSync');
 
 // Eventos que serão registrados na Nuvemshop ao conectar
 const WEBHOOK_EVENTS = [
@@ -196,6 +196,37 @@ function createRouter(db, authenticateToken) {
     } catch (err) {
       console.error('[Nuvemshop] Erro ao sincronizar produtos:', err.message);
       return res.status(500).json({ error: 'Erro ao sincronizar produtos' });
+    }
+  });
+
+  // ─── POST /api/nuvemshop/push/products ───────────────────────────────────────
+  // PUSH Alya → Nuvemshop: cria/atualiza produtos na loja.
+  // body.productIds (opcional) restringe aos selecionados; ausente = todos.
+  router.post('/push/products', authenticateToken, async (req, res) => {
+    try {
+      const config = await db.getNuvemshopConfig(req.user.id);
+      if (!config || !config.isActive) {
+        return res.status(400).json({ error: 'Nenhuma integração Nuvemshop ativa' });
+      }
+
+      const token = decrypt(config.accessToken);
+      const productIds = (req.body && Array.isArray(req.body.productIds)) ? req.body.productIds : null;
+      const result = await pushProducts(db, req.user.id, token, config.storeId, productIds);
+
+      // Se nada foi enviado e todos os erros são 403, é falta do escopo de escrita.
+      const allForbidden = result.errors > 0 && result.created === 0 && result.updated === 0
+        && result.details.every((d) => d.action !== 'error' || d.status === 403);
+      if (allForbidden) {
+        return res.status(403).json({
+          error: 'O app Nuvemshop não tem permissão de escrita (escopo write_products). Habilite no painel do app e reconecte.',
+          ...result,
+        });
+      }
+
+      return res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Nuvemshop Push] Erro ao enviar produtos:', err.message);
+      return res.status(500).json({ error: 'Erro ao enviar produtos' });
     }
   });
 

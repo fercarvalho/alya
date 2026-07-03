@@ -2839,6 +2839,17 @@ class Database extends FileDatabase {
     );
   }
 
+  // Consulta reversa: dado um id LOCAL (Alya), retorna o mapa (com nuvemshopId).
+  // Usada pelo push (Alya→Nuvemshop) p/ decidir entre criar ou atualizar.
+  async getSyncMapByLocalId(userId, resourceType, localId) {
+    const r = await this.pool.query(
+      'SELECT * FROM nuvemshop_sync_map WHERE user_id = $1 AND resource_type = $2 AND local_id = $3',
+      [userId, resourceType, String(localId)]
+    );
+    if (r.rows.length === 0) return null;
+    return toCamelCase(r.rows[0]);
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   // Bling (ERP) — espelha o padrão da Nuvemshop. Tokens chegam JÁ criptografados
   // (a cifragem AES-256-GCM acontece na camada de auth/rota, não aqui).

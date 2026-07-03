@@ -201,6 +201,41 @@ async function getAllProducts(token, storeId, since) {
 }
 
 /**
+ * Cria um produto na Nuvemshop (Alya → Nuvemshop / push).
+ * Requer que o app tenha o escopo `write_products` — sem ele a API responde 403.
+ *
+ * @param {string} token - Access token Nuvemshop (descriptografado)
+ * @param {string} storeId - ID da loja Nuvemshop
+ * @param {object} productData - { name: {pt, ...}, variants: [{price, stock, sku?}], ... }
+ * @returns {object} produto criado (com `id` preenchido)
+ */
+async function createProduct(token, storeId, productData) {
+  return enqueue(async () => {
+    const client = createClient(token, storeId);
+    const { data } = await client.post('/products', productData);
+    return data;
+  });
+}
+
+/**
+ * Atualiza um produto existente na Nuvemshop (Alya → Nuvemshop / push).
+ * Requer o escopo `write_products`.
+ *
+ * @param {string} token - Access token Nuvemshop (descriptografado)
+ * @param {string} storeId - ID da loja Nuvemshop
+ * @param {string|number} productId - ID do produto na Nuvemshop
+ * @param {object} updateData - campos a atualizar (name/variants/...)
+ * @returns {object} produto atualizado
+ */
+async function updateProduct(token, storeId, productId, updateData) {
+  return enqueue(async () => {
+    const client = createClient(token, storeId);
+    const { data } = await client.put(`/products/${productId}`, updateData);
+    return data;
+  });
+}
+
+/**
  * Busca uma página de clientes.
  */
 async function getCustomers(token, storeId, params = {}) {
@@ -288,6 +323,8 @@ module.exports = {
   getAllOrders,
   getProducts,
   getAllProducts,
+  createProduct,
+  updateProduct,
   getCustomers,
   getAllCustomers,
   registerWebhook,
