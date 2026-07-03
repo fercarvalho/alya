@@ -362,8 +362,8 @@ class Database extends FileDatabase {
     const now = new Date().toISOString();
     const date = parseDate(transaction.date) || now.split('T')[0];
     const r = await this.pool.query(
-      `INSERT INTO transactions (id, date, description, value, type, category, subcategory, source, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      `INSERT INTO transactions (id, date, description, value, type, category, subcategory, source, project_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
         id,
         date,
@@ -373,6 +373,7 @@ class Database extends FileDatabase {
         transaction.category || null,
         transaction.subcategory || null,
         transaction.source || 'manual',
+        transaction.project_id || null,
         now,
         now,
       ]
@@ -384,25 +385,36 @@ class Database extends FileDatabase {
 
   async updateTransaction(id, data) {
     const date = data.date != null ? parseDate(data.date) : null;
+    const sets = [
+      'date = COALESCE($2, date)',
+      'description = COALESCE($3, description)',
+      'value = COALESCE($4, value)',
+      'type = COALESCE($5, type)',
+      'category = COALESCE($6, category)',
+      'subcategory = COALESCE($7, subcategory)',
+      'updated_at = CURRENT_TIMESTAMP',
+    ];
+    const params = [
+      id,
+      date,
+      data.description,
+      data.value != null ? parseFloat(data.value) : null,
+      data.type,
+      data.category,
+      data.subcategory,
+    ];
+    // Vínculo a projeto (PM): só toca em project_id se a chave veio no payload,
+    // permitindo VINCULAR/trocar (id) e DESVINCULAR (null) sem afetar outros
+    // callers. Atribuição direta (sem COALESCE) para que null realmente limpe.
+    // O trigger trg_pm_transactions_cost (migration 034) recalcula o custo do
+    // projeto automaticamente ao gravar.
+    if (Object.prototype.hasOwnProperty.call(data, 'project_id')) {
+      params.push(data.project_id || null);
+      sets.push(`project_id = $${params.length}`);
+    }
     const r = await this.pool.query(
-      `UPDATE transactions SET
-        date = COALESCE($2, date),
-        description = COALESCE($3, description),
-        value = COALESCE($4, value),
-        type = COALESCE($5, type),
-        category = COALESCE($6, category),
-        subcategory = COALESCE($7, subcategory),
-        updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 RETURNING *`,
-      [
-        id,
-        date,
-        data.description,
-        data.value != null ? parseFloat(data.value) : null,
-        data.type,
-        data.category,
-        data.subcategory,
-      ]
+      `UPDATE transactions SET ${sets.join(', ')} WHERE id = $1 RETURNING *`,
+      params
     );
     if (r.rows.length === 0) throw new Error('Transação não encontrada');
     const t = toCamelCase(r.rows[0]);

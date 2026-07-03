@@ -6069,6 +6069,35 @@ const AppContent: React.FC = () => {
               </div>
               )}
 
+              {/* Projeto (Gerenciamento/PM) — vínculo opcional. Não se aplica a
+                  transferência/caixa; só aparece se há projetos acessíveis (ou já
+                  vinculado). Ao salvar, o backend grava project_id e o trigger
+                  recalcula o custo do projeto. */}
+              {transactionForm.type !== 'Transferência entre contas' &&
+                !CAIXA_TRANSACTION_TYPES.includes(transactionForm.type as TransactionType) &&
+                (Object.keys(projectsMap).length > 0 || !!transactionForm.project_id) && (
+              <div>
+                <label htmlFor="tx-project" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Projeto <span className="text-xs font-normal text-gray-400">(Gerenciamento)</span>
+                </label>
+                <select
+                  id="tx-project"
+                  name="project_id"
+                  value={transactionForm.project_id ?? ""}
+                  onChange={(e) => setTransactionForm((prev) => ({ ...prev, project_id: e.target.value }))}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-gray-100 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                >
+                  <option value="">Sem projeto</option>
+                  {transactionForm.project_id && !projectsMap[transactionForm.project_id] && (
+                    <option value={transactionForm.project_id}>Projeto vinculado (sem acesso)</option>
+                  )}
+                  {Object.entries(projectsMap).map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              )}
+
               {/* Botões */}
               <div className="flex gap-3 pt-4">
                 <button
