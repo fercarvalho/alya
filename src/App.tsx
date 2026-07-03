@@ -98,7 +98,7 @@ const RelatoriosTarefas = lazy(() => import("@/subsistemas/gerenciamento/modulos
 const ProjecaoGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/ProjecaoGerenciamento"));
 const RelatoriosGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/RelatoriosGerenciamento"));
 import Reports from "@/subsistemas/financeiro/modulos/Reports";
-import Products from "@/subsistemas/gerenciamento/modulos/Products";
+import Products from "@/subsistemas/especial/modulos/Products";
 import Transactions from "@/subsistemas/financeiro/modulos/Transactions";
 import Metas from "@/subsistemas/financeiro/modulos/Metas";
 import Dashboard from "@/subsistemas/financeiro/modulos/Dashboard";
