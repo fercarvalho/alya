@@ -30,11 +30,11 @@ const PERIOD_LABEL: Record<Period, string> = { week: 'Semana', month: 'Mês', qu
 const STATUS_META: Record<Goal['status'], { label: string; bar: string; badge: string }> = {
   hit: { label: 'Batida', bar: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   on_track: { label: 'No caminho', bar: 'bg-violet-500', badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
-  at_risk: { label: 'Em risco', bar: 'bg-amber-500', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  at_risk: { label: 'Em risco', bar: 'bg-yellow-500', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' },
   missed: { label: 'Não batida', bar: 'bg-rose-500', badge: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' },
 }
 
-const DONUT_COLOR: Record<Goal['status'], string> = { hit: '#22c55e', on_track: '#8b5cf6', at_risk: '#f59e0b', missed: '#ef4444' }
+const DONUT_COLOR: Record<Goal['status'], string> = { hit: '#22c55e', on_track: '#8b5cf6', at_risk: '#eab308', missed: '#ef4444' }
 
 const fmtVal = (m: Metric, v: number) => METRIC_META[m].unit === 'min' ? fmtMin(v) : METRIC_META[m].unit === 'pct' ? `${Math.round(v)}%` : fmtNum(v)
 const fmtDate = (v: string) => { const [y, m, d] = String(v).slice(0, 10).split('-'); return `${d}/${m}/${y.slice(2)}` }

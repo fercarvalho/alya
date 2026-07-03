@@ -65,7 +65,7 @@ const TASK_STATUS: Record<string, { label: string; cls: string }> = {
   pending:            { label: 'Pendente',          cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
   available:          { label: 'Disponível',        cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400' },
   in_progress:        { label: 'Em andamento',      cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  pending_acceptance: { label: 'Aguard. aceite',    cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  pending_acceptance: { label: 'Aguard. aceite',    cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
   pending_review:     { label: 'Aguard. revisão',   cls: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
   pending_adjustment: { label: 'Em ajuste',         cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
   completed:          { label: 'Concluída',         cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },

@@ -20,7 +20,7 @@ export const fmtDay = (d: string) => {
 }
 
 export const STATUS_COLORS: Record<string, string> = {
-  completed: '#10b981', in_progress: '#f59e0b', available: '#0ea5e9', overdue: '#f43f5e',
+  completed: '#10b981', in_progress: '#3b82f6', available: '#0ea5e9', overdue: '#f43f5e',
   pending_acceptance: '#a78bfa', pending_review: '#8b5cf6', pending_adjustment: '#fb923c',
   refused: '#9ca3af', canceled: '#6b7280', pending: '#cbd5e1',
 }
