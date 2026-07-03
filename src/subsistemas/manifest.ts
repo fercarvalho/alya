@@ -156,7 +156,7 @@ export const SUBSYSTEMS: ReadonlyArray<SubsystemDefinition> = [
     name: 'Módulos Extras',
     description: 'Integrações externas e módulos que não pertencem aos demais subsistemas',
     iconName: 'Sparkles',
-    moduleKeys: ['nuvemshop'],
+    moduleKeys: ['nuvemshop', 'bling'],
     palette: PALETTES.amber,
   },
 ];
