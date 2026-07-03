@@ -19,4 +19,14 @@ export type TabType =
   | 'bling'
   | 'roadmap'
   | 'faq'
-  | 'documentacao';
+  | 'documentacao'
+  // Subsistema Gerenciamento (PM)
+  | 'dashboard_gerenciamento'
+  | 'metas_gerenciamento'
+  | 'projecao_gerenciamento'
+  | 'relatorios_gerenciamento'
+  | 'projects'
+  | 'services'
+  | 'tarefas_gerenciamento'
+  | 'pomodoro_gerenciamento'
+  | 'relatorios_tarefas_gerenciamento';

@@ -45,6 +45,11 @@ import {
   BookOpen,
   Settings,
   MoreHorizontal,
+  FileText,
+  FolderKanban,
+  Layers,
+  ListTodo,
+  Timer,
 } from "lucide-react";
 import Clients from "@/subsistemas/gerenciamento/modulos/Clients";
 import DRE from "@/subsistemas/financeiro/modulos/DRE";
@@ -82,6 +87,16 @@ const FAQ = lazy(() => import("@/subsistemas/gestao/modulos/FAQ"));
 import Documentation from "@/subsistemas/gestao/modulos/Documentation";
 // Widget flutuante de Pomodoro (PM) — sempre montado; auto-oculta sem sessão ativa.
 const PomodoroFloatingWidget = lazy(() => import("@/subsistemas/gerenciamento/modulos/_pm/PomodoroFloatingWidget"));
+// Subsistema Gerenciamento (PM) — módulos (lazy; self-contained, buscam seus dados).
+const Tarefas = lazy(() => import("@/subsistemas/gerenciamento/modulos/Tarefas"));
+const Projects = lazy(() => import("@/subsistemas/gerenciamento/modulos/Projects"));
+const Services = lazy(() => import("@/subsistemas/gerenciamento/modulos/Services"));
+const Pomodoro = lazy(() => import("@/subsistemas/gerenciamento/modulos/Pomodoro"));
+const DashboardGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/DashboardGerenciamento"));
+const MetasGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/MetasGerenciamento"));
+const RelatoriosTarefas = lazy(() => import("@/subsistemas/gerenciamento/modulos/RelatoriosTarefas"));
+const ProjecaoGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/ProjecaoGerenciamento"));
+const RelatoriosGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/RelatoriosGerenciamento"));
 import Reports from "@/subsistemas/financeiro/modulos/Reports";
 import Products from "@/subsistemas/gerenciamento/modulos/Products";
 import Transactions from "@/subsistemas/financeiro/modulos/Transactions";
@@ -4881,6 +4896,16 @@ const AppContent: React.FC = () => {
                     roadmap: Map,
                     faq: HelpCircle,
                     documentacao: BookOpen,
+                    // Subsistema Gerenciamento (PM)
+                    dashboard_gerenciamento: BarChart3,
+                    metas_gerenciamento: Target,
+                    projecao_gerenciamento: LineChart,
+                    relatorios_gerenciamento: FileText,
+                    projects: FolderKanban,
+                    services: Layers,
+                    tarefas_gerenciamento: ListTodo,
+                    pomodoro_gerenciamento: Timer,
+                    relatorios_tarefas_gerenciamento: BarChart3,
                   };
 
                   const visibleModules = getVisibleModules();
@@ -5073,6 +5098,54 @@ const AppContent: React.FC = () => {
           />
         )}
         {activeTab === "clients" && <Clients />}
+
+        {/* ─── Subsistema Gerenciamento (PM) ─── */}
+        {activeTab === "tarefas_gerenciamento" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Tarefas...</div>}>
+            <Tarefas />
+          </Suspense>
+        )}
+        {activeTab === "projects" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Projetos...</div>}>
+            <Projects />
+          </Suspense>
+        )}
+        {activeTab === "services" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Serviços...</div>}>
+            <Services />
+          </Suspense>
+        )}
+        {activeTab === "pomodoro_gerenciamento" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Pomodoro...</div>}>
+            <Pomodoro />
+          </Suspense>
+        )}
+        {activeTab === "dashboard_gerenciamento" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Dashboard...</div>}>
+            <DashboardGerenciamento />
+          </Suspense>
+        )}
+        {activeTab === "metas_gerenciamento" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Metas...</div>}>
+            <MetasGerenciamento />
+          </Suspense>
+        )}
+        {activeTab === "relatorios_tarefas_gerenciamento" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Relatórios...</div>}>
+            <RelatoriosTarefas />
+          </Suspense>
+        )}
+        {activeTab === "projecao_gerenciamento" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Projeção...</div>}>
+            <ProjecaoGerenciamento />
+          </Suspense>
+        )}
+        {activeTab === "relatorios_gerenciamento" && (
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Relatórios...</div>}>
+            <RelatoriosGerenciamento />
+          </Suspense>
+        )}
+
         {activeTab === "nuvemshop" && (
           <Suspense fallback={<div className="flex items-center justify-center py-20 text-gray-500">Carregando Nuvemshop...</div>}>
             <NuvemshopIntegration />
