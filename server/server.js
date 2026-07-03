@@ -978,7 +978,7 @@ app.post("/api/auth/demo-register", async (req, res) => {
 
     // Gera JWT
     const accessToken = jwt.sign(
-      { id: newUser.id, username: newUser.username, role: newUser.role, permissoes_legais: {} },
+      { id: newUser.id, username: newUser.username, role: newUser.role, permissoes_legais: {}, modulesAccess: newUser.modulesAccess || {} },
       JWT_SECRET,
       { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN }
     );
@@ -1209,6 +1209,9 @@ app.post("/api/auth/login", authLimiter, validateLogin, async (req, res) => {
         username: user.username,
         role: user.role,
         permissoes_legais: user.permissoesLegais || {},
+        // Permissões granulares por módulo — o gate requireModulePermission lê
+        // req.user.modulesAccess. Sem isto, todo não-admin levava 403 nos módulos.
+        modulesAccess: user.modulesAccess || {},
       },
       JWT_SECRET,
       { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN },
@@ -1498,9 +1501,11 @@ app.post("/api/auth/refresh", authLimiter, async (req, res) => {
 
     // Gerar novo access token — buscar permissões atuais do usuário no banco
     let permissoesLegaisRefresh = {};
+    let modulesAccessRefresh = {};
     try {
       const userRefresh = await db.getUserById(tokenData.userId);
       permissoesLegaisRefresh = userRefresh?.permissoesLegais || {};
+      modulesAccessRefresh = userRefresh?.modulesAccess || {};
     } catch (_e) { /* não bloqueia o refresh se falhar */ }
 
     const newAccessToken = jwt.sign(
@@ -1509,6 +1514,7 @@ app.post("/api/auth/refresh", authLimiter, async (req, res) => {
         username: tokenData.username,
         role: tokenData.role,
         permissoes_legais: permissoesLegaisRefresh,
+        modulesAccess: modulesAccessRefresh,
       },
       JWT_SECRET,
       { expiresIn: TOKEN_EXPIRY.ACCESS_TOKEN },
@@ -2862,6 +2868,7 @@ app.put(
           id: updatedUser.id,
           username: updatedUser.username,
           role: updatedUser.role,
+          modulesAccess: updatedUser.modulesAccess || {},
         },
         JWT_SECRET,
         { expiresIn: "7d" },
@@ -5668,7 +5675,7 @@ app.post(
       }
 
       const impersonationToken = jwt.sign(
-        { id: targetUser.id, username: targetUser.username, role: targetUser.role, impersonatedBy: req.user.id },
+        { id: targetUser.id, username: targetUser.username, role: targetUser.role, impersonatedBy: req.user.id, modulesAccess: targetUser.modulesAccess || {} },
         JWT_SECRET,
         { expiresIn: "2h" }
       );
