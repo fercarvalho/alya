@@ -108,6 +108,7 @@ import VersaoNovaModal from "./components/VersaoNovaModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
 import { DialogProvider } from "@/components/DialogProvider";
+import ProjectPickerModal from "@/components/ProjectPickerModal";
 import { useModules } from "./hooks/useModules";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -165,6 +166,7 @@ interface NewTransaction {
   needsConfirmation?: boolean;
   isHidden?: boolean;
   createdAt: Date;
+  project_id?: string | null; // vínculo a projeto do subsistema Gerenciamento (PM)
 }
 
 interface Product {
@@ -356,6 +358,58 @@ const AppContent: React.FC = () => {
     return result.success;
   };
 
+  // PM: carrega o mapa id→nome de projetos (para exibir vínculos). Sem projects/view → mapa vazio.
+  const fetchProjectsMap = async () => {
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects`, { headers });
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        const map: Record<string, string> = {};
+        for (const p of result.data) map[p.id] = p.name;
+        setProjectsMap(map);
+      }
+    } catch {
+      /* sem permissão / offline → mantém mapa vazio */
+    }
+  };
+
+  // PM: vincula 1 (linkPickerFor = txId) ou várias (linkPickerFor = 'bulk') transações ao projeto escolhido.
+  const handlePickProject = async (p: { id: string }) => {
+    if (!linkPickerFor) return;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    setLinkBusy(true);
+    try {
+      let ids: string[] = [];
+      if (linkPickerFor === "bulk") {
+        ids = Array.from(selectedTransactions);
+        const r = await fetch(`${API_BASE_URL}/transactions/link-project-bulk`, {
+          method: "POST", headers, body: JSON.stringify({ ids, projectId: p.id }),
+        });
+        if (r.status === 401 || r.status === 403) { logout(); return; }
+      } else {
+        ids = [linkPickerFor];
+        const r = await fetch(`${API_BASE_URL}/transactions/${linkPickerFor}/link-project`, {
+          method: "POST", headers, body: JSON.stringify({ projectId: p.id }),
+        });
+        if (r.status === 401 || r.status === 403) { logout(); return; }
+      }
+      const idSet = new Set(ids);
+      setTransactions((prev) =>
+        prev.map((t) => (idSet.has(t.id) ? { ...t, project_id: p.id } : t)),
+      );
+      if (linkPickerFor === "bulk") setSelectedTransactions(new Set());
+      setLinkPickerFor(null);
+    } catch (error) {
+      console.error("Erro ao vincular transação a projeto:", error);
+    } finally {
+      setLinkBusy(false);
+    }
+  };
+
   // Funções para Produtos
   const fetchProducts = async () => {
     const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -512,6 +566,10 @@ const AppContent: React.FC = () => {
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
     new Set(),
   );
+  // PM: vínculo transação → projeto
+  const [projectsMap, setProjectsMap] = useState<Record<string, string>>({});
+  const [linkPickerFor, setLinkPickerFor] = useState<string | "bulk" | null>(null);
+  const [linkBusy, setLinkBusy] = useState(false);
 
   // Metas derivadas diretamente da Projeção (cenário "Previsto" do faturamento total).
   // Fallback: MESES_METAS_BASE (quando projeção ainda não existe ou não carregou).
@@ -636,6 +694,7 @@ const AppContent: React.FC = () => {
     type: string;
     category: string;
     subcategory?: string;
+    project_id?: string;
   }>({
     date: new Date().toISOString().split("T")[0], // Data atual por padrão
     description: "",
@@ -643,6 +702,7 @@ const AppContent: React.FC = () => {
     type: "Receita",
     category: "",
     subcategory: "",
+    project_id: "",
   });
   const [transactionFormErrors, setTransactionFormErrors] = useState({
     date: false,
@@ -767,6 +827,7 @@ const AppContent: React.FC = () => {
         setTransactions(transactionsData);
         setProducts(productsData);
         setProjectionSnapshot(projectionData);
+        fetchProjectsMap(); // PM: mapa de projetos p/ exibir/gerir vínculos (fire-and-forget)
       } catch (error) {
         if (!mounted) return;
         console.error("Erro ao carregar dados:", error);
@@ -2146,6 +2207,7 @@ const AppContent: React.FC = () => {
       type: transaction.type,
       category: transaction.category,
       subcategory: transaction.subcategory ?? "",
+      project_id: transaction.project_id ?? "",
     });
     setIsTransactionModalOpen(true);
   };
@@ -4810,6 +4872,17 @@ const AppContent: React.FC = () => {
           <PomodoroFloatingWidget />
         </Suspense>
       )}
+      {linkPickerFor && (
+        <ProjectPickerModal
+          title="Vincular a projeto"
+          busy={linkBusy}
+          currentProjectId={linkPickerFor !== "bulk"
+            ? (transactions.find((t) => t.id === linkPickerFor)?.project_id || null)
+            : null}
+          onPick={handlePickProject}
+          onClose={() => setLinkPickerFor(null)}
+        />
+      )}
       {/* Container fixo para Header e Navigation */}
       <div className="fixed top-0 left-0 right-0 z-[60]">
         {/* Header */}
@@ -5058,6 +5131,8 @@ const AppContent: React.FC = () => {
             getTransactionSortAriaSort={getTransactionSortAriaSort}
             handleEditTransaction={handleEditTransaction}
             handleDeleteSelectedTransactions={handleDeleteSelectedTransactions}
+            projectsMap={projectsMap}
+            onLinkBulk={() => setLinkPickerFor("bulk")}
             deleteTransaction={deleteTransaction}
             getCategoriesByType={getCategoriesByType}
             formatDateToDisplay={formatDateToDisplay}
@@ -5617,6 +5692,7 @@ const AppContent: React.FC = () => {
                         type: transactionForm.type as "Receita" | "Despesa",
                         category: categoryToSave,
                         subcategory: subcategoryToSave,
+                        project_id: transactionForm.project_id || null,
                       },
                     );
 
@@ -5642,6 +5718,7 @@ const AppContent: React.FC = () => {
                       type: transactionForm.type as "Receita" | "Despesa",
                       category: categoryToSave,
                       subcategory: subcategoryToSave,
+                      project_id: transactionForm.project_id || null,
                     });
 
                     if (newTransaction) {

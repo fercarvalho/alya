@@ -25,6 +25,7 @@ import {
   Calendar,
   Trash2,
   Edit,
+  Link2,
 } from 'lucide-react';
 import PendingTransactionsBanner from '@/components/PendingTransactionsBanner';
 import { type TransactionType, TRANSACTION_TYPE_STYLES } from '@/types/transactionType';
@@ -97,6 +98,9 @@ interface TransactionsProps {
   handleEditTransaction: (t: any) => void;
   handleDeleteSelectedTransactions: () => void;
   deleteTransaction: (id: string) => Promise<boolean>;
+  // PM: vínculo a projeto
+  projectsMap?: Record<string, string>;
+  onLinkBulk?: () => void;
   // Helpers
   getCategoriesByType: (type: string) => string[];
   formatDateToDisplay: (date: string) => string;
@@ -146,6 +150,8 @@ export default function Transactions({
   deleteTransaction,
   getCategoriesByType,
   formatDateToDisplay,
+  projectsMap = {},
+  onLinkBulk,
 }: TransactionsProps) {
   return (
     <div className="space-y-6">
@@ -480,7 +486,16 @@ export default function Transactions({
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             {/* Ações (acima da lista) */}
             {selectedTransactions.size > 0 && (
-              <div className="flex justify-end p-3 sm:p-4 bg-red-50 border-b border-red-200">
+              <div className="flex justify-end items-center gap-2 p-3 sm:p-4 bg-red-50 border-b border-red-200">
+                {onLinkBulk && (
+                  <button
+                    onClick={onLinkBulk}
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <Link2 className="h-4 w-4" />
+                    Vincular a projeto ({selectedTransactions.size})
+                  </button>
+                )}
                 <button
                   onClick={handleDeleteSelectedTransactions}
                   className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -617,6 +632,12 @@ export default function Transactions({
                       <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${getSourceMeta(transaction.source).badge}`} title={`Origem: ${getSourceMeta(transaction.source).label}`}>
                         {getSourceMeta(transaction.source).label}
                       </span>
+                      {/* PM: projeto vinculado */}
+                      {transaction.project_id && (
+                        <span className="inline-block mt-0.5 ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" title="Projeto vinculado">
+                          {projectsMap[transaction.project_id] || 'Projeto'}
+                        </span>
+                      )}
                     </div>
 
                     {/* Tipo */}
