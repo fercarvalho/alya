@@ -153,7 +153,7 @@ const Tarefas: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-md shadow-violet-500/25">
+        <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-md shadow-amber-500/25">
           <ListTodo className="w-5 h-5 text-white" aria-hidden="true" />
         </div>
         <div>
@@ -186,7 +186,7 @@ const Tarefas: React.FC = () => {
                 <button onClick={async () => { const note = await prompt({ title: 'Recusar pedido de prazo', label: 'Motivo (opcional)', multiline: true, confirmLabel: 'Recusar' }); if (note === null) return; await decideDueRequest(d.id, { action: 'reject', note }); load() }} title="Recusar (mantém o prazo atual)"
                   className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100"><X className="w-4 h-4" /></button>
                 <button onClick={() => setDueModal({ mode: 'decider', request: d })} title="Propor / forçar outra data"
-                  className="p-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 hover:bg-violet-100"><CalendarClock className="w-4 h-4" /></button>
+                  className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100"><CalendarClock className="w-4 h-4" /></button>
               </div>
             ))}
           </div>
@@ -195,8 +195,8 @@ const Tarefas: React.FC = () => {
 
       {/* Contrapropostas de prazo para mim (solicitante responde) */}
       {dueProps.length > 0 && (
-        <section className="rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-900/10 p-4">
-          <h2 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-1 flex items-center gap-2">
+        <section className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-900/10 p-4">
+          <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-1 flex items-center gap-2">
             <CalendarClock className="w-4 h-4" /> Propostas de prazo para você ({dueProps.length})
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Um gestor propôs outra data para o seu pedido. Aceite, recuse (mantém o atual) ou contraproponha.</p>
@@ -215,7 +215,7 @@ const Tarefas: React.FC = () => {
                 <button onClick={async () => { const note = await prompt({ title: 'Recusar proposta de prazo', label: 'Motivo (opcional)', multiline: true, confirmLabel: 'Recusar' }); if (note === null) return; await respondDueProposal(d.id, { action: 'reject', justification: note }); load() }} title="Recusar (mantém o prazo atual)"
                   className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100"><X className="w-4 h-4" /></button>
                 <button onClick={() => setDueModal({ mode: 'requester', request: d })} title="Contrapropor outra data"
-                  className="p-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 hover:bg-violet-100"><CalendarClock className="w-4 h-4" /></button>
+                  className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100"><CalendarClock className="w-4 h-4" /></button>
               </div>
             ))}
           </div>
@@ -273,8 +273,8 @@ const Tarefas: React.FC = () => {
 
       {/* Revisões pendentes (admin/manager) */}
       {pendingReviews && pendingReviews.length > 0 && (
-        <section className="rounded-xl border border-violet-200 dark:border-violet-900 bg-violet-50/50 dark:bg-violet-900/10 p-4">
-          <h2 className="text-sm font-semibold text-violet-700 dark:text-violet-300 mb-2 flex items-center gap-2">
+        <section className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-900/10 p-4">
+          <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4" /> Revisões pendentes ({pendingReviews.length})
           </h2>
           <div className="space-y-2">
@@ -288,7 +288,7 @@ const Tarefas: React.FC = () => {
                   <span className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs font-medium">Só admin revisa</span>
                 ) : (
                   <button onClick={() => setReviewTask(t)}
-                    className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold">Revisar</button>
+                    className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Revisar</button>
                 )}
               </div>
             ))}
@@ -356,7 +356,7 @@ const Tarefas: React.FC = () => {
                 {t.default_days != null && <span title="Prazo (dias) — começa a contar quando você pega" className="text-[11px] text-gray-400 flex items-center gap-1 flex-shrink-0"><Clock className="w-3 h-3" />{t.default_days}d</span>}
                 {t.can_assign && (
                   <button onClick={() => setAssignTask(t)} disabled={busyId === t.id} title="Atribuir a outra pessoa"
-                    className="p-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 hover:bg-violet-100 disabled:opacity-50 flex-shrink-0">
+                    className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 disabled:opacity-50 flex-shrink-0">
                     <Users className="w-4 h-4" />
                   </button>
                 )}
@@ -419,13 +419,13 @@ const Tarefas: React.FC = () => {
                             {t.due_action && (t.status === 'in_progress' || t.status === 'overdue') && (
                               <button onClick={() => setDueTask(t)} disabled={busyId === t.id}
                                 title={t.due_action === 'request' ? 'Solicitar alteração de prazo' : 'Editar prazo'}
-                                className="p-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 hover:bg-violet-100 disabled:opacity-50">
+                                className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 disabled:opacity-50">
                                 <CalendarClock className="w-4 h-4" />
                               </button>
                             )}
                             {(t.status === 'available' || t.status === 'overdue' || t.status === 'pending_adjustment') && (
                               <button onClick={() => startAndFocus(t)} disabled={busyId === t.id} title="Iniciar (abre o foco)"
-                                className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 disabled:opacity-50">
+                                className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 disabled:opacity-50">
                                 {busyId === t.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                               </button>
                             )}
@@ -444,7 +444,7 @@ const Tarefas: React.FC = () => {
                             {/* Em andamento sem cronômetro ativo → iniciar um Pomodoro novo (ex.: sessão estacionada expirou). */}
                             {t.status === 'in_progress' && !paused && !session && (
                               <button onClick={() => setFocusTask(t)} disabled={busyId === t.id} title="Iniciar cronômetro (foco)"
-                                className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 disabled:opacity-50">
+                                className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 disabled:opacity-50">
                                 <Timer className="w-4 h-4" />
                               </button>
                             )}

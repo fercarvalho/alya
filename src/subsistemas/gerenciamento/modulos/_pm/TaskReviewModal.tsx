@@ -25,7 +25,7 @@ const TaskReviewModal: React.FC<{ task: PmTask; onClose: () => void; onDone: () 
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between">
           <h3 className="text-white font-bold flex items-center gap-2"><ClipboardCheck className="w-4 h-4" /> Revisar tarefa</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>

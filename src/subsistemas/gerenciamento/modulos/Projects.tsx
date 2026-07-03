@@ -439,7 +439,7 @@ const Projects: React.FC = () => {
           {(permissions.canImport || permissions.canExport) && (
             <button
               onClick={() => setIsImportExportOpen(true)}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
             >
               <Download className="h-5 w-5" />
               Importar/Exportar
@@ -448,7 +448,7 @@ const Projects: React.FC = () => {
           {permissions.canCreate && (
             <button
               onClick={() => { setEditing(null); setCreateServiceId(''); setForm({ name: '', description: '', client: '', startDate: new Date().toISOString().split('T')[0], endDate: '', status: 'ativo', value: '', progress: '0', selectedServices: [], managerUserId: '' }); setFormErrors({}); setIsModalOpen(true) }}
-              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
             >
               <Plus className="h-5 w-5" />
               Novo Projeto
@@ -458,7 +458,7 @@ const Projects: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/60 dark:from-blue-900/20 dark:to-indigo-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/30 shadow-sm">
+      <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/60 dark:from-amber-900/20 dark:to-orange-900/10 p-5 rounded-2xl border border-amber-100 dark:border-amber-800/30 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="flex flex-col flex-1 min-w-0">
             <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">Nome</label>
@@ -467,7 +467,7 @@ const Projects: React.FC = () => {
               placeholder="Nome..."
               value={filters.name}
               onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
-              className="px-2 md:px-3 py-1.5 sm:py-2 border border-blue-200 dark:border-blue-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:!bg-[#243040] dark:text-gray-200 w-full transition-all duration-200"
+              className="px-2 md:px-3 py-1.5 sm:py-2 border border-amber-200 dark:border-amber-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-[#243040] dark:text-gray-200 w-full transition-all duration-200"
             />
           </div>
           <div className="flex flex-col flex-1 min-w-0">
@@ -477,7 +477,7 @@ const Projects: React.FC = () => {
               placeholder="Cliente..."
               value={filters.client}
               onChange={(e) => setFilters(prev => ({ ...prev, client: e.target.value }))}
-              className="px-2 md:px-3 py-1.5 sm:py-2 border border-blue-200 dark:border-blue-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:!bg-[#243040] dark:text-gray-200 w-full transition-all duration-200"
+              className="px-2 md:px-3 py-1.5 sm:py-2 border border-amber-200 dark:border-amber-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-[#243040] dark:text-gray-200 w-full transition-all duration-200"
             />
           </div>
           <div className="flex flex-col flex-1 min-w-0">
@@ -485,7 +485,7 @@ const Projects: React.FC = () => {
             <select
               value={filters.status}
               onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="px-2 md:px-3 py-1.5 sm:py-2 border border-blue-200 dark:border-blue-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:!bg-[#243040] dark:text-gray-200 w-full transition-all duration-200"
+              className="px-2 md:px-3 py-1.5 sm:py-2 border border-amber-200 dark:border-amber-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:!bg-[#243040] dark:text-gray-200 w-full transition-all duration-200"
             >
               <option value="">Todos</option>
               <option value="ativo">Ativo</option>
@@ -496,7 +496,7 @@ const Projects: React.FC = () => {
           <div className="flex items-end">
             <button
               onClick={clearFilters}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 transition-all duration-200 w-full"
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-0.5 transition-all duration-200 w-full"
             >
               Limpar
             </button>
@@ -521,7 +521,7 @@ const Projects: React.FC = () => {
       <div className="bg-white dark:!bg-[#243040] rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-indigo-600">
+            <thead className="bg-gradient-to-r from-amber-500 to-orange-500">
               <tr>
                 {permissions.canDelete && (
                   <th className="px-4 sm:px-6 py-3 text-left">
@@ -531,7 +531,7 @@ const Projects: React.FC = () => {
                       ref={(el) => { if (el) el.indeterminate = selectedProjects.size > 0 && selectedProjects.size < filteredProjects.length }}
                       onChange={handleSelectAll}
                       aria-label="Selecionar todos os projetos"
-                      className="w-4 h-4 text-blue-600 bg-white/20 border-white/40 rounded focus:ring-blue-300 focus:ring-2"
+                      className="w-4 h-4 text-amber-600 bg-white/20 border-white/40 rounded focus:ring-amber-300 focus:ring-2"
                     />
                   </th>
                 )}
@@ -593,7 +593,7 @@ const Projects: React.FC = () => {
                         checked={selectedProjects.has(project.id)}
                         onChange={() => handleSelect(project.id)}
                         aria-label={`Selecionar projeto ${project.name}`}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
                       />
                     </td>
                   )}
@@ -625,7 +625,7 @@ const Projects: React.FC = () => {
                     <div className="flex items-center">
                       <div className="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-2 mr-2">
                         <div
-                          className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full"
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full"
                           style={{ width: `${Math.min(100, Math.max(0, projProgress(project)))}%` }}
                         ></div>
                       </div>
@@ -636,7 +636,7 @@ const Projects: React.FC = () => {
                     <div className="flex justify-center space-x-2">
                       <button
                         onClick={() => openDetail(project.id)}
-                        className="p-1 text-violet-600 hover:text-violet-800 hover:bg-violet-50 rounded-full transition-colors"
+                        className="p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-full transition-colors"
                         title="Abrir projeto (etapas, tarefas, custos)"
                       >
                         <Eye className="w-4 h-4" />
@@ -644,7 +644,7 @@ const Projects: React.FC = () => {
                       {permissions.canEdit && (
                         <button
                           onClick={() => { setEditing(project); setForm({ name: project.name || '', description: project.description || '', client: clientNameOf(project), startDate: projStart(project), endDate: project.endDate || '', status: (project.status as any) || 'ativo', value: String(projValue(project)), progress: String(Math.round(projProgress(project))), selectedServices: project.services || [], managerUserId: project.manager_user_id || '' }); setIsModalOpen(true) }}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-colors"
+                          className="p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-full transition-colors"
                           title="Editar projeto"
                         >
                           <Edit className="w-4 h-4" />
@@ -671,7 +671,7 @@ const Projects: React.FC = () => {
       {/* Modal Import/Export */}
       <Modal isOpen={isImportExportOpen} onClose={() => setIsImportExportOpen(false)}>
         <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-1.5 bg-white/20 rounded-lg"><Upload className="w-5 h-5 text-white" aria-hidden="true" /></div>
                 <h2 className="text-lg font-bold text-white">Importar/Exportar Projetos</h2>
@@ -682,12 +682,12 @@ const Projects: React.FC = () => {
               <p className="text-sm text-gray-600 dark:text-gray-400">Escolha uma das opções abaixo para gerenciar seus dados:</p>
 
               {/* Seção Baixar Modelo */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
-                <p className="text-blue-700 dark:text-blue-300 font-semibold text-sm mb-2">Primeiro baixe o modelo, depois importe!</p>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+                <p className="text-amber-700 dark:text-amber-300 font-semibold text-sm mb-2">Primeiro baixe o modelo, depois importe!</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Baixe o arquivo modelo, preencha com seus dados e depois faça o upload.</p>
                 <button
                   onClick={downloadModel}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                  className="w-full px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
                 >
                   <Download className="w-4 h-4" />
                   Baixar Modelo de Projetos
@@ -699,7 +699,7 @@ const Projects: React.FC = () => {
                 {permissions.canImport && (
                   <div className="relative">
                     <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileSelect} className="hidden" />
-                    <button onClick={() => fileInputRef.current?.click()} className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35">
+                    <button onClick={() => fileInputRef.current?.click()} className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35">
                       <Upload className="w-4 h-4" />
                       <div className="text-center">
                         <div className="font-bold">Selecionar Arquivo</div>
@@ -709,7 +709,7 @@ const Projects: React.FC = () => {
                   </div>
                 )}
                 {permissions.canExport && (
-                  <button onClick={handleExport} className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35">
+                  <button onClick={handleExport} className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35">
                     <Download className="w-4 h-4" />
                     <div className="text-center">
                       <div className="font-bold">Exportar</div>
@@ -729,7 +729,7 @@ const Projects: React.FC = () => {
       {/* Modal Novo/Editar Projeto */}
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditing(null); setForm({ name: '', description: '', client: '', startDate: new Date().toISOString().split('T')[0], endDate: '', status: 'ativo', value: '', progress: '0', selectedServices: [], managerUserId: '' }); setFormErrors({}) }}>
         <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 flex items-center justify-between flex-shrink-0">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">{editing ? <Edit className="w-5 h-5" aria-hidden="true" /> : <Plus className="w-5 h-5" aria-hidden="true" />}{editing ? 'Editar Projeto' : 'Novo Projeto'}</h2>
               <button onClick={() => { setIsModalOpen(false); setEditing(null); setForm({ name: '', description: '', client: '', startDate: new Date().toISOString().split('T')[0], endDate: '', status: 'ativo', value: '', progress: '0', selectedServices: [], managerUserId: '' }); setFormErrors({}) }} className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all duration-200"><X className="w-5 h-5" /></button>
             </div>
@@ -743,7 +743,7 @@ const Projects: React.FC = () => {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                     formErrors.name ? 'border-red-500 bg-red-50 dark:!bg-red-900/20' : 'bg-white dark:bg-gray-700'
                   }`}
                 />
@@ -763,7 +763,7 @@ const Projects: React.FC = () => {
                   <select
                     value={createServiceId}
                     onChange={(e) => setCreateServiceId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
                   >
                     <option value="">Sem estrutura (projeto vazio)</option>
                     {services.filter(s => (s as any).status !== 'inativo').map(s => (
@@ -771,7 +771,7 @@ const Projects: React.FC = () => {
                     ))}
                   </select>
                   {createServiceId && (
-                    <p className="mt-1 text-xs text-violet-600 dark:text-violet-400">
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                       As etapas e tarefas padrão deste serviço serão copiadas para o projeto.
                     </p>
                   )}
@@ -786,7 +786,7 @@ const Projects: React.FC = () => {
                   value={form.description}
                   onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                     formErrors.description ? 'border-red-500 bg-red-50 dark:!bg-red-900/20' : 'bg-white dark:bg-gray-700'
                   }`}
                 />
@@ -805,7 +805,7 @@ const Projects: React.FC = () => {
                 <select
                   value={form.client}
                   onChange={(e) => setForm(prev => ({ ...prev, client: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                     formErrors.client ? 'border-red-500 bg-red-50 dark:!bg-red-900/20' : 'bg-white dark:bg-gray-700'
                   }`}
                 >
@@ -833,7 +833,7 @@ const Projects: React.FC = () => {
                     type="date"
                     value={form.startDate}
                     onChange={(e) => setForm(prev => ({ ...prev, startDate: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                    className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                       formErrors.startDate ? 'border-red-500 bg-red-50 dark:!bg-red-900/20' : 'bg-white dark:bg-gray-700'
                     }`}
                   />
@@ -850,7 +850,7 @@ const Projects: React.FC = () => {
                     type="date"
                     value={form.endDate}
                     onChange={(e) => setForm(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -861,7 +861,7 @@ const Projects: React.FC = () => {
                   <select
                     value={form.status}
                     onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as 'ativo' | 'pausado' | 'concluido' }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
                   >
                     <option value="ativo">Ativo</option>
                     <option value="pausado">Pausado</option>
@@ -877,7 +877,7 @@ const Projects: React.FC = () => {
                     step="0.01"
                     value={form.value}
                     onChange={(e) => setForm(prev => ({ ...prev, value: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                    className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                       formErrors.value ? 'border-red-500 bg-red-50 dark:!bg-red-900/20' : 'bg-white dark:bg-gray-700'
                     }`}
                   />
@@ -895,7 +895,7 @@ const Projects: React.FC = () => {
                 <select
                   value={form.managerUserId}
                   onChange={(e) => setForm(prev => ({ ...prev, managerUserId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
                 >
                   <option value="">— Sem responsável —</option>
                   {leads.map(l => (
@@ -917,7 +917,7 @@ const Projects: React.FC = () => {
                   max="100"
                   value={form.progress}
                   onChange={(e) => setForm(prev => ({ ...prev, progress: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                     formErrors.progress ? 'border-red-500 bg-red-50 dark:!bg-red-900/20' : 'bg-white dark:bg-gray-700'
                   }`}
                 />
@@ -936,7 +936,7 @@ const Projects: React.FC = () => {
               )}
               <div className="mt-6 flex justify-end gap-3">
                 <button onClick={() => { setIsModalOpen(false); setEditing(null); setSaveError(null); setForm({ name: '', description: '', client: '', startDate: new Date().toISOString().split('T')[0], endDate: '', status: 'ativo', value: '', progress: '0', selectedServices: [], managerUserId: '' }); setFormErrors({}) }} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] hover:bg-gray-200 dark:hover:!bg-[#354b60] text-gray-700 dark:text-gray-200 font-medium transition-all duration-200">Cancelar</button>
-                <button onClick={saveProject} className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 transition-all duration-200">Salvar</button>
+                <button onClick={saveProject} className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-0.5 transition-all duration-200">Salvar</button>
               </div>
             </div>
             </div>

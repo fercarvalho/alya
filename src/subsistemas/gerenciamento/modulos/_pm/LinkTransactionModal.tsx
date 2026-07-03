@@ -50,7 +50,7 @@ const LinkTransactionModal: React.FC<{ projectId: string; onClose: () => void; o
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between flex-shrink-0">
           <h3 className="text-white font-bold flex items-center gap-2"><Link2 className="w-4 h-4" /> Vincular despesa ao projeto</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -87,7 +87,7 @@ const LinkTransactionModal: React.FC<{ projectId: string; onClose: () => void; o
                     <div className="text-xs text-gray-400">{t.date} · <span className="text-red-600 dark:text-red-400">{fmtBRL(t.value)}</span></div>
                   </div>
                   <button onClick={() => link(t.id)} disabled={busyId === t.id}
-                    className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1">
+                    className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1">
                     {busyId === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Vincular
                   </button>
                 </div>

@@ -34,7 +34,7 @@ const ClaimTaskModal: React.FC<{ task: PmTask; onClose: () => void; onDone: () =
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between">
           <h3 className="text-white font-bold flex items-center gap-2"><Hand className="w-4 h-4" /> Pegar tarefa</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -92,7 +92,7 @@ const ClaimTaskModal: React.FC<{ task: PmTask; onClose: () => void; onDone: () =
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
             <button onClick={confirm} disabled={busy}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} {primaryLabel}
             </button>
           </div>

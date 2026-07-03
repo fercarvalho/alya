@@ -238,7 +238,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
         </button>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-md shadow-violet-500/25 flex-shrink-0">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-md shadow-amber-500/25 flex-shrink-0">
               <Layers className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
@@ -259,7 +259,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
               tab === t.key
-                ? 'border-violet-500 text-violet-600 dark:text-violet-400'
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}>
             <t.icon className="w-4 h-4" /> {t.label}
@@ -276,14 +276,14 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
           {(project.stages || []).map((s, i) => (
             <div key={s.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
               <div className="bg-gray-50 dark:bg-[#2d3f52] px-4 py-2.5 flex items-center gap-2">
-                <span className="text-xs font-bold text-violet-600 dark:text-violet-400 w-5">{i + 1}</span>
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 w-5">{i + 1}</span>
                 <span className="font-semibold text-gray-800 dark:text-gray-100 flex-1 truncate">{s.name}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">{STAGE_STATUS[s.status] || s.status}</span>
                 {canEdit && (
                   <div className="flex items-center gap-0.5">
-                    <button onClick={() => moveStage(i, -1)} disabled={busy || i === 0} title="Mover para cima" className="p-1 text-gray-400 hover:text-violet-600 disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
-                    <button onClick={() => moveStage(i, 1)} disabled={busy || i === (project.stages || []).length - 1} title="Mover para baixo" className="p-1 text-gray-400 hover:text-violet-600 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
-                    <button onClick={() => cloneStage(s.id)} disabled={busy} title="Nova versão (diligência)" className="p-1 text-violet-400 hover:text-violet-600"><CopyPlus className="w-4 h-4" /></button>
+                    <button onClick={() => moveStage(i, -1)} disabled={busy || i === 0} title="Mover para cima" className="p-1 text-gray-400 hover:text-amber-600 disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
+                    <button onClick={() => moveStage(i, 1)} disabled={busy || i === (project.stages || []).length - 1} title="Mover para baixo" className="p-1 text-gray-400 hover:text-amber-600 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+                    <button onClick={() => cloneStage(s.id)} disabled={busy} title="Nova versão (diligência)" className="p-1 text-amber-400 hover:text-amber-600"><CopyPlus className="w-4 h-4" /></button>
                     {s.status !== 'completed' && s.status !== 'skipped' && (
                       <button onClick={() => skipStage(s.id)} disabled={busy} title="Pular etapa" className="p-1 text-gray-400 hover:text-gray-600"><SkipForward className="w-4 h-4" /></button>
                     )}
@@ -311,14 +311,14 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
                       {t.due_action && (
                         <button onClick={() => openDue(t)} disabled={busy}
                           title={t.due_action === 'request' ? 'Solicitar alteração de prazo' : (t.due_date ? 'Editar prazo' : 'Definir prazo')}
-                          className="p-1 text-violet-400 hover:text-violet-600">
+                          className="p-1 text-amber-400 hover:text-amber-600">
                           <CalendarClock className="w-4 h-4" />
                         </button>
                       )}
                       {canEdit && t.can_manage !== false && t.status !== 'completed' && (
                         <button onClick={() => setAssignFor(t)} disabled={busy}
                           title={t.assignee_user_id ? 'Reatribuir' : 'Atribuir responsável'}
-                          className="p-1 text-violet-400 hover:text-violet-600">
+                          className="p-1 text-amber-400 hover:text-amber-600">
                           <UserPlus className="w-4 h-4" />
                         </button>
                       )}
@@ -356,7 +356,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Despesas vinculadas</h3>
               {canEdit && (
                 <button onClick={() => setShowLink(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">
                   <Plus className="w-3.5 h-3.5" /> Vincular transação
                 </button>
               )}
@@ -389,7 +389,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
           {(project.events || []).length === 0 && <p className="text-sm text-gray-400">Sem eventos.</p>}
           {(project.events || []).map(ev => (
             <div key={ev.id} className="flex items-start gap-2 text-sm">
-              <CheckCircle2 className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
                 <span className="text-gray-800 dark:text-gray-200 font-medium">{ev.event_type}</span>
                 <span className="text-gray-400 text-xs ml-2">{new Date(ev.created_at).toLocaleString('pt-BR')}</span>
@@ -412,7 +412,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
         return (
           <div className="space-y-4">
             <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <AlertCircle className="w-4 h-4 text-violet-400" /> Atribua responsáveis pelo botão <UserPlus className="w-3.5 h-3.5 inline" /> em cada tarefa, na aba <strong>Etapas</strong>.
+              <AlertCircle className="w-4 h-4 text-amber-400" /> Atribua responsáveis pelo botão <UserPlus className="w-3.5 h-3.5 inline" /> em cada tarefa, na aba <strong>Etapas</strong>.
             </p>
             {members.length === 0 ? (
               <div className="text-center py-10 text-gray-400">
@@ -427,11 +427,11 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
                   return (
                     <div key={uid} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                       <div className="bg-gray-50 dark:bg-[#2d3f52] px-4 py-2.5 flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {m.name.charAt(0).toUpperCase()}
                         </div>
                         <span className="font-semibold text-gray-800 dark:text-gray-100 flex-1 truncate">{m.name}</span>
-                        <span className="text-xs text-violet-600 dark:text-violet-400 font-medium flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{fmtDur(totalMin)}</span>
+                        <span className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{fmtDur(totalMin)}</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">· {done}/{m.tasks.length} concluída(s)</span>
                       </div>
                       <div className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -442,7 +442,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
                           return (
                             <div key={t.id} className="px-4 py-2.5 flex items-center gap-2">
                               <span className="text-sm text-gray-800 dark:text-gray-100 flex-1 truncate">{t.name}</span>
-                              <span className="text-[10px] text-violet-500 dark:text-violet-400 flex items-center gap-0.5 flex-shrink-0" title="Tempo trabalhado"><Clock className="w-3 h-3" />{fmtDur(t.actual_minutes)}</span>
+                              <span className="text-[10px] text-amber-500 dark:text-amber-400 flex items-center gap-0.5 flex-shrink-0" title="Tempo trabalhado"><Clock className="w-3 h-3" />{fmtDur(t.actual_minutes)}</span>
                               <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
                             </div>
                           )
@@ -499,7 +499,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
         return (
         <Modal isOpen onClose={() => setDueFor(null)}>
           <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between">
               <h3 className="text-white font-bold flex items-center gap-2"><CalendarClock className="w-4 h-4" /> {isReq ? 'Solicitar alteração de prazo' : 'Prazo da tarefa'}</h3>
               <button onClick={() => setDueFor(null)} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
@@ -508,7 +508,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
                 <div className="text-center space-y-2 py-2">
                   <CheckCircle2 className="w-10 h-10 mx-auto text-green-500" />
                   <p className="text-sm text-gray-700 dark:text-gray-200">{dueMsg}</p>
-                  <button onClick={() => setDueFor(null)} className="mt-1 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold">Fechar</button>
+                  <button onClick={() => setDueFor(null)} className="mt-1 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold">Fechar</button>
                 </div>
               ) : (
                 <>
@@ -529,7 +529,7 @@ const ProjectDetailPage: React.FC<Props> = ({ projectId, canEdit, onBack }) => {
                     <div className="flex gap-2">
                       <button onClick={() => setDueFor(null)} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
                       <button onClick={() => saveDue(dueVal)} disabled={busy}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
                         {busy && <Loader2 className="w-4 h-4 animate-spin" />} {isReq ? 'Solicitar' : 'Salvar'}
                       </button>
                     </div>

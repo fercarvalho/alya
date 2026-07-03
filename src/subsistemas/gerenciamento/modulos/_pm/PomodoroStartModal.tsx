@@ -60,7 +60,7 @@ const PomodoroStartModal: React.FC<Props> = ({ taskId = null, taskName = null, o
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between">
           <h3 className="text-white font-bold flex items-center gap-2"><Timer className="w-4 h-4" /> Iniciar foco</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -75,7 +75,7 @@ const PomodoroStartModal: React.FC<Props> = ({ taskId = null, taskName = null, o
                     <CheckCircle2 className="w-10 h-10 mx-auto text-green-500" />
                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Pedido enviado!</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Um gestor vai avaliar. Você será notificado quando aprovarem — só então o tempo extra é contabilizado.</p>
-                    <button onClick={onClose} className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold">Fechar</button>
+                    <button onClick={onClose} className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold">Fechar</button>
                   </div>
                 ) : (
                   <>
@@ -94,7 +94,7 @@ const PomodoroStartModal: React.FC<Props> = ({ taskId = null, taskName = null, o
                     <div className="flex justify-end gap-2">
                       <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Agora não</button>
                       <button onClick={askApproval} disabled={busy}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
                         {busy && <Loader2 className="w-4 h-4 animate-spin" />} Solicitar aprovação
                       </button>
                     </div>
@@ -109,7 +109,7 @@ const PomodoroStartModal: React.FC<Props> = ({ taskId = null, taskName = null, o
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold">Entendi</button>
+                    <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold">Entendi</button>
                   </div>
                 </>
               )}
@@ -135,8 +135,8 @@ const PomodoroStartModal: React.FC<Props> = ({ taskId = null, taskName = null, o
                 <button key={m.minutes} onClick={() => { setCustom(false); setMinutes(m.minutes) }}
                   className={`p-3 rounded-xl border text-center transition-all ${
                     !custom && minutes === m.minutes
-                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 ring-2 ring-violet-500/30'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-violet-300'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 ring-2 ring-amber-500/30'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
                   }`}>
                   <div className="font-bold text-gray-900 dark:text-gray-100">{m.minutes}</div>
                   <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 flex items-center justify-center gap-0.5">
@@ -147,8 +147,8 @@ const PomodoroStartModal: React.FC<Props> = ({ taskId = null, taskName = null, o
               <button onClick={() => setCustom(true)}
                 className={`p-3 rounded-xl border text-center transition-all ${
                   custom
-                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 ring-2 ring-violet-500/30'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-violet-300'
+                    ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 ring-2 ring-amber-500/30'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
                 }`}>
                 <div className="font-bold text-gray-900 dark:text-gray-100">Livre</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">custom</div>
@@ -177,7 +177,7 @@ const PomodoroStartModal: React.FC<Props> = ({ taskId = null, taskName = null, o
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
             <button onClick={submit} disabled={busy || (custom && !customValid)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Iniciar
             </button>
           </div>

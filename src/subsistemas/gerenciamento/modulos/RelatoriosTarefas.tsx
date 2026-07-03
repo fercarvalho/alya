@@ -60,7 +60,7 @@ const RelatoriosTarefas: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-md shadow-violet-500/25">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-md shadow-amber-500/25">
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -83,7 +83,7 @@ const RelatoriosTarefas: React.FC = () => {
       <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
         {([['productivity', 'Produtividade', Users], ['teams', 'Equipes', Users2], ['health', 'Saúde dos projetos', FolderKanban]] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-gray-500'}`}>
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-gray-500'}`}>
             <Icon className="w-4 h-4" /> {label}
           </button>
         ))}
@@ -147,7 +147,7 @@ const RelatoriosTarefas: React.FC = () => {
           {teams.map(team => (
             <div key={team.manager_id} className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="bg-gray-50 dark:bg-[#2d3f52] px-4 py-2.5 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{(team.manager_name || '?').charAt(0).toUpperCase()}</div>
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{(team.manager_name || '?').charAt(0).toUpperCase()}</div>
                 <span className="font-semibold text-gray-800 dark:text-gray-100 flex-1 truncate">
                   Equipe de {team.manager_name}
                   {team.manager_role && team.manager_role !== 'manager' && (
@@ -198,7 +198,7 @@ const RelatoriosTarefas: React.FC = () => {
                           {isOpen && m.projects!.map(p => (
                             <tr key={`${m.user_id}:${p.project_id}`} className="text-gray-600 dark:text-gray-300 bg-gray-50/60 dark:bg-[#2d3f52]/30">
                               <td className="pl-10 pr-4 py-1 text-xs truncate flex items-center gap-1.5">
-                                <FolderKanban className="w-3 h-3 text-violet-400 flex-shrink-0" />{p.project_name}
+                                <FolderKanban className="w-3 h-3 text-amber-400 flex-shrink-0" />{p.project_name}
                                 {p.role === 'lead'
                                   ? <span className="text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Responsável</span>
                                   : <span className="text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Membro</span>}

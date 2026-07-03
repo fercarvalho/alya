@@ -57,9 +57,9 @@ export default function RelatoriosGerenciamento() {
           const Icon = rel.icon;
           return (
             <li key={rel.id}>
-              <article className="h-full bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-l-4 border-l-violet-500 p-5 flex flex-col">
+              <article className="h-full bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-l-4 border-l-amber-500 p-5 flex flex-col">
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-md flex items-center justify-center bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-md flex items-center justify-center bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <h3 className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight pt-0.5">

@@ -168,7 +168,7 @@ const TemplateImportModal: React.FC<{
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between flex-shrink-0">
           <h3 className="text-white font-bold flex items-center gap-2 min-w-0">
             <Copy className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">{step === 'preview' ? `Prévia · ${sourceName} → ${targetServiceName}` : 'Copiar estrutura de outro serviço'}</span>
@@ -206,7 +206,7 @@ const TemplateImportModal: React.FC<{
                   { v: 'merge-before', t: 'Mesclar — nova antes da atual', d: 'Etapas de origem entram primeiro, depois as atuais.' },
                   { v: 'merge-after', t: 'Mesclar — nova depois da atual', d: 'Mantém as etapas atuais e adiciona as de origem ao final.' },
                 ].map(o => (
-                  <label key={o.v} className={`flex items-start gap-2 rounded-xl border p-3 cursor-pointer transition-colors ${mode === o.v ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#2d3f52]/40'}`}>
+                  <label key={o.v} className={`flex items-start gap-2 rounded-xl border p-3 cursor-pointer transition-colors ${mode === o.v ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#2d3f52]/40'}`}>
                     <input type="radio" name="mergemode" className="mt-0.5" checked={mode === o.v} onChange={() => setMode(o.v as MergeMode)} />
                     <span>
                       <span className="block text-sm font-medium text-gray-800 dark:text-gray-100">{o.t}</span>
@@ -225,9 +225,9 @@ const TemplateImportModal: React.FC<{
               {draft.map((s, si) => (
                 <div key={s.refId} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                   <div className="bg-gray-50 dark:bg-[#2d3f52] px-3 py-2 flex items-center gap-2">
-                    <span className="text-xs font-bold text-violet-600 dark:text-violet-400 w-4">{si + 1}</span>
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 w-4">{si + 1}</span>
                     <input value={s.name} onChange={e => setStage(si, { name: e.target.value })}
-                      className="flex-1 min-w-0 bg-transparent border-b border-transparent focus:border-violet-400 outline-none font-semibold text-gray-800 dark:text-gray-100 text-sm py-0.5" />
+                      className="flex-1 min-w-0 bg-transparent border-b border-transparent focus:border-amber-400 outline-none font-semibold text-gray-800 dark:text-gray-100 text-sm py-0.5" />
                     <select value={s.stage_type} onChange={e => setStage(si, { stage_type: e.target.value as any })}
                       className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-1.5 py-0.5 text-gray-600 dark:text-gray-300">
                       <option value="first">Primeira</option><option value="normal">Normal</option><option value="last">Final</option>
@@ -240,7 +240,7 @@ const TemplateImportModal: React.FC<{
                     {s.tasks.map((t, ti) => (
                       <div key={t.refId} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 dark:border-gray-700 px-2 py-1.5">
                         <input value={t.name} onChange={e => setTask(si, ti, { name: e.target.value })}
-                          className="flex-1 min-w-[140px] bg-transparent border-b border-transparent focus:border-violet-400 outline-none text-sm text-gray-700 dark:text-gray-200 py-0.5" />
+                          className="flex-1 min-w-[140px] bg-transparent border-b border-transparent focus:border-amber-400 outline-none text-sm text-gray-700 dark:text-gray-200 py-0.5" />
                         <label className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
                           prazo
                           <input type="number" min={0} value={t.default_days ?? ''} onChange={e => setTask(si, ti, { default_days: e.target.value === '' ? null : Number(e.target.value) })}
@@ -256,7 +256,7 @@ const TemplateImportModal: React.FC<{
                         <button onClick={() => removeTask(si, ti)} className="p-0.5 text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
-                    <button onClick={() => addTask(si)} className="text-xs text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1 px-1 pt-0.5"><Plus className="w-3.5 h-3.5" /> tarefa</button>
+                    <button onClick={() => addTask(si)} className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 px-1 pt-0.5"><Plus className="w-3.5 h-3.5" /> tarefa</button>
                   </div>
                 </div>
               ))}
@@ -275,17 +275,17 @@ const TemplateImportModal: React.FC<{
             <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
             {step === 'pick' ? (
               <button onClick={advanceFromPick} disabled={busy || !sourceId}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
                 {busy && <Loader2 className="w-4 h-4 animate-spin" />} {hasCurrent ? 'Avançar' : 'Ver prévia'}
               </button>
             ) : step === 'mode' ? (
               <button onClick={buildPreview} disabled={busy}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50">
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50">
                 Ver prévia
               </button>
             ) : (
               <button onClick={doImport} disabled={busy || !draft.length}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
                 {busy && <Loader2 className="w-4 h-4 animate-spin" />} Importar estrutura
               </button>
             )}

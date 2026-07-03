@@ -184,7 +184,7 @@ const ServiceTemplateEditor: React.FC<Props> = ({ serviceId, serviceName, canEdi
     <Modal isOpen onClose={onClose} ariaLabelledBy="tpl-editor-title">
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <h2 id="tpl-editor-title" className="text-lg font-bold text-white flex items-center gap-2 min-w-0">
             <Layers className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             <span className="truncate">Estrutura padrão · {serviceName}</span>
@@ -210,7 +210,7 @@ const ServiceTemplateEditor: React.FC<Props> = ({ serviceId, serviceName, canEdi
                 Nova versão
               </button>
               <button onClick={addStage} disabled={busy}
-                className="text-xs px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium flex items-center gap-1 transition-colors disabled:opacity-50">
+                className="text-xs px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium flex items-center gap-1 transition-colors disabled:opacity-50">
                 <Plus className="w-3.5 h-3.5" /> Etapa
               </button>
             </div>
@@ -242,7 +242,7 @@ const ServiceTemplateEditor: React.FC<Props> = ({ serviceId, serviceName, canEdi
               <div key={s.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                 {/* Stage header */}
                 <div className="bg-gray-50 dark:bg-[#2d3f52] px-4 py-2.5 flex items-center gap-2">
-                  <span className="text-xs font-bold text-violet-600 dark:text-violet-400 w-5">{sIdx + 1}</span>
+                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 w-5">{sIdx + 1}</span>
                   <span className="font-semibold text-gray-800 dark:text-gray-100 flex-1 truncate">{s.name}</span>
                   {canEdit ? (
                     <select value={s.stage_type} onChange={(e) => setStageType(s, e.target.value)}
@@ -260,7 +260,7 @@ const ServiceTemplateEditor: React.FC<Props> = ({ serviceId, serviceName, canEdi
                     <div className="flex items-center gap-0.5">
                       <button onClick={() => moveStage(s, -1)} disabled={busy || sIdx === 0} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30" aria-label="Mover acima"><ChevronUp className="w-4 h-4" /></button>
                       <button onClick={() => moveStage(s, 1)} disabled={busy || sIdx === tpl.stages.length - 1} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30" aria-label="Mover abaixo"><ChevronDown className="w-4 h-4" /></button>
-                      <button onClick={() => renameStage(s)} disabled={busy} className="p-1 text-blue-400 hover:text-blue-600" aria-label="Renomear"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => renameStage(s)} disabled={busy} className="p-1 text-amber-400 hover:text-amber-600" aria-label="Renomear"><Edit2 className="w-4 h-4" /></button>
                       <button onClick={() => deleteStage(s)} disabled={busy} className="p-1 text-red-400 hover:text-red-600" aria-label="Excluir etapa"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
@@ -278,9 +278,9 @@ const ServiceTemplateEditor: React.FC<Props> = ({ serviceId, serviceName, canEdi
                         {t.default_assignee_role && <span className="text-[10px] text-gray-400">{ROLE_LABELS[t.default_assignee_role]}</span>}
                         {canEdit && (
                           <div className="flex items-center gap-0.5">
-                            <button onClick={() => setDepModal(t)} disabled={busy} className="p-1 text-indigo-400 hover:text-indigo-600" aria-label="Dependências" title="Dependências"><GitBranch className="w-4 h-4" /></button>
+                            <button onClick={() => setDepModal(t)} disabled={busy} className="p-1 text-amber-400 hover:text-amber-600" aria-label="Dependências" title="Dependências"><GitBranch className="w-4 h-4" /></button>
                             <button onClick={() => setTriggerModal(t)} disabled={busy} className="p-1 text-fuchsia-400 hover:text-fuchsia-600" aria-label="Gatilhos" title="Gatilhos"><Zap className="w-4 h-4" /></button>
-                            <button onClick={() => setTaskModal({ stageId: s.id, task: t })} disabled={busy} className="p-1 text-blue-400 hover:text-blue-600" aria-label="Editar tarefa"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => setTaskModal({ stageId: s.id, task: t })} disabled={busy} className="p-1 text-amber-400 hover:text-amber-600" aria-label="Editar tarefa"><Edit2 className="w-4 h-4" /></button>
                             <button onClick={() => deleteTask(t)} disabled={busy} className="p-1 text-red-400 hover:text-red-600" aria-label="Excluir tarefa"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         )}
@@ -290,7 +290,7 @@ const ServiceTemplateEditor: React.FC<Props> = ({ serviceId, serviceName, canEdi
                         <div className="mt-1.5 ml-1 space-y-1">
                           {t.deps.map(d => (
                             <div key={d.id} className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                              <GitBranch className="w-3 h-3 text-indigo-400" />
+                              <GitBranch className="w-3 h-3 text-amber-400" />
                               <span>
                                 {d.dependency_type === 'start_dependency' ? 'inicia após' : 'conclui após'}{' '}
                                 {d.dependency_target_type === 'task' ? taskName(d.target_task_id) : `etapa: ${stageName(d.target_stage_id)}`}
@@ -312,7 +312,7 @@ const ServiceTemplateEditor: React.FC<Props> = ({ serviceId, serviceName, canEdi
                   ))}
                   {canEdit && (
                     <button onClick={() => setTaskModal({ stageId: s.id, task: null })} disabled={busy}
-                      className="w-full px-4 py-2 text-xs text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 flex items-center gap-1.5 transition-colors">
+                      className="w-full px-4 py-2 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1.5 transition-colors">
                       <Plus className="w-3.5 h-3.5" /> Adicionar tarefa
                     </button>
                   )}
@@ -411,12 +411,12 @@ const TaskFormModal: React.FC<{
     } catch (e: any) { setErr(e.message); setBusy(false) }
   }
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white dark:bg-gray-700 dark:text-gray-100 text-sm transition-all'
+  const inputCls = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 text-sm transition-all'
 
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between">
           <h3 className="text-white font-bold">{task ? 'Editar tarefa' : 'Nova tarefa'}</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -478,7 +478,7 @@ const TaskFormModal: React.FC<{
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
-            <button onClick={submit} disabled={busy} className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+            <button onClick={submit} disabled={busy} className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Salvar
             </button>
           </div>
@@ -525,7 +525,7 @@ const DependencyFormModal: React.FC<{
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-500 to-blue-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between">
           <h3 className="text-white font-bold flex items-center gap-2"><GitBranch className="w-4 h-4" /> Dependência</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -563,7 +563,7 @@ const DependencyFormModal: React.FC<{
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
-            <button onClick={submit} disabled={busy} className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+            <button onClick={submit} disabled={busy} className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Adicionar
             </button>
           </div>
@@ -611,7 +611,7 @@ const TriggerFormModal: React.FC<{
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-fuchsia-500 to-amber-600 px-5 py-3 flex items-center justify-between">
           <h3 className="text-white font-bold flex items-center gap-2"><Zap className="w-4 h-4" /> Gatilho</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -644,7 +644,7 @@ const TriggerFormModal: React.FC<{
           </label>
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
-            <button onClick={submit} disabled={busy} className="px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+            <button onClick={submit} disabled={busy} className="px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-amber-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Adicionar
             </button>
           </div>

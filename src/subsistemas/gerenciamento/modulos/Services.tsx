@@ -197,7 +197,7 @@ const Services: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md shadow-blue-500/25">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-md shadow-amber-500/25">
             <Target className="w-5 h-5 text-white" aria-hidden="true" />
           </div>
           <div>
@@ -208,7 +208,7 @@ const Services: React.FC = () => {
         {permissions.canCreate && (
           <button
             onClick={() => { setEditing(null); setForm(EMPTY_FORM); setFormErrors({}); setErrorMsg(null); setIsModalOpen(true) }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 transition-all duration-200"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/25 hover:-translate-y-0.5 transition-all duration-200"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             Novo Serviço
@@ -240,7 +240,7 @@ const Services: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service) => (
-            <div key={service.id} className="bg-white dark:!bg-[#243040] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 hover:border-blue-200 dark:hover:border-blue-700 transition-all duration-200 flex flex-col">
+            <div key={service.id} className="bg-white dark:!bg-[#243040] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg hover:shadow-amber-500/10 hover:-translate-y-0.5 hover:border-amber-200 dark:hover:border-amber-700 transition-all duration-200 flex flex-col">
               <div className="flex items-start justify-between mb-3">
                 <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug flex-1 mr-2">{service.name}</h2>
                 <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 ${getStatusColor(service.status)}`}>
@@ -254,7 +254,7 @@ const Services: React.FC = () => {
                 {permissions.canView && (
                   <button
                     onClick={() => setTemplateService(service)}
-                    className="w-full px-3 py-2 bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/20 dark:hover:bg-violet-900/40 text-violet-600 dark:text-violet-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Layers className="w-3.5 h-3.5" aria-hidden="true" />
                     Estrutura padrão
@@ -265,7 +265,7 @@ const Services: React.FC = () => {
                     {permissions.canEdit && (
                       <button
                         onClick={() => { setEditing(service); setForm({ name: service.name, description: service.description, status: service.status }); setFormErrors({}); setErrorMsg(null); setIsModalOpen(true) }}
-                        className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                       >
                         <Edit className="w-3.5 h-3.5" aria-hidden="true" />
                         Editar
@@ -292,15 +292,15 @@ const Services: React.FC = () => {
       {/* Mensagem quando não há serviços */}
       {!loading && services.length === 0 && !errorMsg && (
         <div className="text-center py-16 bg-white dark:!bg-[#243040] rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Target className="w-8 h-8 text-blue-400" aria-hidden="true" />
+          <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-amber-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Target className="w-8 h-8 text-amber-400" aria-hidden="true" />
           </div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Nenhum serviço cadastrado</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">Comece adicionando seu primeiro serviço</p>
           {permissions.canCreate && (
             <button
               onClick={() => { setEditing(null); setForm(EMPTY_FORM); setFormErrors({}); setErrorMsg(null); setIsModalOpen(true) }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 transition-all duration-200"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/25 hover:-translate-y-0.5 transition-all duration-200"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               Adicionar Primeiro Serviço
@@ -312,7 +312,7 @@ const Services: React.FC = () => {
       {/* Modal Novo/Editar Serviço */}
       <Modal isOpen={isModalOpen} onClose={closeModal} ariaLabelledBy="modal-title">
         <div ref={modalRef} className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 flex items-center justify-between">
               <h2 id="modal-title" className="text-lg font-bold text-white flex items-center gap-2">
                 <Target className="w-5 h-5" aria-hidden="true" />
                 {editing ? 'Editar Serviço' : 'Novo Serviço'}
@@ -332,7 +332,7 @@ const Services: React.FC = () => {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                     formErrors.name ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300'
                   }`}
                 />
@@ -353,7 +353,7 @@ const Services: React.FC = () => {
                   value={form.description}
                   onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 transition-all duration-200 ${
                     formErrors.description ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300'
                   }`}
                 />
@@ -372,7 +372,7 @@ const Services: React.FC = () => {
                   id="svc-status"
                   value={form.status}
                   onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as 'ativo' | 'inativo' }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white dark:bg-gray-700 dark:text-gray-100 transition-all duration-200"
                 >
                   <option value="ativo">Ativo</option>
                   <option value="inativo">Inativo</option>
@@ -384,7 +384,7 @@ const Services: React.FC = () => {
                 <button
                   onClick={saveService}
                   disabled={saving}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
                   {saving ? 'Salvando…' : 'Salvar'}
                 </button>

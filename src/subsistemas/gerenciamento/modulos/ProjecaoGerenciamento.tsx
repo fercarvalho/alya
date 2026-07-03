@@ -34,11 +34,11 @@ export default function ProjecaoGerenciamento() {
       </header>
 
       {/* Indicador de fase */}
-      <div className="mb-6 p-4 rounded-lg border border-violet-200 dark:border-violet-900 bg-violet-50 dark:bg-violet-900/20 text-sm text-violet-800 dark:text-violet-200 flex items-start gap-3">
+      <div className="mb-6 p-4 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-900/20 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-3">
         <Lock className="h-5 w-5 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <p className="font-medium mb-1">Edição de metas em desenvolvimento</p>
-          <p className="text-violet-700/90 dark:text-violet-200/90 leading-relaxed">
+          <p className="text-amber-700/90 dark:text-amber-200/90 leading-relaxed">
             A UI abaixo é um preview funcional do layout. A persistência das metas (salvar,
             editar, comparar com o real) será habilitada na próxima entrega — quando o backend
             de projeção operacional estiver pronto.
@@ -50,7 +50,7 @@ export default function ProjecaoGerenciamento() {
       <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <LineChart className="h-5 w-5 text-violet-600" />
+            <LineChart className="h-5 w-5 text-amber-600" />
             Metas mensais — {new Date().getFullYear()}
           </h2>
           <span className="text-[11px] font-mono px-2.5 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center gap-1">

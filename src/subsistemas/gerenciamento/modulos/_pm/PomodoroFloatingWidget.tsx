@@ -200,7 +200,7 @@ const PomodoroFloatingWidget: React.FC = () => {
         <Pause className="w-4 h-4 text-amber-500" />
         <span className="text-xs text-gray-600 dark:text-gray-300">Tarefa pausada</span>
         <button onClick={onResumeParked} disabled={busy} title="Retomar tarefa e cronômetro"
-          className="p-1.5 rounded-full bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-50">
+          className="p-1.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
         </button>
       </div>
@@ -215,7 +215,7 @@ const PomodoroFloatingWidget: React.FC = () => {
     <div className="flex items-center justify-center gap-2 mt-3">
       {paused ? (
         <button onClick={() => act('resume')} disabled={busy} title="Retomar"
-          className="p-2.5 rounded-full bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-50">
+          className="p-2.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50">
           {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
         </button>
       ) : (
@@ -260,7 +260,7 @@ const PomodoroFloatingWidget: React.FC = () => {
     // Só o cronômetro vai pra janela destacada; a pausa obrigatória trava a tela principal.
     const pipBody = (
       <div className="flex flex-col h-screen w-screen bg-white dark:bg-[#1a2332] text-gray-900 dark:text-gray-100 select-none">
-        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-500 to-indigo-600 text-white">
+        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white">
           <Timer className="w-4 h-4" />
           <span className="text-sm font-semibold flex-1">{paused ? 'Pausado' : 'Em foco'}</span>
           <span className="text-[11px] opacity-80">{session.planned_minutes}/{session.break_planned_minutes}</span>
@@ -279,13 +279,13 @@ const PomodoroFloatingWidget: React.FC = () => {
         {/* Indicador discreto na página principal enquanto está destacado */}
         <div
           style={{ left: pos.x, top: pos.y }}
-          className="fixed z-[10040] rounded-xl shadow-lg border border-violet-200 dark:border-violet-900 bg-white dark:!bg-[#1a2332] px-3 py-2 flex items-center gap-2"
+          className="fixed z-[10040] rounded-xl shadow-lg border border-amber-200 dark:border-amber-900 bg-white dark:!bg-[#1a2332] px-3 py-2 flex items-center gap-2"
           role="dialog" aria-label="Cronômetro Pomodoro (janela flutuante)"
         >
-          <Timer className="w-4 h-4 text-violet-500" />
+          <Timer className="w-4 h-4 text-amber-500" />
           <span className="text-xs text-gray-600 dark:text-gray-300">Cronômetro na janela flutuante</span>
           <button onClick={closePip} title="Trazer de volta para a página"
-            className="p-1 rounded-md text-gray-400 hover:text-violet-600 dark:hover:text-violet-400">
+            className="p-1 rounded-md text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -312,12 +312,12 @@ const PomodoroFloatingWidget: React.FC = () => {
   return (
     <div
       style={{ left: pos.x, top: pos.y }}
-      className="fixed z-[10040] w-72 rounded-2xl shadow-2xl border border-violet-200 dark:border-violet-900 bg-white dark:!bg-[#1a2332] overflow-hidden"
+      className="fixed z-[10040] w-72 rounded-2xl shadow-2xl border border-amber-200 dark:border-amber-900 bg-white dark:!bg-[#1a2332] overflow-hidden"
       role="dialog" aria-label="Cronômetro Pomodoro"
     >
       <div
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
-        className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-500 to-indigo-600 text-white cursor-move select-none"
+        className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white cursor-move select-none"
       >
         <GripVertical className="w-4 h-4 opacity-70" />
         <Timer className="w-4 h-4" />

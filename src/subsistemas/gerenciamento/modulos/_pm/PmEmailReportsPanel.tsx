@@ -49,13 +49,13 @@ const PmEmailReportsPanel: React.FC = () => {
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Mail className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+          <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Relatórios por e-mail (gestão)</span>
           {saving && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
         </div>
         <label className="inline-flex items-center cursor-pointer">
           <input type="checkbox" checked={emailReports} onChange={e => save({ emailReports: e.target.checked })} className="sr-only peer" />
-          <div className="relative w-10 h-5 bg-gray-200 peer-checked:bg-violet-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+          <div className="relative w-10 h-5 bg-gray-200 peer-checked:bg-amber-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
         </label>
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400">Receba resumos de produtividade e tempo por e-mail nas frequências escolhidas.</p>
@@ -65,7 +65,7 @@ const PmEmailReportsPanel: React.FC = () => {
             <button key={f.value} onClick={() => toggleFreq(f.value)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                 frequencies.includes(f.value)
-                  ? 'bg-violet-600 text-white'
+                  ? 'bg-amber-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
               }`}>
               {f.label}

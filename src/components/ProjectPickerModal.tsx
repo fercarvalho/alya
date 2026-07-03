@@ -32,7 +32,7 @@ const ProjectPickerModal: React.FC<{
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between flex-shrink-0">
           <h3 className="text-white font-bold flex items-center gap-2"><FolderKanban className="w-4 h-4" /> {title}</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -52,7 +52,7 @@ const ProjectPickerModal: React.FC<{
             <div className="space-y-1">
               {list.map(p => (
                 <button key={p.id} onClick={() => onPick(p)} disabled={busy}
-                  className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50 ${p.id === currentProjectId ? 'bg-violet-50 dark:bg-violet-900/20 ring-1 ring-violet-300' : 'hover:bg-violet-50 dark:hover:bg-violet-900/20'}`}>
+                  className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50 ${p.id === currentProjectId ? 'bg-amber-50 dark:bg-amber-900/20 ring-1 ring-amber-300' : 'hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
                   <span className="flex-1 text-sm text-gray-800 dark:text-gray-100 truncate">{p.name}</span>
                   {p.status && <span className="text-[10px] text-gray-400 flex-shrink-0">{p.status}</span>}
                 </button>

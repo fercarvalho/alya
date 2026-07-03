@@ -99,10 +99,10 @@ const MetasGerenciamento: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-gray-900 dark:text-gray-100">
-          <Target className="w-8 h-8 text-violet-600" /> Metas
+          <Target className="w-8 h-8 text-amber-600" /> Metas
         </h1>
         <button onClick={() => { setEditing(null); setModalOpen(true) }}
-          className="flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-violet-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-violet-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
+          className="flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
           <Plus className="h-5 w-5" /> Nova meta
         </button>
       </div>
@@ -116,7 +116,7 @@ const MetasGerenciamento: React.FC = () => {
       <div className="inline-flex rounded-xl bg-gray-100 dark:bg-[#243040] p-1">
         {([['mine', 'Minhas metas'], ['team', 'Equipe & empresa']] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === k ? 'bg-white dark:bg-violet-600 text-violet-700 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === k ? 'bg-white dark:bg-amber-600 text-amber-700 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>
             {label} {k === 'mine' ? `(${mine.length})` : `(${team.length})`}
           </button>
         ))}
@@ -128,7 +128,7 @@ const MetasGerenciamento: React.FC = () => {
         <div className="text-center py-16 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
           <Flag className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
           <p className="text-sm text-gray-500 dark:text-gray-400">{tab === 'mine' ? 'Você ainda não tem metas pessoais.' : 'Nenhuma meta de equipe/empresa.'}</p>
-          <button onClick={() => { setEditing(null); setModalOpen(true) }} className="mt-3 text-sm text-violet-600 dark:text-violet-400 font-medium hover:underline">Criar a primeira</button>
+          <button onClick={() => { setEditing(null); setModalOpen(true) }} className="mt-3 text-sm text-amber-600 dark:text-amber-400 font-medium hover:underline">Criar a primeira</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
@@ -141,7 +141,7 @@ const MetasGerenciamento: React.FC = () => {
               <div key={g.id} className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-5">
                 {/* Cabeçalho */}
                 <div className="flex items-start gap-2 mb-4">
-                  <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 flex items-center justify-center flex-shrink-0">{mm.icon}</div>
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 flex items-center justify-center flex-shrink-0">{mm.icon}</div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-bold text-gray-800 dark:text-gray-100 truncate">{g.title || mm.label}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{mm.label} · {scopeLabel(g)}</p>
@@ -149,7 +149,7 @@ const MetasGerenciamento: React.FC = () => {
                   <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${sm.badge} flex-shrink-0`}>{sm.label}</span>
                   {canEdit && (
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <button onClick={() => { setEditing(g); setModalOpen(true) }} className="p-1 text-gray-400 hover:text-violet-600" title="Editar"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditing(g); setModalOpen(true) }} className="p-1 text-gray-400 hover:text-amber-600" title="Editar"><Pencil className="w-4 h-4" /></button>
                       <button onClick={() => remove(g)} className="p-1 text-gray-400 hover:text-rose-600" title="Excluir"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
@@ -168,7 +168,7 @@ const MetasGerenciamento: React.FC = () => {
                       <div className="text-lg font-black text-emerald-700 dark:text-emerald-400">{fmtVal(g.metric, g.current)}</div>
                     </div>
                     <div className="bg-white dark:!bg-[#243040] rounded-xl p-3 text-center shadow-md border border-gray-100 dark:border-gray-700">
-                      <div className="text-[10px] font-bold text-violet-600 uppercase tracking-wide mb-1">Falta</div>
+                      <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1">Falta</div>
                       <div className="text-lg font-black text-gray-800 dark:text-gray-100">{g.status === 'hit' ? '—' : fmtVal(g.metric, remaining)}</div>
                     </div>
                   </div>
@@ -252,7 +252,7 @@ const GoalModal: React.FC<{
   return (
     <Modal isOpen onClose={onClose}>
       <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 flex items-center justify-between">
           <h3 className="text-white font-bold flex items-center gap-2"><Target className="w-4 h-4" /> {editMode ? 'Editar meta' : 'Nova meta'}</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
@@ -310,7 +310,7 @@ const GoalModal: React.FC<{
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={onClose} className="px-4 py-2 rounded-xl bg-gray-100 dark:!bg-[#2d3f52] text-gray-700 dark:text-gray-200 text-sm font-medium">Cancelar</button>
             <button onClick={submit} disabled={busy || !target}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} {editMode ? 'Salvar' : 'Criar meta'}
             </button>
           </div>

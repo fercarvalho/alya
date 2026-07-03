@@ -58,7 +58,7 @@ type ActiveDialog =
   | { kind: 'prompt'; opts: PromptOptions; resolve: (v: string | null) => void }
 
 const variantStyle: Record<Variant, { grad: string; Icon: typeof Info }> = {
-  info: { grad: 'from-sky-500 to-blue-600', Icon: Info },
+  info: { grad: 'from-amber-500 to-orange-500', Icon: Info },
   success: { grad: 'from-emerald-500 to-green-600', Icon: CheckCircle2 },
   error: { grad: 'from-rose-500 to-red-600', Icon: AlertTriangle },
 }
@@ -155,7 +155,7 @@ const DialogCard: React.FC<{
   const cancelLabel = (active.kind === 'confirm' || active.kind === 'prompt') ? (active.opts.cancelLabel ?? 'Cancelar') : 'Cancelar'
   const confirmTone = active.kind === 'confirm' && active.opts.destructive
     ? 'from-rose-500 to-red-600'
-    : 'from-blue-500 to-indigo-600'
+    : 'from-amber-500 to-orange-500'
 
   return (
     <div className="bg-white dark:!bg-[#243040] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">

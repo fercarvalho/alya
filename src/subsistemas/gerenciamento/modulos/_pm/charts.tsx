@@ -61,7 +61,7 @@ export const SectionPanel: React.FC<{
   children: React.ReactNode
 }> = ({ title, icon, tint, right, children }) => {
   const tints: Record<string, string> = {
-    violet: 'from-violet-50/60 to-indigo-50/40 dark:from-violet-900/20 dark:to-indigo-900/10 border-violet-100 dark:border-violet-900/30',
+    violet: 'from-amber-50/60 to-orange-50/40 dark:from-amber-900/20 dark:to-orange-900/10 border-amber-100 dark:border-amber-900/30',
     cyan: 'from-cyan-50/60 to-sky-50/40 dark:from-cyan-900/20 dark:to-sky-900/10 border-cyan-100 dark:border-cyan-900/30',
     emerald: 'from-emerald-50/60 to-green-50/40 dark:from-emerald-900/20 dark:to-green-900/10 border-emerald-100 dark:border-emerald-900/30',
   }
@@ -169,7 +169,7 @@ export const Bars: React.FC<{
   height?: number
   xIsDay?: boolean
   layout?: 'horizontal' | 'vertical'
-}> = ({ data, xKey, yKey, color = '#8b5cf6', height = 220, xIsDay, layout = 'horizontal' }) => {
+}> = ({ data, xKey, yKey, color = '#f59e0b', height = 220, xIsDay, layout = 'horizontal' }) => {
   if (!data?.length) return <EmptyChart height={height} />
   const vertical = layout === 'vertical'
   return (
@@ -204,7 +204,7 @@ export const AreaTrend: React.FC<{
   color?: string
   height?: number
   suffix?: string
-}> = ({ data, xKey, yKey, color = '#6366f1', height = 200, suffix }) => {
+}> = ({ data, xKey, yKey, color = '#f59e0b', height = 200, suffix }) => {
   if (!data?.length) return <EmptyChart height={height} />
   const gid = `g-${yKey}-${color.replace('#', '')}`
   return (
@@ -249,7 +249,7 @@ export const ConicGauge: React.FC<{ pct: number; color: string; size?: number; l
 }
 
 // ─── Barra de progresso (metas / saúde) ───────────────────────────────────────
-export const ProgressBar: React.FC<{ pct: number; color?: string; height?: string }> = ({ pct, color = 'bg-violet-500', height = 'h-2' }) => (
+export const ProgressBar: React.FC<{ pct: number; color?: string; height?: string }> = ({ pct, color = 'bg-amber-500', height = 'h-2' }) => (
   <div className={`w-full ${height} bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden`}>
     <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
   </div>
