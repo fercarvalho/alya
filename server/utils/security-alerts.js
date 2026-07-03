@@ -206,7 +206,7 @@ async function sendAlert(title, message, severity, fields = []) {
   // Registrar no banco de dados (audit log)
   try {
     await pool.query(
-      `INSERT INTO audit_logs (action, status, details, created_at)
+      `INSERT INTO audit_logs (operation, status, details, created_at)
        VALUES ($1, $2, $3, NOW())`,
       [
         'security_alert',
