@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   TrendingUp,
+  Upload,
   Users,
   Wallet,
   X,
@@ -79,6 +80,7 @@ const NuvemshopIntegration: React.FC = () => {
   const [connecting, setConnecting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [syncing, setSyncing] = useState<'orders' | 'products' | 'customers' | null>(null)
+  const [pushing, setPushing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
@@ -178,6 +180,25 @@ const NuvemshopIntegration: React.FC = () => {
       setError(msg || `Erro ao sincronizar ${type}`)
     } finally {
       setSyncing(null)
+    }
+  }
+
+  // ── Enviar produtos ALYA → Nuvemshop (push de todos) ────────────────────────
+  const handlePushProducts = async () => {
+    setPushing(true)
+    setError(null)
+    try {
+      const { data } = await axios.post(`${API_BASE_URL}/nuvemshop/push/products`)
+      showSuccess(
+        `Envio de produtos concluído! ` +
+        `${data.created ?? 0} criados, ${data.updated ?? 0} atualizados, ${data.errors ?? 0} erros.`
+      )
+      await loadStatus()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
+      setError(msg || 'Erro ao enviar produtos para a Nuvemshop')
+    } finally {
+      setPushing(false)
     }
   }
 
@@ -362,6 +383,20 @@ const NuvemshopIntegration: React.FC = () => {
                   {syncing !== type && <Icon className="w-3.5 h-3.5 text-gray-400" />}
                 </button>
               ))}
+
+              {/* Envio ALYA → Nuvemshop (direção inversa: cor distinta) */}
+              <button
+                onClick={handlePushProducts}
+                disabled={pushing || syncing !== null}
+                title="Cria/atualiza os produtos do Alya na sua loja Nuvemshop"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-blue-200 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+              >
+                {pushing
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Upload className="w-4 h-4" />
+                }
+                {pushing ? 'Enviando...' : 'Enviar Produtos para a Nuvemshop'}
+              </button>
             </div>
           </div>
 

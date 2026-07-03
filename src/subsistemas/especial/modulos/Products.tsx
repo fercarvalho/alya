@@ -14,7 +14,7 @@
 // =============================================================================
 
 import type React from 'react';
-import { Package, Download, Plus, Filter, Edit, Trash2 } from 'lucide-react';
+import { Package, Download, Plus, Filter, Edit, Trash2, Upload } from 'lucide-react';
 
 interface ProductFilters {
   category: string;
@@ -47,6 +47,9 @@ interface ProductsProps {
   handleEditProduct: (p: any) => void;
   deleteProduct: (id: string) => Promise<boolean>;
   handleDeleteSelectedProducts: () => void;
+  // Envio ALYA → Nuvemshop (produtos selecionados)
+  onPushSelected?: () => void;
+  pushingProducts?: boolean;
 }
 
 export default function Products({
@@ -70,6 +73,8 @@ export default function Products({
   handleEditProduct,
   deleteProduct,
   handleDeleteSelectedProducts,
+  onPushSelected,
+  pushingProducts,
 }: ProductsProps) {
   return (
     <div className="space-y-6">
@@ -429,9 +434,20 @@ export default function Products({
               </div>
             ))}
 
-            {/* Botão de Deletar Selecionados */}
+            {/* Ações em massa dos selecionados */}
             {selectedProducts.size > 0 && (
-              <div className="flex justify-end p-4 bg-red-50 border-t border-red-200">
+              <div className="flex flex-wrap justify-end gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
+                {onPushSelected && (
+                  <button
+                    onClick={onPushSelected}
+                    disabled={pushingProducts}
+                    title="Cria/atualiza os produtos selecionados na sua loja Nuvemshop"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {pushingProducts ? 'Enviando...' : `Enviar para a Nuvemshop (${selectedProducts.size})`}
+                  </button>
+                )}
                 <button
                   onClick={handleDeleteSelectedProducts}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"

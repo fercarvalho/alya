@@ -563,6 +563,7 @@ const AppContent: React.FC = () => {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     new Set(),
   );
+  const [pushingProducts, setPushingProducts] = useState(false);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
     new Set(),
   );
@@ -1551,6 +1552,40 @@ const AppContent: React.FC = () => {
       } catch (error) {
         console.error("Erro ao deletar produtos:", error);
       }
+    }
+  };
+
+  // Envio ALYA → Nuvemshop dos produtos selecionados (push).
+  const handlePushSelectedProducts = async () => {
+    if (selectedProducts.size === 0) return;
+    const ids = Array.from(selectedProducts);
+    setPushingProducts(true);
+    try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(`${API_BASE_URL}/nuvemshop/push/products`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ productIds: ids }),
+      });
+      if (response.status === 401) {
+        logout();
+        return;
+      }
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.success) {
+        alert(
+          `Envio concluído! ${result.created ?? 0} criados, ${result.updated ?? 0} atualizados, ${result.errors ?? 0} erros.`,
+        );
+        setSelectedProducts(new Set());
+      } else {
+        alert(result.error || "Erro ao enviar produtos para a Nuvemshop.");
+      }
+    } catch (error) {
+      console.error("Erro ao enviar produtos:", error);
+      alert("Erro ao conectar para enviar produtos.");
+    } finally {
+      setPushingProducts(false);
     }
   };
 
@@ -5160,6 +5195,8 @@ const AppContent: React.FC = () => {
             handleEditProduct={handleEditProduct}
             deleteProduct={deleteProduct}
             handleDeleteSelectedProducts={handleDeleteSelectedProducts}
+            onPushSelected={handlePushSelectedProducts}
+            pushingProducts={pushingProducts}
           />
         )}
         {activeTab === "reports" && (
