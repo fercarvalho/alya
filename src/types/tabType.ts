@@ -5,6 +5,7 @@
 export type TabType =
   | 'dashboard'
   | 'transactions'
+  | 'products'
   | 'reports'
   | 'metas'
   | 'clients'
