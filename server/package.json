@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "migrate": "node migrate-to-postgresql.js",
     "migrate:up": "node run-migrations.js",
+    "validate:sync": "node validate-sync-points.js",
     "migrate:baseline": "node run-migrations.js --baseline",
     "migrate:status": "node run-migrations.js --status",
     "migrate-projection": "node migrate-projection-to-postgresql.js",
