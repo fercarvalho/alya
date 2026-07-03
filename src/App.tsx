@@ -98,7 +98,6 @@ const RelatoriosTarefas = lazy(() => import("@/subsistemas/gerenciamento/modulos
 const ProjecaoGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/ProjecaoGerenciamento"));
 const RelatoriosGerenciamento = lazy(() => import("@/subsistemas/gerenciamento/modulos/RelatoriosGerenciamento"));
 import Reports from "@/subsistemas/financeiro/modulos/Reports";
-import Products from "@/subsistemas/gerenciamento/modulos/Products";
 import Transactions from "@/subsistemas/financeiro/modulos/Transactions";
 import Metas from "@/subsistemas/financeiro/modulos/Metas";
 import Dashboard from "@/subsistemas/financeiro/modulos/Dashboard";
@@ -167,16 +166,6 @@ interface NewTransaction {
   isHidden?: boolean;
   createdAt: Date;
   project_id?: string | null; // vínculo a projeto do subsistema Gerenciamento (PM)
-}
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  cost: number;
-  stock: number;
-  sold: number;
-  category: string;
 }
 
 interface Meta {
@@ -410,25 +399,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Funções para Produtos
-  const fetchProducts = async () => {
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${API_BASE_URL}/products`, { headers });
-    if (response.status === 401 || response.status === 403) {
-      logout();
-      return [];
-    }
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `HTTP ${response.status}`);
-    }
-    const result = await response.json();
-    return result.success ? result.data : [];
-  };
-
   // Funções para Projeção (snapshot consolidado)
   const fetchProjectionSnapshot = async () => {
     const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -452,93 +422,6 @@ const AppContent: React.FC = () => {
     return result.success ? result.data : null;
   };
 
-  const saveProduct = async (product: any) => {
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${API_BASE_URL}/products`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(product),
-    });
-    if (response.status === 401 || response.status === 403) {
-      logout();
-      return null;
-    }
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `HTTP ${response.status}`);
-    }
-    const result = await response.json();
-    return result.success ? result.data : null;
-  };
-
-  const updateProduct = async (id: string, product: any) => {
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify(product),
-    });
-    if (response.status === 401 || response.status === 403) {
-      logout();
-      return null;
-    }
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `HTTP ${response.status}`);
-    }
-    const result = await response.json();
-    return result.success ? result.data : null;
-  };
-
-  const deleteProduct = async (id: string) => {
-    const headers: HeadersInit = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-      method: "DELETE",
-      headers,
-    });
-    if (response.status === 401 || response.status === 403) {
-      logout();
-      return false;
-    }
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `HTTP ${response.status}`);
-    }
-    const result = await response.json();
-    return result.success;
-  };
-
-  const deleteMultipleProducts = async (ids: string[]) => {
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${API_BASE_URL}/products`, {
-      method: "DELETE",
-      headers,
-      body: JSON.stringify({ ids }),
-    });
-    if (response.status === 401 || response.status === 403) {
-      logout();
-      return false;
-    }
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `HTTP ${response.status}`);
-    }
-    const result = await response.json();
-    return result.success;
-  };
-
   // ⚠️ IMPORTANTE: Todos os hooks devem ser declarados ANTES de qualquer return condicional
   // Estados principais
   // Fase 1.7: activeTab inicial respeita o subsistema atual — primeiro módulo
@@ -557,12 +440,8 @@ const AppContent: React.FC = () => {
     }
   }, [subsystem?.key]);
 
-  const [products, setProducts] = useState<Product[]>([]);
   const [metas, setMetas] = useState<Meta[]>([]);
   const [projectionSnapshot, setProjectionSnapshot] = useState<any>(null);
-  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
-    new Set(),
-  );
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
     new Set(),
   );
@@ -584,27 +463,6 @@ const AppContent: React.FC = () => {
     return MESES_METAS_BASE;
   }, [projectionSnapshot]);
 
-  // Estados dos modais
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-
-  // Estados do formulário de produto
-  const [productForm, setProductForm] = useState({
-    name: "",
-    category: "",
-    price: "",
-    cost: "",
-    stock: "",
-    sold: "",
-  });
-  const [productFormErrors, setProductFormErrors] = useState({
-    name: false,
-    category: false,
-    price: false,
-    cost: false,
-    stock: false,
-    sold: false,
-  });
-
   // Estados das transações
   const [transactions, setTransactions] = useState<NewTransaction[]>([]);
 
@@ -615,9 +473,9 @@ const AppContent: React.FC = () => {
 
   // Estados do modal de importar/exportar
   const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
-  const [importExportType, setImportExportType] = useState<
-    "transactions" | "products"
-  >("transactions");
+  const [importExportType, setImportExportType] = useState<"transactions">(
+    "transactions",
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -675,18 +533,11 @@ const AppContent: React.FC = () => {
     };
   }, [isActionsMenuOpen]);
 
-  // Estados do modal de exportação de produtos
-  const [isExportProdutosModalOpen, setIsExportProdutosModalOpen] =
-    useState(false);
-  const [exportarFiltrados, setExportarFiltrados] = useState(true);
-  const [incluirResumoProdutos, setIncluirResumoProdutos] = useState(true);
-
   // Estado de geração de PDF (desabilita botões durante geração)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Refs para estado indeterminate nos Select All checkboxes
   const selectAllTransactionsRef = useRef<HTMLInputElement>(null);
-  const selectAllProductsRef = useRef<HTMLInputElement>(null);
   const [transactionForm, setTransactionForm] = useState<{
     date: string;
     description: string;
@@ -753,13 +604,6 @@ const AppContent: React.FC = () => {
     field: null,
     direction: "asc",
   });
-  const [productSortConfig, setProductSortConfig] = useState<{
-    field: string | null;
-    direction: "asc" | "desc";
-  }>({
-    field: null,
-    direction: "asc",
-  });
 
   // Estados para filtros
   const [transactionFilters, setTransactionFilters] = useState({
@@ -772,15 +616,7 @@ const AppContent: React.FC = () => {
     source: "", // origem: manual/import_xlsx/extrato/fatura/nuvemshop/bling/infinitepay
   });
 
-  const [productFilters, setProductFilters] = useState({
-    category: "", // categoria específica ou ''
-    stockFilter: "", // 'inStock', 'outOfStock', ''
-    soldFilter: "", // 'sold', 'notSold', ''
-    costFilter: "", // 'withCost', 'withoutCost', ''
-  });
-
   // Estados adicionais que aparecem mais tarde no código
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number>(
     new Date().getMonth(),
   );
@@ -817,15 +653,13 @@ const AppContent: React.FC = () => {
 
     const loadData = async () => {
       try {
-        const [transactionsData, productsData, projectionData] =
+        const [transactionsData, projectionData] =
           await Promise.all([
             fetchTransactions(),
-            fetchProducts(),
             fetchProjectionSnapshot(),
           ]);
         if (!mounted) return;
         setTransactions(transactionsData);
-        setProducts(productsData);
         setProjectionSnapshot(projectionData);
         fetchProjectsMap(); // PM: mapa de projetos p/ exibir/gerir vínculos (fire-and-forget)
       } catch (error) {
@@ -976,11 +810,9 @@ const AppContent: React.FC = () => {
     if (!user) {
       const storage = getStorage();
       const savedTransactions = storage.getItem("alya-transactions");
-      const savedProducts = storage.getItem("alya-products");
       const savedMetas = storage.getItem("alya-metas");
 
       if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-      if (savedProducts) setProducts(JSON.parse(savedProducts));
       if (savedMetas) setMetas(JSON.parse(savedMetas));
     }
   }, [token, user]);
@@ -992,13 +824,6 @@ const AppContent: React.FC = () => {
       storage.setItem("alya-transactions", JSON.stringify(transactions));
     }
   }, [transactions]);
-
-  useEffect(() => {
-    const storage = getStorage();
-    if (products.length > 0) {
-      storage.setItem("alya-products", JSON.stringify(products));
-    }
-  }, [products]);
 
   useEffect(() => {
     const storage = getStorage();
@@ -1037,29 +862,6 @@ const AppContent: React.FC = () => {
         // Fechar calendário se estiver aberto
         if (isCalendarOpen) {
           setIsCalendarOpen(false);
-          return;
-        }
-
-        // Fechar modal de produto se estiver aberto
-        if (isProductModalOpen) {
-          setIsProductModalOpen(false);
-          setEditingProduct(null);
-          setProductForm({
-            name: "",
-            category: "",
-            price: "",
-            cost: "",
-            stock: "",
-            sold: "",
-          });
-          setProductFormErrors({
-            name: false,
-            category: false,
-            price: false,
-            cost: false,
-            stock: false,
-            sold: false,
-          });
           return;
         }
 
@@ -1114,12 +916,6 @@ const AppContent: React.FC = () => {
           setIsExportTransacoesModalOpen(false);
           return;
         }
-
-        // Fechar modal de exportação de produtos
-        if (isExportProdutosModalOpen) {
-          setIsExportProdutosModalOpen(false);
-          return;
-        }
       }
     };
 
@@ -1131,39 +927,15 @@ const AppContent: React.FC = () => {
     isFilterCalendarFromOpen,
     isFilterCalendarToOpen,
     isCalendarOpen,
-    isProductModalOpen,
     isTransactionModalOpen,
     isImportExportModalOpen,
     isImportExtratoModalOpen,
     isPeriodoExportModalOpen,
     isExportTransacoesModalOpen,
-    isExportProdutosModalOpen,
   ]);
 
   // Fechar modais ao mudar de guia
   useEffect(() => {
-    // Fechar modal de produto se estiver aberto
-    if (isProductModalOpen) {
-      setIsProductModalOpen(false);
-      setEditingProduct(null);
-      setProductForm({
-        name: "",
-        category: "",
-        price: "",
-        cost: "",
-        stock: "",
-        sold: "",
-      });
-      setProductFormErrors({
-        name: false,
-        category: false,
-        price: false,
-        cost: false,
-        stock: false,
-        sold: false,
-      });
-    }
-
     // Fechar modal de transação se estiver aberto
     if (isTransactionModalOpen) {
       setIsTransactionModalOpen(false);
@@ -1195,7 +967,6 @@ const AppContent: React.FC = () => {
 
     // Limpar seleções ao trocar de aba para evitar exclusões acidentais
     setSelectedTransactions(new Set());
-    setSelectedProducts(new Set());
   }, [activeTab]);
 
   // Resetar aba ao mudar de usuário (impersonação)
@@ -1227,17 +998,6 @@ const AppContent: React.FC = () => {
     el.indeterminate = someSelected && !allSelected;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTransactions, transactions, transactionFilters, transactionSortConfig, isLoading, user]);
-
-  useEffect(() => {
-    if (isLoading || !user) return;
-    const el = selectAllProductsRef.current;
-    if (!el) return;
-    const filtered = getFilteredAndSortedProducts();
-    const someSelected = filtered.some((p) => selectedProducts.has(p.id));
-    const allSelected = filtered.length > 0 && filtered.every((p) => selectedProducts.has(p.id));
-    el.indeterminate = someSelected && !allSelected;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProducts, products, productFilters, productSortConfig, isLoading, user]);
 
   // ⚠️ AGORA SIM: Verificações de autenticação DEPOIS de todos os hooks
   if (isLoading) {
@@ -1507,53 +1267,6 @@ const AppContent: React.FC = () => {
     }));
   };
 
-  // Funções para gerenciar seleção de produtos
-  const handleSelectProduct = (productId: string) => {
-    setSelectedProducts((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(productId)) {
-        newSet.delete(productId);
-      } else {
-        newSet.add(productId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleSelectAllProducts = () => {
-    const filtered = getFilteredAndSortedProducts();
-    const allSelected = filtered.length > 0 && filtered.every((p) => selectedProducts.has(p.id));
-    if (allSelected) {
-      setSelectedProducts(new Set());
-    } else {
-      setSelectedProducts(new Set(filtered.map((p) => p.id)));
-    }
-  };
-
-  const handleDeleteSelectedProducts = async () => {
-    if (selectedProducts.size === 0) return;
-
-    const confirmMessage =
-      selectedProducts.size === 1
-        ? "Tem certeza que deseja deletar este produto?"
-        : `Tem certeza que deseja deletar ${selectedProducts.size} produtos?`;
-
-    if (confirm(confirmMessage)) {
-      try {
-        const ids = Array.from(selectedProducts);
-        const success = await deleteMultipleProducts(ids);
-        if (success) {
-          setProducts((prev) =>
-            prev.filter((product) => !selectedProducts.has(product.id)),
-          );
-          setSelectedProducts(new Set());
-        }
-      } catch (error) {
-        console.error("Erro ao deletar produtos:", error);
-      }
-    }
-  };
-
   // Funções para gerenciar seleção de transações
   const handleSelectTransaction = (transactionId: string) => {
     setSelectedTransactions((prev) => {
@@ -1611,13 +1324,6 @@ const AppContent: React.FC = () => {
     }));
   };
 
-  const handleProductSort = (field: string) => {
-    setProductSortConfig((prev) => ({
-      field,
-      direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-    }));
-  };
-
   const getSortIcon = (field: string) => {
     if (transactionSortConfig.field !== field) {
       return <span className="text-gray-400" aria-hidden="true">↕</span>;
@@ -1632,22 +1338,6 @@ const AppContent: React.FC = () => {
   const getTransactionSortAriaSort = (field: string): "ascending" | "descending" | "none" => {
     if (transactionSortConfig.field !== field) return "none";
     return transactionSortConfig.direction === "asc" ? "ascending" : "descending";
-  };
-
-  const getProductSortIcon = (field: string) => {
-    if (productSortConfig.field !== field) {
-      return <span className="text-gray-400" aria-hidden="true">↕</span>;
-    }
-    return productSortConfig.direction === "asc" ? (
-      <span className="text-amber-600" aria-hidden="true">↑</span>
-    ) : (
-      <span className="text-amber-600" aria-hidden="true">↓</span>
-    );
-  };
-
-  const getProductSortAriaSort = (field: string): "ascending" | "descending" | "none" => {
-    if (productSortConfig.field !== field) return "none";
-    return productSortConfig.direction === "asc" ? "ascending" : "descending";
   };
 
   // Removido: funções de ordenação não utilizadas (agora usamos filtros + ordenação combinada)
@@ -1731,69 +1421,6 @@ const AppContent: React.FC = () => {
     });
   };
 
-  const getFilteredAndSortedProducts = () => {
-    let filtered = products;
-
-    // Filtro por categoria
-    if (productFilters.category) {
-      filtered = filtered.filter((p) =>
-        p.category
-          .toLowerCase()
-          .includes(productFilters.category.toLowerCase()),
-      );
-    }
-
-    // Filtro por estoque
-    if (productFilters.stockFilter === "inStock") {
-      filtered = filtered.filter((p) => p.stock > 0);
-    } else if (productFilters.stockFilter === "outOfStock") {
-      filtered = filtered.filter((p) => p.stock === 0);
-    }
-
-    // Filtro por vendidos
-    if (productFilters.soldFilter === "sold") {
-      filtered = filtered.filter((p) => p.sold > 0);
-    } else if (productFilters.soldFilter === "notSold") {
-      filtered = filtered.filter((p) => p.sold === 0);
-    }
-
-    // Filtro por custo
-    if (productFilters.costFilter === "withCost") {
-      filtered = filtered.filter((p) => p.cost > 0);
-    } else if (productFilters.costFilter === "withoutCost") {
-      filtered = filtered.filter((p) => p.cost === 0);
-    }
-
-    // Aplicar ordenação
-    if (!productSortConfig.field) return filtered;
-
-    return filtered.sort((a, b) => {
-      let aValue: any = a[productSortConfig.field as keyof Product];
-      let bValue: any = b[productSortConfig.field as keyof Product];
-
-      if (
-        productSortConfig.field === "price" ||
-        productSortConfig.field === "cost" ||
-        productSortConfig.field === "stock" ||
-        productSortConfig.field === "sold"
-      ) {
-        aValue = Number(aValue);
-        bValue = Number(bValue);
-      } else if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (aValue < bValue) {
-        return productSortConfig.direction === "asc" ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return productSortConfig.direction === "asc" ? 1 : -1;
-      }
-      return 0;
-    });
-  };
-
   // Funções para limpar filtros
   const clearTransactionFilters = () => {
     setTransactionFilters({
@@ -1804,15 +1431,6 @@ const AppContent: React.FC = () => {
       hasDateFilter: false,
       description: "",
       source: "",
-    });
-  };
-
-  const clearProductFilters = () => {
-    setProductFilters({
-      category: "",
-      stockFilter: "",
-      soldFilter: "",
-      costFilter: "",
     });
   };
 
@@ -2210,64 +1828,6 @@ const AppContent: React.FC = () => {
       project_id: transaction.project_id ?? "",
     });
     setIsTransactionModalOpen(true);
-  };
-
-  // Função para gerenciar mudanças no formulário de produto
-  const handleProductInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    setProductForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Limpar erro do campo quando o usuário digitar
-    setProductFormErrors((prev) => ({
-      ...prev,
-      [name]: false,
-    }));
-  };
-
-  // Função para validar formulário de produto
-  const validateProductForm = () => {
-    const errors = {
-      name: !productForm.name || productForm.name.trim() === "",
-      category: !productForm.category || productForm.category.trim() === "",
-      price:
-        !productForm.price ||
-        productForm.price.trim() === "" ||
-        parseFloat(productForm.price) <= 0,
-      cost: false, // Não obrigatório
-      stock: false, // Não obrigatório
-      sold: false, // Não obrigatório
-    };
-
-    setProductFormErrors(errors);
-
-    // Verificar se há erros apenas nos campos obrigatórios
-    const hasErrors = errors.name || errors.category || errors.price;
-
-    if (hasErrors) {
-      // Não mostrar notificação, apenas marcar os campos com erro visual
-      return false;
-    }
-
-    return true;
-  };
-
-  // Função para abrir modal de edição de produto
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-    setProductForm({
-      name: product.name,
-      price: product.price.toString(),
-      cost: product.cost.toString(),
-      stock: product.stock.toString(),
-      sold: product.sold.toString(),
-      category: product.category,
-    });
-    setIsProductModalOpen(true);
   };
 
   // Função auxiliar para extrair mês e ano de uma data (suporta YYYY-MM-DD, DD/MM/YYYY e MM/DD/YYYY)
@@ -4011,303 +3571,6 @@ const AppContent: React.FC = () => {
 
   // Render Transactions
 
-  // Função para exportar produtos em PDF
-  const exportarProdutosPDF = async () => {
-    setIsGeneratingPDF(true);
-    try {
-      setIsExportProdutosModalOpen(false);
-
-      // Obter produtos para exportar
-      const produtosParaExportar = exportarFiltrados
-        ? getFilteredAndSortedProducts()
-        : products;
-
-      // Validar se há produtos
-      if (produtosParaExportar.length === 0) {
-        alert("Não há produtos para exportar!");
-        return;
-      }
-
-      // Calcular resumo estatístico (se habilitado)
-      let totalProdutos = produtosParaExportar.length;
-      let valorTotalEstoque = 0;
-      let custoTotalEstoque = 0;
-      let lucroPotencial = 0;
-      let margemMedia = 0;
-      let totalVendidos = 0;
-      let produtosEmEstoque = 0;
-      let produtosSemEstoque = 0;
-      let produtosPorCategoria: { [key: string]: number } = {};
-
-      if (incluirResumoProdutos) {
-        // Calcular valores totais
-        produtosParaExportar.forEach((p) => {
-          valorTotalEstoque += p.price * p.stock;
-          custoTotalEstoque += p.cost * p.stock;
-          totalVendidos += p.sold;
-
-          if (p.stock > 0) {
-            produtosEmEstoque++;
-          } else {
-            produtosSemEstoque++;
-          }
-
-          // Contar por categoria
-          produtosPorCategoria[p.category] =
-            (produtosPorCategoria[p.category] || 0) + 1;
-
-          // Calcular margem de lucro (evitar divisão por zero)
-          if (p.price > 0) {
-            const margem = ((p.price - p.cost) / p.price) * 100;
-            margemMedia += margem;
-          }
-        });
-
-        lucroPotencial = valorTotalEstoque - custoTotalEstoque;
-        margemMedia =
-          produtosParaExportar.length > 0
-            ? margemMedia / produtosParaExportar.length
-            : 0;
-      }
-
-      // Criar elemento temporário para capturar o conteúdo
-      const tempElement = document.createElement("div");
-      tempElement.style.position = "absolute";
-      tempElement.style.left = "-9999px";
-      tempElement.style.top = "-9999px";
-      tempElement.style.width = "800px";
-      tempElement.style.backgroundColor = "white";
-      tempElement.style.padding = "20px";
-      tempElement.style.fontFamily = "Arial, sans-serif";
-
-      // Construir informações de filtros aplicados
-      let infoFiltros = "Todos os produtos";
-      if (exportarFiltrados) {
-        const filtrosAtivos = [];
-        if (productFilters.category)
-          filtrosAtivos.push(`Categoria: ${productFilters.category}`);
-        if (productFilters.stockFilter === "inStock")
-          filtrosAtivos.push("Em estoque");
-        if (productFilters.stockFilter === "outOfStock")
-          filtrosAtivos.push("Sem estoque");
-        if (productFilters.soldFilter === "sold")
-          filtrosAtivos.push("Vendidos");
-        if (productFilters.soldFilter === "notSold")
-          filtrosAtivos.push("Não vendidos");
-        if (productFilters.costFilter === "withCost")
-          filtrosAtivos.push("Com preço de custo");
-        if (productFilters.costFilter === "withoutCost")
-          filtrosAtivos.push("Sem preço de custo");
-
-        if (filtrosAtivos.length > 0) {
-          infoFiltros = `Produtos filtrados: ${filtrosAtivos.join(", ")}`;
-        } else {
-          infoFiltros = "Todos os produtos (sem filtros ativos)";
-        }
-      }
-
-      // Construir HTML do relatório
-      let htmlContent = `
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #f59e0b; font-size: 28px; margin: 0; font-weight: bold;">ALYA VELAS</h1>
-          <h2 style="color: #374151; font-size: 24px; margin: 10px 0; font-weight: bold;">Relatório de Produtos</h2>
-          <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">${infoFiltros}</p>
-          <p style="color: #6b7280; font-size: 14px; margin: 0;">Gerado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}</p>
-        </div>
-      `;
-
-      // Resumo Estatístico (se habilitado)
-      if (incluirResumoProdutos) {
-        htmlContent += `
-          <div style="margin-bottom: 30px;">
-            <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📊 Resumo Estatístico</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-              <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Total de Produtos</div>
-                <div style="font-size: 18px; font-weight: bold; color: #d97706;">${totalProdutos}</div>
-              </div>
-              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
-                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Valor Total do Estoque</div>
-                <div style="font-size: 18px; font-weight: bold; color: #059669;">R$ ${valorTotalEstoque.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-              </div>
-              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
-                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Custo Total do Estoque</div>
-                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">R$ ${custoTotalEstoque.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-              </div>
-              <div style="background: ${lucroPotencial >= 0 ? "#f0fdf4" : "#fef2f2"}; padding: 15px; border-radius: 8px; border-left: 4px solid ${lucroPotencial >= 0 ? "#10b981" : "#ef4444"};">
-                <div style="font-weight: bold; color: ${lucroPotencial >= 0 ? "#10b981" : "#ef4444"}; margin-bottom: 5px;">Lucro Potencial</div>
-                <div style="font-size: 18px; font-weight: bold; color: ${lucroPotencial >= 0 ? "#059669" : "#dc2626"};">R$ ${lucroPotencial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-              </div>
-              <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                <div style="font-weight: bold; color: #f59e0b; margin-bottom: 5px;">Margem de Lucro Média</div>
-                <div style="font-size: 18px; font-weight: bold; color: #d97706;">${margemMedia.toFixed(1)}%</div>
-              </div>
-              <div style="background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                <div style="font-weight: bold; color: #3b82f6; margin-bottom: 5px;">Total Vendidos</div>
-                <div style="font-size: 18px; font-weight: bold; color: #2563eb;">${totalVendidos}</div>
-              </div>
-              <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
-                <div style="font-weight: bold; color: #10b981; margin-bottom: 5px;">Em Estoque</div>
-                <div style="font-size: 18px; font-weight: bold; color: #059669;">${produtosEmEstoque}</div>
-              </div>
-              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444;">
-                <div style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">Sem Estoque</div>
-                <div style="font-size: 18px; font-weight: bold; color: #dc2626;">${produtosSemEstoque}</div>
-              </div>
-            </div>
-            
-            ${
-              Object.keys(produtosPorCategoria).length > 0
-                ? `
-              <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 15px;">
-                <h4 style="color: #374151; font-size: 16px; margin-bottom: 10px; font-weight: bold;">Distribuição por Categoria:</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                  ${Object.entries(produtosPorCategoria)
-                    .map(
-                      ([categoria, quantidade]) => `
-                    <div style="text-align: center; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-                      <div style="font-weight: bold; color: #f59e0b; font-size: 18px;">${quantidade}</div>
-                      <div style="font-size: 12px; color: #6b7280;">${categoria}</div>
-                    </div>
-                  `,
-                    )
-                    .join("")}
-                </div>
-              </div>
-            `
-                : ""
-            }
-          </div>
-        `;
-      }
-
-      // Tabela de Produtos
-      htmlContent += `
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #f59e0b; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #f59e0b; padding-bottom: 5px;">📦 Lista de Produtos</h3>
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; background: white;">
-              <thead>
-                <tr style="background: linear-gradient(to right, #fef3c7, #fed7aa); border-bottom: 2px solid #f59e0b;">
-                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Nome</th>
-                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Categoria</th>
-                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Preço</th>
-                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Custo</th>
-                  <th style="padding: 12px; text-align: center; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Estoque</th>
-                  <th style="padding: 12px; text-align: center; font-weight: bold; color: #92400e; border-right: 1px solid #fbbf24;">Vendidos</th>
-                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #92400e;">Margem</th>
-                </tr>
-              </thead>
-              <tbody>
-      `;
-
-      // Adicionar linhas da tabela
-      produtosParaExportar.forEach((product, index) => {
-        const precoFormatado = (Number(product.price) || 0).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-        });
-        const custoFormatado = (Number(product.cost) || 0).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-        });
-
-        // Calcular margem de lucro (evitar divisão por zero)
-        let margemLucro = 0;
-        let margemCor = "#6b7280";
-        if (product.price > 0) {
-          margemLucro = ((product.price - product.cost) / product.price) * 100;
-          margemCor = margemLucro >= 0 ? "#10b981" : "#ef4444";
-        }
-
-        // Cor do estoque
-        let estoqueCor = "#ef4444"; // vermelho
-        if (product.stock > 10) {
-          estoqueCor = "#10b981"; // verde
-        } else if (product.stock > 0) {
-          estoqueCor = "#f59e0b"; // amarelo
-        }
-
-        const bgColor = index % 2 === 0 ? "#ffffff" : "#f9fafb";
-
-        htmlContent += `
-          <tr style="background: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 10px; color: #374151; font-weight: 500;">${product.name}</td>
-            <td style="padding: 10px; color: #6b7280;">${product.category}</td>
-            <td style="padding: 10px; text-align: right; font-weight: bold; color: #10b981;">R$ ${precoFormatado}</td>
-            <td style="padding: 10px; text-align: right; font-weight: bold; color: #f97316;">R$ ${custoFormatado}</td>
-            <td style="padding: 10px; text-align: center; font-weight: bold; color: ${estoqueCor};">${product.stock}</td>
-            <td style="padding: 10px; text-align: center; font-weight: bold; color: #3b82f6;">${product.sold}</td>
-            <td style="padding: 10px; text-align: right; font-weight: bold; color: ${margemCor};">${margemLucro.toFixed(1)}%</td>
-          </tr>
-        `;
-      });
-
-      htmlContent += `
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-
-      // Rodapé
-      htmlContent += `
-        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
-          <p style="color: #6b7280; font-size: 12px; margin: 0;">
-            Relatório gerado automaticamente pelo sistema Alya Velas<br>
-            Dados baseados em produtos ${exportarFiltrados ? "filtrados" : "completos"}<br>
-            Para mais informações, acesse o painel administrativo
-          </p>
-        </div>
-      `;
-
-      tempElement.innerHTML = htmlContent;
-      document.body.appendChild(tempElement);
-
-      // Capturar o elemento como imagem
-      const canvas = await html2canvas(tempElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      });
-
-      // Remover elemento temporário
-      document.body.removeChild(tempElement);
-
-      // Criar PDF
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // Salvar PDF
-      const fileName = `Produtos_${exportarFiltrados ? "Filtrados" : "Completos"}_${new Date().toISOString().split("T")[0]}.pdf`;
-      pdf.save(fileName);
-
-      alert(
-        `✅ Relatório PDF exportado com sucesso!\nArquivo: ${fileName}\n\n📊 Dados incluídos:\n• Total de produtos: ${totalProdutos}${incluirResumoProdutos ? `\n• Valor total do estoque: R$ ${valorTotalEstoque.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n• Custo total do estoque: R$ ${custoTotalEstoque.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n• Lucro potencial: R$ ${lucroPotencial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n• Margem média: ${margemMedia.toFixed(1)}%` : ""}`,
-      );
-    } catch (error) {
-      console.error("Erro ao exportar PDF:", error);
-      alert("❌ Erro ao exportar PDF. Tente novamente.");
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
 
   // Função para abrir modal de seleção de período
   const abrirModalSelecaoPeriodo = () => {
@@ -4957,7 +4220,6 @@ const AppContent: React.FC = () => {
                     reports: BarChart3,
                     projecao: Calculator,
                     transactions: DollarSign,
-                    products: Package,
                     clients: Users,
                     nuvemshop: ShoppingBag,
                     bling: Boxes,
@@ -5138,30 +4400,6 @@ const AppContent: React.FC = () => {
             formatDateToDisplay={formatDateToDisplay}
           />
         )}
-        {activeTab === "products" && (
-          <Products
-            products={products}
-            setProducts={setProducts}
-            productFilters={productFilters}
-            setProductFilters={setProductFilters}
-            selectedProducts={selectedProducts}
-            selectAllProductsRef={selectAllProductsRef}
-            setIsExportProdutosModalOpen={setIsExportProdutosModalOpen}
-            setIsImportExportModalOpen={setIsImportExportModalOpen}
-            setImportExportType={setImportExportType}
-            setIsProductModalOpen={setIsProductModalOpen}
-            clearProductFilters={clearProductFilters}
-            getFilteredAndSortedProducts={getFilteredAndSortedProducts}
-            handleSelectAllProducts={handleSelectAllProducts}
-            handleSelectProduct={handleSelectProduct}
-            handleProductSort={handleProductSort}
-            getProductSortIcon={getProductSortIcon}
-            getProductSortAriaSort={getProductSortAriaSort}
-            handleEditProduct={handleEditProduct}
-            deleteProduct={deleteProduct}
-            handleDeleteSelectedProducts={handleDeleteSelectedProducts}
-          />
-        )}
         {activeTab === "reports" && (
           <Reports
             transactions={transactions}
@@ -5310,295 +4548,6 @@ const AppContent: React.FC = () => {
           </Suspense>
         )}
       </main>
-
-      {/* Modal de Produto */}
-      {isProductModalOpen && (
-        <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsProductModalOpen(false);
-              setEditingProduct(null);
-              setProductForm({
-                name: "",
-                category: "",
-                price: "",
-                cost: "",
-                stock: "",
-                sold: "",
-              });
-              setProductFormErrors({
-                name: false,
-                category: false,
-                price: false,
-                cost: false,
-                stock: false,
-                sold: false,
-              });
-            }
-          }}
-        >
-          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
-                  <Package className="w-6 h-6 text-amber-700" />
-                  {editingProduct ? "Editar Produto" : "Novo Produto"}
-                </h2>
-                <button
-                  onClick={() => {
-                    setIsProductModalOpen(false);
-                    setEditingProduct(null);
-                    setProductForm({
-                      name: "",
-                      category: "",
-                      price: "",
-                      cost: "",
-                      stock: "",
-                      sold: "",
-                    });
-                    setProductFormErrors({
-                      name: false,
-                      category: false,
-                      price: false,
-                      cost: false,
-                      stock: false,
-                      sold: false,
-                    });
-                  }}
-                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Formulário */}
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-
-                // Validar formulário antes de prosseguir
-                if (!validateProductForm()) {
-                  return;
-                }
-
-                if (editingProduct) {
-                  // Editar produto existente
-                  try {
-                    const updatedProduct = await updateProduct(
-                      editingProduct.id,
-                      {
-                        name: productForm.name,
-                        category: productForm.category,
-                        price: parseFloat(productForm.price) || 0,
-                        cost: parseFloat(productForm.cost) || 0,
-                        stock: parseInt(productForm.stock) || 0,
-                        sold: parseInt(productForm.sold) || 0,
-                      },
-                    );
-
-                    if (updatedProduct) {
-                      setProducts((prev) =>
-                        prev.map((p) =>
-                          p.id === editingProduct.id ? updatedProduct : p,
-                        ),
-                      );
-                    }
-                  } catch (error) {
-                    console.error("Erro ao atualizar produto:", error);
-                  }
-                } else {
-                  // Criar novo produto
-                  try {
-                    const newProduct = await saveProduct({
-                      name: productForm.name,
-                      category: productForm.category,
-                      price: parseFloat(productForm.price) || 0,
-                      cost: parseFloat(productForm.cost) || 0,
-                      stock: parseInt(productForm.stock) || 0,
-                      sold: parseInt(productForm.sold) || 0,
-                    });
-
-                    if (newProduct) {
-                      setProducts((prev) => [newProduct, ...prev]);
-                    }
-                  } catch (error) {
-                    console.error("Erro ao salvar produto:", error);
-                  }
-                }
-
-                // Limpar formulário e fechar modal
-                setEditingProduct(null);
-                setIsProductModalOpen(false);
-                setProductForm({
-                  name: "",
-                  category: "",
-                  price: "",
-                  cost: "",
-                  stock: "",
-                  sold: "",
-                });
-              }}
-              className="space-y-4"
-            >
-              {/* Nome do Produto */}
-              <div>
-                <label htmlFor="product-name" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Nome do Produto <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="product-name"
-                  type="text"
-                  name="name"
-                  required
-                  value={productForm.name}
-                  onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 transition-all duration-200 shadow-sm dark:text-gray-200 ${
-                    productFormErrors.name
-                      ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
-                      : "bg-gray-50 border-gray-200 dark:bg-gray-700 dark:border-gray-600"
-                  }`}
-                  placeholder="Ex: Vela Aromática Lavanda"
-                />
-              </div>
-
-              {/* Categoria */}
-              <div>
-                <label htmlFor="product-category" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Categoria <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="product-category"
-                  type="text"
-                  name="category"
-                  required
-                  value={productForm.category}
-                  onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 transition-all duration-200 shadow-sm dark:text-gray-200 ${
-                    productFormErrors.category
-                      ? "bg-red-50 border-red-300 focus:ring-red-500 dark:bg-red-900/20"
-                      : "bg-gray-50 border-gray-200 dark:bg-gray-700 dark:border-gray-600"
-                  }`}
-                  placeholder="Ex: Velas Aromáticas"
-                />
-              </div>
-
-              {/* Preço de Venda */}
-              <div>
-                <label htmlFor="product-price" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Preço de Venda (R$) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="product-price"
-                  type="number"
-                  name="price"
-                  step="0.01"
-                  min="0"
-                  required
-                  value={productForm.price}
-                  onChange={handleProductInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm ${
-                    productFormErrors.price
-                      ? "bg-red-50 border-red-300 focus:ring-red-500"
-                      : "bg-gray-50 border-gray-200"
-                  }`}
-                  placeholder="0,00"
-                />
-              </div>
-
-              {/* Custo */}
-              <div>
-                <label htmlFor="product-cost" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Custo (R$)
-                </label>
-                <input
-                  id="product-cost"
-                  type="number"
-                  name="cost"
-                  step="0.01"
-                  min="0"
-                  value={productForm.cost}
-                  onChange={handleProductInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
-                  placeholder="0,00"
-                />
-              </div>
-
-              {/* Estoque */}
-              <div>
-                <label htmlFor="product-stock" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Estoque
-                </label>
-                <input
-                  id="product-stock"
-                  type="number"
-                  name="stock"
-                  min="0"
-                  value={productForm.stock}
-                  onChange={handleProductInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Quantidade Vendida */}
-              <div>
-                <label htmlFor="product-sold" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Quantidade Vendida
-                </label>
-                <input
-                  id="product-sold"
-                  type="number"
-                  name="sold"
-                  min="0"
-                  value={productForm.sold}
-                  onChange={handleProductInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:bg-white transition-all duration-200 shadow-sm"
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Botões */}
-              <div className="flex gap-3 pt-6 border-t border-gray-200 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProductModalOpen(false);
-                    setEditingProduct(null);
-                    setProductForm({
-                      name: "",
-                      category: "",
-                      price: "",
-                      cost: "",
-                      stock: "",
-                      sold: "",
-                    });
-                    setProductFormErrors({
-                      name: false,
-                      category: false,
-                      price: false,
-                      cost: false,
-                      stock: false,
-                      sold: false,
-                    });
-                  }}
-                  className="flex-1 px-6 py-3 text-gray-700 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 font-semibold shadow-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  {editingProduct ? "Atualizar" : "Salvar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Nova Transação */}
       {isTransactionModalOpen && (
@@ -6088,10 +5037,7 @@ const AppContent: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Download className="w-6 h-6 text-amber-700" />
-                  Importar/Exportar{" "}
-                  {importExportType === "transactions"
-                    ? "Transações"
-                    : "Produtos"}
+                  Importar/Exportar Transações
                 </h2>
                 <button
                   onClick={() => {
@@ -6138,7 +5084,7 @@ const AppContent: React.FC = () => {
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement("a");
                         a.href = url;
-                        a.download = `modelo-${importExportType === "transactions" ? "transacoes" : "produtos"}.xlsx`;
+                        a.download = "modelo-transacoes.xlsx";
                         document.body.appendChild(a);
                         a.click();
                         setTimeout(() => window.URL.revokeObjectURL(url), 150);
@@ -6160,26 +5106,14 @@ const AppContent: React.FC = () => {
                       let csvContent = "";
                       let filename = "";
 
-                      if (importExportType === "transactions") {
-                        csvContent = "Data,Descrição,Valor,Tipo,Categoria\n";
-                        csvContent +=
-                          '2025-09-23,"Exemplo de venda",150.00,Entrada,Vendas\n';
-                        csvContent +=
-                          '2025-09-23,"Exemplo de compra",75.50,Saída,Compras\n';
-                        csvContent +=
-                          '2025-09-23,"Exemplo de serviço",200.00,Saída,Serviços';
-                        filename = "modelo-transacoes.csv";
-                      } else {
-                        csvContent =
-                          "Nome,Categoria,Preço,Custo,Estoque,Vendido\n";
-                        csvContent +=
-                          "Produto Exemplo 1,Eletrônicos,299.90,150.00,25,8\n";
-                        csvContent +=
-                          "Produto Exemplo 2,Roupas,89.90,45.00,50,15\n";
-                        csvContent +=
-                          "Produto Exemplo 3,Casa,149.90,75.00,10,3";
-                        filename = "modelo-produtos.csv";
-                      }
+                      csvContent = "Data,Descrição,Valor,Tipo,Categoria\n";
+                      csvContent +=
+                        '2025-09-23,"Exemplo de venda",150.00,Entrada,Vendas\n';
+                      csvContent +=
+                        '2025-09-23,"Exemplo de compra",75.50,Saída,Compras\n';
+                      csvContent +=
+                        '2025-09-23,"Exemplo de serviço",200.00,Saída,Serviços';
+                      filename = "modelo-transacoes.csv";
 
                       const blob = new Blob([csvContent], {
                         type: "text/csv;charset=utf-8;",
@@ -6201,10 +5135,7 @@ const AppContent: React.FC = () => {
                   className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  Baixar Modelo{" "}
-                  {importExportType === "transactions"
-                    ? "de Transações"
-                    : "de Produtos"}
+                  Baixar Modelo de Transações
                 </button>
               </div>
 
@@ -6282,15 +5213,10 @@ const AppContent: React.FC = () => {
                     setIsUploading(true);
 
                     // Preparar dados para exportação
-                    const dataToExport =
-                      importExportType === "transactions"
-                        ? transactions
-                        : products;
+                    const dataToExport = transactions;
 
                     if (dataToExport.length === 0) {
-                      alert(
-                        `Nenhuma ${importExportType === "transactions" ? "transação" : "produto"} encontrada para exportar!`,
-                      );
+                      alert("Nenhuma transação encontrada para exportar!");
                       return;
                     }
 
@@ -6312,14 +5238,14 @@ const AppContent: React.FC = () => {
                       const url = window.URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
-                      a.download = `${importExportType === "transactions" ? "transacoes" : "produtos"}_${new Date().toISOString().split("T")[0]}.xlsx`;
+                      a.download = `transacoes_${new Date().toISOString().split("T")[0]}.xlsx`;
                       document.body.appendChild(a);
                       a.click();
                       setTimeout(() => window.URL.revokeObjectURL(url), 150);
                       document.body.removeChild(a);
 
                       alert(
-                        `Arquivo ${importExportType === "transactions" ? "de transações" : "de produtos"} exportado com sucesso!`,
+                        `Arquivo de transações exportado com sucesso!`,
                       );
                     } else {
                       const error = await response.text();
@@ -6356,7 +5282,7 @@ const AppContent: React.FC = () => {
                       // Criar FormData para enviar o arquivo
                       const formData = new FormData();
                       formData.append("file", selectedFile);
-                      formData.append("type", importExportType); // 'transactions' ou 'products'
+                      formData.append("type", importExportType); // 'transactions'
 
                       console.log(
                         `Enviando arquivo: ${selectedFile.name} (${importExportType})`,
@@ -6393,14 +5319,6 @@ const AppContent: React.FC = () => {
                             setUndoMaxCountdown(30);
                             setUndoCountdown(30);
                             setShowUndoToast(true);
-                          } else if (
-                            importExportType === "products" &&
-                            result.data?.length
-                          ) {
-                            setProducts((prev) => [...prev, ...result.data]);
-                            alert(
-                              `Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || "Dados processados com sucesso."}`,
-                            );
                           } else {
                             alert(
                               `Arquivo "${selectedFile.name}" importado com sucesso!\n\n${result.message || "Dados processados com sucesso."}`,
@@ -6451,36 +5369,6 @@ const AppContent: React.FC = () => {
                           });
                           alert(
                             `Arquivo "${selectedFile.name}" processado localmente!\n\n${mockTransactions.length} transações adicionadas como exemplo.`,
-                          );
-                        } else if (importExportType === "products") {
-                          const mockProducts = [
-                            {
-                              id: (Date.now() + 1).toString(),
-                              name: "Produto Importado 1",
-                              category: "Importados",
-                              price: 120,
-                              cost: 60,
-                              stock: 15,
-                              sold: 3,
-                            },
-                            {
-                              id: (Date.now() + 2).toString(),
-                              name: "Produto Importado 2",
-                              category: "Importados",
-                              price: 80,
-                              cost: 40,
-                              stock: 25,
-                              sold: 8,
-                            },
-                          ];
-                          const storage = getStorage();
-                          setProducts((prev) => {
-                            const updated = [...prev, ...mockProducts];
-                            storage.setItem("products", JSON.stringify(updated));
-                            return updated;
-                          });
-                          alert(
-                            `Arquivo "${selectedFile.name}" processado localmente!\n\n${mockProducts.length} produtos adicionados como exemplo.`,
                           );
                         }
                       }
@@ -7326,144 +6214,6 @@ const AppContent: React.FC = () => {
                 </button>
                 <button
                   onClick={exportarTransacoesPDF}
-                  disabled={isGeneratingPDF}
-                  className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isGeneratingPDF ? "Gerando..." : "Exportar PDF"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Configuração de Exportação de Produtos */}
-      {isExportProdutosModalOpen && (
-        <div
-          className="fixed inset-0 bg-gradient-to-br from-amber-900/50 to-orange-900/50 backdrop-blur-sm flex items-center justify-center z-50 px-4 pb-4 pt-[120px]"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsExportProdutosModalOpen(false);
-            }
-          }}
-        >
-          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 w-full max-w-md max-h-[calc(100vh-220px)] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 -mx-6 -mt-6 mb-6 px-6 py-4 border-b border-amber-200/50 dark:border-amber-800/30">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
-                  <Download className="w-6 h-6 text-amber-700" />
-                  Exportar Produtos em PDF
-                </h2>
-                <button
-                  onClick={() => setIsExportProdutosModalOpen(false)}
-                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-2 rounded-full transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Conteúdo do Modal */}
-            <div className="space-y-6">
-              <p className="text-gray-700 text-sm">
-                Configure as opções de exportação:
-              </p>
-
-              {/* Opção: Exportar Filtrados */}
-              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <input
-                  type="checkbox"
-                  id="exportarFiltrados"
-                  checked={exportarFiltrados}
-                  onChange={(e) => setExportarFiltrados(e.target.checked)}
-                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
-                />
-                <div className="flex-1">
-                  <label
-                    htmlFor="exportarFiltrados"
-                    className="font-semibold text-gray-800 cursor-pointer block mb-1"
-                  >
-                    Exportar apenas produtos filtrados
-                  </label>
-                  <p className="text-sm text-gray-600">
-                    {exportarFiltrados
-                      ? "Serão exportados apenas os produtos que estão visíveis na lista (com filtros aplicados)."
-                      : "Todos os produtos serão exportados, independente dos filtros ativos."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Opção: Incluir Resumo */}
-              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <input
-                  type="checkbox"
-                  id="incluirResumoProdutos"
-                  checked={incluirResumoProdutos}
-                  onChange={(e) => setIncluirResumoProdutos(e.target.checked)}
-                  className="mt-1 w-5 h-5 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 focus:ring-2"
-                />
-                <div className="flex-1">
-                  <label
-                    htmlFor="incluirResumoProdutos"
-                    className="font-semibold text-gray-800 cursor-pointer block mb-1"
-                  >
-                    Incluir resumo estatístico
-                  </label>
-                  <p className="text-sm text-gray-600">
-                    {incluirResumoProdutos
-                      ? "O PDF incluirá um resumo com totais de estoque, custos, lucro potencial, margem média e distribuição por categoria."
-                      : "Apenas a tabela de produtos será incluída no PDF."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Informações sobre filtros ativos */}
-              {(productFilters.category ||
-                productFilters.stockFilter ||
-                productFilters.soldFilter ||
-                productFilters.costFilter) &&
-                exportarFiltrados && (
-                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                    <p className="text-sm font-semibold text-blue-800 mb-2">
-                      Filtros ativos:
-                    </p>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      {productFilters.category && (
-                        <li>• Categoria: {productFilters.category}</li>
-                      )}
-                      {productFilters.stockFilter === "inStock" && (
-                        <li>• Em estoque</li>
-                      )}
-                      {productFilters.stockFilter === "outOfStock" && (
-                        <li>• Sem estoque</li>
-                      )}
-                      {productFilters.soldFilter === "sold" && (
-                        <li>• Vendidos</li>
-                      )}
-                      {productFilters.soldFilter === "notSold" && (
-                        <li>• Não vendidos</li>
-                      )}
-                      {productFilters.costFilter === "withCost" && (
-                        <li>• Com preço de custo</li>
-                      )}
-                      {productFilters.costFilter === "withoutCost" && (
-                        <li>• Sem preço de custo</li>
-                      )}
-                    </ul>
-                  </div>
-                )}
-
-              {/* Botões */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => setIsExportProdutosModalOpen(false)}
-                  className="flex-1 py-2 px-4 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={exportarProdutosPDF}
                   disabled={isGeneratingPDF}
                   className="flex-1 py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >

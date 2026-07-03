@@ -74,7 +74,7 @@ interface TransactionsProps {
   setExtratoFile: (v: any) => void;
   setIsImportExtratoModalOpen: (v: boolean) => void;
   setIsExportTransacoesModalOpen: (v: boolean) => void;
-  setImportExportType: (v: 'transactions' | 'products') => void;
+  setImportExportType: (v: 'transactions') => void;
   setIsImportExportModalOpen: (v: boolean) => void;
   setIsRulesModalOpen: (v: boolean) => void;
   setIsManageSubcategoriesOpen: (v: boolean) => void;
