@@ -89,8 +89,10 @@ const BulkEditTransactionsModal: React.FC<Props> = ({ isOpen, count, subcategori
           <div className="flex items-center gap-2">
             <PencilLine className="w-5 h-5 text-amber-600" />
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Editar em massa</h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400">{count} transação(ões) selecionada(s)</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Editar selecionadas</h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {count === 1 ? '1 transação selecionada' : `${count} transações selecionadas`}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" aria-label="Fechar">
@@ -101,7 +103,7 @@ const BulkEditTransactionsModal: React.FC<Props> = ({ isOpen, count, subcategori
         {/* Corpo */}
         <div className="p-6 space-y-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Marque os campos que deseja alterar. Só os marcados são aplicados a todas as selecionadas.
+            Marque o que você quer mudar. O que deixar desmarcado continua como está.
           </p>
 
           {/* Tipo */}
@@ -192,7 +194,7 @@ const BulkEditTransactionsModal: React.FC<Props> = ({ isOpen, count, subcategori
             className="flex items-center gap-2 px-5 py-2 text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg shadow-sm"
           >
             <Check className="w-4 h-4" />
-            {submitting ? 'Aplicando...' : `Aplicar a ${count}`}
+            {submitting ? 'Salvando...' : count === 1 ? 'Salvar alterações' : `Salvar nas ${count} transações`}
           </button>
         </div>
       </div>

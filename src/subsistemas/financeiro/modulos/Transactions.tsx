@@ -496,7 +496,7 @@ export default function Transactions({
                     className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
                     <PencilLine className="h-4 w-4" />
-                    Editar em massa ({selectedTransactions.size})
+                    Editar selecionadas ({selectedTransactions.size})
                   </button>
                 )}
                 {onLinkBulk && (
