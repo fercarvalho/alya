@@ -3230,6 +3230,55 @@ app.delete("/api/transactions/bulk", authenticateToken, async (req, res) => {
   }
 });
 
+// Edição em massa: aplica propriedades em comum (tipo/categoria/subcategoria)
+// às transações selecionadas. Só os campos presentes em `updates` são alterados.
+// Se o tipo resultante não usa categoria (transferência/caixa), categoria e
+// subcategoria são zeradas. Edição manual "solta" da regra (como o PUT único).
+app.post("/api/transactions/bulk-update", authenticateToken, async (req, res) => {
+  try {
+    const { ids, updates } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: "Nenhuma transação informada." });
+    }
+    const setType = updates && Object.prototype.hasOwnProperty.call(updates, "type");
+    const setCategory = updates && Object.prototype.hasOwnProperty.call(updates, "category");
+    const setSubcategory = updates && Object.prototype.hasOwnProperty.call(updates, "subcategory");
+    if (!setType && !setCategory && !setSubcategory) {
+      return res.status(400).json({ success: false, error: "Nenhuma propriedade para alterar." });
+    }
+    const TYPES_WITHOUT_CATEGORY = ["Transferência entre contas", "Reforço de caixa", "Retirada de caixa"];
+    const data = [];
+    for (const id of ids) {
+      try {
+        const tx = (await db.pool.query("SELECT * FROM transactions WHERE id = $1", [id])).rows[0];
+        if (!tx) continue;
+        const newType = setType ? updates.type : tx.type;
+        const typeUsesCategory = !TYPES_WITHOUT_CATEGORY.includes(newType);
+        const newCategory = !typeUsesCategory ? null : (setCategory ? (updates.category || null) : tx.category);
+        const newSubcategory = !typeUsesCategory ? null : (setSubcategory ? (updates.subcategory || null) : tx.subcategory);
+        await db.pool.query(
+          `UPDATE transactions SET
+             type = $1, category = $2, subcategory = $3,
+             applied_rule_id = NULL, original_type = NULL, original_category = NULL,
+             original_subcategory = NULL, needs_confirmation = FALSE,
+             updated_at = CURRENT_TIMESTAMP
+           WHERE id = $4`,
+          [newType, newCategory, newSubcategory, id]
+        );
+        const fresh = await db.getTransactionById(id);
+        if (fresh) data.push(fresh);
+      } catch (err) {
+        console.error(`Erro ao editar transação ${id} em lote:`, err);
+      }
+    }
+    await logActivity(req.user.id, req.user.username, "edit", "transactions", "transaction", null, { bulkUpdate: { count: data.length, updates } });
+    res.json({ success: true, updated: data.length, data });
+  } catch (error) {
+    console.error("Erro ao editar transações em lote:", error);
+    res.status(500).json({ success: false, error: error.message || "Erro interno do servidor." });
+  }
+});
+
 // Rota para exportar dados
 // 🔒 CORREÇÃO DE SEGURANÇA: Adicionar autenticação obrigatória
 app.post("/api/export", authenticateToken, (req, res) => {

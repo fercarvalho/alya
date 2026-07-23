@@ -62,6 +62,7 @@ const PushPermissionBanner = lazy(() => import("./components/PushPermissionBanne
 import TransactionRulesModal from "./components/modals/TransactionRulesModal";
 import ResolveTransactionModal from "./components/modals/ResolveTransactionModal";
 import ManageSubcategoriesModal from "./components/modals/ManageSubcategoriesModal";
+import BulkEditTransactionsModal from "./components/modals/BulkEditTransactionsModal";
 import ImpersonationBanner from "./components/ImpersonationBanner";
 import OfflineBanner from "./components/OfflineBanner";
 import PwaInstallBanner from "./components/PwaInstallBanner";
@@ -717,6 +718,7 @@ const AppContent: React.FC = () => {
   // o modal de Regras e o modal de Gerenciar Subcategorias.
   const [subcategories, setSubcategories] = useState<string[]>([]);
   const [isManageSubcategoriesOpen, setIsManageSubcategoriesOpen] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const loadSubcategories = useCallback(async () => {
     if (!token) return;
     try {
@@ -1635,6 +1637,30 @@ const AppContent: React.FC = () => {
       } catch (error) {
         console.error("Erro ao deletar transações:", error);
       }
+    }
+  };
+
+  // Edição em massa: aplica tipo/categoria/subcategoria às selecionadas.
+  const handleBulkEditTransactions = async (updates: { type?: string; category?: string; subcategory?: string }) => {
+    const ids = Array.from(selectedTransactions);
+    if (ids.length === 0) return;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    try {
+      const r = await fetch(`${API_BASE_URL}/transactions/bulk-update`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ids, updates }),
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || "Falha ao editar em massa."); return; }
+      const byId: Record<string, NewTransaction> = {};
+      for (const t of (j.data || []) as NewTransaction[]) byId[t.id] = t;
+      setTransactions((prev) => prev.map((t) => byId[t.id] || t));
+      setSelectedTransactions(new Set());
+      setIsBulkEditOpen(false);
+    } catch {
+      alert("Erro ao editar transações em massa.");
     }
   };
 
@@ -5168,6 +5194,7 @@ const AppContent: React.FC = () => {
             handleDeleteSelectedTransactions={handleDeleteSelectedTransactions}
             projectsMap={projectsMap}
             onLinkBulk={() => setLinkPickerFor("bulk")}
+            onBulkEdit={() => setIsBulkEditOpen(true)}
             deleteTransaction={deleteTransaction}
             getCategoriesByType={getCategoriesByType}
             formatDateToDisplay={formatDateToDisplay}
@@ -7632,6 +7659,14 @@ const AppContent: React.FC = () => {
         token={token}
         onChanged={loadSubcategories}
         onRequestEditRules={() => setIsRulesModalOpen(true)}
+      />
+
+      <BulkEditTransactionsModal
+        isOpen={isBulkEditOpen}
+        count={selectedTransactions.size}
+        subcategories={subcategories}
+        onClose={() => setIsBulkEditOpen(false)}
+        onApply={handleBulkEditTransactions}
       />
 
       <ResolveTransactionModal

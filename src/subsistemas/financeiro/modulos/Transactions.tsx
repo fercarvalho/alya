@@ -26,6 +26,7 @@ import {
   Trash2,
   Edit,
   Link2,
+  PencilLine,
 } from 'lucide-react';
 import PendingTransactionsBanner from '@/components/PendingTransactionsBanner';
 import { type TransactionType, TRANSACTION_TYPE_STYLES } from '@/types/transactionType';
@@ -101,6 +102,7 @@ interface TransactionsProps {
   // PM: vínculo a projeto
   projectsMap?: Record<string, string>;
   onLinkBulk?: () => void;
+  onBulkEdit?: () => void;
   // Helpers
   getCategoriesByType: (type: string) => string[];
   formatDateToDisplay: (date: string) => string;
@@ -152,6 +154,7 @@ export default function Transactions({
   formatDateToDisplay,
   projectsMap = {},
   onLinkBulk,
+  onBulkEdit,
 }: TransactionsProps) {
   return (
     <div className="space-y-6">
@@ -486,7 +489,16 @@ export default function Transactions({
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             {/* Ações (acima da lista) */}
             {selectedTransactions.size > 0 && (
-              <div className="flex justify-end items-center gap-2 p-3 sm:p-4 bg-red-50 border-b border-red-200">
+              <div className="flex justify-end items-center gap-2 p-3 sm:p-4 bg-red-50 border-b border-red-200 flex-wrap">
+                {onBulkEdit && (
+                  <button
+                    onClick={onBulkEdit}
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <PencilLine className="h-4 w-4" />
+                    Editar em massa ({selectedTransactions.size})
+                  </button>
+                )}
                 {onLinkBulk && (
                   <button
                     onClick={onLinkBulk}
